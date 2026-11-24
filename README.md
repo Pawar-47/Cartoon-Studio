@@ -17,4 +17,4 @@ Initial repository bootstrap is in progress. The first milestone establishes the
 
 ## Documentation
 
-See `docs/MASTER_PLAN.md`, `docs/REQUIREMENTS_REGISTRY.md`, `docs/GITHUB_RESEARCH.md`, and `docs/PROJECT_STATUS.md`.
+Every coding agent must follow `AGENTS.md` and read `docs/PROJECT_SPECIFICATION.md` in full before changing code. The execution plan, requirement registry, traceability, research and status are maintained under `docs/`.
