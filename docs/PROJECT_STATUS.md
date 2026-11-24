@@ -3,8 +3,8 @@
 **Milestone:** Phase 0 — requirements, research and architecture freeze (not exited)  
 **Repository:** https://github.com/Pawar-47/Cartoon-Studio  
 **Branch:** main  
-**Current HEAD (after checkpoint-document reconciliation):** `be5c397f7ff1d15c411c82136a0a70448f3ea735`  
-**Code-audited baseline commit:** `40bec8c423e953a0753c62f53c8a173274ac72e1`
+**Code-audited source baseline:** `40bec8c423e953a0753c62f53c8a173274ac72e1`  
+The checkpoint-document reconciliation has since been committed to `main`; always fetch the live branch head before the next batch.
 
 ## Implemented and tested foundation
 
