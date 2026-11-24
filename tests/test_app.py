@@ -121,3 +121,22 @@ def test_story_plan_rejects_duration_outside_episode_window():
     plan["scenes"] = plan["scenes"][:4]
     response = client.post("/api/story-plans/validate", json=plan)
     assert response.status_code == 422
+
+
+def test_seven_scene_episode_is_supported():
+    plan = valid_episode_plan()
+    plan["scenes"].append({**plan["scenes"][-1], "id": "scene-6"})
+    plan["scenes"].append({**plan["scenes"][-1], "id": "scene-7"})
+    plan["target_duration_seconds"] = 420
+    response = client.post("/api/story-plans/validate", json=plan)
+    assert response.status_code == 200
+    assert len(response.json()["scenes"]) == 7
+
+
+def test_story_plan_rejects_more_than_seven_scenes():
+    plan = valid_episode_plan()
+    for number in range(6, 9):
+        plan["scenes"].append({**plan["scenes"][-1], "id": f"scene-{number}"})
+    plan["target_duration_seconds"] = 420
+    response = client.post("/api/story-plans/validate", json=plan)
+    assert response.status_code == 422

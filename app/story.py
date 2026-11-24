@@ -164,14 +164,17 @@ CONTINUITY NOTES: {continuity}
 PRODUCTION RULES:
 - Produce 5 to 7 scenes, each 30 to 60 seconds.
 - Total scene duration must be 300 to 420 seconds and within 30 seconds of the target.
-- Use only the supplied character IDs consistently after defining them.
+- Use no more than 5 characters and keep their IDs stable throughout the episode.
 - Define character relationships and keep them consistent across the episode.
+- Each action cue is one animation clip of up to 12 seconds; split longer actions into multiple cues.
 - Every scene needs a reusable location_id, character_ids, actions, expressions,
   camera, lighting, props, audio and transition plan.
 - Dialogue must be natural, character-specific and timed within the scene.
 - Include clear physical comedy and visual actions where appropriate; do not rely only on dialogue.
 - Use action_id values that can later map to the reusable animation library.
 - Use only wide, medium or close shots and locked, orbit or dolly camera movement.
+- Use only cut or fade scene transitions.
+- Use stable location IDs and action IDs from the available production catalog.
 - Provide an ending that resolves the episode story.
 - Keep every dialogue, action, camera and audio cue inside its scene duration.
 - Use narrator as character_id only when narration is needed.

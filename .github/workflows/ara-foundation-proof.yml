@@ -40,9 +40,22 @@ jobs:
         working-directory: ara-upstream
         run: npm run setup-assets
 
-      - name: Type-check upstream
+      - name: Set up Python for integration patches
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Apply Cartoon Studio integration patches
+        working-directory: ara-upstream
+        run: python ../scripts/patch_ara_foundation.py
+
+      - name: Type-check patched upstream
         working-directory: ara-upstream
         run: npm run typecheck
+
+      - name: Test seven-scene film limit
+        working-directory: ara-upstream
+        run: npm run test:studio:film
 
       - name: Run Studio checks
         working-directory: ara-upstream
