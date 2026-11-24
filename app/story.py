@@ -166,7 +166,8 @@ PRODUCTION RULES:
 - Total scene duration must be 300 to 420 seconds and within 30 seconds of the target.
 - Use no more than 5 characters and keep their IDs stable throughout the episode.
 - Define character relationships and keep them consistent across the episode.
-- Each action cue is one animation clip of up to 12 seconds; split longer actions into multiple cues.
+- Each action cue is one animation clip of up to 12 seconds.
+  Split longer actions into multiple cues.
 - Every scene needs a reusable location_id, character_ids, actions, expressions,
   camera, lighting, props, audio and transition plan.
 - Dialogue must be natural, character-specific and timed within the scene.
