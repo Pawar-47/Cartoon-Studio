@@ -61,6 +61,10 @@ jobs:
         working-directory: ara-upstream
         run: npm run test:studio
 
+      - name: Run browser scene-strip checks
+        working-directory: ara-upstream
+        run: npx tsx scripts/studio-film-browser-check.ts
+
       - name: Build upstream for Cartoon Studio route
         working-directory: ara-upstream
         env:
