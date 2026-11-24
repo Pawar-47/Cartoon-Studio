@@ -7,7 +7,8 @@ Phase 0 has **not** exited. The master plan prohibits engine-dependent productio
 ## Current verified checkpoint
 
 - Branch: `main`
-- HEAD: `40bec8c423e953a0753c62f53c8a173274ac72e1`
+- Current HEAD after documentation reconciliation: `be5c397f7ff1d15c411c82136a0a70448f3ea735` (docs-only commits after the audited source baseline).  
+- Source baseline tested by CI run #52: `40bec8c423e953a0753c62f53c8a173274ac72e1`.
 - Latest Cartoon Studio CI: run #52, ID `45487769827`, SUCCESS on the current HEAD.
 - Test evidence: Ruff PASS, compile PASS, 12 pytest tests PASS (one deprecation warning), Windows bootstrap ZIP uploaded.
 - Artifact: `Cartoon-Studio-Windows-Bootstrap`, ID `14963389016`, SHA-256 `423371c438c3b07a5b2aa3c38f6b26768078ffb1611e96b72d3c08a2e189d0ea`.
