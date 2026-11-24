@@ -93,6 +93,28 @@ def main() -> None:
     replace_all("docs/README.md", "up to five scenes", "up to seven scenes")
     replace_all("docs/studio.md", "five scenes", "seven scenes")
     replace_all("docs/mcp.md", "up to five scenes", "up to seven scenes")
+    replace_all("src/studio/assist-ui.ts", "up to five scenes", "up to seven scenes")
+    replace_all("packages/cli/src/mcp.ts", "up to five scenes", "up to seven scenes")
+    replace_all("packages/cli/src/film-quickstart.ts", "up to five scenes", "up to seven scenes")
+    replace_all("index.html", "up to five scenes", "up to seven scenes")
+
+    # Keep the browser-level scene-strip test aligned with the expanded cap.
+    replace_all("scripts/studio-film-browser-check.ts", "up to five", "up to seven")
+    replace_once(
+        "scripts/studio-film-browser-check.ts",
+        "for(let i=0;i<2;i++){await click('#scene-add');await settled();}",
+        "for(let i=0;i<4;i++){await click('#scene-add');await settled();}",
+    )
+    replace_once(
+        "scripts/studio-film-browser-check.ts",
+        "assert.equal((await film()).length,5);",
+        "assert.equal((await film()).length,7);",
+    )
+    replace_all(
+        "scripts/studio-film-browser-check.ts",
+        "film-scene-strip-five",
+        "film-scene-strip-seven",
+    )
 
     # Compact the inspector at 1366x768 and other short desktop viewports.
     append_once(
