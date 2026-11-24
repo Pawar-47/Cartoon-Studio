@@ -15,6 +15,7 @@ class CharacterSpec(StrictModel):
     name: str = Field(min_length=1, max_length=80)
     personality: str = Field(default="", max_length=500)
     voice_profile: str = Field(default="", max_length=80)
+    relationships: list[str] = Field(default_factory=list, max_length=12)
 
 
 class DialogueLine(StrictModel):
@@ -56,6 +57,8 @@ class ScenePlan(StrictModel):
     title: str = Field(min_length=1, max_length=100)
     location_id: str = Field(min_length=1, max_length=80)
     environment_description: str = Field(default="", max_length=1200)
+    lighting: str = Field(default="", max_length=300)
+    transition_to_next: Literal["cut", "fade", "dissolve"] = "cut"
     duration_seconds: int = Field(ge=30, le=90)
     character_ids: list[str] = Field(min_length=1, max_length=8)
     props: list[str] = Field(default_factory=list, max_length=30)
@@ -68,6 +71,7 @@ class ScenePlan(StrictModel):
 class EpisodePlan(StrictModel):
     title: str = Field(min_length=1, max_length=100)
     synopsis: str = Field(min_length=1, max_length=1500)
+    ending: str = Field(default="", max_length=1500)
     language: Literal["ur", "en"] = "ur"
     target_duration_seconds: int = Field(default=360, ge=300, le=420)
     characters: list[CharacterSpec] = Field(min_length=1, max_length=8)
@@ -159,11 +163,11 @@ PRODUCTION RULES:
 - Produce 5 to 12 scenes, each 30 to 90 seconds.
 - Total scene duration must be 300 to 420 seconds and within 30 seconds of the target.
 - Use only the supplied character IDs consistently after defining them.
-- Every scene needs a reusable location_id, character_ids, actions, camera plan and audio plan.
+- Define character relationships and keep them consistent across the episode.\n- Every scene needs a reusable location_id, character_ids, actions, expressions, camera, lighting, props, audio and transition plan.
 - Dialogue must be natural, character-specific and timed within the scene.
 - Include clear physical comedy and visual actions where appropriate; do not rely only on dialogue.
 - Use action_id values that can later map to the reusable animation library.
-- Use camera shots and movement that can be executed by a 3D scene editor.
+- Use camera shots and movement that can be executed by a 3D scene editor.\n- Provide an ending that resolves the episode story.
 - Keep every dialogue, action, camera and audio cue inside its scene duration.
 - Use narrator as character_id only when narration is needed.
 - Return valid JSON only. No Markdown fences, preamble or explanation.
