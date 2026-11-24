@@ -21,7 +21,9 @@ Code license: MIT.
 
 **Integration approach under evaluation:** pin upstream commit as a submodule or build dependency; build the upstream multi-page Vite app on GitHub Actions; serve it locally under /ara/ from the FastAPI shell; keep Cartoon Studio-specific changes as patches/adapters in this repository. Extend scene limit to 7, create original toon character presets/imports, add Urdu TTS adapter, connect project persistence, and implement low-hardware render options. Preserve all notices and asset conditions.
 
-**Decision:** HIGH PRIORITY FOUNDATION CANDIDATE. Do not call it production-ready or integrate it as a final dependency until the Windows proof workflow succeeds and its output is inspected.
+**Proof result:** Ara Foundation Proof run #6 (ID `45486950450`) was CANCELLED during browser MP4 export. Type-check, film model checks and several editor browser checks completed; Studio-wide checks, Vite build and artifact upload were skipped. No proof artifact exists. The logs do not establish the cancellation cause.
+
+**Decision:** HIGH PRIORITY FOUNDATION CANDIDATE ONLY. Ara is not selected, integrated or production-ready. Do not auto-integrate after a future green CI; inspect the full build, export output, asset notices and target-like hardware evidence first.
 
 ## Candidate B — Ekza Studio
 Source: https://github.com/ekza-space/ekza-studio  
@@ -52,9 +54,10 @@ AGPL-3.0-or-later. Rigging and animation editor with third-party motion packs.
 **Decision:** no TTS model approved. Keep TTS modular and support recorded voice. Benchmark Smol Urdu TTS and any new permissively licensed models before adoption.
 
 ## Next evaluation gate
-1. Windows build proof succeeds.
-2. Inspect resulting dist and notices.
-3. Test app load, character import, one scene edit, save/reopen, 720p MP4 export.
-4. Measure browser memory and render time on comparable low-end hardware.
-5. Verify model and asset downloads and their licenses.
-6. Only then accept submodule/upstream integration.
+1. Diagnose the browser MP4 export timeout/cancellation with a bounded, instrumented test.
+2. Complete the Windows proof workflow: browser film/export test, Studio checks, Vite production build and artifact upload.
+3. Inspect resulting build, notices and actual MP4 output.
+4. Test app load, original character import, one scene edit, save/reopen and 720p MP4 export.
+5. Measure browser memory and render time on comparable low-end hardware; later validate on the actual target PC.
+6. Verify model and asset downloads and their licenses.
+7. Only then decide whether Ara or an alternative is accepted.
