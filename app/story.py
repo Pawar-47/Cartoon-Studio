@@ -121,6 +121,52 @@ class EpisodePlan(StrictModel):
         return self
 
 
+AVAILABLE_ACTION_IDS = [
+    "idle",
+    "crouch",
+    "walk",
+    "run",
+    "walk_back",
+    "strafe_left",
+    "strafe_right",
+    "run_slide",
+    "stumble_recover",
+    "talk",
+    "talk_gestures",
+    "wave",
+    "cheer",
+    "laugh",
+    "clap",
+    "point",
+    "thumbs_up",
+    "bow",
+    "dance_groove",
+    "dance_bounce",
+    "phone_call",
+    "texting",
+    "take_picture",
+    "lean_wall",
+    "look_around",
+    "sweep",
+    "fall",
+    "jump_start",
+    "jump_air",
+    "jump_land",
+    "jump_running",
+    "punch",
+    "hit",
+    "pick_up",
+    "use_press",
+    "open_door",
+    "push",
+    "put_down",
+    "drive_car",
+    "sit_passenger",
+    "ride_bicycle",
+    "ride_motorcycle",
+]
+
+
 class StoryPromptRequest(StrictModel):
     idea: str = Field(min_length=5, max_length=2000)
     language: Literal["ur", "en"] = "ur"
@@ -140,6 +186,7 @@ def build_story_prompt(request: StoryPromptRequest) -> str:
     )
     schema = json.dumps(EpisodePlan.model_json_schema(), ensure_ascii=False, indent=2)
     characters = ", ".join(request.character_names) or "Create an original small recurring cast."
+    action_ids = ", ".join(AVAILABLE_ACTION_IDS)
     continuity = request.continuity_notes or (
         "Preserve established character identities and relationships."
     )
@@ -175,7 +222,7 @@ PRODUCTION RULES:
 - Use action_id values that can later map to the reusable animation library.
 - Use only wide, medium or close shots and locked, orbit or dolly camera movement.
 - Use only cut or fade scene transitions.
-- Use stable location IDs and action IDs from the available production catalog.
+- Use descriptive stable location slugs such as market_street, town_square, school_yard, park or cafe.\n- VALID ACTION IDS (use only these exact IDs): {action_ids}. Do not invent clip IDs.
 - Provide an ending that resolves the episode story.
 - Keep every dialogue, action, camera and audio cue inside its scene duration.
 - Use narrator as character_id only when narration is needed.
