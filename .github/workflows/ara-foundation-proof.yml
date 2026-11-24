@@ -1,0 +1,63 @@
+name: Ara 3D Foundation Proof
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/ara-foundation-proof.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-upstream-on-windows:
+    name: Build and test pinned Ara 3D Studio upstream
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout Cartoon Studio
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Clone pinned upstream source
+        shell: pwsh
+        run: |
+          git clone --filter=blob:none https://github.com/olatunde85/3d-gen.git ara-upstream
+          git -C ara-upstream checkout 4151c1124b172fdd918d23e0ef4aad727f4984c1
+          Write-Host "Ara upstream commit:"
+          git -C ara-upstream rev-parse HEAD
+
+      - name: Install upstream dependencies
+        working-directory: ara-upstream
+        run: npm ci
+
+      - name: Prepare original CC0 character assets
+        working-directory: ara-upstream
+        run: npm run setup-assets
+
+      - name: Type-check upstream
+        working-directory: ara-upstream
+        run: npm run typecheck
+
+      - name: Run Studio checks
+        working-directory: ara-upstream
+        run: npm run test:studio
+
+      - name: Build upstream for Cartoon Studio route
+        working-directory: ara-upstream
+        env:
+          BASE_PATH: /ara/
+        run: npm run build
+
+      - name: Upload upstream build proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ara-3D-Foundation-Proof
+          path: ara-upstream/dist
+          if-no-files-found: error
+          retention-days: 14
