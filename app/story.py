@@ -314,7 +314,7 @@ def build_story_prompt(request: StoryPromptRequest) -> str:
     schema = json.dumps(EpisodePlan.model_json_schema(), ensure_ascii=False, indent=2)
     characters = ", ".join(request.character_names) or "Create an original small recurring cast."
     action_ids = ", ".join(AVAILABLE_ACTION_IDS)
-    location_catalog = "\\n".join(
+    location_catalog = "\n".join(
         f"- {location_id}: {name}" for location_id, name in LOCATION_CATALOG.items()
     )
     expression_ids = ", ".join(EXPRESSION_IDS)
@@ -356,9 +356,16 @@ PRODUCTION RULES:
 - Use only cut or fade scene transitions.
 - Use only exact location_id values from the production location catalog below.
 - Use only these exact expression IDs: {expression_ids}.
-- VALID ACTION IDS (use only these exact IDs):
-  {action_ids}
-  Do not invent clip IDs.
+- Use only the exact action IDs listed below; never invent clip IDs.
+
+VALID LOCATION CATALOG:
+{location_catalog}
+
+VALID EXPRESSION IDS:
+{expression_ids}
+
+VALID ACTION IDS:
+{action_ids}
 - Provide an ending that resolves the episode story.
 - Keep every dialogue, action, camera and audio cue inside its scene duration.
 - Use narrator as character_id only when narration is needed.
