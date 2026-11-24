@@ -1,10 +1,10 @@
 # Next Steps
 
-1. Verify the newest Windows Actions run: Ruff, compile, pytest, package and artifact upload. Fix all failures before new features.
-2. Complete the Ara 3D Gen Windows build proof. Inspect source/license and generated assets. Benchmark browser preview and MP4 export at low resolution.
-3. Decide whether to pin Ara as a submodule/upstream dependency and maintain Cartoon Studio patches in this repository.
-4. If adopted, plan changes for toon-style characters/materials, persistent project storage, 7 scenes (at least 5–7 minutes), low-hardware render preset and external Urdu TTS adapter.
-5. Verify Urdu TTS models and licenses. Benchmark Smol Urdu TTS and other candidates; do not select based on model-card claims alone.
-6. Verify Rhubarb source/release license and Urdu cue behavior.
-7. Add a real 3D preview and GLB asset import only after the upstream foundation decision.
-8. Create a true Windows installer after production dependencies and their sizes are known.
+1. Verify current Cartoon Studio Windows CI remains green after the latest source/docs commits.
+2. Complete pinned Ara 3D Gen Windows proof including asset preparation, tracked patches, typecheck, film tests, Studio UI tests, browser scene-strip test and Vite build.
+3. If the proof passes, inspect the build artifact and third-party notices; then integrate Ara as a pinned upstream component/submodule with patch scripts.
+4. Connect the Story Generator JSON schema to Ara's Studio film schema and real animation/set catalogs.
+5. Create original cartoon-style character presets/imports and a toon rendering mode; do not ship MakeHuman realism as the final creative direction without adaptation.
+6. Implement a tested Urdu TTS adapter. Smol Urdu TTS is only an experimental candidate; preserve manual recording fallback.
+7. Test audio-driven lip-sync with Urdu speech and a suitable viseme/Rhubarb pipeline.
+8. Build a real Windows installer and test it on the user's PC after the 3D runtime is integrated.

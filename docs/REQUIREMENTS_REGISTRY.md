@@ -28,7 +28,7 @@ Statuses: NOT REVIEWED, RESEARCH REQUIRED, PLANNED, IN PROGRESS, IMPLEMENTED, PA
 | APP-001 | Lightweight browser-based application | Critical | TESTED |
 | APP-002 | Local backend and persistent SQLite project metadata | High | TESTED |
 | APP-003 | Dashboard, project creation and listing | High | TESTED |
-| APP-004 | Story Generator workspace | High | PLANNED |
+| APP-004 | Story Generator workspace | High | TESTED |
 | APP-005 | Character Studio workspace | High | PLANNED |
 | APP-006 | World Builder workspace | High | PLANNED |
 | APP-007 | Asset Library workspace | High | PLANNED |
@@ -46,15 +46,15 @@ Statuses: NOT REVIEWED, RESEARCH REQUIRED, PLANNED, IN PROGRESS, IMPLEMENTED, PA
 | ANIM-001 | Reusable body animation library | Critical | PLANNED |
 | ANIM-002 | Facial expressions, blinking, talking and gestures | High | PLANNED |
 | ANIM-003 | Smooth transitions, blending and retargeting | High | PLANNED |
-| STORY-001 | One-prompt original story generation in Urdu or English | Critical | PLANNED |
-| STORY-002 | Title, summary, cast, scenes, actions, camera and audio plan | High | PLANNED |
-| STORY-003 | Natural conversational Pakistani Urdu | Critical | PLANNED |
-| STORY-004 | Urdu script, RTL and optional Roman Urdu | Critical | PLANNED |
-| STORY-005 | Edit and approve story before production | High | PLANNED |
-| STORY-006 | Validate scene data and recover invalid output | High | PLANNED |
+| STORY-001 | One-prompt original story generation in Urdu or English | Critical | PARTIALLY IMPLEMENTED |
+| STORY-002 | Title, summary, cast, scenes, actions, camera and audio plan | High | PARTIALLY IMPLEMENTED |
+| STORY-003 | Natural conversational Pakistani Urdu | Critical | PARTIALLY IMPLEMENTED |
+| STORY-004 | Urdu script, RTL and optional Roman Urdu | Critical | PARTIALLY IMPLEMENTED |
+| STORY-005 | Edit and approve story before production | High | PARTIALLY IMPLEMENTED |
+| STORY-006 | Validate scene data and recover invalid output | High | TESTED |
 | AI-001 | Modular multi-provider AI architecture | High | PLANNED |
 | AI-002 | Verify free quotas, refill cycles, terms and Pakistan availability | High | PLANNED |
-| AI-003 | Manual handoff where official APIs are unavailable | High | PLANNED |
+| AI-003 | Manual handoff where official APIs are unavailable | High | TESTED |
 | AI-004 | Never bypass quotas or use unauthorized APIs | Critical | PLANNED |
 | RES-001 | Research agent searches docs, GitHub, issues and alternatives | High | PLANNED |
 | RES-002 | Compare capability, compatibility, license, cost and hardware | High | PLANNED |
