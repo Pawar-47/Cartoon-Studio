@@ -39,6 +39,7 @@ Statuses: NOT REVIEWED, RESEARCH REQUIRED, PLANNED, IN PROGRESS, IMPLEMENTED, PA
 | WORLD-002 | Reusable streets, buildings, shops, schools, parks and interiors | High | PLANNED |
 | WORLD-003 | Reusable vehicles and interactive movement | High | PLANNED |
 | WORLD-004 | Persistent layouts, props, materials and scene templates | High | PLANNED |
+| WORLD-005 | Validate story location IDs against the pinned 3D set catalog | High | TESTED |
 | CHAR-001 | Create and save original reusable characters | Critical | PLANNED |
 | CHAR-002 | Persistent face, body, clothing, hair and accessories | High | PLANNED |
 | CHAR-003 | Personality, relationships, voice and dialogue profiles | High | PLANNED |
@@ -47,6 +48,7 @@ Statuses: NOT REVIEWED, RESEARCH REQUIRED, PLANNED, IN PROGRESS, IMPLEMENTED, PA
 | ANIM-002 | Facial expressions, blinking, talking and gestures | High | PLANNED |
 | ANIM-003 | Smooth transitions, blending and retargeting | High | PLANNED |
 | ANIM-004 | Validate story action IDs against the pinned production animation catalog | High | TESTED |
+| ANIM-005 | Validate facial expression IDs against the pinned expression catalog | High | TESTED |
 | STORY-001 | One-prompt original story generation in Urdu or English | Critical | PARTIALLY IMPLEMENTED |
 | STORY-002 | Title, summary, cast, scenes, actions, camera and audio plan | High | PARTIALLY IMPLEMENTED |
 | STORY-003 | Natural conversational Pakistani Urdu | Critical | PARTIALLY IMPLEMENTED |

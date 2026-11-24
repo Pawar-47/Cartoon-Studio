@@ -1,44 +1,52 @@
 # Project Status
 
-**Milestone:** Phase 0 — specification and architecture planning  
+**Milestone:** P0 research / P1 application foundation  
 **Repository:** https://github.com/Pawar-47/Cartoon-Studio  
-**Branch:** main  
-**Audited HEAD before this planning commit:** `c55d77c446b75ce1f86cf839fb1ccb9e06346608`
+**Branch:** main
 
-## What is actually working
+## Implemented
+- Repository governance, authoritative specification, AGENTS.md and requirement traceability.
+- FastAPI local application shell and SQLite project creation/listing.
+- Lightweight dashboard and local project workspace.
+- Story Generator page with prompt builder for manual use of FreeMilk/other AI apps.
+- Structured episode schema: 5–7 minutes, 5–7 scenes, max 5 characters, timed dialogue/action/camera/audio cues.
+- Exact validation against the pinned Ara scene-location, facial-expression and animation-action catalogs.
+- Story JSON validation and save/load to a local project.
+- GitHub Actions Windows validation and bootstrap ZIP packaging.
+- Public GitHub research and initial licensing evaluation.
 
-- FastAPI local application shell and browser dashboard.
-- SQLite-backed project creation/listing.
-- Story prompt builder for manual copy/paste use with an external AI provider.
-- Structured episode-plan validation and local project save/load.
-- Windows GitHub Actions lint, compile, pytest and bootstrap ZIP packaging.
-- Latest application CI run 45 passed: https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45486332959.
+## Latest successful application CI
+- Workflow: https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45487439930
+- Commit tested: 3dc006102f7b911c0b24db119f0fc166b5807a41
+- Ruff: PASS.
+- Python compile: PASS.
+- pytest: PASS — 12 passed, 1 warning.
+- Windows bootstrap ZIP packaging: PASS.
+- Artifact: Cartoon-Studio-Windows-Bootstrap (ID 14965370345).
+- SHA-256: ffc96c280d403ac6b33a3ea35bacf49c48a1d10fc4bf943925c75db0a09634ce.
 
-## What is not yet a production capability
+The artifact is still a bootstrap ZIP, not a standalone installer or complete production studio.
 
-- No integrated 3D engine/editor.
-- No persistent character creation or world builder.
-- No verified cartoon character style pipeline.
-- No direct AI provider integration.
-- No Urdu TTS, production lip-sync or tested voice profile.
-- No end-to-end 3D scene renderer or 5–7 minute MP4 pipeline.
-- No self-contained Windows installer.
-- No installation/performance benchmark on the target PC.
+## 3D foundation research
+Ara 3D Gen is the leading candidate. The pinned Windows proof has:
+- Cloned the exact upstream commit.
+- Installed dependencies.
+- Prepared original CC0 character assets.
+- Applied the tracked seven-scene/700 KB, documentation, browser-test and compact-inspector patches.
+- Passed patch diff validation.
+- Passed TypeScript type-check.
 
-## Candidate proof
+The seven-scene browser/MP4 test is currently running. Studio UI checks and Vite build are still pending. Ara is NOT yet accepted or integrated.
 
-Ara 3D Gen is a candidate only. The pinned Windows proof run 5 was already active at audit time and had reached the seven-scene film test after successful dependency installation, asset preparation, patch application, diff check and typecheck. It has not passed its complete proof gate and is not an accepted engine. Do not begin integration based solely on this proof.
+## Not implemented
+- Integrated 3D editor and production renderer.
+- Cartoon-style character presets and persistent character assets.
+- Full world builder and persistent environment database.
+- Direct AI provider integrations.
+- Verified Urdu TTS and production-grade Urdu lip-sync.
+- Complete scene-to-MP4 episode pipeline inside Cartoon Studio.
+- Standalone Windows installer.
+- Actual target-PC installation and performance benchmark.
 
-## Planning correction
-
-The repository history shows too many small commits and repeated CI runs in a short period. That was inconsistent with the required batch discipline. The next work is to complete Phase 0 planning/research and freeze architecture before more feature implementation.
-
-See:
-- `docs/BASELINE_AUDIT.md`
-- `docs/MASTER_PLAN.md`
-- `docs/EXECUTION_BATCH_PLAN.md`
-- `docs/NEXT_STEPS.md`
-
-## Current phase gate
-
-**Phase 0 is not complete.** Requirements decomposition, comparative research, hardware/Urdu feasibility and architecture freeze remain open. No later feature phase may start until its exit gate is met.
+## Next batch
+Complete the Ara Windows proof, inspect its build artifact, then integrate the pinned upstream as a submodule/dependency if all tests pass. Add low-hardware and original cartoon-style rendering adaptations before calling the 3D foundation production-ready.
