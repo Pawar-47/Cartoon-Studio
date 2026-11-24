@@ -136,6 +136,7 @@ def build_story_prompt(request: StoryPromptRequest) -> str:
     )
     schema = json.dumps(EpisodePlan.model_json_schema(), ensure_ascii=False, indent=2)
     characters = ", ".join(request.character_names) or "Create an original small recurring cast."
+    continuity = request.continuity_notes or "Preserve established character identities and relationships."
     return f"""You are the story and scene director for an original 3D cartoon series.
 Create one complete, production-ready episode plan. Do not copy existing copyrighted
 characters, shows, stories, dialogue, names, branding or designs.
@@ -152,7 +153,7 @@ TARGET DURATION:
 TONE: {request.tone}
 AUDIENCE: {request.audience}
 PREFERRED RECURRING CHARACTERS: {characters}
-CONTINUITY NOTES: {request.continuity_notes or "Preserve established character identities and relationships."}
+CONTINUITY NOTES: {continuity}
 
 PRODUCTION RULES:
 - Produce 5 to 12 scenes, each 30 to 90 seconds.
