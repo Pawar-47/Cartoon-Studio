@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class StrictModel(BaseModel):
@@ -11,7 +11,7 @@ class StrictModel(BaseModel):
 
 
 class CharacterSpec(StrictModel):
-    id: str = Field(min_length=1, max_length=40)
+    id: str = Field(min_length=1, max_length=40, pattern=r"^[a-z][a-z0-9_-]*$")
     name: str = Field(min_length=1, max_length=80)
     personality: str = Field(default="", max_length=500)
     voice_profile: str = Field(default="", max_length=80)
@@ -25,100 +25,6 @@ class DialogueLine(StrictModel):
     delivery: str = Field(default="natural", max_length=80)
     start_seconds: float = Field(ge=0, le=60)
     duration_seconds: float = Field(gt=0, le=45)
-
-
-class ActionCue(StrictModel):
-    character_id: str = Field(min_length=1, max_length=40)
-    action_id: str = Field(min_length=1, max_length=80)
-    expression: str = Field(default="neutral", max_length=40)
-    target: str = Field(default="", max_length=120)
-    start_seconds: float = Field(ge=0, le=60)
-    duration_seconds: float = Field(gt=0, le=12)
-
-
-class CameraCue(StrictModel):
-    shot: Literal["wide", "medium", "close"]
-    movement: Literal["locked", "orbit", "dolly"] = "locked"
-    target: str = Field(default="all", max_length=40)
-    start_seconds: float = Field(ge=0, le=60)
-    duration_seconds: float = Field(gt=0, le=60)
-
-
-class SoundCue(StrictModel):
-    kind: Literal["music", "effect", "ambience"]
-    description: str = Field(min_length=1, max_length=240)
-    start_seconds: float = Field(ge=0, le=60)
-    duration_seconds: float = Field(gt=0, le=60)
-    volume: float = Field(default=0.5, ge=0, le=1)
-
-
-class ScenePlan(StrictModel):
-    id: str = Field(min_length=1, max_length=40)
-    title: str = Field(min_length=1, max_length=100)
-    location_id: str = Field(min_length=1, max_length=80)
-    environment_description: str = Field(default="", max_length=1200)
-    lighting: str = Field(default="", max_length=300)
-    transition_to_next: Literal["cut", "fade"] = "cut"
-    duration_seconds: int = Field(ge=30, le=60)
-    character_ids: list[str] = Field(min_length=1, max_length=5)
-    props: list[str] = Field(default_factory=list, max_length=30)
-    dialogue: list[DialogueLine] = Field(default_factory=list, max_length=60)
-    actions: list[ActionCue] = Field(default_factory=list, max_length=80)
-    camera: list[CameraCue] = Field(default_factory=list, max_length=12)
-    audio: list[SoundCue] = Field(default_factory=list, max_length=40)
-
-
-class EpisodePlan(StrictModel):
-    title: str = Field(min_length=1, max_length=100)
-    synopsis: str = Field(min_length=1, max_length=1500)
-    ending: str = Field(default="", max_length=1500)
-    language: Literal["ur", "en"] = "ur"
-    target_duration_seconds: int = Field(default=360, ge=300, le=420)
-    characters: list[CharacterSpec] = Field(min_length=1, max_length=5)
-    scenes: list[ScenePlan] = Field(min_length=5, max_length=7)
-    subtitle_mode: Literal["urdu", "roman_urdu", "english", "none"] = "urdu"
-
-    @model_validator(mode="after")
-    def validate_episode_timeline(self) -> EpisodePlan:
-        character_ids = [character.id for character in self.characters]
-        if len(character_ids) != len(set(character_ids)):
-            raise ValueError("Character IDs must be unique.")
-
-        scene_ids = [scene.id for scene in self.scenes]
-        if len(scene_ids) != len(set(scene_ids)):
-            raise ValueError("Scene IDs must be unique.")
-
-        total_duration = sum(scene.duration_seconds for scene in self.scenes)
-        if not 300 <= total_duration <= 420:
-            raise ValueError("Total episode duration must be between 300 and 420 seconds.")
-        if abs(total_duration - self.target_duration_seconds) > 30:
-            raise ValueError(
-                "Total scene duration must be within 30 seconds of target_duration_seconds."
-            )
-
-        known_characters = set(character_ids)
-        for scene in self.scenes:
-            scene_characters = set(scene.character_ids)
-            if not scene_characters.issubset(known_characters):
-                raise ValueError(f"Scene {scene.id} references an unknown character.")
-            allowed_speakers = known_characters | {"narrator"}
-            for line in scene.dialogue:
-                if line.character_id not in allowed_speakers:
-                    raise ValueError(f"Scene {scene.id} dialogue references an unknown speaker.")
-                if line.start_seconds + line.duration_seconds > scene.duration_seconds:
-                    raise ValueError(f"Scene {scene.id} has dialogue outside its duration.")
-            for action in scene.actions:
-                if action.character_id not in known_characters:
-                    raise ValueError(f"Scene {scene.id} action references an unknown character.")
-                if action.start_seconds + action.duration_seconds > scene.duration_seconds:
-                    raise ValueError(f"Scene {scene.id} has an action outside its duration.")
-            for cue in scene.camera:
-                if cue.start_seconds + cue.duration_seconds > scene.duration_seconds:
-                    raise ValueError(f"Scene {scene.id} has a camera cue outside its duration.")
-            for cue in scene.audio:
-                if cue.start_seconds + cue.duration_seconds > scene.duration_seconds:
-                    raise ValueError(f"Scene {scene.id} has an audio cue outside its duration.")
-        return self
 
 
 AVAILABLE_ACTION_IDS = [
@@ -165,6 +71,115 @@ AVAILABLE_ACTION_IDS = [
     "ride_bicycle",
     "ride_motorcycle",
 ]
+
+
+
+class ActionCue(StrictModel):
+    character_id: str = Field(min_length=1, max_length=40)
+    action_id: str = Field(min_length=1, max_length=80)
+
+    @field_validator("action_id")
+    @classmethod
+    def validate_action_id(cls, value: str) -> str:
+        if value not in AVAILABLE_ACTION_IDS:
+            raise ValueError("Action ID is not in the production animation catalog.")
+        return value
+    expression: str = Field(default="neutral", max_length=40)
+    target: str = Field(default="", max_length=120)
+    start_seconds: float = Field(ge=0, le=60)
+    duration_seconds: float = Field(gt=0, le=12)
+
+
+class CameraCue(StrictModel):
+    shot: Literal["wide", "medium", "close"]
+    movement: Literal["locked", "orbit", "dolly"] = "locked"
+    target: str = Field(default="all", max_length=40)
+    start_seconds: float = Field(ge=0, le=60)
+    duration_seconds: float = Field(gt=0, le=60)
+
+
+class SoundCue(StrictModel):
+    kind: Literal["music", "effect", "ambience"]
+    description: str = Field(min_length=1, max_length=240)
+    start_seconds: float = Field(ge=0, le=60)
+    duration_seconds: float = Field(gt=0, le=60)
+    volume: float = Field(default=0.5, ge=0, le=1)
+
+
+class ScenePlan(StrictModel):
+    id: str = Field(min_length=1, max_length=40, pattern=r"^[a-z][a-z0-9_-]*$")
+    title: str = Field(min_length=1, max_length=100)
+    location_id: str = Field(min_length=1, max_length=80, pattern=r"^[a-z][a-z0-9_-]*$")
+    environment_description: str = Field(default="", max_length=1200)
+    lighting: str = Field(default="", max_length=300)
+    transition_to_next: Literal["cut", "fade"] = "cut"
+    duration_seconds: int = Field(ge=30, le=60)
+    character_ids: list[str] = Field(min_length=1, max_length=5)
+    props: list[str] = Field(default_factory=list, max_length=30)
+    dialogue: list[DialogueLine] = Field(default_factory=list, max_length=60)
+    actions: list[ActionCue] = Field(default_factory=list, max_length=80)
+    camera: list[CameraCue] = Field(default_factory=list, max_length=12)
+    audio: list[SoundCue] = Field(default_factory=list, max_length=40)
+
+
+class EpisodePlan(StrictModel):
+    title: str = Field(min_length=1, max_length=100)
+    synopsis: str = Field(min_length=1, max_length=1500)
+    ending: str = Field(default="", max_length=1500)
+    language: Literal["ur", "en"] = "ur"
+    target_duration_seconds: int = Field(default=360, ge=300, le=420)
+    characters: list[CharacterSpec] = Field(min_length=1, max_length=5)
+    scenes: list[ScenePlan] = Field(min_length=5, max_length=7)
+    subtitle_mode: Literal["urdu", "roman_urdu", "english", "none"] = "urdu"
+
+    @model_validator(mode="after")
+    def validate_episode_timeline(self) -> EpisodePlan:
+        character_ids = [character.id for character in self.characters]
+        if len(character_ids) != len(set(character_ids)):
+            raise ValueError("Character IDs must be unique.")
+
+        scene_ids = [scene.id for scene in self.scenes]
+        if len(scene_ids) != len(set(scene_ids)):
+            raise ValueError("Scene IDs must be unique.")
+
+        total_duration = sum(scene.duration_seconds for scene in self.scenes)
+        if not 300 <= total_duration <= 420:
+            raise ValueError("Total episode duration must be between 300 and 420 seconds.")
+        if abs(total_duration - self.target_duration_seconds) > 30:
+            raise ValueError(
+                "Total scene duration must be within 30 seconds of target_duration_seconds."
+            )
+
+        known_characters = set(character_ids)
+        for scene in self.scenes:
+            scene_characters = set(scene.character_ids)
+            if len(scene_characters) != len(scene.character_ids):
+                raise ValueError(f"Scene {scene.id} contains duplicate character IDs.")
+            if not scene_characters.issubset(known_characters):
+                raise ValueError(f"Scene {scene.id} references an unknown character.")
+            for line in scene.dialogue:
+                if line.character_id != "narrator" and line.character_id not in scene_characters:
+                    raise ValueError(f"Scene {scene.id} dialogue references a character not in the scene.")
+                if line.start_seconds + line.duration_seconds > scene.duration_seconds:
+                    raise ValueError(f"Scene {scene.id} has dialogue outside its duration.")
+            action_counts: dict[str, int] = {}
+            for action in scene.actions:
+                if action.character_id not in scene_characters:
+                    raise ValueError(f"Scene {scene.id} action references a character not in the scene.")
+                action_counts[action.character_id] = action_counts.get(action.character_id, 0) + 1
+                if action_counts[action.character_id] > 16:
+                    raise ValueError(f"Scene {scene.id} exceeds 16 animation beats for one character.")
+                if action.start_seconds + action.duration_seconds > scene.duration_seconds:
+                    raise ValueError(f"Scene {scene.id} has an action outside its duration.")
+            for cue in scene.camera:
+                if cue.target != "all" and cue.target not in scene_characters:
+                    raise ValueError(f"Scene {scene.id} camera cue targets a character not in the scene.")
+                if cue.start_seconds + cue.duration_seconds > scene.duration_seconds:
+                    raise ValueError(f"Scene {scene.id} has a camera cue outside its duration.")
+            for cue in scene.audio:
+                if cue.start_seconds + cue.duration_seconds > scene.duration_seconds:
+                    raise ValueError(f"Scene {scene.id} has an audio cue outside its duration.")
+        return self
 
 
 class StoryPromptRequest(StrictModel):
