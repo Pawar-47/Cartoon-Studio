@@ -218,11 +218,11 @@ PRODUCTION RULES:
 - Every scene needs a reusable location_id, character_ids, actions, expressions,
   camera, lighting, props, audio and transition plan.
 - Dialogue must be natural, character-specific and timed within the scene.
-- Include clear physical comedy and visual actions where appropriate; do not rely only on dialogue.
+- Include clear physical comedy and visual actions where appropriate.\n  Do not rely only on dialogue.
 - Use action_id values that can later map to the reusable animation library.
 - Use only wide, medium or close shots and locked, orbit or dolly camera movement.
 - Use only cut or fade scene transitions.
-- Use descriptive stable location slugs such as market_street, town_square, school_yard, park or cafe.\n- VALID ACTION IDS (use only these exact IDs): {action_ids}. Do not invent clip IDs.
+- Use descriptive stable location slugs such as market_street, town_square,\n  school_yard, park or cafe.\n- VALID ACTION IDS (use only these exact IDs): {action_ids}. Do not invent clip IDs.
 - Provide an ending that resolves the episode story.
 - Keep every dialogue, action, camera and audio cue inside its scene duration.
 - Use narrator as character_id only when narration is needed.
