@@ -10,18 +10,116 @@ class StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+LOCATION_CATALOG = {
+    "portrait": "The portrait",
+    "runway": "After hours",
+    "black-box": "Black box",
+    "cyclorama": "White cyclorama",
+    "art-gallery": "Art gallery",
+    "photo-loft": "Photo loft",
+    "office": "Executive office",
+    "open-office": "Open-plan office",
+    "boardroom": "Boardroom",
+    "newsroom": "Newsroom",
+    "recording-studio": "Recording studio",
+    "classroom": "Classroom",
+    "laboratory": "Laboratory",
+    "coworking": "Co-working lounge",
+    "bedroom": "Morning bedroom",
+    "bedroom-night": "Bedroom at night",
+    "living-room": "Living room",
+    "kitchen": "Kitchen",
+    "dining-room": "Dining room",
+    "apartment-loft": "City loft",
+    "home-library": "Home library",
+    "veranda": "Veranda",
+    "beach": "Palm beach",
+    "sunset-beach": "Sunset beach",
+    "resort-pool": "Resort pool",
+    "infinity-pool": "Infinity pool",
+    "hotel-lobby": "Hotel lobby",
+    "rooftop-bar": "Rooftop bar",
+    "spa": "Garden spa",
+    "wedding-garden": "Wedding garden",
+    "restaurant-terrace": "Restaurant terrace",
+    "yacht-deck": "Yacht deck",
+    "street-cafe": "Street café",
+    "alley": "Neon alley",
+    "subway": "Subway platform",
+    "parking-garage": "Parking garage",
+    "diner": "Roadside diner",
+    "warehouse": "Warehouse",
+    "city-rooftop": "City rooftop",
+    "airport-lounge": "Airport lounge",
+    "train-platform": "Railway platform",
+    "boutique": "Fashion boutique",
+    "courtyard": "Golden hour",
+    "urban-park": "City park",
+    "forest-trail": "Forest trail",
+    "campsite": "Lakeside campsite",
+    "desert-outpost": "Desert outpost",
+    "mountain-lake": "Mountain lake",
+    "sports-court": "Basketball court",
+    "harbour": "Harbour promenade",
+    "hospital-room": "Hospital room",
+    "police-station": "Police station",
+    "interrogation-room": "Police interrogation room",
+    "highway": "Highway",
+    "military-base": "Military base",
+    "prison-cell": "Prison cell",
+    "prison-yard": "Prison yard",
+    "public-restroom": "Public restroom",
+    "private-bathroom": "Private bathroom / toilet",
+    "neon-street": "Neon-lit street",
+    "back-alley": "Alley",
+    "football-stadium": "Football stadium",
+    "fine-dining": "Fancy-dining restaurant room",
+    "night-club": "Night club",
+    "elevator": "Elevator",
+    "church": "Church",
+    "train-carriage": "Train carriage",
+    "city-bus": "City bus",
+    "private-jet": "Private jet",
+    "airliner-cabin": "Airliner cabin",
+    "gym": "Gym",
+}
+EXPRESSION_IDS = (
+    "neutral",
+    "happy",
+    "laughing",
+    "angry",
+    "sad",
+    "crying",
+    "surprised",
+    "afraid",
+    "determined",
+)
+ExpressionId = Literal[
+    "neutral",
+    "happy",
+    "laughing",
+    "angry",
+    "sad",
+    "crying",
+    "surprised",
+    "afraid",
+    "determined",
+]
+
+
 class CharacterSpec(StrictModel):
     id: str = Field(min_length=1, max_length=40, pattern=r"^[a-z][a-z0-9_-]*$")
     name: str = Field(min_length=1, max_length=80)
     personality: str = Field(default="", max_length=500)
     voice_profile: str = Field(default="", max_length=80)
+    resting_expression: ExpressionId = "neutral"
     relationships: list[str] = Field(default_factory=list, max_length=12)
 
 
 class DialogueLine(StrictModel):
     character_id: str = Field(min_length=1, max_length=40)
     text: str = Field(min_length=1, max_length=1200)
-    emotion: str = Field(default="neutral", max_length=40)
+    emotion: ExpressionId = "neutral"
     delivery: str = Field(default="natural", max_length=80)
     start_seconds: float = Field(ge=0, le=60)
     duration_seconds: float = Field(gt=0, le=45)
@@ -76,7 +174,7 @@ AVAILABLE_ACTION_IDS = [
 class ActionCue(StrictModel):
     character_id: str = Field(min_length=1, max_length=40)
     action_id: str = Field(min_length=1, max_length=80)
-    expression: str = Field(default="neutral", max_length=40)
+    expression: ExpressionId = "neutral"
     target: str = Field(default="", max_length=120)
     start_seconds: float = Field(ge=0, le=60)
     duration_seconds: float = Field(gt=0, le=12)
@@ -108,7 +206,7 @@ class SoundCue(StrictModel):
 class ScenePlan(StrictModel):
     id: str = Field(min_length=1, max_length=40, pattern=r"^[a-z][a-z0-9_-]*$")
     title: str = Field(min_length=1, max_length=100)
-    location_id: str = Field(min_length=1, max_length=80, pattern=r"^[a-z][a-z0-9_-]*$")
+    location_id: str = Field(min_length=1, max_length=80)
     environment_description: str = Field(default="", max_length=1200)
     lighting: str = Field(default="", max_length=300)
     transition_to_next: Literal["cut", "fade"] = "cut"
@@ -119,6 +217,13 @@ class ScenePlan(StrictModel):
     actions: list[ActionCue] = Field(default_factory=list, max_length=80)
     camera: list[CameraCue] = Field(default_factory=list, max_length=12)
     audio: list[SoundCue] = Field(default_factory=list, max_length=40)
+
+    @field_validator("location_id")
+    @classmethod
+    def validate_location_id(cls, value: str) -> str:
+        if value not in LOCATION_CATALOG:
+            raise ValueError("Location ID is not in the production scene catalog.")
+        return value
 
 
 class EpisodePlan(StrictModel):
@@ -209,6 +314,10 @@ def build_story_prompt(request: StoryPromptRequest) -> str:
     schema = json.dumps(EpisodePlan.model_json_schema(), ensure_ascii=False, indent=2)
     characters = ", ".join(request.character_names) or "Create an original small recurring cast."
     action_ids = ", ".join(AVAILABLE_ACTION_IDS)
+    location_catalog = "\\n".join(
+        f"- {location_id}: {name}" for location_id, name in LOCATION_CATALOG.items()
+    )
+    expression_ids = ", ".join(EXPRESSION_IDS)
     continuity = request.continuity_notes or (
         "Preserve established character identities and relationships."
     )
@@ -245,8 +354,8 @@ PRODUCTION RULES:
 - Use action_id values that can later map to the reusable animation library.
 - Use only wide, medium or close shots and locked, orbit or dolly camera movement.
 - Use only cut or fade scene transitions.
-- Use descriptive stable location slugs such as market_street, town_square,
-  school_yard, park or cafe.
+- Use only exact location_id values from the production location catalog below.
+- Use only these exact expression IDs: {expression_ids}.
 - VALID ACTION IDS (use only these exact IDs):
   {action_ids}
   Do not invent clip IDs.

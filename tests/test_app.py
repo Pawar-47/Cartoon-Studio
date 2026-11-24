@@ -16,7 +16,7 @@ def valid_episode_plan():
             {
                 "id": f"scene-{number}",
                 "title": f"Scene {number}",
-                "location_id": "market-street",
+                "location_id": "street-cafe",
                 "duration_seconds": 60,
                 "character_ids": ["ali", "bilu"],
                 "dialogue": [
@@ -97,6 +97,7 @@ def test_story_prompt_builder_returns_schema():
     assert response.status_code == 200
     assert "Pakistani Urdu" in response.json()["prompt"]
     assert "walk" in response.json()["prompt"]
+    assert "street-cafe" in response.json()["prompt"]
     assert "properties" in response.json()["schema"]
 
 
@@ -146,5 +147,19 @@ def test_story_plan_rejects_more_than_seven_scenes():
 def test_story_plan_rejects_unknown_animation_clip():
     plan = valid_episode_plan()
     plan["scenes"][0]["actions"][0]["action_id"] = "made_up_animation"
+    response = client.post("/api/story-plans/validate", json=plan)
+    assert response.status_code == 422
+
+
+def test_story_plan_rejects_unknown_location_id():
+    plan = valid_episode_plan()
+    plan["scenes"][0]["location_id"] = "imaginary-market"
+    response = client.post("/api/story-plans/validate", json=plan)
+    assert response.status_code == 422
+
+
+def test_story_plan_rejects_unknown_expression():
+    plan = valid_episode_plan()
+    plan["scenes"][0]["actions"][0]["expression"] = "excited"
     response = client.post("/api/story-plans/validate", json=plan)
     assert response.status_code == 422
