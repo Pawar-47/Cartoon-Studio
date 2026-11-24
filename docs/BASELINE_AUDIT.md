@@ -3,79 +3,109 @@
 **Audit date:** 2026-11-25  
 **Repository:** https://github.com/Pawar-47/Cartoon-Studio  
 **Branch:** main  
-**Audited HEAD:** c55d77c446b75ce1f86cf839fb1ccb9e06346608
+**Audited HEAD:** 40bec8c423e953a0753c62f53c8a173274ac72e1
 
-## 1. Repository state
+## 1. Repository and Git state
 
-The repository is no longer empty. It contains:
-- FastAPI application shell and SQLite-backed project metadata.
-- Static dashboard and Story Generator pages.
-- Episode-plan schema, prompt builder, validation and project save/load.
-- GitHub Actions Windows validation and bootstrap ZIP packaging.
-- Project specification, agent instructions, master plan, architecture, research, licensing, registry, traceability and status documents.
-- A pinned Ara 3D Gen proof workflow and a patch script. Ara source is cloned only inside the workflow; it is not integrated into the application or committed as a vendored production engine.
+- The GitHub repository is public; default branch is `main`.
+- Branch search returned only `main`.
+- The latest commit is `40bec8c423e953a0753c62f53c8a173274ac72e1` (2026-11-24 21:06:56 UTC), updating `AGENTS.md` with the complete document-reading gate and upstream patch review requirements.
+- The recent history includes the Story Plan schema/catalog validation, prompt catalog inclusion, CI and checkpoint documentation. No code change after the latest app CI is required to explain the green run: run #52 tested the current HEAD.
+- The project remains in the original repository. No reset, replacement or migration was performed.
 
-Only the `main` branch was present at audit time. No pull requests or issues were open.
+## 2. Current application source
 
-## 2. Latest verified application CI
+Confirmed from current `main`:
 
-Latest run at audit time:
-- Run: https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45486332959
-- Workflow: Cartoon Studio CI, run 45.
-- Commit: `c55d77c446b75ce1f86cf839fb1ccb9e06346608`.
-- Result: SUCCESS.
-- Completed steps: dependency setup, Ruff lint, Python compile, pytest, Windows bootstrap ZIP packaging and artifact upload.
+- `app/main.py`: FastAPI app, SQLite project metadata, health/status endpoints, project create/list, story prompt, story-plan validation and save/load.
+- `app/story.py`: strict Pydantic episode schema; 5–7 scenes; 300–420 seconds; up to five characters; timed dialogue, action, camera and audio cues; exact location, expression and action ID validation; prompt builder includes the current catalogs and Urdu instructions.
+- `app/static/`: dashboard and Story Generator UI.
+- `tests/test_app.py`: 12 tests covering health, routes, projects, prompt/schema, save/load, duration, seven scenes and invalid catalog references.
+- `.github/workflows/ci.yml`: Windows Python lint, compile, pytest, bootstrap ZIP and artifact upload.
+- `.github/workflows/ara-foundation-proof.yml`: pinned upstream Ara Windows proof; it clones Ara at a fixed SHA and applies the tracked patch script. It does not integrate Ara into the product.
 
-The preceding run 44 recorded 10 passing tests and one non-fatal deprecation warning. Run 45 is green, but this does not establish 3D production readiness or a successful installation on the target PC.
+## 3. Current Cartoon Studio CI — run #52
 
-## 3. Existing application capabilities
+Run: https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45487769827  
+Run ID: `45487769827`  
+Head SHA: `40bec8c423e953a0753c62f53c8a173274ac72e1`  
+Job: `test-and-package-windows`  
+Conclusion: **success**.
 
-| Area | Actual current state |
+Verified job steps: dependency installation, Ruff lint, Python compile, pytest (12 passed, one Starlette/httpx deprecation warning), Windows bootstrap ZIP packaging and artifact upload.
+
+Artifact:
+- Name: `Cartoon-Studio-Windows-Bootstrap`
+- ID: `14963389016`
+- Size: 74,228 bytes
+- SHA-256: `423371c438c3b07a5b2aa3c38f6b26768078ffb1611e96b72d3c08a2e189d0ea`
+- Expires: 2026-12-08 21:07:29 UTC
+
+This artifact is a bootstrap ZIP containing source and a launcher. It is not a self-contained installer, production engine or completed application.
+
+## 4. Ara proof — run #6 actual outcome
+
+Run: https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45486950450  
+Run ID: `45486950450`  
+Tested Cartoon Studio commit: `3beb546b63e9a0a07e1459ea4f4e3ea26d6d41d6`  
+Pinned upstream: `olatunde85/3d-gen@4151c1124b172fdd918d23e0ef4aad727f4984c1`  
+Job: `Build and test pinned Ara 3D Studio upstream`  
+Conclusion: **cancelled**, not success.
+
+Completed before cancellation:
+- Upstream clone and dependency installation.
+- CC0 asset preparation (including the upstream setup-assets process).
+- Cartoon Studio patch application and `git diff --check`.
+- TypeScript type-check.
+- Film model checks: seven-scene limit, film JSON, timing, editing and related assertions.
+- Browser checks for adding scenes, per-scene sets/names/transitions, continuous playback, reload/save, and scene-strip duplication/reordering/deletion up to seven.
+
+The job was cancelled during the browser-level two-scene MP4 export test. Studio-wide checks, Vite build and proof artifact upload were skipped. The run has no artifacts. The logs do not establish why the export did not finish before cancellation; that remains an investigation item, not a proven upstream defect.
+
+Ara is still a candidate only. Neither the type-check nor partial browser checks approve it as the production engine.
+
+## 5. Evidence boundaries and limitations
+
+- The GitHub connector exposed branch search, commit history, selected run jobs/logs and artifacts. It did not expose a complete paginated Actions run listing in this audit. Therefore this document reports the explicitly inspected run #52 and Ara run #6, and does not claim that every historical or currently active run was enumerated.
+- The combined commit status endpoint for the current HEAD returned no status records; run #52 itself is directly verified through its job and artifact records.
+- No target-PC installation, Intel HD 5500 performance measurement, real final MP4 from Cartoon Studio, Urdu TTS, Urdu lip-sync or end-to-end production render has been verified.
+
+## 6. Actual capability baseline
+
+| Area | Current evidence-backed state |
 |---|---|
-| Dashboard | Static browser dashboard served by FastAPI |
-| Local projects | Create/list projects using SQLite |
-| Story prompt | Builds a structured prompt for manual use in an external AI app |
-| AI integration | Manual copy/paste handoff only; no direct provider integration |
-| Episode schema | Pydantic schema with timed scenes, dialogue, actions, camera and audio cues |
-| Validation | Checks episode duration, scene count, references and timing |
-| Story persistence | Saves/loads a validated story plan against a local project |
-| 3D editor | Not integrated |
-| Characters/world | No persistent 3D character or world builder yet |
-| Urdu TTS/lip-sync | Not implemented or verified |
-| Final rendering | No end-to-end episode renderer or MP4 production pipeline in Cartoon Studio |
-| Windows delivery | Bootstrap ZIP only; not a self-contained installer |
-| Target PC | No actual installation or performance benchmark recorded |
+| Dashboard | FastAPI-served static dashboard |
+| Projects | SQLite create/list metadata |
+| Story Generator | Prompt construction and manual external-AI handoff |
+| Episode schema | Pydantic schema with duration, scene, cast and cue validation |
+| Catalog validation | Location/action/expression IDs checked against candidate production catalogs |
+| Story persistence | Validated JSON save/load per project |
+| Direct AI generation | Not integrated |
+| Character Studio | Not implemented |
+| Persistent world builder | Not implemented |
+| Animation/timeline editor | Not integrated into Cartoon Studio |
+| Urdu TTS / lip-sync | Not implemented or verified |
+| Production renderer | Not integrated |
+| Final MP4 pipeline | Not implemented in Cartoon Studio |
+| Windows delivery | Bootstrap ZIP only |
+| Target PC | No actual install or performance benchmark |
 
-The Story Generator is a prompt-and-validation workflow. It does not itself generate a story through an AI service or convert a story into a rendered episode.
+Catalog validation currently uses Ara-derived identifiers. This is useful input validation, but it couples the schema to an unapproved candidate and does not prove an engine adapter or real animation playback.
 
-## 4. Open-source foundation investigation already present
+## 7. Phase and process assessment
 
-Ara 3D Gen is documented as the leading candidate, pinned at:
-`olatunde85/3d-gen@4151c1124b172fdd918d23e0ef4aad727f4984c1`.
+The master plan's Phase 0 exit gate is not met:
+1. Registry and traceability do not yet decompose every distinct specification requirement into a fully evidenced row.
+2. Comparative research remains incomplete across toon character creation, persistent world assets, animation/retargeting, render compatibility, audio, Urdu lip-sync, packaging and AI provider terms.
+3. Target-hardware and Urdu TTS feasibility remain unproven.
+4. Architecture is provisional; no production engine has been selected.
 
-Existing research records a character/scene editor, procedural sets, animation/timeline, project save/import and browser MP4 export. It also records important constraints: early-preview maturity, MakeHuman-derived default character assets, CMU motion-data terms, five-scene upstream cap, and built-in Supertonic voices lacking Urdu support.
+Therefore Phase 0 remains active. Do not begin engine-dependent production feature work or integrate Ara until the master-plan gate is met. Continue the highest-priority Phase 0 work in complete documentation/research batches, and keep the existing app foundation intact.
 
-A Windows proof workflow is currently present. At audit time its latest run (run 5, ID `45486108974`) had completed clone, dependency installation, CC0 asset preparation, patch application, diff check and TypeScript typecheck; the seven-scene film test was still in progress. The run was already active before this baseline-planning batch. No new proof run is being started here.
+## 8. Preservation rules
 
-The patch script currently expands Ara's five-scene cap to seven and adjusts the inspector layout. This is a candidate-specific experiment, not an approved production architecture. It must not trigger integration automatically if the proof passes.
-
-## 5. Process and planning defects found
-
-1. **Excessive micro-commits:** the recent history contains a dense sequence of narrowly scoped commits and repeated CI runs within a short period. This conflicts with the required coherent-batch policy.
-2. **Premature candidate coupling:** the Story Generator's action IDs currently follow the Ara candidate's animation catalog even though Ara has not passed the final adoption gate. The production story schema should ultimately use a stable Cartoon Studio action vocabulary with engine-specific adapters.
-3. **Research coverage is incomplete:** current records emphasize the 3D editor and a small set of Urdu TTS candidates. They do not yet demonstrate complete comparative research across character creation/rigging, toon rendering, persistent world assets, animation retargeting, facial animation, lip-sync, Blender/alternative rendering, audio, packaging and free AI-provider constraints.
-4. **Traceability is partial:** the current registry is a useful starting list, but requirement decomposition does not yet prove that every distinct requirement and sub-requirement in the full specification has an ID, dependencies, implementation path, test and evidence.
-5. **Architecture is provisional:** FastAPI/static UI/SQLite is an initial project shell. The production 3D engine, render orchestration, asset pipeline, voice stack and packaging strategy are not yet frozen.
-6. **Acceptance evidence is incomplete:** green Python CI does not prove 3D rendering, Urdu voice quality, lip-sync, MP4 quality, low-end hardware performance or a Windows installation.
-
-## 6. Preservation rules
-
-- Preserve all existing source, tests, documentation and research.
-- Do not reset the repository or replace the current application shell.
-- Do not delete the Ara proof workflow or patch script during this planning correction; retain them as candidate research artifacts until the P0 evaluation decides their fate.
-- Do not integrate Ara, bind the permanent story schema to Ara, or build dependent character/world features until the P0 architecture gate is passed.
-- Do not call the bootstrap ZIP a final installer or the current application a complete cartoon studio.
-
-## 7. Baseline conclusion
-
-The repository has a useful initial application and CI foundation, but the project is still at the planning/research-to-foundation boundary. The next work is governance and evidence completion—not another feature sprint. Phase 0 must be completed and frozen before production implementation proceeds.
+- Preserve all current application source, tests, docs, Ara proof workflow and patch script.
+- Do not reset the repository or replace the application shell.
+- Do not promote Ara from candidate to selected engine based on partial checks.
+- Do not call the bootstrap ZIP a final installer.
+- Do not mark requirements VERIFIED from code presence or unrelated CI success.
