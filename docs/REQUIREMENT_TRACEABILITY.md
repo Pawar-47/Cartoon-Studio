@@ -4,7 +4,7 @@ This matrix records only source/test/evidence relationships that have been inspe
 
 | Requirement IDs | Area | Implementation | Test/evidence | Status / limitation |
 |---|---|---|---|---|
-| GIT-001/002 | Repository governance | Pawar-47/Cartoon-Studio, main | Current HEAD `40bec8c423e953a0753c62f53c8a173274ac72e1`; commit history and branch search | IN PROGRESS |
+| GIT-001/002 | Repository governance | Pawar-47/Cartoon-Studio, main | Code-audited source baseline commit `40bec8c423e953a0753c62f53c8a173274ac72e1`; subsequent commits reconciled checkpoint documents on `main` | IN PROGRESS |
 | GIT-003 | CI/CD validation | `.github/workflows/ci.yml` | Run `45487769827`: Ruff, compile, pytest and package all passed | TESTED |
 | GIT-004 | Windows bootstrap artifact | Windows bootstrap ZIP | Artifact `14963389016` from run `45487769827`; SHA-256 recorded in TEST_REPORT | TESTED; not final installer |
 | APP-001 | Browser interface | `app/static/index.html`, `styles.css`, `app.js` | Dashboard route test in `tests/test_app.py`, run `45487769827` | TESTED |
