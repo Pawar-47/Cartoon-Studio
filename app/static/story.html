@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#10151d"><title>Story Generator · Cartoon Studio</title>
+<link rel="stylesheet" href="/static/styles.css"><link rel="stylesheet" href="/static/story.css">
+</head>
+<body>
+<main class="story-page">
+<header class="story-header"><div><a class="back-link" href="/">← Dashboard</a><span class="eyebrow">EPISODE WORKSHOP</span><h1>Story Generator</h1><p>Prepare a structured episode prompt, use any AI service, then validate and save its production plan.</p></div><span class="pill">Local-first · Manual AI handoff</span></header>
+<div class="story-grid">
+<section class="panel">
+ <span class="eyebrow">01 / STORY BRIEF</span><h2>What should happen?</h2>
+ <form id="brief-form">
+  <label>Story idea<textarea id="idea" rows="5" required minlength="5" maxlength="2000" placeholder="دو دوست بازار جاتے ہیں، ایک غلط فہمی پیدا ہوتی ہے اور پھر مزاحیہ صورتحال بن جاتی ہے۔"></textarea></label>
+  <div class="form-grid">
+   <label>Dialogue language<select id="language"><option value="ur">Urdu (Pakistani Urdu)</option><option value="en">English</option></select></label>
+   <label>Episode length<select id="duration"><option value="300">5 minutes</option><option value="360" selected>6 minutes</option><option value="420">7 minutes</option></select></label>
+   <label>Tone<select id="tone"><option value="comedy">Comedy</option><option value="adventure">Adventure</option><option value="family">Family</option><option value="mystery">Mystery</option><option value="educational">Educational</option></select></label>
+   <label>Audience<select id="audience"><option value="family">Family</option><option value="children">Children</option><option value="general">General</option></select></label>
+  </div>
+  <label>Recurring character names <small>One name per line; optional</small><textarea id="characters" rows="3" placeholder="Ali&#10;Bilu"></textarea></label>
+  <label>Continuity notes <small>Optional details about established characters and previous episodes</small><textarea id="continuity" rows="3" maxlength="2000" placeholder="Keep character personalities and relationships consistent."></textarea></label>
+  <button type="submit" id="build-prompt">Build AI prompt</button>
+ </form>
+</section>
+<section class="panel">
+ <span class="eyebrow">02 / AI HANDOFF</span><h2>Copy prompt to your AI app</h2>
+ <p class="helper">Use FreeMilk, Gemini, ChatGPT, Claude or another provider. This app does not pretend to call a service unless an official integration is configured.</p>
+ <textarea id="prompt-output" rows="15" readonly placeholder="Your complete story-generation prompt will appear here."></textarea>
+ <div class="button-row"><button id="copy-prompt" class="secondary" disabled>Copy prompt</button><span id="prompt-status" class="inline-status"></span></div>
+</section>
+<section class="panel plan-panel">
+ <span class="eyebrow">03 / PRODUCTION PLAN</span><h2>Paste the AI's JSON response</h2>
+ <p class="helper">Paste the complete JSON object. The validator checks episode length, scene timing, character references, dialogue and animation cue timing.</p>
+ <textarea id="plan-json" rows="14" spellcheck="false" placeholder='{"title":"...","synopsis":"...","language":"ur","target_duration_seconds":360,"characters":[...],"scenes":[...]} '></textarea>
+ <div class="button-row"><button id="validate-plan">Validate plan</button><span id="validation-status" class="inline-status"></span></div>
+ <div id="plan-summary" class="plan-summary" hidden></div>
+ <div class="save-row"><label>Save to project<select id="project-select"><option value="">Choose a project…</option></select></label><button id="save-plan" disabled>Save episode plan</button></div>
+</section>
+</div>
+<footer>Story plans are saved locally in this Cartoon Studio installation. AI usage limits and provider terms remain controlled by the provider you choose.</footer>
+</main>
+<script src="/static/story.js"></script>
+</body></html>

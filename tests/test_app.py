@@ -56,6 +56,12 @@ def test_health_endpoint():
     assert response.json()["status"] == "ok"
 
 
+def test_story_builder_is_served():
+    response = client.get("/story")
+    assert response.status_code == 200
+    assert "Story Generator" in response.text
+
+
 def test_dashboard_is_served():
     response = client.get("/")
     assert response.status_code == 200
