@@ -158,21 +158,29 @@ class EpisodePlan(StrictModel):
                 raise ValueError(f"Scene {scene.id} references an unknown character.")
             for line in scene.dialogue:
                 if line.character_id != "narrator" and line.character_id not in scene_characters:
-                    raise ValueError(f"Scene {scene.id} dialogue references a character not in the scene.")
+                    raise ValueError(
+                        f"Scene {scene.id} dialogue references a character not in the scene."
+                    )
                 if line.start_seconds + line.duration_seconds > scene.duration_seconds:
                     raise ValueError(f"Scene {scene.id} has dialogue outside its duration.")
             action_counts: dict[str, int] = {}
             for action in scene.actions:
                 if action.character_id not in scene_characters:
-                    raise ValueError(f"Scene {scene.id} action references a character not in the scene.")
+                    raise ValueError(
+                        f"Scene {scene.id} action references a character not in the scene."
+                    )
                 action_counts[action.character_id] = action_counts.get(action.character_id, 0) + 1
                 if action_counts[action.character_id] > 16:
-                    raise ValueError(f"Scene {scene.id} exceeds 16 animation beats for one character.")
+                    raise ValueError(
+                        f"Scene {scene.id} exceeds 16 animation beats for one character."
+                    )
                 if action.start_seconds + action.duration_seconds > scene.duration_seconds:
                     raise ValueError(f"Scene {scene.id} has an action outside its duration.")
             for cue in scene.camera:
                 if cue.target != "all" and cue.target not in scene_characters:
-                    raise ValueError(f"Scene {scene.id} camera cue targets a character not in the scene.")
+                    raise ValueError(
+                        f"Scene {scene.id} camera cue targets a character not in the scene."
+                    )
                 if cue.start_seconds + cue.duration_seconds > scene.duration_seconds:
                     raise ValueError(f"Scene {scene.id} has a camera cue outside its duration.")
             for cue in scene.audio:
