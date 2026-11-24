@@ -1,11 +1,10 @@
 # Next Steps
 
-1. Inspect the latest Actions run for lint, compile, tests and ZIP packaging; repair any failure before expanding the app.
-2. Complete source-level audit of Ara 3D Gen, Ekza Studio and DvaitAI anim-studio.
-3. Inspect Ara's Studio and character modules, asset provenance, runtime size and build/test requirements.
-4. Verify Urdu TTS model card, model-weight license and practical CPU inference.
-5. Verify Rhubarb Lip Sync NG source/release license and Urdu cue suitability.
-6. Search further for original cartoon-style low-poly characters, sets, vehicles, props and CC0 motion libraries.
-7. Build a small 3D preview and Blender CPU-render proof before committing to the production engine.
-8. Implement the first real 3D asset preview/import capability as a coherent batch.
-9. Add a true Windows installer only after the production runtime dependencies and size are understood.
+1. Verify the newest Windows Actions run: Ruff, compile, pytest, package and artifact upload. Fix all failures before new features.
+2. Complete the Ara 3D Gen Windows build proof. Inspect source/license and generated assets. Benchmark browser preview and MP4 export at low resolution.
+3. Decide whether to pin Ara as a submodule/upstream dependency and maintain Cartoon Studio patches in this repository.
+4. If adopted, plan changes for toon-style characters/materials, persistent project storage, 7 scenes (at least 5–7 minutes), low-hardware render preset and external Urdu TTS adapter.
+5. Verify Urdu TTS models and licenses. Benchmark Smol Urdu TTS and other candidates; do not select based on model-card claims alone.
+6. Verify Rhubarb source/release license and Urdu cue behavior.
+7. Add a real 3D preview and GLB asset import only after the upstream foundation decision.
+8. Create a true Windows installer after production dependencies and their sizes are known.

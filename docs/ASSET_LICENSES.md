@@ -1,12 +1,20 @@
 # Asset and Dependency License Register
-No external project code has been copied into this repository in the bootstrap batch.
 
-| Project | Source | License evidence | Decision |
+No third-party source project has yet been copied into this repository.
+
+| Project / asset | Source | License evidence | Current decision |
 |---|---|---|---|
-| Ara 3D Gen | https://github.com/olatunde85/3d-gen | Source LICENSE says MIT; MakeHuman data CC0; remaining downloaded assets need review | Research only |
+| Ara 3D Gen source | https://github.com/olatunde85/3d-gen | Repository LICENSE says MIT | Candidate only; no code copied |
+| Ara MakeHuman character data | Ara scripts/ASSETS_LICENSE.txt | CC0 1.0, attribution not required under CC0 | Potential reuse after checking each asset |
+| Ara CMU motion data | Ara scripts/ASSETS_LICENSE.txt and CMU terms | Commercial use allowed; direct resale, including converted data, prohibited; acknowledgement required | Preserve acknowledgement; do not sell/resell motion data directly |
+| Ara Supertonic 2 weights | https://huggingface.co/Supertone/supertonic-2 | OpenRAIL-M; only five listed languages, no Urdu | Do not use for Urdu; no model bundling decision |
 | Ekza Studio | https://github.com/ekza-space/ekza-studio | Main MIT; anim-core Apache-2.0; fixtures separately licensed | Research only |
 | DvaitAI anim-studio | https://github.com/DvaitAI-tech/anim-studio | GitHub API reports MIT | Research only |
-| AnimStudio | https://github.com/Sheggyb/AnimStudio | AGPL-3.0-or-later | Reference only |
-| Urdu TTS | https://github.com/ahmedHanzala/urdu-tts | README says MIT code; separate weights license unresolved | Research only |
+| AnimStudio | https://github.com/Sheggyb/AnimStudio | AGPL-3.0-or-later | Reference only pending copyleft review |
+| Smol Urdu TTS | https://huggingface.co/ProximaAI/smol-urdu-tts-v1 | Apache-2.0 model card | Experimental; validate dependencies and model card |
+| tiny-urdu | https://github.com/Zafar205/tiny-urdu | No explicit repository license found; dataset UrduTTS is CC-BY-NC 4.0 | Do not redistribute pending rights clarification |
+| DeepSpeak-v1 | https://huggingface.co/mahwizzzz/deepspeak-v1 | Apache-2.0 stated; codec weights have separate license | Research only |
+| Dia-1.6B-Urdu | https://huggingface.co/mahwizzzz/Dia-1.6B-Urdu | Verify complete model/data license | Not selected |
+| XTTS-v2 Urdu fine-tune | https://huggingface.co/suhaibrashid17/XTTS-v2-Urdu-FT | Model card says MIT; upstream XTTS base is Coqui Public Model License | Derivative rights unresolved |
 
-Before integrating code, models, voices, textures, animations or datasets, record exact version, source URL, author, license text/reference, attribution, modification and redistribution conditions.
+For every future code/model/voice/texture/animation/dataset, record exact version, author, source, license text, attribution, commercial rights, modifications, redistribution conditions and checksum before adoption.
