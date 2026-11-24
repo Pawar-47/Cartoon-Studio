@@ -15,6 +15,8 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from app.story import EpisodePlan, StoryPromptRequest, build_story_prompt
+
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = Path(os.environ.get("CARTOON_STUDIO_DATA", ROOT / "data"))
 DB_PATH = DATA_DIR / "cartoon_studio.sqlite3"
@@ -39,6 +41,16 @@ def initialize_database() -> None:
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
                 metadata_json TEXT NOT NULL DEFAULT '{}'
+            )
+            """
+        )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS story_plans (
+                project_id TEXT PRIMARY KEY,
+                plan_json TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY(project_id) REFERENCES projects(id)
             )
             """
         )
@@ -104,6 +116,65 @@ def status() -> dict[str, Any]:
             "research-backed 3D preview and character-animation foundation"
         ),
     }
+
+
+@app.post("/api/story-prompts")
+def create_story_prompt(payload: StoryPromptRequest) -> dict[str, Any]:
+    return {
+        "prompt": build_story_prompt(payload),
+        "schema": EpisodePlan.model_json_schema(),
+    }
+
+
+@app.post("/api/story-plans/validate", response_model=EpisodePlan)
+def validate_story_plan(plan: EpisodePlan) -> EpisodePlan:
+    return plan
+
+
+@app.put("/api/projects/{project_id}/story")
+def save_story_plan(project_id: str, plan: EpisodePlan) -> dict[str, Any]:
+    initialize_database()
+    now = datetime.now(UTC).isoformat()
+    plan_json = json.dumps(plan.model_dump(mode="json"), ensure_ascii=False)
+    with connect_db() as connection:
+        project = connection.execute(
+            "SELECT id FROM projects WHERE id = ?", (project_id,)
+        ).fetchone()
+        if project is None:
+            raise HTTPException(status_code=404, detail="Project not found.")
+        connection.execute(
+            """
+            INSERT INTO story_plans(project_id, plan_json, updated_at)
+            VALUES (?, ?, ?)
+            ON CONFLICT(project_id) DO UPDATE SET
+                plan_json = excluded.plan_json,
+                updated_at = excluded.updated_at
+            """,
+            (project_id, plan_json, now),
+        )
+    return {"project_id": project_id, "updated_at": now, "plan": plan.model_dump(mode="json")}
+
+
+@app.get("/api/projects/{project_id}/story")
+def get_story_plan(project_id: str) -> dict[str, Any]:
+    initialize_database()
+    with connect_db() as connection:
+        row = connection.execute(
+            "SELECT plan_json, updated_at FROM story_plans WHERE project_id = ?",
+            (project_id,),
+        ).fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="No story plan saved for this project.")
+    return {
+        "project_id": project_id,
+        "updated_at": row["updated_at"],
+        "plan": json.loads(row["plan_json"]),
+    }
+
+
+@app.get("/story", include_in_schema=False)
+def story_builder() -> FileResponse:
+    return FileResponse(STATIC_DIR / "story.html")
 
 
 @app.get("/api/projects", response_model=list[ProjectRecord])
