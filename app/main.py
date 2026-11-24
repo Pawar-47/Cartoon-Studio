@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import json
 import os
 import sqlite3
@@ -6,10 +7,12 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+
 ROOT=Path(__file__).resolve().parent.parent
 DATA_DIR=Path(os.environ.get("CARTOON_STUDIO_DATA",ROOT/"data"))
 DB_PATH=DATA_DIR/"cartoon_studio.sqlite3"
