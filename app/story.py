@@ -23,7 +23,7 @@ class DialogueLine(StrictModel):
     text: str = Field(min_length=1, max_length=1200)
     emotion: str = Field(default="neutral", max_length=40)
     delivery: str = Field(default="natural", max_length=80)
-    start_seconds: float = Field(ge=0, le=90)
+    start_seconds: float = Field(ge=0, le=60)
     duration_seconds: float = Field(gt=0, le=45)
 
 
@@ -33,12 +33,12 @@ class ActionCue(StrictModel):
     expression: str = Field(default="neutral", max_length=40)
     target: str = Field(default="", max_length=120)
     start_seconds: float = Field(ge=0, le=90)
-    duration_seconds: float = Field(gt=0, le=90)
+    duration_seconds: float = Field(gt=0, le=60)
 
 
 class CameraCue(StrictModel):
-    shot: Literal["wide", "medium", "close", "two_shot", "over_shoulder"]
-    movement: Literal["static", "pan", "tilt", "dolly", "orbit", "tracking"] = "static"
+    shot: Literal["wide", "medium", "close"]
+    movement: Literal["locked", "orbit", "dolly"] = "locked"
     target: str = Field(default="all", max_length=40)
     start_seconds: float = Field(ge=0, le=90)
     duration_seconds: float = Field(gt=0, le=90)
@@ -58,13 +58,13 @@ class ScenePlan(StrictModel):
     location_id: str = Field(min_length=1, max_length=80)
     environment_description: str = Field(default="", max_length=1200)
     lighting: str = Field(default="", max_length=300)
-    transition_to_next: Literal["cut", "fade", "dissolve"] = "cut"
-    duration_seconds: int = Field(ge=30, le=90)
-    character_ids: list[str] = Field(min_length=1, max_length=8)
+    transition_to_next: Literal["cut", "fade"] = "cut"
+    duration_seconds: int = Field(ge=30, le=60)
+    character_ids: list[str] = Field(min_length=1, max_length=5)
     props: list[str] = Field(default_factory=list, max_length=30)
     dialogue: list[DialogueLine] = Field(default_factory=list, max_length=60)
-    actions: list[ActionCue] = Field(default_factory=list, max_length=100)
-    camera: list[CameraCue] = Field(default_factory=list, max_length=20)
+    actions: list[ActionCue] = Field(default_factory=list, max_length=80)
+    camera: list[CameraCue] = Field(default_factory=list, max_length=12)
     audio: list[SoundCue] = Field(default_factory=list, max_length=40)
 
 
@@ -74,8 +74,8 @@ class EpisodePlan(StrictModel):
     ending: str = Field(default="", max_length=1500)
     language: Literal["ur", "en"] = "ur"
     target_duration_seconds: int = Field(default=360, ge=300, le=420)
-    characters: list[CharacterSpec] = Field(min_length=1, max_length=8)
-    scenes: list[ScenePlan] = Field(min_length=5, max_length=12)
+    characters: list[CharacterSpec] = Field(min_length=1, max_length=5)
+    scenes: list[ScenePlan] = Field(min_length=5, max_length=7)
     subtitle_mode: Literal["urdu", "roman_urdu", "english", "none"] = "urdu"
 
     @model_validator(mode="after")
@@ -127,7 +127,7 @@ class StoryPromptRequest(StrictModel):
     target_duration_seconds: int = Field(default=360, ge=300, le=420)
     tone: Literal["comedy", "adventure", "family", "mystery", "educational"] = "comedy"
     audience: Literal["family", "children", "general"] = "family"
-    character_names: list[str] = Field(default_factory=list, max_length=8)
+    character_names: list[str] = Field(default_factory=list, max_length=5)
     continuity_notes: str = Field(default="", max_length=2000)
 
 
@@ -162,7 +162,7 @@ PREFERRED RECURRING CHARACTERS: {characters}
 CONTINUITY NOTES: {continuity}
 
 PRODUCTION RULES:
-- Produce 5 to 12 scenes, each 30 to 90 seconds.
+- Produce 5 to 7 scenes, each 30 to 60 seconds.
 - Total scene duration must be 300 to 420 seconds and within 30 seconds of the target.
 - Use only the supplied character IDs consistently after defining them.
 - Define character relationships and keep them consistent across the episode.
@@ -171,7 +171,7 @@ PRODUCTION RULES:
 - Dialogue must be natural, character-specific and timed within the scene.
 - Include clear physical comedy and visual actions where appropriate; do not rely only on dialogue.
 - Use action_id values that can later map to the reusable animation library.
-- Use camera shots and movement that can be executed by a 3D scene editor.
+- Use only wide, medium or close shots and locked, orbit or dolly camera movement.
 - Provide an ending that resolves the episode story.
 - Keep every dialogue, action, camera and audio cue inside its scene duration.
 - Use narrator as character_id only when narration is needed.
