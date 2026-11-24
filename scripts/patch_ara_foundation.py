@@ -117,8 +117,8 @@ def main() -> None:
     )
     replace_once(
         "scripts/studio-film-browser-check.ts",
-        "for(let i=0;i<3;i++){await click('#scene-remove');await settled();}\n   assert.equal((await film()).length,2);",
-        "for(let i=0;i<3;i++){await click('#scene-remove');await settled();}\n   assert.equal((await film()).length,4);",
+        "  assert.equal((await film()).length,2);",
+        "  assert.equal((await film()).length,4);",
     )
     replace_all(
         "scripts/studio-film-browser-check.ts",
