@@ -32,23 +32,23 @@ class ActionCue(StrictModel):
     action_id: str = Field(min_length=1, max_length=80)
     expression: str = Field(default="neutral", max_length=40)
     target: str = Field(default="", max_length=120)
-    start_seconds: float = Field(ge=0, le=90)
-    duration_seconds: float = Field(gt=0, le=60)
+    start_seconds: float = Field(ge=0, le=60)
+    duration_seconds: float = Field(gt=0, le=12)
 
 
 class CameraCue(StrictModel):
     shot: Literal["wide", "medium", "close"]
     movement: Literal["locked", "orbit", "dolly"] = "locked"
     target: str = Field(default="all", max_length=40)
-    start_seconds: float = Field(ge=0, le=90)
-    duration_seconds: float = Field(gt=0, le=90)
+    start_seconds: float = Field(ge=0, le=60)
+    duration_seconds: float = Field(gt=0, le=60)
 
 
 class SoundCue(StrictModel):
     kind: Literal["music", "effect", "ambience"]
     description: str = Field(min_length=1, max_length=240)
-    start_seconds: float = Field(ge=0, le=90)
-    duration_seconds: float = Field(gt=0, le=90)
+    start_seconds: float = Field(ge=0, le=60)
+    duration_seconds: float = Field(gt=0, le=60)
     volume: float = Field(default=0.5, ge=0, le=1)
 
 
