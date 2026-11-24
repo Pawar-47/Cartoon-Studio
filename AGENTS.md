@@ -12,10 +12,14 @@ Before making any change, read this file completely, then read the complete auth
 6. docs/PROJECT_STATUS.md
 7. docs/GITHUB_RESEARCH.md
 8. docs/OPEN_SOURCE_REUSE_MATRIX.md
-9. docs/HARDWARE_PROFILE.md
-10. docs/ASSET_LICENSES.md
-11. docs/AI_PROVIDERS.md
-12. docs/NEXT_STEPS.md
+9. docs/REPOSITORY_EVALUATION.md
+10. docs/RESEARCH_LOG.md
+11. docs/HARDWARE_PROFILE.md
+12. docs/ASSET_LICENSES.md
+13. docs/AI_PROVIDERS.md
+14. docs/BUILD_AND_INSTALL.md
+15. docs/TEST_REPORT.md
+16. docs/NEXT_STEPS.md
 11. The source and tests of the modules you intend to change.
 
 Do not begin coding after reading only a summary or a few sections. Recheck the relevant registry entries and their dependencies before each implementation batch. Reconcile every requirement with code and tests before marking it complete.
