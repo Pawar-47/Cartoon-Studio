@@ -10,7 +10,7 @@ The pinned upstream source is kept unmodified in its own repository. Cartoon Stu
 ## Patches in scripts/patch_ara_foundation.py
 1. Extend the Studio film limit from 5 to 7 scenes. Each scene remains limited to 60 seconds, giving a 5–7 minute film range.
 2. Increase the JSON film-file limit from 500 KB to 700 KB and update validation messages/tests.
-3. Update user-facing documentation and AI Assist guidance to reflect seven scenes.
+3. Update user-facing documentation, AI Assist, MCP/CLI guides, metadata and the browser scene-strip test to reflect seven scenes.
 4. Compact the right-hand inspector at desktop heights up to 800px. The upstream Windows proof run found the landscape, portrait and title-card controls clipped at 1366x768; the patch addresses this without removing controls.
 
 ## Patch safety
