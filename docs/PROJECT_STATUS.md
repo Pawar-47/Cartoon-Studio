@@ -1,52 +1,61 @@
 # Project Status
 
-**Milestone:** P0 research / P1 application foundation  
+**Milestone:** Phase 0 — requirements, research and architecture freeze (not exited)  
 **Repository:** https://github.com/Pawar-47/Cartoon-Studio  
-**Branch:** main
+**Branch:** main  
+**Current HEAD:** `40bec8c423e953a0753c62f53c8a173274ac72e1`
 
-## Implemented
-- Repository governance, authoritative specification, AGENTS.md and requirement traceability.
+## Implemented and tested foundation
+
 - FastAPI local application shell and SQLite project creation/listing.
-- Lightweight dashboard and local project workspace.
-- Story Generator page with prompt builder for manual use of FreeMilk/other AI apps.
-- Structured episode schema: 5–7 minutes, 5–7 scenes, max 5 characters, timed dialogue/action/camera/audio cues.
-- Exact validation against the pinned Ara scene-location, facial-expression and animation-action catalogs.
-- Story JSON validation and save/load to a local project.
-- GitHub Actions Windows validation and bootstrap ZIP packaging.
-- Public GitHub research and initial licensing evaluation.
+- Static dashboard and Story Generator workspace.
+- Manual external-AI prompt handoff; no direct provider API integration.
+- Strict Pydantic episode schema for 5–7 scenes and 300–420 seconds.
+- Validation of character references, cue timing, location IDs, expression IDs and animation action IDs.
+- Story-plan validation and per-project SQLite save/load.
+- Windows GitHub Actions CI for Ruff, Python compile, pytest and bootstrap ZIP packaging.
 
-## Latest successful application CI
-- Workflow: https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45487439930
-- Commit tested: 3dc006102f7b911c0b24db119f0fc166b5807a41
+Current tests: `tests/test_app.py` — 12 tests. Latest verified run #52 passed all 12 tests.
+
+## Latest successful Cartoon Studio CI
+
+- Run: https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45487769827
+- Run ID: `45487769827`
+- Tested HEAD: `40bec8c423e953a0753c62f53c8a173274ac72e1`
 - Ruff: PASS.
 - Python compile: PASS.
-- pytest: PASS — 12 passed, 1 warning.
-- Windows bootstrap ZIP packaging: PASS.
-- Artifact: Cartoon-Studio-Windows-Bootstrap (ID 14965370345).
-- SHA-256: ffc96c280d403ac6b33a3ea35bacf49c48a1d10fc4bf943925c75db0a09634ce.
+- pytest: PASS — 12 passed, 1 Starlette/httpx deprecation warning.
+- Windows bootstrap ZIP: PASS.
+- Artifact ID: `14963389016`; 74,228 bytes.
+- SHA-256: `423371c438c3b07a5b2aa3c38f6b26768078ffb1611e96b72d3c08a2e189d0ea`.
 
-The artifact is still a bootstrap ZIP, not a standalone installer or complete production studio.
+The artifact is a bootstrap ZIP, not a standalone installer or complete production studio.
 
-## 3D foundation research
-Ara 3D Gen is the leading candidate. The pinned Windows proof has:
-- Cloned the exact upstream commit.
-- Installed dependencies.
-- Prepared original CC0 character assets.
-- Applied the tracked seven-scene/700 KB, documentation, browser-test and compact-inspector patches.
-- Passed patch diff validation.
-- Passed TypeScript type-check.
+## Ara candidate — proof status
 
-The seven-scene browser/MP4 test is currently running. Studio UI checks and Vite build are still pending. Ara is NOT yet accepted or integrated.
+Ara 3D Gen remains unapproved.
 
-## Not implemented
-- Integrated 3D editor and production renderer.
-- Cartoon-style character presets and persistent character assets.
-- Full world builder and persistent environment database.
-- Direct AI provider integrations.
-- Verified Urdu TTS and production-grade Urdu lip-sync.
-- Complete scene-to-MP4 episode pipeline inside Cartoon Studio.
-- Standalone Windows installer.
-- Actual target-PC installation and performance benchmark.
+The latest checkpointed proof, run #6 (`45486950450`), is **cancelled**. Clone, dependencies, asset setup, patches, diff check, type-check, film model checks and several editor browser checks completed. The browser MP4 export test did not complete; Studio checks, Vite build and artifact upload were skipped. No proof artifact exists.
 
-## Next batch
-Complete the Ara Windows proof, inspect its build artifact, then integrate the pinned upstream as a submodule/dependency if all tests pass. Add low-hardware and original cartoon-style rendering adaptations before calling the 3D foundation production-ready.
+Do not describe Ara as integrated, selected or production-ready. Investigate the browser export timeout/cancellation and retain the candidate comparison gate.
+
+## Not implemented / not verified
+
+- Production 3D engine and final renderer.
+- Persistent original Character Studio, rigging and identity management.
+- Persistent world builder and reusable original sets.
+- Engine-neutral animation/action adapter and production timeline.
+- Direct AI provider integrations and verified free-provider quota matrix.
+- Natural Pakistani Urdu TTS, character-specific voice output and production lip-sync.
+- Complete audio, subtitle and scene-to-MP4 pipeline.
+- Persistent render queue, scene cache, retry and crash recovery.
+- Self-contained Windows installer.
+- Actual installation and performance benchmark on Intel i3-5005U / HD 5500 / 8 GB PC.
+
+## Current phase decision
+
+Phase 0 is still active. The registry/traceability coverage is incomplete, open-source research is not yet comprehensive, Urdu voice and target-hardware feasibility are unresolved, and the architecture is provisional. Per `MASTER_PLAN.md`, engine-dependent production work must wait until the Phase 0 exit gate is satisfied.
+
+## Immediate priority
+
+Complete P0.2: decompose every specification requirement and sub-requirement into traceable registry rows with dependencies, code path, test method, evidence and honest status. Then continue P0.3–P0.5 research and architecture decisions. Do not restart or discard the existing application foundation.
