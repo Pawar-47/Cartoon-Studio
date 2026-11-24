@@ -4,6 +4,8 @@ import json
 import os
 import sqlite3
 import uuid
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -17,13 +19,6 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = Path(os.environ.get("CARTOON_STUDIO_DATA", ROOT / "data"))
 DB_PATH = DATA_DIR / "cartoon_studio.sqlite3"
 STATIC_DIR = Path(__file__).resolve().parent / "static"
-
-app = FastAPI(
-    title="Cartoon Studio",
-    description="Local-first original Urdu 3D cartoon studio",
-    version="0.1.0",
-)
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 def connect_db() -> sqlite3.Connection:
@@ -49,9 +44,19 @@ def initialize_database() -> None:
         )
 
 
-@app.on_event("startup")
-def on_startup() -> None:
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     initialize_database()
+    yield
+
+
+app = FastAPI(
+    title="Cartoon Studio",
+    description="Local-first original Urdu 3D cartoon studio",
+    version="0.1.0",
+    lifespan=lifespan,
+)
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 class ProjectCreate(BaseModel):

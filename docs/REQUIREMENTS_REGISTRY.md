@@ -5,29 +5,29 @@ Statuses: NOT REVIEWED, RESEARCH REQUIRED, PLANNED, IN PROGRESS, IMPLEMENTED, PA
 |---|---|---|---|
 | GOV-001 | Read entire specification before coding | Critical | PARTIALLY IMPLEMENTED |
 | GOV-002 | Maintain permanent requirement registry | Critical | IMPLEMENTED |
-| GOV-003 | Trace requirement to architecture, code, test and evidence | Critical | IMPLEMENTED |
-| GOV-004 | Recheck requirements before every major phase, batch and release | Critical | PLANNED |
+| GOV-003 | Trace requirements to architecture, code, tests and evidence | Critical | IMPLEMENTED |
+| GOV-004 | Recheck requirements before every phase, batch and release | Critical | PLANNED |
 | GOV-005 | Never silently omit, downgrade or fake requirements | Critical | PLANNED |
-| GOV-006 | Resume from original spec, registry, code and checkpoints | High | PLANNED |
+| GOV-006 | Resume from specification, registry, code and checkpoints | High | PLANNED |
 | GIT-001 | Use Pawar-47/Cartoon-Studio as source of truth | Critical | IMPLEMENTED |
 | GIT-002 | Develop and maintain source in GitHub | Critical | IN PROGRESS |
-| GIT-003 | GitHub Actions build, test and Windows package | Critical | PARTIALLY IMPLEMENTED |
-| GIT-004 | Produce downloadable Windows artifacts | High | PARTIALLY IMPLEMENTED |
-| GIT-005 | Verify installation on user's PC | Critical | NOT REVIEWED |
+| GIT-003 | GitHub Actions build, test and Windows package | Critical | TESTED |
+| GIT-004 | Produce downloadable Windows artifacts | High | TESTED |
+| GIT-005 | Verify installation on user's Windows PC | Critical | NOT REVIEWED |
 | GIT-006 | Keep episode rendering separate from CI runners | High | PLANNED |
-| OSS-001 | Extensively search public GitHub before building components | Critical | IN PROGRESS |
+| OSS-001 | Search public GitHub extensively before building components | Critical | IN PROGRESS |
 | OSS-002 | Inspect source, docs, releases, issues, activity and dependencies | Critical | RESEARCH REQUIRED |
 | OSS-003 | Verify software, model, dataset and asset licenses | Critical | RESEARCH REQUIRED |
 | OSS-004 | Prefer reuse/integration/adaptation before scratch development | Critical | PLANNED |
-| OSS-005 | Record source, version, author, license and provenance | High | PLANNED |
+| OSS-005 | Record source, version, author, license and provenance | High | IN PROGRESS |
 | HW-001 | Support Intel Core i3-5005U | Critical | PLANNED |
 | HW-002 | Support Intel HD Graphics 5500 without NVIDIA requirement | Critical | PLANNED |
 | HW-003 | Operate within 8 GB RAM using low-memory/sequential processing | Critical | PLANNED |
 | HW-004 | Benchmark actual scenes before performance promises | High | PLANNED |
 | HW-005 | Preview, Low Hardware, Balanced and High Quality presets | High | PLANNED |
-| APP-001 | Lightweight browser-based application | Critical | PARTIALLY IMPLEMENTED |
-| APP-002 | Local backend and persistent SQLite project metadata | High | PARTIALLY IMPLEMENTED |
-| APP-003 | Dashboard, project creation and listing | High | IMPLEMENTED |
+| APP-001 | Lightweight browser-based application | Critical | TESTED |
+| APP-002 | Local backend and persistent SQLite project metadata | High | TESTED |
+| APP-003 | Dashboard, project creation and listing | High | TESTED |
 | APP-004 | Story Generator workspace | High | PLANNED |
 | APP-005 | Character Studio workspace | High | PLANNED |
 | APP-006 | World Builder workspace | High | PLANNED |
@@ -75,9 +75,9 @@ Statuses: NOT REVIEWED, RESEARCH REQUIRED, PLANNED, IN PROGRESS, IMPLEMENTED, PA
 | OFF-002 | No mandatory paid APIs, subscriptions or cloud inference | Critical | PLANNED |
 | LIC-001 | Original or properly licensed creative assets | Critical | PLANNED |
 | LIC-002 | Preserve third-party notices and attribution | Critical | PLANNED |
-| QA-001 | Test app, APIs, projects, rendering and installation | Critical | PLANNED |
+| QA-001 | Test app, APIs, projects, rendering and installation | Critical | PARTIALLY IMPLEMENTED |
 | QA-002 | Inspect rendered frames/videos, not code alone | Critical | PLANNED |
-| QA-003 | Record actual CI and test evidence | Critical | PLANNED |
+| QA-003 | Record actual CI and test evidence | Critical | TESTED |
 | REL-001 | Persistent job queue, autosave and crash recovery | High | PLANNED |
 | REL-002 | Monitor memory, disk, failures and safe cancellation | High | PLANNED |
 | REL-003 | Preserve checkpoints and avoid destructive resets | Critical | PLANNED |
