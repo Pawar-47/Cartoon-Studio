@@ -46,6 +46,7 @@ Statuses: NOT REVIEWED, RESEARCH REQUIRED, PLANNED, IN PROGRESS, IMPLEMENTED, PA
 | ANIM-001 | Reusable body animation library | Critical | PLANNED |
 | ANIM-002 | Facial expressions, blinking, talking and gestures | High | PLANNED |
 | ANIM-003 | Smooth transitions, blending and retargeting | High | PLANNED |
+| ANIM-004 | Validate story action IDs against the pinned production animation catalog | High | TESTED |
 | STORY-001 | One-prompt original story generation in Urdu or English | Critical | PARTIALLY IMPLEMENTED |
 | STORY-002 | Title, summary, cast, scenes, actions, camera and audio plan | High | PARTIALLY IMPLEMENTED |
 | STORY-003 | Natural conversational Pakistani Urdu | Critical | PARTIALLY IMPLEMENTED |
