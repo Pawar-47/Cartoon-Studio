@@ -105,10 +105,20 @@ def main() -> None:
         "for(let i=0;i<2;i++){await click('#scene-add');await settled();}",
         "for(let i=0;i<4;i++){await click('#scene-add');await settled();}",
     )
-    replace_once(
+    replace_all(
         "scripts/studio-film-browser-check.ts",
         "assert.equal((await film()).length,5);",
         "assert.equal((await film()).length,7);",
+    )
+    replace_once(
+        "scripts/studio-film-browser-check.ts",
+        "await click('#scene-remove');await settled();assert.equal((await film()).length,4);",
+        "await click('#scene-remove');await settled();assert.equal((await film()).length,6);",
+    )
+    replace_once(
+        "scripts/studio-film-browser-check.ts",
+        "assert.equal((await film()).length,2);",
+        "assert.equal((await film()).length,4);",
     )
     replace_all(
         "scripts/studio-film-browser-check.ts",
