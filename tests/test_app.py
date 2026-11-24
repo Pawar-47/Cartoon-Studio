@@ -38,7 +38,7 @@ def valid_episode_plan():
                 "camera": [
                     {
                         "shot": "wide",
-                        "movement": "static",
+                        "movement": "locked",
                         "start_seconds": 0,
                         "duration_seconds": 10,
                     }
