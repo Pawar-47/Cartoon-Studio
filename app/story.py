@@ -73,10 +73,13 @@ AVAILABLE_ACTION_IDS = [
 ]
 
 
-
 class ActionCue(StrictModel):
     character_id: str = Field(min_length=1, max_length=40)
     action_id: str = Field(min_length=1, max_length=80)
+    expression: str = Field(default="neutral", max_length=40)
+    target: str = Field(default="", max_length=120)
+    start_seconds: float = Field(ge=0, le=60)
+    duration_seconds: float = Field(gt=0, le=12)
 
     @field_validator("action_id")
     @classmethod
@@ -84,10 +87,6 @@ class ActionCue(StrictModel):
         if value not in AVAILABLE_ACTION_IDS:
             raise ValueError("Action ID is not in the production animation catalog.")
         return value
-    expression: str = Field(default="neutral", max_length=40)
-    target: str = Field(default="", max_length=120)
-    start_seconds: float = Field(ge=0, le=60)
-    duration_seconds: float = Field(gt=0, le=12)
 
 
 class CameraCue(StrictModel):
