@@ -9,7 +9,7 @@ Phase 0 has **not** exited. The master plan prohibits engine-dependent productio
 - Branch: `main`
 - Source baseline tested by CI run #52: `40bec8c423e953a0753c62f53c8a173274ac72e1`.
 - Checkpoint documents have since been reconciled in additional `main` commits; fetch the live `main` HEAD before every subsequent batch.
-- Latest Cartoon Studio CI: run #52, ID `45487769827`, SUCCESS on the current HEAD.
+- Latest verified Cartoon Studio CI: run #52, ID `45487769827`, SUCCESS on source baseline `40bec8c423e953a0753c62f53c8a173274ac72e1`. Subsequent commits in this checkpoint update documentation only; their CI status has not been verified in this audit.
 - Test evidence: Ruff PASS, compile PASS, 12 pytest tests PASS (one deprecation warning), Windows bootstrap ZIP uploaded.
 - Artifact: `Cartoon-Studio-Windows-Bootstrap`, ID `14963389016`, SHA-256 `423371c438c3b07a5b2aa3c38f6b26768078ffb1611e96b72d3c08a2e189d0ea`.
 - Ara proof run #6, ID `45486950450`: CANCELLED during browser MP4 export. Type-check and partial film/editor tests passed; Studio checks, production build and artifact upload did not run. Ara is not selected.
