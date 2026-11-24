@@ -1,14 +1,16 @@
 # Requirements Registry
 Statuses: NOT REVIEWED, RESEARCH REQUIRED, PLANNED, IN PROGRESS, IMPLEMENTED, PARTIALLY IMPLEMENTED, TESTED, VERIFIED, BLOCKED, DEFERRED WITH REASON, REJECTED WITH JUSTIFICATION.
 
+**Coverage warning:** this is an initial requirement inventory, not yet the complete P0.2 decomposition. Some rows still combine multiple specification sub-requirements and do not yet have their own dependency, implementation, test and evidence fields. The traceability matrix currently maps only the inspected subset. Do not treat this registry as complete until every specification requirement and acceptance bullet has a one-to-one traceability row.
+
 | ID | Requirement | Priority | Status |
 |---|---|---|---|
-| GOV-001 | Read entire specification before coding | Critical | PARTIALLY IMPLEMENTED |
+| GOV-001 | Read entire specification before coding | Critical | TESTED |
 | GOV-002 | Maintain permanent requirement registry | Critical | IMPLEMENTED |
-| GOV-003 | Trace requirements to architecture, code, tests and evidence | Critical | IMPLEMENTED |
+| GOV-003 | Trace requirements to architecture, code, tests and evidence | Critical | PARTIALLY IMPLEMENTED |
 | GOV-004 | Recheck requirements before every phase, batch and release | Critical | PLANNED |
 | GOV-005 | Never silently omit, downgrade or fake requirements | Critical | PLANNED |
-| GOV-006 | Resume from specification, registry, code and checkpoints | High | PLANNED |
+| GOV-006 | Resume from specification, registry, code and checkpoints | High | IN PROGRESS |
 | GIT-001 | Use Pawar-47/Cartoon-Studio as source of truth | Critical | IMPLEMENTED |
 | GIT-002 | Develop and maintain source in GitHub | Critical | IN PROGRESS |
 | GIT-003 | GitHub Actions build, test and Windows package | Critical | TESTED |
@@ -84,5 +86,12 @@ Statuses: NOT REVIEWED, RESEARCH REQUIRED, PLANNED, IN PROGRESS, IMPLEMENTED, PA
 | REL-001 | Persistent job queue, autosave and crash recovery | High | PLANNED |
 | REL-002 | Monitor memory, disk, failures and safe cancellation | High | PLANNED |
 | REL-003 | Preserve checkpoints and avoid destructive resets | Critical | PLANNED |
+
+## Evidence notes for currently tested catalog requirements
+
+- `WORLD-005`, `ANIM-004` and `ANIM-005` mean only that the Story Plan validator accepts/rejects identifiers from the current Ara-derived location/action/expression catalogs. They do not prove a persistent world, engine-neutral vocabulary, animation playback or facial rig.
+- `APP-001` through `APP-004` are tested only for the current lightweight dashboard/project/story workflow.
+- `GIT-003` and `GIT-004` refer to current Windows CI and the bootstrap ZIP, not a final installer.
+- `STORY-001` through `STORY-005` remain partial because story creation is a manual external-AI handoff, not an integrated AI story-production pipeline.
 
 Every status change must include evidence. IMPLEMENTED is not TESTED or VERIFIED.
