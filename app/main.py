@@ -4,7 +4,7 @@ import json
 import os
 import sqlite3
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -131,7 +131,7 @@ def create_project(payload: ProjectCreate) -> ProjectRecord:
             detail="Project name cannot be blank.",
         )
 
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     project_id = str(uuid.uuid4())
     description = payload.description.strip()
     with connect_db() as connection:
