@@ -140,7 +140,9 @@ def build_story_prompt(request: StoryPromptRequest) -> str:
     )
     schema = json.dumps(EpisodePlan.model_json_schema(), ensure_ascii=False, indent=2)
     characters = ", ".join(request.character_names) or "Create an original small recurring cast."
-    continuity = request.continuity_notes or (\n        "Preserve established character identities and relationships."\n    )
+    continuity = request.continuity_notes or (
+        "Preserve established character identities and relationships."
+    )
     return f"""You are the story and scene director for an original 3D cartoon series.
 Create one complete, production-ready episode plan. Do not copy existing copyrighted
 characters, shows, stories, dialogue, names, branding or designs.
@@ -163,11 +165,14 @@ PRODUCTION RULES:
 - Produce 5 to 12 scenes, each 30 to 90 seconds.
 - Total scene duration must be 300 to 420 seconds and within 30 seconds of the target.
 - Use only the supplied character IDs consistently after defining them.
-- Define character relationships and keep them consistent across the episode.\n- Every scene needs a reusable location_id, character_ids, actions, expressions, camera, lighting, props, audio and transition plan.
+- Define character relationships and keep them consistent across the episode.
+- Every scene needs a reusable location_id, character_ids, actions, expressions,
+  camera, lighting, props, audio and transition plan.
 - Dialogue must be natural, character-specific and timed within the scene.
 - Include clear physical comedy and visual actions where appropriate; do not rely only on dialogue.
 - Use action_id values that can later map to the reusable animation library.
-- Use camera shots and movement that can be executed by a 3D scene editor.\n- Provide an ending that resolves the episode story.
+- Use camera shots and movement that can be executed by a 3D scene editor.
+- Provide an ending that resolves the episode story.
 - Keep every dialogue, action, camera and audio cue inside its scene duration.
 - Use narrator as character_id only when narration is needed.
 - Return valid JSON only. No Markdown fences, preamble or explanation.
