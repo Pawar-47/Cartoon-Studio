@@ -75,6 +75,18 @@
   <div class="panel-head"><div><span class="eyebrow">03 / PROJECT LIBRARY</span><h2>Saved characters</h2></div><button id="refresh-characters" class="secondary" disabled>Refresh</button></div>
   <div id="character-list" class="character-list"><div class="empty">Select a project to see its characters.</div></div>
  </section>
+ <section class="panel retarget-panel">
+  <span class="eyebrow">04 / RIG RETARGETING</span><h2>Transfer animation to another character</h2>
+  <p class="helper">Choose an animated source character and a separate target character with a skinned humanoid rig. The original GLB files remain unchanged; Godot saves a separate retarget scene and project record.</p>
+  <div class="form-grid">
+   <label>Source character<select id="retarget-source"><option value="">Select animated source…</option></select></label>
+   <label>Target character<select id="retarget-target"><option value="">Select target rig…</option></select></label>
+  </div>
+  <label>Animation name (optional)<input id="retarget-animation" maxlength="120" placeholder="Leave blank to use the first imported animation"></label>
+  <button id="create-retarget" type="button" disabled>Create retarget scene</button>
+  <p id="retarget-status" class="inline-status" role="status">Save two characters in this project to begin.</p>
+  <div id="retarget-list" class="retarget-list"></div>
+ </section>
 </div>
 <footer>GLB import and preview are available. Material PBR settings and existing facial morph targets can be saved as non-destructive recipes; mesh editing, rig creation, new blend-shape authoring and animation authoring remain upcoming.</footer>
 </main>

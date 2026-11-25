@@ -28,3 +28,5 @@
 @media(max-width:520px){.morph-controls{grid-template-columns:1fr}}
 
 .profile-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.profile-actions button{margin-top:8px}
+
+.retarget-panel{grid-column:1/-1}.retarget-panel label{margin:10px 0}.retarget-panel input,.retarget-panel select{width:100%;box-sizing:border-box;padding:9px;border:1px solid #3a4b60;border-radius:8px;background:#101822;color:#fff}.retarget-list{display:grid;gap:8px;margin-top:12px}.retarget-record{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;padding:10px;border:1px solid #34465b;border-radius:8px;background:#121b26;font-size:11px}.retarget-record span{color:var(--muted)}

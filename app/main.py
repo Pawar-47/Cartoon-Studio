@@ -95,6 +95,12 @@ class GlbInspectRequest(BaseModel):
     relative_path: str = Field(min_length=1, max_length=512)
 
 
+class CharacterRetargetInput(BaseModel):
+    source_character_id: str = Field(min_length=1, max_length=64)
+    target_character_id: str = Field(min_length=1, max_length=64)
+    animation_name: str = Field(default="", max_length=120)
+
+
 
 class CharacterProfileInput(BaseModel):
     name: str = Field(min_length=1, max_length=80)
@@ -612,6 +618,99 @@ def get_character_asset(project_id: str, asset_id: str) -> FileResponse:
         media_type="model/gltf-binary",
         filename=manifest["data"].get("original_filename", "character.glb"),
     )
+
+@app.post("/api/projects/{project_id}/retargets", status_code=201)
+def create_character_retarget(project_id: str, payload: CharacterRetargetInput) -> dict[str, Any]:
+    initialize_database()
+    if payload.source_character_id == payload.target_character_id:
+        raise HTTPException(status_code=422, detail="Choose two different characters.")
+    with connect_db() as connection:
+        exists = connection.execute("SELECT 1 FROM projects WHERE id = ?", (project_id,)).fetchone()
+    if exists is None:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    source = _character_document(DATA_DIR, project_id, payload.source_character_id)
+    target = _character_document(DATA_DIR, project_id, payload.target_character_id)
+    source_data, target_data = source["data"], target["data"]
+    source_asset, target_asset = source_data.get("asset", {}), target_data.get("asset", {})
+    for label, asset in (("source", source_asset), ("target", target_asset)):
+        rig = asset.get("rig_analysis", {})
+        hierarchy = rig.get("hierarchy_validation", {})
+        if rig.get("status") != "humanoid_names_complete":
+            raise HTTPException(status_code=422, detail=f"The {label} character needs an unambiguous 15-bone humanoid mapping.")
+        if hierarchy.get("status") != "valid":
+            raise HTTPException(status_code=422, detail=f"The {label} character's humanoid parent hierarchy is not validated: " + str(hierarchy.get("note", "review the rig diagnostics")))
+    source_inspection, target_inspection = source_asset.get("engine_inspection", {}), target_asset.get("engine_inspection", {})
+    if int(source_inspection.get("animation_count", 0) or 0) < 1:
+        raise HTTPException(status_code=422, detail="The source character has no imported animation.")
+    if int(target_inspection.get("skin_count", 0) or 0) < 1:
+        raise HTTPException(status_code=422, detail="The target character has no skinned mesh.")
+    project_root = project_directory(DATA_DIR, project_id)
+    try:
+        source_path = resolve_project_relative(DATA_DIR, project_id, str(source_asset.get("relative_path", "")))
+        target_path = resolve_project_relative(DATA_DIR, project_id, str(target_asset.get("relative_path", "")))
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail="A character asset path is invalid.") from error
+    if not source_path.is_file() or not target_path.is_file():
+        raise HTTPException(status_code=404, detail="A source or target GLB file is missing.")
+    retarget_id = str(uuid.uuid4())
+    scene_relative = f"retargets/{retarget_id}.tscn"
+    scene_path = resolve_project_relative(DATA_DIR, project_id, scene_relative)
+    try:
+        result = get_engine_adapter().retarget_glb_pair(
+            source_path, target_path, scene_path, allowed_root=project_root,
+            source_profile_mapping=source_asset["rig_analysis"]["godot_profile_mapping"],
+            target_profile_mapping=target_asset["rig_analysis"]["godot_profile_mapping"],
+            animation_name=payload.animation_name.strip(),
+        )
+    except EngineUnavailableError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    except EngineTimeoutError as error:
+        raise HTTPException(status_code=504, detail=str(error)) from error
+    except EnginePathError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    except EngineError as error:
+        scene_path.unlink(missing_ok=True)
+        raise HTTPException(status_code=502, detail=f"Godot retargeting failed: {error}") from error
+    now = datetime.now(UTC).isoformat()
+    data = {
+        "source_character_id": source["id"], "source_character_name": source_data.get("name", ""),
+        "target_character_id": target["id"], "target_character_name": target_data.get("name", ""),
+        "source_asset_path": source_asset["relative_path"], "target_asset_path": target_asset["relative_path"],
+        "animation_name": result.get("animation_name", payload.animation_name.strip()),
+        "scene_relative_path": scene_relative, "mapped_bone_count": result.get("mapped_bone_count", 0),
+        "target_skinned_mesh_count": result.get("target_skinned_mesh_count", 0),
+        "scene_reopened": bool(result.get("scene_reopened", False)),
+        "source_glb_preserved": True, "target_glb_preserved": True,
+    }
+    document = make_envelope("character_retarget", retarget_id, data, now, now, 1)
+    config_relative = f"retargets/{retarget_id}.json"
+    config_path = resolve_project_relative(DATA_DIR, project_id, config_relative)
+    digest = write_json_atomic(config_path, document)
+    with connect_db() as connection:
+        upsert_document_index(connection, project_id, document, config_relative, digest)
+    return document
+
+
+@app.get("/api/projects/{project_id}/retargets")
+def list_character_retargets(project_id: str) -> list[dict[str, Any]]:
+    initialize_database()
+    with connect_db() as connection:
+        exists = connection.execute("SELECT 1 FROM projects WHERE id = ?", (project_id,)).fetchone()
+        if exists is None:
+            raise HTTPException(status_code=404, detail="Project not found.")
+        rows = connection.execute(
+            "SELECT relative_path FROM project_documents WHERE project_id = ? AND document_type = 'character_retarget' ORDER BY updated_at DESC",
+            (project_id,),
+        ).fetchall()
+    documents = []
+    for row in rows:
+        path = resolve_project_relative(DATA_DIR, project_id, row["relative_path"])
+        if path.is_file():
+            document = read_json(path)
+            if document.get("document_type") == "character_retarget":
+                documents.append(document)
+    return documents
+
 
 @app.get("/api/projects/{project_id}/characters")
 def list_characters(project_id: str) -> list[dict[str, Any]]:

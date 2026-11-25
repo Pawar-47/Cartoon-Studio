@@ -38,10 +38,44 @@ async function selectProject(id){
  if(!id){$("character-list").innerHTML='<div class="empty">Select a project to see its characters.</div>';return}
  await loadCharacters();
 }
+function documentElementOption(characterDoc){
+ const option=window.document.createElement("option");
+ option.value=characterDoc.id;option.textContent=characterDoc.data.name||"Unnamed character";return option;
+}
+function updateRetargetCharacterOptions(characters){
+ const source=$("retarget-source"),target=$("retarget-target");
+ const previousSource=source.value,previousTarget=target.value;
+ source.replaceChildren();target.replaceChildren();
+ for(const [select,label] of [[source,"Select animated source…"],[target,"Select target rig…"]]){
+  const option=document.createElement("option");option.value="";option.textContent=label;select.append(option);
+ }
+ for(const characterDoc of characters){
+  const data=characterDoc.data||{},asset=data.asset||{},inspection=asset.engine_inspection||{},rig=asset.rig_analysis||{},hierarchy=rig.hierarchy_validation||{};
+  const compatible=rig.status==="humanoid_names_complete"&&hierarchy.status==="valid";
+  if(compatible&&Number(inspection.animation_count||0)>0)source.append(documentElementOption(characterDoc));
+  if(compatible&&Number(inspection.skin_count||0)>0)target.append(documentElementOption(characterDoc));
+ }
+ if([...source.options].some(option=>option.value===previousSource))source.value=previousSource;
+ if([...target.options].some(option=>option.value===previousTarget))target.value=previousTarget;
+ $("create-retarget").disabled=!source.value||!target.value||source.value===target.value;
+}
+async function loadRetargets(){
+ if(!activeProject)return;
+ const response=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/retargets");
+ if(!response.ok)throw new Error("Could not load saved retarget scenes.");
+ const documents=await response.json(),container=$("retarget-list");container.replaceChildren();
+ for(const item of documents){
+  const row=document.createElement("div");row.className="retarget-record";
+  const title=document.createElement("strong");title.textContent=(item.data.source_character_name||"Source")+" → "+(item.data.target_character_name||"Target");
+  const detail=document.createElement("span");detail.textContent=(item.data.animation_name||"Imported animation")+" · "+item.data.mapped_bone_count+"/15 bones · "+(item.data.scene_reopened?"saved scene reopened":"scene saved");
+  row.append(title,detail);container.append(row);
+ }
+ if(!documents.length){const empty=document.createElement("p");empty.className="inline-status";empty.textContent="No retarget scenes saved in this project yet.";container.append(empty)}
+}
 async function loadCharacters(){
  const response=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/characters");
  if(!response.ok)throw new Error("Could not load saved characters.");
- const characters=await response.json(),list=$("character-list");list.replaceChildren();
+ const characters=await response.json(),list=$("character-list");list.replaceChildren();updateRetargetCharacterOptions(characters);await loadRetargets();
  if(!characters.length){list.innerHTML='<div class="empty">No saved characters in this project yet.</div>';return}
  for(const document of characters){
   const data=document.data,card=document.createElement("article");card.className="character-card";
@@ -142,6 +176,20 @@ $("save-appearance").addEventListener("click",async()=>{
   await loadCharacters();
  }catch(error){$("appearance-status").textContent=error.message}
  finally{$("save-appearance").disabled=!(getCharacterMaterials().length||getCharacterMorphTargets().length)}
+});
+$("retarget-source").addEventListener("change",()=>{$("create-retarget").disabled=!$("retarget-source").value||!$("retarget-target").value||$("retarget-source").value===$("retarget-target").value});
+$("retarget-target").addEventListener("change",()=>{$("create-retarget").disabled=!$("retarget-source").value||!$("retarget-target").value||$("retarget-source").value===$("retarget-target").value});
+$("create-retarget").addEventListener("click",async()=>{
+ const sourceId=$("retarget-source").value,targetId=$("retarget-target").value;
+ if(!activeProject||!sourceId||!targetId||sourceId===targetId)return;
+ $("create-retarget").disabled=true;$("retarget-status").textContent="Validating both rigs and creating a Godot retarget scene…";
+ try{
+  const response=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/retargets",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({source_character_id:sourceId,target_character_id:targetId,animation_name:$("retarget-animation").value.trim()})});
+  const result=await response.json();if(!response.ok)throw new Error(result.detail||"Retarget scene creation failed.");
+  $("retarget-status").textContent="Retarget scene saved at "+result.data.scene_relative_path+". Both source GLBs were preserved.";
+  await loadRetargets();
+ }catch(error){$("retarget-status").textContent=error.message}
+ finally{$("create-retarget").disabled=!$("retarget-source").value||!$("retarget-target").value||$("retarget-source").value===$("retarget-target").value}
 });
 $("project-select").addEventListener("change",event=>selectProject(event.target.value).catch(error=>$("project-status").textContent=error.message));
 $("model-file").addEventListener("change",()=>{if(editingCharacter)cancelProfileEdit();$("import-model").disabled=!activeProject||!$("model-file").files.length;importedAsset=null;$("save-character").disabled=true;$("asset-report").hidden=true});

@@ -318,6 +318,9 @@ func _retarget_glb_pair(payload: Dictionary) -> Dictionary:
         target_scene.free()
         return {"error_code": "animation_not_found", "error": "The requested source animation does not exist."}
 
+    source_player.autoplay = selected_animation
+    source_player.play(selected_animation)
+
     var combined_root := Node3D.new()
     combined_root.name = "RetargetedCharacterScene"
     source_scene.name = "SourceCharacter"

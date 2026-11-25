@@ -220,8 +220,8 @@ def test_pinned_godot_worker_creates_non_destructive_retarget_scene(tmp_path):
     target_rig = analyze_rig(adapter.inspect_glb(target, allowed_root=project_root))
     assert source_rig["status"] == "humanoid_names_complete"
     assert target_rig["status"] == "humanoid_names_complete"
-    assert source_rig["hierarchy_validation"]["status"] == "valid"
-    assert target_rig["hierarchy_validation"]["status"] == "valid"
+    assert source_rig["hierarchy_validation"]["status"] == "valid", source_rig["hierarchy_validation"]
+    assert target_rig["hierarchy_validation"]["status"] == "valid", target_rig["hierarchy_validation"]
 
     output = project_root / "retargets" / "source-to-target.tscn"
     response = adapter.retarget_glb_pair(
