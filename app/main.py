@@ -15,8 +15,8 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from app.storage import connect_db as open_database
 from app.storage import (
-    connect_db as open_database,
     default_data_dir,
     initialize_database as migrate_database,
     make_envelope,
