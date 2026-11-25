@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from app.storage import default_data_dir
+from app.rig_analysis import REQUIRED_HUMANOID_BONES
 
 ENGINE_VERSION = "4.7.2-stable"
 ENGINE_BINARY_NAME = "Godot_v4.7.2-stable_win64.exe"
@@ -116,6 +117,55 @@ class GodotEngineAdapter:
         return self._run(
             "inspect_glb",
             {"source_path": str(source), "project_root": str(root)},
+            timeout_seconds=timeout_seconds,
+            cancel_event=cancel_event,
+        )
+
+
+    def retarget_glb_pair(
+        self,
+        source_path: Path,
+        target_path: Path,
+        output_path: Path,
+        allowed_root: Path,
+        source_profile_mapping: dict[str, dict[str, Any]],
+        target_profile_mapping: dict[str, dict[str, Any]],
+        animation_name: str = "",
+        timeout_seconds: float | None = None,
+        cancel_event: threading.Event | None = None,
+    ) -> dict[str, Any]:
+        root = Path(allowed_root).resolve(strict=False)
+        paths = [Path(source_path).resolve(strict=True), Path(target_path).resolve(strict=True)]
+        for path in paths:
+            if path == root or root not in path.parents:
+                raise EnginePathError("A GLB path escapes the allowed project directory.")
+            if path.suffix.lower() != ".glb" or not path.is_file():
+                raise EnginePathError("Only existing .glb files can be retargeted.")
+            if path.stat().st_size > MAX_GLB_BYTES:
+                raise EnginePathError("A GLB exceeds the 512 MiB retarget limit.")
+        output = Path(output_path).resolve(strict=False)
+        if output == root or root not in output.parents:
+            raise EnginePathError("Retarget output escapes the allowed project directory.")
+        if output.suffix.lower() != ".tscn":
+            raise EnginePathError("Retarget output must use the .tscn extension.")
+        if output.exists():
+            raise EnginePathError("Refusing to overwrite an existing retarget scene.")
+        if set(source_profile_mapping) != REQUIRED_HUMANOID_BONES or set(
+            target_profile_mapping
+        ) != REQUIRED_HUMANOID_BONES:
+            raise EnginePathError("Both rigs must have complete, unambiguous humanoid mappings.")
+        output.parent.mkdir(parents=True, exist_ok=True)
+        return self._run(
+            "retarget_glb_pair",
+            {
+                "project_root": str(root),
+                "source_path": str(paths[0]),
+                "target_path": str(paths[1]),
+                "output_path": str(output),
+                "source_profile_mapping": source_profile_mapping,
+                "target_profile_mapping": target_profile_mapping,
+                "animation_name": animation_name,
+            },
             timeout_seconds=timeout_seconds,
             cancel_event=cancel_event,
         )

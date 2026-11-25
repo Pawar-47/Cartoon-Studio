@@ -62,13 +62,21 @@ func _handle_request(request_value: Variant) -> Dictionary:
 
     if operation == "ping":
         response["ok"] = true
-        response["capabilities"] = ["ping", "glb_inspect", "scene_metrics", "skeleton_report"]
+        response["capabilities"] = [
+            "ping", "glb_inspect", "scene_metrics", "skeleton_report", "retarget_glb_pair"
+        ]
         return response
 
     if operation == "inspect_glb":
         var inspection := _inspect_glb(payload)
         for key in inspection:
             response[key] = inspection[key]
+        return response
+
+    if operation == "retarget_glb_pair":
+        var retarget_result := _retarget_glb_pair(payload)
+        for key in retarget_result:
+            response[key] = retarget_result[key]
         return response
 
     response["error_code"] = "unsupported_operation"
@@ -183,3 +191,187 @@ func _error_response(request_id: String, code: String, message: String) -> Dicti
         "error_code": code,
         "error": message
     }
+
+
+func _retarget_glb_pair(payload: Dictionary) -> Dictionary:
+    var project_root := _normalise_path(str(payload.get("project_root", "")))
+    var source_path := _normalise_path(str(payload.get("source_path", "")))
+    var target_path := _normalise_path(str(payload.get("target_path", "")))
+    var output_path := _normalise_path(str(payload.get("output_path", "")))
+    if project_root.is_empty() or not DirAccess.dir_exists_absolute(project_root):
+        return {"error_code": "invalid_project_root", "error": "A valid project root is required."}
+    var root_prefix := project_root.trim_suffix("/") + "/"
+    for asset_path in [source_path, target_path]:
+        if not asset_path.to_lower().begins_with(root_prefix.to_lower()):
+            return {"error_code": "path_outside_project", "error": "A GLB path resolves outside the project."}
+        if not asset_path.to_lower().ends_with(".glb") or not FileAccess.file_exists(asset_path):
+            return {"error_code": "invalid_glb_path", "error": "Both source and target GLB files must exist."}
+    if not output_path.to_lower().begins_with(root_prefix.to_lower()):
+        return {"error_code": "path_outside_project", "error": "The retarget scene path resolves outside the project."}
+    if not output_path.to_lower().ends_with(".tscn"):
+        return {"error_code": "invalid_output_path", "error": "Retarget output must use the .tscn extension."}
+    if FileAccess.file_exists(output_path):
+        return {"error_code": "output_exists", "error": "Refusing to overwrite an existing retarget scene."}
+
+    var source_document := GLTFDocument.new()
+    var source_state := GLTFState.new()
+    var source_error := source_document.append_from_file(source_path, source_state)
+    if source_error != OK:
+        return {"error_code": "source_import_failed", "error": "Godot could not import the source GLB.", "godot_error": source_error}
+    var source_scene := source_document.generate_scene(source_state)
+    if source_scene == null:
+        return {"error_code": "source_scene_failed", "error": "Godot could not generate the source scene."}
+
+    var target_document := GLTFDocument.new()
+    var target_state := GLTFState.new()
+    var target_error := target_document.append_from_file(target_path, target_state)
+    if target_error != OK:
+        source_scene.free()
+        return {"error_code": "target_import_failed", "error": "Godot could not import the target GLB.", "godot_error": target_error}
+    var target_scene := target_document.generate_scene(target_state)
+    if target_scene == null:
+        source_scene.free()
+        return {"error_code": "target_scene_failed", "error": "Godot could not generate the target scene."}
+
+    var source_skeletons := source_scene.find_children("*", "Skeleton3D", true, false)
+    var target_skeletons := target_scene.find_children("*", "Skeleton3D", true, false)
+    if source_skeletons.size() != 1 or target_skeletons.size() != 1:
+        source_scene.free()
+        target_scene.free()
+        return {
+            "error_code": "ambiguous_skeleton_count",
+            "error": "Retargeting requires exactly one Skeleton3D in each imported GLB.",
+            "source_skeleton_count": source_skeletons.size(),
+            "target_skeleton_count": target_skeletons.size()
+        }
+    var source_skeleton := source_skeletons[0] as Skeleton3D
+    var target_skeleton := target_skeletons[0] as Skeleton3D
+    var source_mapping: Dictionary = payload.get("source_profile_mapping", {})
+    var target_mapping: Dictionary = payload.get("target_profile_mapping", {})
+    var required_profile_bones := [
+        "Hips", "Spine", "Head",
+        "LeftUpperLeg", "LeftLowerLeg", "LeftFoot",
+        "RightUpperLeg", "RightLowerLeg", "RightFoot",
+        "LeftUpperArm", "LeftLowerArm", "LeftHand",
+        "RightUpperArm", "RightLowerArm", "RightHand"
+    ]
+    for profile_bone in required_profile_bones:
+        if not source_mapping.has(profile_bone) or not target_mapping.has(profile_bone):
+            source_scene.free()
+            target_scene.free()
+            return {"error_code": "incomplete_profile_mapping", "error": "Both rigs must map all 15 core humanoid bones."}
+
+    var source_indices: Array[int] = []
+    var target_indices: Array[int] = []
+    for profile_bone in required_profile_bones:
+        var source_index := int(source_mapping[profile_bone].get("bone_index", -1))
+        var target_index := int(target_mapping[profile_bone].get("bone_index", -1))
+        if source_index < 0 or source_index >= source_skeleton.get_bone_count():
+            source_scene.free()
+            target_scene.free()
+            return {"error_code": "invalid_source_mapping", "error": "Source humanoid mapping contains an invalid bone index."}
+        if target_index < 0 or target_index >= target_skeleton.get_bone_count():
+            source_scene.free()
+            target_scene.free()
+            return {"error_code": "invalid_target_mapping", "error": "Target humanoid mapping contains an invalid bone index."}
+        if source_indices.has(source_index) or target_indices.has(target_index):
+            source_scene.free()
+            target_scene.free()
+            return {"error_code": "duplicate_profile_mapping", "error": "A source or target bone is mapped more than once."}
+        source_indices.append(source_index)
+        target_indices.append(target_index)
+
+    for profile_bone in required_profile_bones:
+        source_skeleton.set_bone_name(int(source_mapping[profile_bone]["bone_index"]), profile_bone)
+        target_skeleton.set_bone_name(int(target_mapping[profile_bone]["bone_index"]), profile_bone)
+
+    var target_meshes := target_scene.find_children("*", "MeshInstance3D", true, false)
+    var bound_target_meshes: Array[MeshInstance3D] = []
+    for mesh_node in target_meshes:
+        var mesh := mesh_node as MeshInstance3D
+        if mesh.skeleton.is_empty():
+            continue
+        if mesh.get_node_or_null(mesh.skeleton) == target_skeleton:
+            bound_target_meshes.append(mesh)
+    if bound_target_meshes.is_empty():
+        source_scene.free()
+        target_scene.free()
+        return {"error_code": "target_skin_missing", "error": "Target GLB has no mesh bound to its humanoid skeleton."}
+
+    var source_players := source_scene.find_children("*", "AnimationPlayer", true, false)
+    if source_players.is_empty():
+        source_scene.free()
+        target_scene.free()
+        return {"error_code": "source_animation_missing", "error": "Source GLB contains no AnimationPlayer."}
+    var source_player := source_players[0] as AnimationPlayer
+    var requested_animation := str(payload.get("animation_name", ""))
+    var selected_animation := ""
+    for animation_name in source_player.get_animation_list():
+        var name := str(animation_name)
+        if name.to_upper() == "RESET":
+            continue
+        if requested_animation.is_empty() or name == requested_animation:
+            selected_animation = name
+            break
+    if selected_animation.is_empty():
+        source_scene.free()
+        target_scene.free()
+        return {"error_code": "animation_not_found", "error": "The requested source animation does not exist."}
+
+    var combined_root := Node3D.new()
+    combined_root.name = "RetargetedCharacterScene"
+    source_scene.name = "SourceCharacter"
+    target_scene.name = "TargetCharacter"
+    combined_root.add_child(source_scene)
+    combined_root.add_child(target_scene)
+    root.add_child(combined_root)
+
+    var modifier := RetargetModifier3D.new()
+    modifier.name = "RetargetModifier3D"
+    modifier.profile = SkeletonProfileHumanoid.new()
+    modifier.use_global_pose = false
+    source_skeleton.add_child(modifier)
+    target_skeleton.reparent(modifier, true)
+    for mesh in bound_target_meshes:
+        mesh.skeleton = mesh.get_path_to(target_skeleton)
+
+    _set_scene_ownership(combined_root, combined_root)
+    var packed_scene := PackedScene.new()
+    var pack_error := packed_scene.pack(combined_root)
+    if pack_error != OK:
+        combined_root.queue_free()
+        return {"error_code": "scene_pack_failed", "error": "Could not pack the retarget scene.", "godot_error": pack_error}
+    var save_error := ResourceSaver.save(packed_scene, output_path)
+    if save_error != OK:
+        combined_root.queue_free()
+        return {"error_code": "scene_save_failed", "error": "Could not save the retarget scene.", "godot_error": save_error}
+
+    var reopened := ResourceLoader.load(output_path) as PackedScene
+    if reopened == null:
+        combined_root.queue_free()
+        return {"error_code": "scene_reopen_failed", "error": "Saved retarget scene could not be reopened."}
+    var reopened_instance := reopened.instantiate()
+    var reopened_modifier := reopened_instance.find_child("RetargetModifier3D", true, false)
+    var reopened_target := reopened_instance.find_child("Skeleton3D", true, false)
+    var scene_reopened := reopened_modifier != null and reopened_target != null
+    reopened_instance.free()
+    combined_root.queue_free()
+    if not scene_reopened:
+        return {"error_code": "scene_reopen_invalid", "error": "Reopened retarget scene is missing its modifier or target skeleton."}
+
+    return {
+        "ok": true,
+        "output_path": output_path,
+        "animation_name": selected_animation,
+        "source_bone_count": source_skeleton.get_bone_count(),
+        "target_bone_count": target_skeleton.get_bone_count(),
+        "mapped_bone_count": required_profile_bones.size(),
+        "target_skinned_mesh_count": bound_target_meshes.size(),
+        "scene_reopened": true
+    }
+
+
+func _set_scene_ownership(node: Node, owner_node: Node) -> void:
+    for child in node.get_children():
+        child.owner = owner_node
+        _set_scene_ownership(child, owner_node)
