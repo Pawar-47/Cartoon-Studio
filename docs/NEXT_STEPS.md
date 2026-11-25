@@ -1,5 +1,9 @@
 # Next Steps — 2026-11-25
 
+## Current checkpoint
+
+Main is `d42a6e766fdae22e9a742435228cfdb4431c656b`. PR #10 (verified baked appearance GLB export) and PR #11 (modular recipe save/reopen/reassembly regression coverage) are merged. Main quick CI run [45663866235 PASSED](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45663866235). Phase 2 Character Studio remains active; no interactive browser acceptance or geometric customization is being claimed from these API/worker tests.
+
 ## Active batch — Phase 2 Character Studio
 
 The first user-facing non-destructive imported-GLB retarget workflow and saved browser preview are implemented. Facial morph-target metadata is now reported by the Godot worker; named and unnamed morph fixtures are covered, and the appearance API has save/reopen/range-validation regression tests. The appearance editor now pauses embedded animation playback to prevent morph animation tracks from fighting expression sliders; ordinary previews still auto-play. Windows CI #326 passed the complete full-build pipeline on `696929595b2d03e64e46a568ec9d163860ae3239`. Windows CI #334 passed the quick validation pipeline, including the pinned third-party RobotExpressive download and Godot facial morph/animation inspection. Windows CI #299 passed the complete pipeline, including a real third-party Khronos Rigged Figure retargeted onto the canonical target after scene save/reopen. It includes source/target selectors, preflight validation, a saved Godot scene, a persistent project record, scene download, and a runtime check that the reopened source animation transfers its pose to the target skeleton.
@@ -51,21 +55,21 @@ The browser retarget path now samples source animation from the full GLTF scene 
 
 Work in coherent feature batches, preserve all existing work, use GitHub main as the source of truth, and do not use physical-PC testing as an early gate. Do not call the entire project complete while Phases 2–7 remain open.
 
-## Next P2.2 batch — creator acceptance and geometric customization
+## Next P2.2 batch — interactive acceptance and original geometry
 
-The pinned CC0 library, four-slot Godot assembly/export, browser selectors and versioned recipe manifest are implemented and merged. The real mixed-outfit integration test passes on the Male Adventurer base and preserves all 24 clips. The next batch is not another catalog-only pass:
+The pinned CC0 library, four-slot Godot assembly/export, browser selectors and versioned recipe manifest are implemented. PR #11 now verifies API-level save/reopen/reassemble using recovered source manifests and a bone-attached accessory. PR #10 adds a separate verified appearance-bake/export path. These automated contracts do not establish browser-level visual quality.
 
-1. Add an automated recipe save/reopen/reassemble test that starts from a saved character profile and restores every source asset and accessory through its manifest.
-2. Exercise the browser builder end-to-end: import/select parts, shuffle, add/remove accessories, assemble, download, preview expressions, save profile, reload project and reopen the recipe. Record visual acceptance separately from CI.
-3. Add browser-facing playback acceptance for assembled GLBs; the Godot probe now confirms the Walk clip changes bone poses and the selected skinned meshes remain bound after re-import.
+1. Exercise the browser creator end-to-end: library preview/import, choose head/body/legs/feet, shuffle, add/remove accessories, assemble, download, preview expressions, save the profile, reload the project and restore the recipe.
+2. Inspect baked appearance export with a real morph-capable character. Compare material and morph values before/after export, verify animation clips remain usable and confirm the original source GLB is byte-identical.
+3. Add browser-facing playback acceptance for assembled GLBs and compare browser retarget preview with the authoritative saved Godot scene.
 4. Implement real geometric customization for proportions, face and hair using compatible mesh, morph-target or rig operations. Keep metadata-only fields clearly distinguished from geometry changes.
-5. Compare browser retarget preview with the authoritative Godot scene and broaden rig families only where tests prove compatibility.
+5. Expand rig families only where compatibility tests and visual acceptance justify it.
 
-Phase 2 remains ACTIVE. Do not start Phase 3 until the P2.2 Character Studio exit criteria are met. Physical-PC performance testing and full Windows packaging remain later-stage work, not blockers for this batch.
+Phase 2 remains ACTIVE. Do not start Phase 3 until P2.2 exit criteria are met. Physical-PC performance testing and full Windows packaging remain later-stage work, not blockers.
 
 
-## 2026-11-25 — Modular recipe persistence regression coverage
+## 2026-11-25 — Modular recipe persistence regression coverage (completed)
 
-The next P2.2 acceptance batch now includes a deterministic API-level round-trip test for modular character recipes. It exercises assembly with four parts plus a bone-attached accessory, persists the resulting asset manifest, verifies every source manifest can be reopened, saves and reopens a character profile referencing the assembled asset, and submits a second assembly using only the recovered recipe. This isolates the persistence/replay contract from interactive browser acceptance; the fake engine is used here, while the separate pinned-Godot integration test remains responsible for real skeleton compatibility and animation playback.
+PR #11 merged the deterministic API-level round-trip test for modular character recipes. It exercises assembly with four parts plus a bone-attached accessory, persists the resulting asset manifest, verifies every source manifest can be reopened, saves and reopens a character profile referencing the assembled asset, and submits a second assembly using only the recovered recipe. The fake engine isolates persistence/replay contracts; the separate pinned-Godot integration test remains responsible for real skeleton compatibility and animation playback.
 
-After this test passes in CI, continue with the real browser end-to-end workflow and then geometric customization. Do not mark visual acceptance complete from an API test.
+This closes the API-level persistence regression item only. Interactive browser acceptance and geometric customization remain open.
