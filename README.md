@@ -11,9 +11,10 @@ An original, local-first Urdu 3D cartoon production studio. This repository is t
 - Copyable structured story prompt and JSON Schema.
 - Validation of 5–7 minute episode plans, 5–7 scenes, character references and timed production cues.
 - Save and reload validated episode plans inside a local project.
+- Character Studio: import and inspect GLB 2.0 models, check mesh/skeleton/animation readiness, and save versioned reusable character profiles to a project.
 - GitHub Actions Windows CI installs exact uv-locked dependencies, runs lint/compile/tests and packages a hash-locked bootstrap ZIP.
 
-Godot 4.7.2 Compatibility is now integrated as a pinned, bundled native worker behind a supervised Python adapter. P2.1 passed real Windows CI integration tests on 2026-11-25 (CI #204), including the worker handshake and GLB import/inspection. This is an engine-integration milestone, not a complete Character Studio: character authoring, rigging, modular appearance, animation, Urdu TTS, lip-sync and final episode rendering remain future work.
+Godot 4.7.2 Compatibility is integrated as a pinned, bundled native worker behind a supervised Python adapter. P2.1 passed Windows CI #204. The first P2.2 Character Studio vertical slice also passed Windows CI #208 (45 pytest tests): project-scoped GLB 2.0 import/inspection, rig-readiness reporting, versioned character profiles, project references and recovery. The Character Studio phase is still active; live 3D preview, mesh/rig authoring, material/blend-shape editing, export and animation authoring remain future work.
 
 ## Run on Windows
 
@@ -22,9 +23,10 @@ Godot 4.7.2 Compatibility is now integrated as a pinned, bundled native worker b
 3. Keep requirements.lock beside start.bat.
 4. Run start.bat; dependencies are installed with pip hash verification.
 5. The local app opens at http://127.0.0.1:8765.
-6. Open Story Generator from the dashboard to prepare a prompt, paste an AI-generated JSON plan, validate it and save it to a project.
+6. Open Character Studio to import a GLB 2.0 character model, inspect its geometry/rig/animation readiness and save a reusable profile.
+7. Open Story Generator to prepare a prompt, paste an AI-generated JSON plan, validate it and save it to a project.
 
-The bootstrap ZIP is not yet a standalone installer. Project data defaults to the user's application-data directory (Windows: %LOCALAPPDATA%\CartoonStudio); set CARTOON_STUDIO_DATA to override it. The self-contained Windows installer is Phase 1.4 work.
+The Windows bootstrap ZIP is Python-dependent. A self-contained Windows installer is also built and uploaded as a GitHub Actions artifact. Project data defaults to the user's application-data directory; on Windows this is `%LOCALAPPDATA%\\CartoonStudio`. Set `CARTOON_STUDIO_DATA` to override it.
 
 ## Development principles
 

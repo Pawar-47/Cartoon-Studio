@@ -110,3 +110,15 @@
 - Added focused API/UI/import/profile/recovery tests in `tests/test_characters.py`.
 - **Not claimed complete:** original mesh authoring, live 3D viewport/thumbnail, rig editing/creation, material/blend-shape editing, export round-trip, VRM support, animation authoring or cross-scene rendered consistency.
 - P2.2 remains active. This vertical slice is pending the Windows CI result and further viewport/authoring work.
+
+
+## P2.2 CI acceptance — 2026-11-25
+
+- Commit: `41aabbb627e36f3f02f306e79e3cba33bd19dc84`.
+- Windows CI #208: [SUCCESS](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45593773278).
+- 45 pytest tests passed with the pinned Godot 4.7.2 runtime supplied to the test environment.
+- Ruff lint, Python compilation, dependency lock verification, Godot SHA-256 verification, CycloneDX SBOM generation and bootstrap packaging passed.
+- Bootstrap smoke test passed archive integrity, actual launcher startup, HTTP UI/API, project save/open and restart persistence.
+- Both self-contained Windows application builds and NSIS installers succeeded.
+- Installer lifecycle passed clean install, shortcuts, v1-to-v2 upgrade, project preservation, uninstall and reinstall.
+- The first Character Studio vertical slice is accepted. Phase 2 remains active; preview, actual authoring, rig editing, export and animation tools remain open.

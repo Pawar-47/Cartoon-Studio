@@ -133,3 +133,17 @@ Coverage added:
 - Recovery of character profiles and document index from portable JSON after SQLite index loss.
 
 The tests use a deterministic fake adapter for API contract tests; the existing Windows CI continues to exercise the real Godot worker with the pinned runtime. The combined suite has not yet been accepted by CI at the time this report was authored. No target-PC benchmark is required.
+
+
+## P2.2 Character Studio vertical slice — Windows CI #208 — 2026-11-25
+
+- Commit: `41aabbb627e36f3f02f306e79e3cba33bd19dc84`.
+- Result: SUCCESS — [workflow run #208](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45593773278).
+- Pytest: 45 tests passed on Windows Server / Python 3.11 with the pinned Godot 4.7.2 runtime path configured. This includes the new Character Studio API tests for GLB upload validation, worker-inspection contract, profile create/list/get/update, project references and portable-file recovery.
+- Ruff: all checks passed. Python compilation passed.
+- Runtime archive SHA-256 verification passed; dependency lock remained current; CycloneDX SBOM export and Godot runtime augmentation passed.
+- Windows bootstrap smoke passed: archive integrity, actual `start.bat` launch, HTTP UI/API, project save/open and restart persistence.
+- Both self-contained PyInstaller application builds passed. Both versioned NSIS installers compiled.
+- Full installer smoke passed: clean install, shortcuts, v1-to-v2 upgrade, project-data preservation, uninstall and reinstall.
+- All three CI artifacts uploaded: Windows bootstrap, self-contained Windows installer and dependency SBOM.
+- Scope limitation: tests validate import and inspection, not live rendering/preview or mesh/rig authoring. Target-PC benchmarking remains Phase 8.

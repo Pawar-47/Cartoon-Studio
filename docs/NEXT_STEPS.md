@@ -87,3 +87,16 @@ Implemented in the current working commit (CI pending):
 - Focused tests for import, validation, profile round-trip, updates, references and database-loss recovery.
 
 Continue the P2.2 batch: implement a real model preview/thumbnail through Godot, then support rig/appearance authoring and export. Do not mark P2.2 complete until the full phase exit gate is satisfied. GLB is the only integrated import format at this checkpoint; VRM remains a researched candidate, not an implemented feature.
+
+
+## CI-accepted checkpoint — 2026-11-25
+
+The first P2.2 import/profile batch is accepted by Windows CI #208 on commit `41aabbb627e36f3f02f306e79e3cba33bd19dc84`. All 45 tests, lint, compilation, runtime integrity, bootstrap smoke, self-contained builds and the full installer lifecycle passed. See `docs/P2_2_CHARACTER_STUDIO_REPORT.md`.
+
+Continue P2.2 with:
+1. A real model preview path. Do not try to save viewport images from the current `--headless` worker: Godot documents that headless mode disables rendering. Evaluate a separate controlled rendering process/virtual display or a local browser renderer and test the chosen route.
+2. Profile editing UI and supported appearance editing based on actual GLB mesh/material/blend-shape structure.
+3. Rig/animation readiness details, then actual rig editing/retargeting and export round-trip.
+4. Tests and evidence for each capability; keep the project portable and local-first.
+
+Do not claim P2.2 complete until the phase exit gate is met. GLB is the only integrated import format; VRM remains a candidate.

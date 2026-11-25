@@ -1,7 +1,7 @@
 # P2.2 Character Studio — Import and Persistent Profile Report
 
 **Date:** 2026-11-25  
-**Status:** Implementation committed; Windows CI acceptance pending  
+**Status:** First vertical slice accepted by Windows CI #208; Character Studio phase remains active  
 **Phase:** 2 — Character Studio  
 **Scope:** First working vertical slice, not phase completion
 
@@ -27,4 +27,4 @@
 - New test module: `tests/test_characters.py`.
 - The tests use a deterministic fake Godot adapter for API-level contract tests.
 - The existing Windows CI job also runs the real pinned Godot 4.7.2 worker integration tests.
-- The combined CI result is pending at the time this report is authored.
+- Windows CI #208 passed on commit `41aabbb627e36f3f02f306e79e3cba33bd19dc84`: 45 tests passed; lint, compilation, runtime integrity, bootstrap smoke, both self-contained builds and the full installer lifecycle passed. The run uploaded the bootstrap, installer and SBOM artifacts.
