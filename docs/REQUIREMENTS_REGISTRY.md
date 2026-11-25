@@ -1,104 +1,287 @@
-# Requirements Registry
-Statuses: NOT REVIEWED, RESEARCH REQUIRED, PLANNED, IN PROGRESS, IMPLEMENTED, PARTIALLY IMPLEMENTED, TESTED, VERIFIED, BLOCKED, DEFERRED WITH REASON, REJECTED WITH JUSTIFICATION.
+# Requirements Registry — Atomic P0.2 Baseline
 
-**Coverage warning:** this is an initial requirement inventory, not yet the complete P0.2 decomposition. Some rows still combine multiple specification sub-requirements and do not yet have their own dependency, implementation, test and evidence fields. The traceability matrix currently maps only the inspected subset. Do not treat this registry as complete until every specification requirement and acceptance bullet has a one-to-one traceability row.
+**Authority:** the original 25-part `MASTER_EXECUTION_PROMPT.md` and the 24-section `PROJECT_SPECIFICATION.md`. The original prompt was reread in full for this batch (1,133 lines; 4,642 words; SHA-256 `541098eebd96b98e0153770f0bc37a1031a7242fd9cb97bc5a6b52c35c9ddfde`). Source references below use `Master Pn` for original Part n and `Spec §n` for repository specification section n. Requirements are split into independently testable obligations; closely coupled fields remain grouped only where they share one acceptance test.
 
-| ID | Requirement | Priority | Status |
-|---|---|---|---|
-| GOV-001 | Read entire specification before coding | Critical | TESTED |
-| GOV-002 | Maintain permanent requirement registry | Critical | IMPLEMENTED |
-| GOV-003 | Trace requirements to architecture, code, tests and evidence | Critical | PARTIALLY IMPLEMENTED |
-| GOV-004 | Recheck requirements before every phase, batch and release | Critical | PLANNED |
-| GOV-005 | Never silently omit, downgrade or fake requirements | Critical | PLANNED |
-| GOV-006 | Resume from specification, registry, code and checkpoints | High | IN PROGRESS |
-| GIT-001 | Use Pawar-47/Cartoon-Studio as source of truth | Critical | IMPLEMENTED |
-| GIT-002 | Develop and maintain source in GitHub | Critical | IN PROGRESS |
-| GIT-003 | GitHub Actions build, test and Windows package | Critical | TESTED |
-| GIT-004 | Produce downloadable Windows artifacts | High | TESTED |
-| GIT-005 | Verify installation on user's Windows PC | Critical | NOT REVIEWED |
-| GIT-006 | Keep episode rendering separate from CI runners | High | PLANNED |
-| OSS-001 | Search public GitHub extensively before building components | Critical | IN PROGRESS |
-| OSS-002 | Inspect source, docs, releases, issues, activity and dependencies | Critical | RESEARCH REQUIRED |
-| OSS-003 | Verify software, model, dataset and asset licenses | Critical | RESEARCH REQUIRED |
-| OSS-004 | Prefer reuse/integration/adaptation before scratch development | Critical | PLANNED |
-| OSS-005 | Record source, version, author, license and provenance | High | IN PROGRESS |
-| HW-001 | Support Intel Core i3-5005U | Critical | PLANNED |
-| HW-002 | Support Intel HD Graphics 5500 without NVIDIA requirement | Critical | PLANNED |
-| HW-003 | Operate within 8 GB RAM using low-memory/sequential processing | Critical | PLANNED |
-| HW-004 | Benchmark actual scenes before performance promises | High | PLANNED |
-| HW-005 | Preview, Low Hardware, Balanced and High Quality presets | High | PLANNED |
-| APP-001 | Lightweight browser-based application | Critical | TESTED |
-| APP-002 | Local backend and persistent SQLite project metadata | High | TESTED |
-| APP-003 | Dashboard, project creation and listing | High | TESTED |
-| APP-004 | Story Generator workspace | High | TESTED |
-| APP-005 | Character Studio workspace | High | PLANNED |
-| APP-006 | World Builder workspace | High | PLANNED |
-| APP-007 | Asset Library workspace | High | PLANNED |
-| APP-008 | Animation, Timeline and Scene Editor | High | PLANNED |
-| APP-009 | Voice Studio and Episode Renderer | High | PLANNED |
-| APP-010 | Research Agent and AI Resource Manager | High | PLANNED |
-| WORLD-001 | Persistent original town, neighborhoods and locations | Critical | PLANNED |
-| WORLD-002 | Reusable streets, buildings, shops, schools, parks and interiors | High | PLANNED |
-| WORLD-003 | Reusable vehicles and interactive movement | High | PLANNED |
-| WORLD-004 | Persistent layouts, props, materials and scene templates | High | PLANNED |
-| WORLD-005 | Validate temporary Ara-derived location IDs in the early Story Generator prototype | High | PARTIALLY IMPLEMENTED |
-| CHAR-001 | Create and save original reusable characters | Critical | PLANNED |
-| CHAR-002 | Persistent face, body, clothing, hair and accessories | High | PLANNED |
-| CHAR-003 | Personality, relationships, voice and dialogue profiles | High | PLANNED |
-| CHAR-004 | Rigging, preview, import and export | Critical | PLANNED |
-| ANIM-001 | Reusable body animation library | Critical | PLANNED |
-| ANIM-002 | Facial expressions, blinking, talking and gestures | High | PLANNED |
-| ANIM-003 | Smooth transitions, blending and retargeting | High | PLANNED |
-| ANIM-004 | Validate temporary Ara-derived action IDs in the early Story Generator prototype | High | PARTIALLY IMPLEMENTED |
-| ANIM-005 | Validate temporary Ara-derived expression IDs in the early Story Generator prototype | High | PARTIALLY IMPLEMENTED |
-| STORY-001 | One-prompt original story generation in Urdu or English | Critical | PARTIALLY IMPLEMENTED |
-| STORY-002 | Title, summary, cast, scenes, actions, camera and audio plan | High | PARTIALLY IMPLEMENTED |
-| STORY-003 | Natural conversational Pakistani Urdu | Critical | PARTIALLY IMPLEMENTED |
-| STORY-004 | Urdu script, RTL and optional Roman Urdu | Critical | PARTIALLY IMPLEMENTED |
-| STORY-005 | Edit and approve story before production | High | PARTIALLY IMPLEMENTED |
-| STORY-006 | Validate scene data and repair/recover invalid output | High | PARTIALLY IMPLEMENTED |
-| AI-001 | Modular multi-provider AI architecture | High | PLANNED |
-| AI-002 | Verify free quotas, refill cycles, terms and Pakistan availability | High | PLANNED |
-| AI-003 | Manual AI copy/paste handoff for providers without an approved API | High | PARTIALLY IMPLEMENTED |
-| AI-004 | Never bypass quotas or use unauthorized APIs | Critical | PLANNED |
-| RES-001 | Research agent searches docs, GitHub, issues and alternatives | High | PLANNED |
-| RES-002 | Compare capability, compatibility, license, cost and hardware | High | PLANNED |
-| RES-003 | Record evidence; never fabricate tests | Critical | PLANNED |
-| VOICE-001 | Evaluate Urdu TTS and Pakistani pronunciation | Critical | RESEARCH REQUIRED |
-| VOICE-002 | Persistent character-specific voice profiles | High | PLANNED |
-| VOICE-003 | Manual recording fallback | High | PLANNED |
-| FACE-001 | Lip-sync, visemes, mouth shapes and dialogue timing | Critical | RESEARCH REQUIRED |
-| AUDIO-001 | Dialogue, music, ambience and sound effects | High | PLANNED |
-| PROD-001 | Complete prompt-to-MP4 production pipeline | Critical | PLANNED |
-| PROD-002 | Approximately 5–7 minute episodes | Critical | PLANNED |
-| PROD-003 | Preserve editable scene and project data | High | PLANNED |
-| PROD-004 | Scene cache, retry, resume and recovery | Critical | PLANNED |
-| PROD-005 | FFmpeg or equivalent final assembly | High | RESEARCH REQUIRED |
-| UX-001 | Every visible control works or is marked planned | Critical | PARTIALLY IMPLEMENTED |
-| UX-002 | Clear progress, logs and diagnostics | High | PLANNED |
-| OFF-001 | Core workflow offline after setup/downloads | Critical | PLANNED |
-| OFF-002 | No mandatory paid APIs, subscriptions or cloud inference | Critical | PLANNED |
-| LIC-001 | Original or properly licensed creative assets | Critical | PLANNED |
-| LIC-002 | Preserve third-party notices and attribution | Critical | PLANNED |
-| QA-001 | Test app, APIs, projects, rendering and installation | Critical | PARTIALLY IMPLEMENTED |
-| QA-002 | Inspect rendered frames/videos, not code alone | Critical | PLANNED |
-| QA-003 | Record actual CI and test evidence | Critical | TESTED |
-| REL-001 | Persistent job queue, autosave and crash recovery | High | PLANNED |
-| REL-002 | Monitor memory, disk, failures and safe cancellation | High | PLANNED |
-| REL-003 | Preserve checkpoints and avoid destructive resets | Critical | PLANNED |
+**Status vocabulary:** NOT REVIEWED; RESEARCH REQUIRED; PLANNED; IN PROGRESS; IMPLEMENTED; PARTIALLY IMPLEMENTED; TESTED; VERIFIED; BLOCKED; DEFERRED WITH REASON; REJECTED WITH JUSTIFICATION. VERIFIED requires direct acceptance evidence. No requirement is VERIFIED at this checkpoint.
 
-## Evidence notes for currently tested catalog requirements
+**Row contract:** every atomic row records source, priority, dependencies, requirement, component, implementation approach, test method, evidence/result, status and remaining limitation. Planned component names are architectural targets, not claims that source modules already exist.
 
-- `WORLD-005`, `ANIM-004` and `ANIM-005` mean only that the Story Plan validator accepts/rejects identifiers from the current Ara-derived location/action/expression catalogs. They do not prove a persistent world, engine-neutral vocabulary, animation playback or facial rig.
-- `APP-001` through `APP-004` are tested only for the current lightweight dashboard/project/story workflow.
-- `GIT-003` and `GIT-004` refer to current Windows CI and the bootstrap ZIP, not a final installer.
-- `STORY-001` through `STORY-005` remain partial because story creation is a manual external-AI handoff, not an integrated AI story-production pipeline.
+**Coverage note:** this registry contains 171 atomic rows. The source mapping covers all 25 original parts and all 24 specification sections. P0.2 includes both requirement extraction and traceability; later Phase 0 batches will refine implementation decisions after comparative research. No requirement is removed because it is difficult or not yet implemented.
 
-## Critical coverage gaps identified by the master-brief audit
+## Atomic requirements
 
-- The current inventory is not yet atomic: several rows combine multiple distinct requirements. Required per-row fields (source section, dependencies, module, implementation approach, test method, evidence and remaining limitations) are not present in this compact table. P0.2 must replace/expand it without losing IDs or history.
-- The existing location/action/expression checks are provisional Ara-derived catalog validation, not production world or animation requirements.
-- Story-plan validation does not implement automatic repair/recovery; that part remains open.
-- Manual provider handoff exists, but current provider terms/quotas/Pakistan availability have not been fully verified.
+| ID | Source | Priority | Depends on | Atomic requirement | Component | Planned implementation | Test method | Evidence/result | Status | Remaining limitation |
+|---|---|---|---|---|---|---|---|---|---|---|
+| GOV-R001 | Master P2; P24; P25; Spec §3 | Critical | None | Treat the complete 25-part master brief as the binding execution contract. | governance | Retain source brief and reconcile all work against it. | Hash and line-count source; checklist all 25 parts. | Source reread: 1,133 lines, 4,642 words; SHA-256 541098eebd96b98e0153770f0bc37a1031a7242fd9cb97bc5a6b52c35c9ddfde. | TESTED | Verbatim source is not yet version-controlled in repository. |
+| GOV-R002 | Master P2; P24; P25; Spec §3 | Critical | GOV-001A | Maintain a permanent registry with unique IDs and original source references. | governance | Atomic registry with stable IDs and source cross-references. | Coverage audit against every prompt part and spec section. | Registry exists; expanded in this batch. | IMPLEMENTED | Coverage remains subject to later independent audit. |
+| GOV-R003 | Master P2; P24; P25; Spec §3 | Critical | GOV-001B | Record priority, dependencies, implementation, test method, result, evidence and limitations for every atomic requirement. | governance | Mandatory columns on every atomic row. | Schema validation for empty mandatory fields. | P0.2 registry rows include all mandatory fields. | IMPLEMENTED | Some planned implementation details will be refined after P0.3-P0.5 research. |
+| GOV-R004 | Master P2; P24; P25; Spec §3 | Critical | GOV-001B | Keep every requirement open until verified, reasoned-deferred or justified-rejected. | governance | Status policy and evidence gate. | Status/evidence review; no silent removals. | Status policy documented; no requirement marked VERIFIED without proof. | IMPLEMENTED | No requirements are VERIFIED at this checkpoint. |
+| GOV-R005 | Master P2; P24; P25; Spec §3 | Critical | GOV-001C | Use only the defined lifecycle statuses and never equate code presence with verification. | governance | Controlled vocabulary and evidence rules. | Registry status audit. | Defined status vocabulary; all new rows carry explicit status. | IMPLEMENTED | Historical parent rows are retained as aliases, not proof. |
+| GOV-R006 | Master P2; P24; P25; Spec §3 | Critical | GOV-001B | Re-scan full registry before architecture, each phase and substantial batch, integration, phase completion and release. | governance | Checkpoint checklist and report template. | Check batch records for relevant IDs, dependencies and tests. | Master plan describes resume/checkpoint protocol. | PLANNED | Future checkpoint execution still required. |
+| GOV-R007 | Master P2; P24; P25; Spec §3 | Critical | GOV-001B | Trace each requirement through architecture, source modules, implementation, test and evidence. | governance | One-to-one traceability matrix. | Registry-to-traceability ID set equality. | Traceability matrix expanded in this batch. | IMPLEMENTED | Future implementation mappings will be populated as modules are built. |
+| GOV-R008 | Master P2; P24; P25; Spec §3 | High | GOV-001A | On resume, inspect live GitHub HEAD, source brief, plans, status, registry, traceability, tests and active-batch code. | governance | Resume checklist and exact checkpoint pointers. | Resume audit record. | This resume checked main HEAD, CI #68, plan, spec, registry and traceability. | IMPLEMENTED | Repeat at every future resume. |
+| GOV-R009 | Master P2; P24; P25; Spec §3 | Critical | GOV-001B, OSS, ARCH | Do not start production features before Phase 0 research and architecture freeze. | governance | Phase 0 gates block downstream production batches. | Review commit diff and batch plan. | Corrected phase order in MASTER_PLAN and EXECUTION_BATCH_PLAN. | IMPLEMENTED | Existing early Story Generator is preserved and frozen, not retroactively erased. |
+| GOV-R010 | Master P2; P24; P25; Spec §3 | Critical | QA | Deliver working product outcomes, not activity, code volume, mockups or documentation alone. | governance | Acceptance evidence must include functioning end-to-end product. | Final acceptance checklist with real installed/rendered output. | Acceptance criteria documented; no complete product evidence. | PLANNED | Final product not delivered. |
+| ROLE-R001 | Master P1; Spec §2 | Critical | ARCH | Own end-to-end architecture and integration across all product subsystems. | project leadership | Architecture decision record and module integration ownership. | Cross-module integration and acceptance review. | No implementation/test evidence in current repository | PLANNED | No integrated production system. |
+| ROLE-R002 | Master P1; Spec §2 | High | APP | Own frontend, backend, database, APIs and usable UX delivery. | project leadership | Deliver tested full-stack workflows. | Browser-to-backend integration tests. | FastAPI, static UI and SQLite shell exist; 12 app tests passed in CI #67. | PARTIALLY IMPLEMENTED | Only dashboard/project/story foundation is present. |
+| ROLE-R003 | Master P1; Spec §2 | Critical | OSS, ARCH | Own open-source research, 3D direction, AI integration and animation pipeline decisions. | project leadership | Research, compare and document evidence before selection. | Source-level candidate review and bounded proof. | Initial candidate notes exist. | RESEARCH REQUIRED | Research breadth and candidate proof incomplete. |
+| ROLE-R004 | Master P1; Spec §2 | Critical | GIT, HW, QA | Own CI/CD, Windows packaging, target-hardware performance and QA. | project leadership | Reproducible pipeline and measured installation/performance evidence. | Windows runner plus clean target-PC install and benchmark. | CI #68 passed; bootstrap artifact exists from #67. | PARTIALLY IMPLEMENTED | No self-contained installer or target-PC validation. |
+| ROLE-R005 | Master P1; Spec §2 | High | LIC, GOV | Own security, licensing, project planning, checkpoints and continuity. | project leadership | License inventory, dependency review and synchronized checkpoints. | License/security audit and resume simulation. | Governance and license documents exist. | PARTIALLY IMPLEMENTED | Full license/dependency audit and continuity automation remain open. |
+| VISION-R001 | Master P3; Spec §1 | Critical | CHAR,WORLD,ANIM,STORY,PROD | Build an original reusable 3D cartoon-production studio, not a one-off video generator. | episode production | Persistent projects and reusable production assets. | Create multiple episodes reusing the same character/world assets. | No implementation/test evidence in current repository | PLANNED | No production engine or completed episode. |
+| VISION-R002 | Master P3; Spec §1 | Critical | STORY | Generate an original story from one user prompt. | episode production | Provider-neutral story pipeline with approval. | Prompt-to-editable-story acceptance test. | Manual external-AI prompt handoff and editable story schema exist. | PARTIALLY IMPLEMENTED | No integrated automatic generation. |
+| VISION-R003 | Master P3; Spec §1 | Critical | STORY,VOICE | Generate natural Pakistani Urdu dialogue with English prompt support. | episode production | Urdu-aware story/dialogue generation and evaluation. | Native-speaker sample review and script checks. | Prompt instructions mention Pakistani Urdu. | PARTIALLY IMPLEMENTED | No quality benchmark or production dialogue pipeline. |
+| VISION-R004 | Master P3; Spec §1 | Critical | CHAR,WORLD | Reuse established characters and locations across episodes. | episode production | Persistent canonical IDs and asset references. | Cross-episode save/reopen identity test. | No implementation/test evidence in current repository | PLANNED | Persistent character/world systems absent. |
+| VISION-R005 | Master P3; Spec §1 | Critical | STORY,ANIM,VOICE,FACE | Automatically create scenes, animate characters and synchronize voice/facial motion. | episode production | Scene planner and production adapters. | End-to-end multi-scene rendered sample. | No implementation/test evidence in current repository | PLANNED | No renderer, animation playback, TTS or lip-sync. |
+| VISION-R006 | Master P3; Spec §1 | Critical | PROD,REL | Assemble and export an editable 5–7 minute MP4 episode. | episode production | Scene render queue, audio mix, MP4 and editable project export. | Inspect full-length MP4 and reopen editable project. | No implementation/test evidence in current repository | PLANNED | No episode pipeline. |
+| GIT-R001 | Master P4; Spec §4 | Critical | None | Use Pawar-47/Cartoon-Studio as the source of truth. | repository and delivery | All source, plans and evidence maintained on main. | Compare live main HEAD and working changes. | Live main HEAD 4171bb320a10c3d7cfec561f706f7e10ebd3bacd. | IMPLEMENTED | Branch protection is currently disabled. |
+| GIT-R002 | Master P4; Spec §4 | Critical | GIT-001A | Keep frontend, backend, configs, tests, workflows, packaging and documentation in GitHub. | repository and delivery | Maintain complete repository layout. | Repository tree and clean checkout build. | App, tests, CI and docs exist in repository. | PARTIALLY IMPLEMENTED | Production engine, installer and multiple modules absent. |
+| GIT-R003 | Master P4; Spec §4 | High | LIC,REL | Do not commit generated videos, caches, temporary files or large model weights unnecessarily. | repository and delivery | Ignore generated artifacts and document external asset acquisition. | Repository size and ignore-rule audit. | No implementation/test evidence in current repository | PLANNED | Needs policy and checks. |
+| GIT-R004 | Master P4; Spec §4 | Critical | GIT-001B | Use GitHub Actions for dependency setup, frontend/backend build, tests and static analysis. | repository and delivery | Keep deterministic CI workflow. | Clean workflow run and inspect each job. | Run #68 success on 4171bb3; run #67 passed Ruff, compileall and 12 pytest tests. | TESTED | CI currently validates shell/bootstrap, not full production app. |
+| GIT-R005 | Master P4; Spec §4 | Critical | GIT-001D | Package repeatable Windows artifacts and retain logs and failure diagnostics. | repository and delivery | Versioned Windows build artifact with checksums and release metadata. | Artifact download, checksum and clean extraction/install. | Run #67 artifact 14964957829, 78,882 bytes; SHA-256 f307617262c75506d622ad602e204b85935bc88a7b73797d14d2c2344dd97fd7. | TESTED | Bootstrap ZIP only; run #68 is documentation CI and no new artifact claim. |
+| GIT-R006 | Master P4; Spec §4 | Critical | ARCH,GIT-001E | Deliver a simple Windows launcher and installer that configures required dependencies. | repository and delivery | Research portable wrapper/installer and implement after architecture freeze. | Clean Windows install, launch, shutdown and diagnostics. | Bootstrap package/launcher foundation exists. | PARTIALLY IMPLEMENTED | Self-contained installer and actual user-PC install unverified. |
+| GIT-R007 | Master P4; Spec §4 | High | ARCH,PROD | Keep browser as primary UX and heavy rendering local on the user's Windows machine. | repository and delivery | Local backend render service; CI only builds/tests/packages. | Offline local render test and CI separation review. | Policy documented in specification. | PLANNED | Production renderer not selected. |
+| GIT-R008 | Master P4; Spec §4 | Critical | PROD,OFF | Do not treat GitHub-hosted CI as an unlimited GPU render farm or require paid cloud rendering. | repository and delivery | Keep render runtime local; cloud render optional only with approval. | Inspect architecture and run production without cloud service. | No implementation/test evidence in current repository | PLANNED | Architecture freeze pending. |
+| OSS-R001 | Master P5; Spec §5 | Critical | GOV | Search public GitHub by subsystem before implementing major functionality. | research and reuse | Subsystem research matrix and candidate shortlist. | Research coverage checklist for each subsystem. | Initial candidates Ara, Ekza, DvaitAI, AnimStudio and Urdu TTS recorded. | IN PROGRESS | Not broad or source-complete. |
+| OSS-R002 | Master P5; Spec §5 | Critical | OSS-001A | Inspect candidate README, docs and complete relevant source structure. | research and reuse | Source-level inspection notes with file paths. | Reviewer can reproduce findings from cited paths. | No implementation/test evidence in current repository | RESEARCH REQUIRED | Candidate coverage incomplete. |
+| OSS-R003 | Master P5; Spec §5 | High | OSS-001A | Inspect candidate releases, versions, commits, activity and issues. | research and reuse | Record release/commit/issue health for each candidate. | Evidence links and timestamp review. | No implementation/test evidence in current repository | RESEARCH REQUIRED | Not completed for all candidates. |
+| OSS-R004 | Master P5; Spec §5 | Critical | OSS-001B | Inspect dependencies, hardware requirements, software/model/asset licenses. | research and reuse | Dependency, compatibility and license matrix. | License and hardware audit for selected components. | Initial license notes only. | RESEARCH REQUIRED | No final selections. |
+| OSS-R005 | Master P5; Spec §5 | High | OSS-001B | Assess maintainability and integration complexity, not popularity alone. | research and reuse | Scored evaluation with explicit trade-offs. | Compare at least two viable candidates per critical subsystem. | No implementation/test evidence in current repository | PLANNED | Comparative research not finished. |
+| OSS-R006 | Master P5; Spec §5 | Critical | OSS-001C | Test candidate functionality where practical and classify reuse/adapt/wrap/build. | research and reuse | Bounded reproducible proofs and reuse decision. | Import/open/save/animate/render or subsystem-specific proof. | Ara proof run #6 cancelled during MP4 export. | PARTIALLY IMPLEMENTED | Ara is not approved; no complete proof. |
+| OSS-R007 | Master P5; Spec §5 | High | OSS-001D | Follow reuse hierarchy: complete solution, combine, adapt, wrap libraries, then scratch. | research and reuse | Document decision rationale for every custom subsystem. | Architecture review against candidate matrix. | No implementation/test evidence in current repository | PLANNED | Final architecture pending. |
+| OSS-R008 | Master P5; Spec §5 | High | OSS-001A | Publish research, evaluation, reuse matrix and asset-license records. | research and reuse | Maintain GITHUB_RESEARCH, REPOSITORY_EVALUATION, OPEN_SOURCE_REUSE_MATRIX and ASSET_LICENSES. | Every candidate has source/version/license/evidence and decision. | Required docs exist. | PARTIALLY IMPLEMENTED | Coverage and verification incomplete. |
+| HW-R001 | Master P6; Spec §6 | Critical | ARCH | Support Intel Core i3-5005U CPU as target baseline. | performance and hardware | CPU-compatible runtime and sequential workload. | Benchmark representative scenes on exact CPU. | Hardware profile recorded. | PLANNED | No measured benchmark. |
+| HW-R002 | Master P6; Spec §6 | Critical | ARCH | Support Intel HD Graphics 5500 without requiring NVIDIA GPU. | performance and hardware | Verify graphics API and renderer compatibility; fallback where needed. | Run preview/render on Intel HD 5500. | Hardware target documented. | PLANNED | No renderer compatibility proof. |
+| HW-R003 | Master P6; Spec §6 | Critical | ARCH,REL | Operate within 8 GB RAM and SSD constraints using low-memory processing. | performance and hardware | Sequential jobs, asset reuse and memory monitoring. | Peak RAM/disk measurement on representative scenes. | No implementation/test evidence in current repository | PLANNED | No benchmark. |
+| HW-R004 | Master P6; Spec §6 | Critical | HW-001A,HW-001B | Provide CPU-compatible options and avoid mandatory discrete GPU. | performance and hardware | Capability detection and software/CPU fallback. | Run with integrated graphics only. | No implementation/test evidence in current repository | PLANNED | No implementation. |
+| HW-R005 | Master P6; Spec §6 | High | ARCH,PROD | Provide Preview, Low Hardware, Balanced and High Quality presets without silently removing features. | performance and hardware | Quality profile settings map to explicit render parameters. | Compare all presets for feature parity and output. | No implementation/test evidence in current repository | PLANNED | No renderer or presets. |
+| HW-R006 | Master P6; Spec §6 | High | HW-001C | Benchmark representative scenes before making render-time or quality promises. | performance and hardware | Publish repeatable benchmark scenes and measurements. | Repeat benchmark and record time/RAM/VRAM/disk. | No implementation/test evidence in current repository | PLANNED | No target-PC run. |
+| ARCH-R001 | Master P7; Spec §7 | Critical | GIT | Build a lightweight local-first web application with browser as main interface. | application architecture | Keep lightweight UI and local service boundary. | Launch locally and use UI without remote app server. | FastAPI and static browser UI exist. | PARTIALLY IMPLEMENTED | Production architecture not frozen. |
+| ARCH-R002 | Master P7; Spec §7 | Critical | ARCH-001A | Use a backend for scene generation, animation, rendering, dialogue, lip-sync, audio and assembly. | application architecture | Backend job orchestration and modular subsystem services. | API/job integration tests per subsystem. | No implementation/test evidence in current repository | PLANNED | Only current project/story API exists. |
+| ARCH-R003 | Master P7; Spec §7 | Critical | OSS,HW | Evaluate frontend, 3D preview, backend, database, production engine, video and queue technologies as candidates. | application architecture | Evidence-based technology decision matrix. | Document compatibility, licensing, performance and proof. | FastAPI/SQLite shell exists; candidates are not frozen. | RESEARCH REQUIRED | No final engine/queue selection. |
+| ARCH-R004 | Master P7; Spec §7 | High | ARCH-001C | Keep production engine and project data contracts engine-neutral where possible. | application architecture | Versioned canonical schemas and adapters. | Contract tests independent of engine adapter. | Architecture doc states adapter direction. | PLANNED | No frozen contract. |
+| ARCH-R005 | Master P7; Spec §7 | Critical | ARCH-001B | Keep browser preview separate from full episode rendering. | application architecture | Preview renderer plus local background render service. | Long render executes outside browser tab. | No implementation/test evidence in current repository | PLANNED | No production renderer. |
+| ARCH-R006 | Master P7; Spec §7 | High | APP,AI,REL | Provide persistent local data and modular provider adapters. | application architecture | Versioned project store and adapter interfaces. | Restart and provider substitution tests. | SQLite project metadata exists; manual AI handoff only. | PARTIALLY IMPLEMENTED | No provider-neutral production architecture. |
+| WORLD-R001 | Master P8; Spec §8 | Critical | ARCH,ASSET | Create persistent towns, neighborhoods and reusable location identities. | world builder | Versioned world/location schema and stable IDs. | Save/reopen same world across episodes. | No implementation/test evidence in current repository | PLANNED | No world builder. |
+| WORLD-R002 | Master P8; Spec §8 | High | WORLD-001A | Support roads, intersections, streets, sidewalks and bus stops. | world builder | Modular road/street asset kit. | Build and reopen multi-street test scene. | No implementation/test evidence in current repository | PLANNED | No implementation. |
+| WORLD-R003 | Master P8; Spec §8 | High | WORLD-001A | Support houses, apartments, shops, markets, restaurants and cafés. | world builder | Reusable building kits and interiors. | Place multiple building types and inspect scene. | No implementation/test evidence in current repository | PLANNED | No implementation. |
+| WORLD-R004 | Master P8; Spec §8 | High | WORLD-001A | Support schools, colleges, offices, hospitals and police stations. | world builder | Reusable civic/commercial environment assets. | Place each category and persist layout. | No implementation/test evidence in current repository | PLANNED | No implementation. |
+| WORLD-R005 | Master P8; Spec §8 | High | WORLD-001A | Support parks, playgrounds, garages and indoor rooms such as kitchens and bedrooms. | world builder | Reusable indoor/outdoor environment templates. | Create mixed indoor/outdoor scene and reopen. | No implementation/test evidence in current repository | PLANNED | No implementation. |
+| WORLD-R006 | Master P8; Spec §8 | High | WORLD-001A,ASSET | Support furniture, vegetation, water bodies, streetlights and environmental props. | world builder | Categorized reusable prop library. | Asset placement and material persistence test. | No implementation/test evidence in current repository | PLANNED | No implementation. |
+| WORLD-R007 | Master P8; Spec §8 | High | WORLD-001A,ASSET | Provide reusable cars, buses, motorcycles, scooters, bicycles, trucks, vans and emergency vehicles. | world builder | Vehicle asset catalogue and rig contract. | Import and instantiate every vehicle class. | No implementation/test evidence in current repository | PLANNED | No implementation. |
+| WORLD-R008 | Master P8; Spec §8 | High | WORLD-001G,ANIM | Vehicles support steering, wheel rotation, acceleration, braking, turning and parking. | world builder | Vehicle controller and animation adapter. | Record and inspect movement sequence. | No implementation/test evidence in current repository | PLANNED | No vehicle controller. |
+| WORLD-R009 | Master P8; Spec §8 | Medium | WORLD-001G,CHAR,ANIM | Vehicles support doors and character interaction where appropriate. | world builder | Interaction points and event hooks. | Character enters/exits vehicle interaction test. | No implementation/test evidence in current repository | PLANNED | No interaction system. |
+| WORLD-R010 | Master P8; Spec §8 | Critical | WORLD-001A,REL | Persist world layout, building placement, materials, props and locations across episodes. | world builder | Project asset references and versioned world serialization. | Cross-session/cross-episode persistence test. | No implementation/test evidence in current repository | PLANNED | No persistence implementation. |
+| CHAR-R001 | Master P9; Spec §9 | Critical | ARCH,OSS | Create and import original reusable characters. | character studio | Character creation/import adapter and asset validation. | Create/import and preview original character. | No implementation/test evidence in current repository | PLANNED | No Character Studio. |
+| CHAR-R002 | Master P9; Spec §9 | High | CHAR-001A | Store persistent character name, face design, body proportions and height. | character studio | Versioned character identity schema. | Save/reopen profile and compare identity fields. | No implementation/test evidence in current repository | PLANNED | No character schema. |
+| CHAR-R003 | Master P9; Spec §9 | High | CHAR-001A | Store hair, clothing, accessories, eyes, mouth and expression design. | character studio | Appearance component model and variants. | Edit variants and reopen without drift. | No implementation/test evidence in current repository | PLANNED | No appearance editor. |
+| CHAR-R004 | Master P9; Spec §9 | High | CHAR-001A,STORY,VOICE | Store personality, relationships, voice profile and dialogue style. | character studio | Character metadata linked to story/voice profiles. | Use same character in multiple episodes. | No implementation/test evidence in current repository | PLANNED | No persistent profiles. |
+| CHAR-R005 | Master P9; Spec §9 | Critical | CHAR-001A,ANIM,OSS | Support animation rigging, preview, import and export. | character studio | Selected rig adapter and documented formats. | Rig, animate, save/reopen and export round-trip. | No implementation/test evidence in current repository | PLANNED | No rigging integration. |
+| CHAR-R006 | Master P9; Spec §9 | Critical | CHAR-001B,CHAR-001C,REL | Preserve character visual identity and consistency across episodes. | character studio | Canonical asset references and versioned identity. | Render same character in multiple scenes and compare. | No implementation/test evidence in current repository | PLANNED | No rendered evidence. |
+| ANIM-R001 | Master P10; Spec §10 | High | CHAR,OSS | Provide reusable idle, walk, run, turn, jump, sit, stand and fall animations. | animation engine | Licensed clip library and action adapter. | Play each action on supported rig. | No implementation/test evidence in current repository | PLANNED | Current IDs only validate candidate labels. |
+| ANIM-R002 | Master P10; Spec §10 | High | CHAR,FACE | Provide laugh, cry, smile, anger, surprise, fear, confusion and thinking expressions/actions. | animation engine | Facial/body animation catalog. | Inspect each expression on real rig. | No implementation/test evidence in current repository | PLANNED | No facial rig or playback. |
+| ANIM-R003 | Master P10; Spec §10 | High | CHAR,FACE,VOICE | Provide blinking, talking, gestures, waving, pointing and dancing. | animation engine | Reusable facial/gesture clips and timing controls. | Playback and timing tests. | No implementation/test evidence in current repository | PLANNED | No animation library. |
+| ANIM-R004 | Master P10; Spec §10 | High | CHAR,WORLD | Provide fighting, object pickup/throw, door opening, driving and character interactions. | animation engine | Interaction clips and event-driven action system. | Inspect multi-character and prop interaction scene. | No implementation/test evidence in current repository | PLANNED | No interaction clips. |
+| ANIM-R005 | Master P10; Spec §10 | Critical | ANIM-001A,CHAR | Blend animations and transition smoothly without robotic movement. | animation engine | Blend graph, transition rules and motion review. | Capture transition clips and evaluate motion. | No implementation/test evidence in current repository | PLANNED | No playback system. |
+| ANIM-R006 | Master P10; Spec §10 | High | OSS,LIC | Support motion retargeting and properly licensed animation assets. | animation engine | Rig retarget adapter and per-clip provenance. | Retarget selected clips and license audit. | No implementation/test evidence in current repository | PLANNED | No rig/clip integration. |
+| STORY-R001 | Master P11; Spec §§11-12 | Critical | AI | Accept one Urdu or English prompt and produce an original story. | story and scene engine | Story provider adapter and structured generation. | Prompt-to-story tests in Urdu and English. | Manual prompt builder/paste workflow and schema exist. | PARTIALLY IMPLEMENTED | No direct integrated AI generation. |
+| STORY-R002 | Master P11; Spec §§11-12 | High | STORY-001A | Generate title, summary, character list and relationships. | story and scene engine | Required fields in versioned episode schema. | Schema and content validation. | Existing story plan schema includes core story fields. | PARTIALLY IMPLEMENTED | Completeness and generated quality unverified. |
+| STORY-R003 | Master P11; Spec §§11-12 | Critical | STORY-001A | Generate scene breakdown and scene durations. | story and scene engine | Scene planner with duration constraints. | Duration totals and scene coverage tests. | Existing scene schema validates duration and scene count. | PARTIALLY IMPLEMENTED | No automated scene planner. |
+| STORY-R004 | Master P11; Spec §§11-12 | Critical | AI,VOICE | Generate natural Pakistani Urdu dialogue and support Urdu script. | story and scene engine | Urdu prompt policy and native-speaker evaluation. | Native-speaker review of varied dialogue samples. | Prompt builder requests Pakistani Urdu. | PARTIALLY IMPLEMENTED | No evaluated generated sample. |
+| STORY-R005 | Master P11; Spec §§11-12 | Critical | UX,STORY-001D | Support correct RTL rendering and optional Roman Urdu. | story and scene engine | RTL-safe layout, shaping and transliteration option. | Browser RTL visual and input tests. | No implementation/test evidence in current repository | PLANNED | No verified RTL/Roman Urdu behavior. |
+| STORY-R006 | Master P11; Spec §§11-12 | High | ANIM,STORY-001A | Generate actions, expressions and animation instructions per scene. | story and scene engine | Engine-neutral action/expression references. | Scene contract validation and playback mapping. | Ara-derived action/expression ID validation exists. | PARTIALLY IMPLEMENTED | IDs provisional; no playback mapping. |
+| STORY-R007 | Master P11; Spec §§11-12 | High | WORLD,ANIM,AUDIO | Generate environment, props, camera directions, music and sound effects. | story and scene engine | Complete scene production schema. | Schema completeness and production mapping. | Current scene schema has some cue fields. | PARTIALLY IMPLEMENTED | Full production mapping absent. |
+| STORY-R008 | Master P11; Spec §§11-12 | High | STORY-001A | Generate transitions and a coherent ending. | story and scene engine | Story structure rules and scene transition fields. | Story continuity and transition validation. | No implementation/test evidence in current repository | PLANNED | No end-to-end story quality tests. |
+| STORY-R009 | Master P11; Spec §§11-12 | Critical | CHAR,WORLD,AI | Keep stories original, coherent, entertaining and consistent with established characters. | story and scene engine | Continuity context and originality safeguards. | Human review across multiple episodes. | No implementation/test evidence in current repository | PLANNED | No multi-episode continuity test. |
+| STORY-R010 | Master P11; Spec §§11-12 | Critical | STORY-001A,UX | Allow story and dialogue editing and explicit user approval before production. | story and scene engine | Editable review/approval state before render queue. | Edit, approve and ensure unapproved story cannot render. | Story editing workspace exists. | PARTIALLY IMPLEMENTED | Approval-to-production gate not integrated. |
+| STORY-R011 | Master P11; Spec §§11-12 | Critical | WORLD,CHAR,ANIM,AUDIO | Convert story into validated structured scenes with location, cast, props, dialogue, actions, camera, lighting, audio, duration and transitions. | story and scene engine | Versioned canonical scene schema. | Schema completeness, migration and round-trip tests. | Current scene schema and validators cover a subset. | PARTIALLY IMPLEMENTED | Missing production fields/adapters; Ara-derived IDs remain provisional. |
+| STORY-R012 | Master P11; Spec §§11-12 | Critical | STORY-001K,PROD | Repair invalid scene data rather than fail the entire episode. | story and scene engine | Validation diagnostics and deterministic repair/fallback layer. | Malformed scene repair and partial-job continuation tests. | Current validator rejects invalid IDs. | PLANNED | Automatic repair/recovery not implemented. |
+| AI-R001 | Master P12; Spec §13 | High | ARCH | Support modular adapters for multiple AI providers rather than one provider dependency. | AI resource manager | Provider interface and capability registry. | Contract tests with two independent providers. | No implementation/test evidence in current repository | PLANNED | Only manual handoff exists. |
+| AI-R002 | Master P12; Spec §13 | High | OSS | Research FreeMilk, ChatGPT Free, Gemini, Claude, Copilot, Perplexity and suitable alternatives. | AI resource manager | Provider matrix with official sources. | Source verification for each provider. | Names listed in source specification. | RESEARCH REQUIRED | No verified current quota matrix. |
+| AI-R003 | Master P12; Spec §13 | Critical | AI-001B | Verify actual free quotas, refill schedules, Pakistan availability, terms and automation permissions. | AI resource manager | Timestamped provider terms/availability research. | Recheck official terms and user-region availability. | No implementation/test evidence in current repository | RESEARCH REQUIRED | Must not infer API access from consumer app allowances. |
+| AI-R004 | Master P12; Spec §13 | Medium | AI-001A | Route research, architecture, coding, review, debugging, stories, Urdu refinement, docs and test planning to suitable tools. | AI resource manager | Task capability mapping and provider selection. | Run representative task routing scenarios. | No implementation/test evidence in current repository | PLANNED | No orchestrator. |
+| AI-R005 | Master P12; Spec §13 | High | AI-001A,AI-001C | When a provider limit is reached, suggest another legitimate provider without bypassing limits. | AI resource manager | Quota-aware manual routing and provider status UI. | Simulated quota-exhaustion routing test. | No implementation/test evidence in current repository | PLANNED | No quota manager. |
+| AI-R006 | Master P12; Spec §13 | Critical | AI-001A | Use official APIs/supported integrations only; never extract unauthorized APIs or bypass quotas. | AI resource manager | Provider allowlist, documented auth and policy checks. | Integration review and negative tests. | Policy recorded in source specification. | PLANNED | Enforcement not implemented. |
+| AI-R007 | Master P12; Spec §13 | High | AI-001A | Support manual copy/paste handoffs where APIs are unavailable. | AI resource manager | Structured prompt/export/import workflow. | Round-trip handoff and schema validation. | Existing Story Generator manual prompt/paste workflow. | PARTIALLY IMPLEMENTED | No provider-specific workflow manager. |
+| AI-R008 | Master P12; Spec §13 | Critical | OFF,ARCH | Keep core application functional without online AI services. | AI resource manager | Offline local editing/render pipeline; AI optional. | Disconnect network and exercise core workflow. | No implementation/test evidence in current repository | PLANNED | Production workflow not built. |
+| RES-R001 | Master P13; Spec §14 | High | AI,OSS | Identify technical problems and search official documentation. | research agent | Research task model and official-doc connectors. | Run a documented research task. | No implementation/test evidence in current repository | PLANNED | No in-app research agent. |
+| RES-R002 | Master P13; Spec §14 | High | RES-001A | Search GitHub repositories, issues, discussions and technical research. | research agent | Search adapters and source provenance. | Research query returns traceable sources. | No implementation/test evidence in current repository | PLANNED | No agent. |
+| RES-R003 | Master P13; Spec §14 | Critical | RES-001B | Compare multiple solutions by capability, compatibility, license, maintenance, cost and hardware. | research agent | Structured evaluation report. | Review comparison completeness against rubric. | No implementation/test evidence in current repository | PLANNED | Manual research exists outside product; no agent. |
+| RES-R004 | Master P13; Spec §14 | High | RES-001C,QA | Test practical alternatives, recommend, implement when appropriate and record evidence/outcomes. | research agent | Experiment records linked to decisions. | Reproduce proof and inspect result artifacts. | No implementation/test evidence in current repository | PLANNED | No agent execution. |
+| RES-R005 | Master P13; Spec §14 | Critical | GOV,LIC | Never fabricate research or tests; ask approval for consequential money, license, privacy or IP decisions. | research agent | Evidence provenance and approval gates. | Review research logs and approval records. | Evidence policy documented in project specification and audit. | IMPLEMENTED | Operational enforcement remains manual. |
+| VOICE-R001 | Master P14; Spec §§12,15-16 | Critical | OSS | Evaluate Urdu-script TTS and Pakistani pronunciation, not Hindi support as a proxy. | Urdu voice and audio | Benchmark Urdu script samples and native-speaker evaluation. | Native-speaker listening review and pronunciation scoring. | TTS candidates noted in research docs. | RESEARCH REQUIRED | No verified Pakistani Urdu TTS winner. |
+| VOICE-R002 | Master P14; Spec §§12,15-16 | Critical | VOICE-001A | Evaluate TTS naturalness, emotion, speaker consistency, size, CPU, license and commercial rights. | Urdu voice and audio | Model/engine evaluation matrix. | Timed CPU benchmark and license verification. | No implementation/test evidence in current repository | RESEARCH REQUIRED | No model selection. |
+| VOICE-R003 | Master P14; Spec §§12,15-16 | High | CHAR,VOICE-001A | Provide persistent character-specific voice profiles, dialogue timing, pauses and emotions. | Urdu voice and audio | Voice profile schema and audio cache. | Repeat voice sample consistency tests. | No implementation/test evidence in current repository | PLANNED | No voice subsystem. |
+| VOICE-R004 | Master P14; Spec §§12,15-16 | High | VOICE-001C,LIC | Provide manual recording fallback and prohibit unauthorized real-person voice cloning. | Urdu voice and audio | Recording import path and consent/provenance policy. | Import recording and verify consent metadata workflow. | No implementation/test evidence in current repository | PLANNED | No voice studio. |
+| VOICE-R005 | Master P14; Spec §§12,15-16 | Critical | CHAR,ANIM,VOICE | Implement lip-sync with mouth shapes/visemes, jaw movement and dialogue timing. | Urdu voice and audio | Research adapter and rig-specific viseme mapping. | Synchronize real Urdu speech with rendered mouth motion. | No implementation/test evidence in current repository | RESEARCH REQUIRED | No face rig or lip-sync. |
+| VOICE-R006 | Master P14; Spec §§12,15-16 | High | VOICE-001E,ANIM | Coordinate facial expressions, blinking and head movement with dialogue. | Urdu voice and audio | Expression/viseme timeline adapter. | Inspect dialogue-driven facial animation. | No implementation/test evidence in current repository | PLANNED | No animation playback. |
+| VOICE-R007 | Master P14; Spec §§12,15-16 | High | PROD,LIC | Support dialogue, music, ambience, footsteps, vehicle/object sounds, comedy effects and transitions. | Urdu voice and audio | Layered audio timeline and licensed asset library. | Mix representative scene and listen for coverage. | No implementation/test evidence in current repository | PLANNED | No audio mixer. |
+| VOICE-R008 | Master P14; Spec §§12,15-16 | Critical | LIC,AUDIO | Keep speech intelligible and balanced; use original/public-domain/properly licensed audio. | Urdu voice and audio | Mixing targets and provenance validation. | Listen/measure dialogue intelligibility and audit assets. | No implementation/test evidence in current repository | PLANNED | No audio pipeline. |
+| PROD-R001 | Master P15; Spec §§16-17 | Critical | STORY,WORLD,CHAR | Implement prompt → story → approval → scene breakdown → asset preparation pipeline. | episode production | Persisted episode state machine. | Run pipeline through asset preparation. | No implementation/test evidence in current repository | PLANNED | Only manual story planning slice. |
+| PROD-R002 | Master P15; Spec §§16-17 | Critical | ANIM,VOICE | Implement character animation, Urdu dialogue, voice, lip-sync and scene rendering stages. | episode production | Stage adapters and persistent render jobs. | Run representative dialogue-driven scene. | No implementation/test evidence in current repository | PLANNED | No production stages. |
+| PROD-R003 | Master P15; Spec §§16-17 | Critical | AUDIO,OSS | Implement audio mixing and FFmpeg or verified equivalent final MP4 assembly. | episode production | Media assembly adapter with codec checks. | Export and inspect MP4 audio/video streams. | No implementation/test evidence in current repository | RESEARCH REQUIRED | No production assembly. |
+| PROD-R004 | Master P15; Spec §§16-17 | Critical | PROD-001A | Target final episodes approximately 5–7 minutes. | episode production | Episode duration constraints and scene timing planner. | Measure exported episode duration. | No implementation/test evidence in current repository | PLANNED | No episode output. |
+| PROD-R005 | Master P15; Spec §§16-17 | Critical | REL,ARCH | Preserve editable scene/project data alongside final video. | episode production | Portable project package with asset references. | Reopen exported project and revise a scene. | No implementation/test evidence in current repository | PLANNED | No editable production project. |
+| PROD-R006 | Master P15; Spec §§16-17 | Critical | REL | Use scene-level caching and render checkpoints. | episode production | Content-addressed scene cache and checkpoints. | Repeat render and confirm cache hit. | No implementation/test evidence in current repository | PLANNED | No render cache. |
+| PROD-R007 | Master P15; Spec §§16-17 | Critical | REL | Use persistent job queue, retry failed scenes and safely cancel jobs. | episode production | Durable queue with retry/cancel states. | Fault injection, retry and cancellation tests. | No implementation/test evidence in current repository | PLANNED | No render queue. |
+| PROD-R008 | Master P15; Spec §§16-17 | Critical | REL,PROD-001F | Recover after restart and preserve completed scene renders. | episode production | Persist job state and completed outputs. | Kill/restart during render and resume without rerendering completed scenes. | No implementation/test evidence in current repository | PLANNED | No recovery system. |
+| PROD-R009 | Master P15; Spec §§16-17 | High | REL,UX | Report progress and monitor memory/disk during production. | episode production | Job telemetry and resource monitoring. | Long-running job progress and resource alerts. | No implementation/test evidence in current repository | PLANNED | No production telemetry. |
+| UX-R001 | Master P16; Spec §18 | High | APP | Provide Home Dashboard and Projects workspaces. | user interface | Functional project navigation and lifecycle UI. | Create/open/rename/archive project workflows. | Dashboard and project workflow exist. | PARTIALLY IMPLEMENTED | Limited foundation only. |
+| UX-R002 | Master P16; Spec §18 | High | STORY,CHAR | Provide Story Generator and Character Studio workspaces. | user interface | Functional editors tied to canonical project data. | Edit/save/reopen story and character. | Story Generator exists; Character Studio absent. | PARTIALLY IMPLEMENTED | Story only partial. |
+| UX-R003 | Master P16; Spec §18 | High | WORLD,ASSET,ANIM | Provide World Builder, Asset Library and Animation Library workspaces. | user interface | Functional asset/world/animation editors. | Create, reuse and persist assets. | No implementation/test evidence in current repository | PLANNED | Not implemented. |
+| UX-R004 | Master P16; Spec §18 | High | VOICE,STORY,ANIM | Provide Voice Studio, Scene Editor, Timeline and 3D Preview. | user interface | Production editing and preview surfaces. | Edit scene, preview animation and voice timing. | No implementation/test evidence in current repository | PLANNED | Not implemented. |
+| UX-R005 | Master P16; Spec §18 | High | PROD,RES,AI | Provide Episode Renderer, Research Agent and AI Resource Manager. | user interface | Job and resource workspaces. | Run render/research/provider workflows. | No implementation/test evidence in current repository | PLANNED | Not implemented. |
+| UX-R006 | Master P16; Spec §18 | High | REL,APP | Provide Settings, Logs and Diagnostics. | user interface | Configuration and actionable diagnostic views. | Change setting and inspect actionable failure report. | No implementation/test evidence in current repository | PLANNED | Not implemented. |
+| UX-R007 | Master P16; Spec §18 | Critical | UX-001A | Every visible control must work or be explicitly marked planned; no fake controls. | user interface | Control inventory with behavior and status. | UI control audit and browser interaction tests. | Current dashboard/story UI exists. | PARTIALLY IMPLEMENTED | Full UI inventory not audited. |
+| UX-R008 | Master P16; Spec §18 | High | REL,PROD | Show meaningful progress and actionable errors. | user interface | Job progress and structured error reporting. | Induce failure and verify actionable message. | No implementation/test evidence in current repository | PLANNED | No production jobs. |
+| LIC-R001 | Master P17; Spec §19 | Critical | WORLD,CHAR,ANIM | Maintain central library for characters, rigs, animations, buildings, furniture, vehicles, props and textures. | assets and licensing | Asset registry and categorized import workflow. | Register and retrieve representative assets. | No implementation/test evidence in current repository | PLANNED | No in-app asset library. |
+| LIC-R002 | Master P17; Spec §19 | High | ASSET,VOICE | Maintain materials, audio, music, environments and scene templates in the library. | assets and licensing | Typed asset catalog and metadata. | Import/search/reuse assets across projects. | No implementation/test evidence in current repository | PLANNED | No library. |
+| LIC-R003 | Master P17; Spec §19 | High | ARCH,OSS | Support GLB/glTF and other formats selected by the engine research. | assets and licensing | Format adapters and validation. | Round-trip import/export of selected formats. | No implementation/test evidence in current repository | RESEARCH REQUIRED | Formats not frozen. |
+| LIC-R004 | Master P17; Spec §19 | Critical | LIC-001A | Record source URL, author, version, license and commercial-use rights for every third-party asset. | assets and licensing | Mandatory provenance metadata. | Reject asset lacking required license fields. | ASSET_LICENSES.md exists. | PLANNED | No in-app enforcement. |
+| LIC-R005 | Master P17; Spec §19 | Critical | LIC-001D | Record modification, redistribution, attribution, checksum and modification history. | assets and licensing | Asset provenance manifest and integrity check. | Audit sample imported assets and checksum verification. | No implementation/test evidence in current repository | PLANNED | Manifest not implemented. |
+| LIC-R006 | Master P17; Spec §19 | Critical | LIC-001D | Use original or appropriately licensed creative elements; never silently include unclear rights. | assets and licensing | License gate and attribution notices. | Release asset audit. | No implementation/test evidence in current repository | PLANNED | No production asset set. |
+| OFF-R001 | Master P18; Spec §20 | Critical | AI,ARCH | Do not require paid APIs, subscriptions or mandatory cloud inference. | offline and cost | Local core and optional provider integrations. | Run core workflows without API keys or subscriptions. | No implementation/test evidence in current repository | PLANNED | Production workflow not available. |
+| OFF-R002 | Master P18; Spec §20 | Critical | OFF-001A | Do not require daily/monthly AI credits or online activation. | offline and cost | No mandatory remote licensing/quota gate. | Offline startup and project workflow. | No implementation/test evidence in current repository | PLANNED | Not tested. |
+| OFF-R003 | Master P18; Spec §20 | Critical | PROD,ARCH | Do not require cloud rendering. | offline and cost | Local render runtime; cloud optional only. | Render locally with network disabled. | No implementation/test evidence in current repository | PLANNED | Renderer not selected. |
+| OFF-R004 | Master P18; Spec §20 | Critical | OFF-001A,OFF-001C | After dependencies/assets are downloaded, core production should work offline. | offline and cost | Offline-capable asset cache and local pipeline. | Disconnect network and create/render/edit episode. | No implementation/test evidence in current repository | PLANNED | No offline production pipeline. |
+| OFF-R005 | Master P18; Spec §20 | High | AI,LIC | Identify optional online features and obtain approval before paid dependencies. | offline and cost | Optional feature flags, cost disclosure and approval gate. | Dependency and settings audit. | No implementation/test evidence in current repository | PLANNED | No provider catalog. |
+| REL-R001 | Master P15/P19; Spec §21 | Critical | APP,ARCH | Autosave projects and maintain versioned project metadata. | reliability and persistence | Versioned project format and autosave policy. | Crash/restart and verify latest saved project. | SQLite project metadata and story persistence tests exist. | PARTIALLY IMPLEMENTED | No full production project format. |
+| REL-R002 | Master P15/P19; Spec §21 | Critical | PROD | Maintain persistent job queue and resumable production jobs. | reliability and persistence | Durable queue with explicit job states. | Restart worker and resume pending jobs. | No implementation/test evidence in current repository | PLANNED | No job queue. |
+| REL-R003 | Master P15/P19; Spec §21 | Critical | PROD | Cache renders and preserve completed outputs. | reliability and persistence | Content hashes and output manifest. | Cache-hit and partial-failure tests. | No implementation/test evidence in current repository | PLANNED | No renderer/cache. |
+| REL-R004 | Master P15/P19; Spec §21 | Critical | REL-001A,HW | Support crash recovery, safe cancellation and memory/disk monitoring. | reliability and persistence | Recovery supervisor and resource telemetry. | Fault injection and resource-limit tests. | No implementation/test evidence in current repository | PLANNED | No production worker. |
+| REL-R005 | Master P15/P19; Spec §21 | High | LIC,ARCH | Version assets and dependencies; preserve portable projects. | reliability and persistence | Asset manifests, dependency lock and portable references. | Move project to clean machine and reopen. | No implementation/test evidence in current repository | PLANNED | No asset/version system. |
+| REL-R006 | Master P15/P19; Spec §21 | Critical | GOV | Never automatically delete user work or destructive-reset existing progress. | reliability and persistence | Non-destructive migrations, backups and explicit deletion confirmation. | Migration/backup/restore and deletion safety tests. | Preservation rule recorded in master plan. | PLANNED | Enforcement/tests still required. |
+| DOC-R001 | Master P19; Spec §22 | Critical | GOV | Maintain MASTER_PLAN, ARCHITECTURE, PROJECT_STATUS, REQUIREMENTS_REGISTRY and REQUIREMENT_TRACEABILITY. | documentation | Update together at each substantial batch. | Required-document presence and freshness audit. | All five documents exist. | IMPLEMENTED | Need continuing synchronization. |
+| DOC-R002 | Master P19; Spec §22 | High | OSS | Maintain GITHUB_RESEARCH, REPOSITORY_EVALUATION, OPEN_SOURCE_REUSE_MATRIX and RESEARCH_LOG. | documentation | Evidence-backed research documentation. | Candidate/source coverage audit. | All required docs exist. | PARTIALLY IMPLEMENTED | Research coverage incomplete. |
+| DOC-R003 | Master P19; Spec §22 | High | ARCH,HW,AI,LIC | Maintain DECISION_LOG, HARDWARE_PROFILE, AI_PROVIDERS and ASSET_LICENSES. | documentation | Record decisions, constraints and provenance. | Decision/constraint traceability review. | All required docs exist. | PARTIALLY IMPLEMENTED | Several remain preliminary. |
+| DOC-R004 | Master P19; Spec §22 | High | GIT,QA,GOV | Maintain BUILD_AND_INSTALL, TEST_REPORT and NEXT_STEPS. | documentation | Record real build/install/test and exact checkpoint. | Compare docs to live workflow and artifacts. | All docs exist; CI #68 now passed. | PARTIALLY IMPLEMENTED | Status/test docs require refresh in this batch. |
+| DOC-R005 | Master P19; Spec §22 | Critical | DOC-001A | PROJECT_STATUS must distinguish implemented, partial, not implemented, test outcomes, untested, blocked, deferred and next batch. | documentation | Explicit state taxonomy and evidence links. | Status audit against registry. | Status document has separate state sections. | PARTIALLY IMPLEMENTED | Refresh live HEAD and granular statuses. |
+| DOC-R006 | Master P19; Spec §22 | Critical | DOC-001A,DOC-001D | Keep all documents synchronized with actual source and test evidence. | documentation | Single batch update and CI checkpoint. | Cross-document consistency check. | P0.2 updates registry/traceability/status/next steps/test report together. | PARTIALLY IMPLEMENTED | Must repeat for each batch. |
+| PHASE-R001 | Master P20; Spec §23 | Critical | GOV,OSS,HW,ARCH | Complete Phase 0 specification, registry, research, licensing and architecture before production feature work. | phase governance | P0.1-P0.7 sequential gates. | Phase 0 exit audit. | P0.1 and corrected sequence complete; P0.2 active. | IN PROGRESS | P0.2-P0.7 remain. |
+| PHASE-R002 | Master P20; Spec §23 | Critical | Phase 0 | Phase 1 delivers repository, app foundation, CI, tests, Windows artifact and verified installation. | phase governance | P1.1-P1.4 foundation batches. | Clean Windows installation and persistent local workflow. | App shell and CI/bootstrap ZIP exist. | PARTIALLY IMPLEMENTED | Installer and install verification absent. |
+| PHASE-R003 | Master P20; Spec §23 | Critical | Phase 0,Phase 1 | Phase 2 delivers character generation/import, rigging, profiles, persistence and export. | phase governance | P2.1-P2.3 Character Studio batches. | Create/import/rig/save/reopen/animate/export. | No implementation/test evidence in current repository | PLANNED | Blocked by phase gates. |
+| PHASE-R004 | Master P20; Spec §23 | Critical | Phase 2 | Phase 3 delivers persistent environments, buildings, streets, vehicles, props and locations. | phase governance | P3.1-P3.3 World Builder batches. | Build and reuse multiple persistent locations. | No implementation/test evidence in current repository | PLANNED | Not started. |
+| PHASE-R005 | Master P20; Spec §23 | Critical | Phase 2,Phase 3 | Phase 4 delivers prompt/story generation, Urdu dialogue, structured scenes and approval/editing. | phase governance | P4.1-P4.3 story/scene batches; preserve current prototype. | Complete story plan and scene generation in Urdu/English. | Existing Story Generator/schema is early partial work. | PARTIALLY IMPLEMENTED | Out-of-sequence; freeze feature expansion until Phase 4. |
+| PHASE-R006 | Master P20; Spec §23 | Critical | Phase 2,Phase 4 | Phase 5 delivers animation, expressions, transitions, camera and scene transitions. | phase governance | P5.1-P5.3 animation batches. | Playable multi-scene animation and inspected output. | No implementation/test evidence in current repository | PLANNED | No playback. |
+| PHASE-R007 | Master P20; Spec §23 | Critical | Phase 4,Phase 5 | Phase 6 delivers Urdu TTS, character voices, audio, lip-sync and recording fallback. | phase governance | P6.1-P6.4 voice/audio batches. | Urdu dialogue audio and synchronized facial output. | No implementation/test evidence in current repository | PLANNED | No subsystem. |
+| PHASE-R008 | Master P20; Spec §23 | Critical | Phases 2-6 | Phase 7 delivers complete episode generation, rendering, audio mix, MP4 and editable project. | phase governance | P7.1-P7.3 production pipeline batches. | Complete 5-7 minute MP4 and reopen source project. | No implementation/test evidence in current repository | PLANNED | No pipeline. |
+| PHASE-R009 | Master P20; Spec §23 | Critical | Phases 1-7 | Phase 8 delivers optimization, recovery, final installation and acceptance. | phase governance | P8.1-P8.3 benchmark/release batches. | Target hardware benchmark and full acceptance suite. | No implementation/test evidence in current repository | PLANNED | Final phase not started. |
+| BATCH-R001 | Master P21; Spec §23 | Critical | GOV | Work in complete features or substantial related groups, not endless tiny disconnected edits. | batch execution | One active batch with explicit scope and exit evidence. | Review commit diff and batch deliverables. | P0.2 is a single coordinated documentation/traceability batch. | IMPLEMENTED | Must remain consistent. |
+| BATCH-R002 | Master P21; Spec §23 | Critical | GOV,OSS | For each batch inspect requirements, dependencies, research, affected modules and configurations before implementation. | batch execution | Batch checklist. | Batch record contains relevant IDs and file list. | P0.2 source and repo audit performed. | IMPLEMENTED | Repeat for all batches. |
+| BATCH-R003 | Master P21; Spec §23 | Critical | QA,DOC | Run tests, inspect actual output, fix issues, then commit/push and update docs. | batch execution | Batch completion protocol. | CI and artifact inspection. | CI #68 passed after prior coherent alignment batch. | IMPLEMENTED | P0.2 documentation batch needs CI after push. |
+| BATCH-R004 | Master P21; Spec §23 | High | BATCH-001A | Do not stop after planning when implementation is possible, and do not stall in validation-only cycles. | batch execution | Progress gates require tangible deliverables. | Review batch outputs and subsequent implementation readiness. | P0.2 produces atomic registry and traceability deliverables. | IMPLEMENTED | Production features remain gated by Phase 0/1. |
+| BATCH-R005 | Master P21; Spec §23 | Critical | GIT | Commit and push one completed batch; do not commit trivial intermediate changes. | batch execution | Create one tree/commit per substantial batch. | Inspect commit history and CI run count. | P0.2 is prepared as one multi-file Git commit. | IMPLEMENTED | Previous 15 docs-only commits were recorded as a process violation. |
+| QA-R001 | Master P22/P23; Spec §24 | Critical | GIT,APP | Test installation, startup, browser UI, backend communication and project create/save/load. | quality and acceptance | End-to-end application test suite. | Clean install and project lifecycle tests. | App routes/project tests passed in CI #67. | PARTIALLY IMPLEMENTED | No clean Windows installation proof. |
+| QA-R002 | Master P22/P23; Spec §24 | Critical | CHAR,WORLD,STORY,ANIM | Test character and world persistence, scene generation and animation playback. | quality and acceptance | Cross-module integration suite. | Create/reopen and play/render a scene. | No implementation/test evidence in current repository | PLANNED | Subsystems absent. |
+| QA-R003 | Master P22/P23; Spec §24 | Critical | STORY,VOICE,AUDIO | Test Urdu rendering, TTS, lip-sync and audio mixing. | quality and acceptance | Urdu sample suite and native-speaker review. | Render and inspect Urdu dialogue sequence. | No implementation/test evidence in current repository | PLANNED | No voice/audio implementation. |
+| QA-R004 | Master P22/P23; Spec §24 | Critical | PROD | Test scene rendering, MP4 assembly and full episode duration. | quality and acceptance | Render acceptance project and inspect media streams. | Inspect frames/video/audio and measure duration. | No implementation/test evidence in current repository | PLANNED | No production render. |
+| QA-R005 | Master P22/P23; Spec §24 | Critical | REL,GIT | Test restart/recovery, CI and Windows installer. | quality and acceptance | Fault-injection and install/upgrade tests. | Restart during job; clean install and upgrade. | CI #68 passed; bootstrap package built in #67. | PARTIALLY IMPLEMENTED | No installer/recovery tests. |
+| QA-R006 | Master P22/P23; Spec §24 | Critical | PROD | Inspect real frames/videos for consistency, motion, expression, lip-sync, camera, lighting, dialogue and continuity. | quality and acceptance | Human visual/audio QA checklist and retained samples. | Review representative rendered scenes and full episode. | Ara proof #6 cancelled before export validation. | PLANNED | No accepted render evidence. |
+| QA-R007 | Master P22/P23; Spec §24 | Critical | OSS,LIC | Demonstrate extensive open-source research and verified third-party licenses. | quality and acceptance | Complete source/license matrix. | Audit every selected dependency and asset. | Initial candidate and license docs exist. | RESEARCH REQUIRED | Not complete. |
+| QA-R008 | Master P22/P23; Spec §24 | Critical | GOV,OFF | Demonstrate complete requirement traceability and no mandatory paid service. | quality and acceptance | Acceptance audit of registry and offline core. | Registry coverage and offline/no-key run. | P0.2 registry/traceability expanded; offline workflow not built. | IN PROGRESS | No complete traceability acceptance yet. |
+| QA-R009 | Master P22/P23; Spec §24 | Critical | CHAR,WORLD,ANIM | Deliver persistent original characters, reusable environments and functional animation library. | quality and acceptance | Integrated persistent asset workflows. | Cross-episode asset reuse and playback. | No implementation/test evidence in current repository | PLANNED | Not implemented. |
+| QA-R010 | Master P22/P23; Spec §24 | Critical | STORY,VOICE | Deliver one-prompt stories, natural Urdu, character voices or documented fallback, and lip-sync or explicit limitation. | quality and acceptance | Full dialogue-driven scene pipeline. | Urdu episode sample and fallback acceptance. | Prompt/schema and manual handoff only. | PARTIALLY IMPLEMENTED | No naturalness benchmark, TTS or lip-sync. |
+| QA-R011 | Master P22/P23; Spec §24 | Critical | PROD,REL | Deliver actual 3D rendering, complete MP4, editable project, scene caching and recovery. | quality and acceptance | End-to-end render pipeline. | Render, export, reopen, failure/retry/recovery test. | No implementation/test evidence in current repository | PLANNED | No renderer or output. |
+| QA-R012 | Master P22/P23; Spec §24 | Critical | HW,GIT | Demonstrate practical target-hardware performance and successful Windows installation. | quality and acceptance | Run install and benchmark on target PC. | Clean install plus measured representative scenes. | No implementation/test evidence in current repository | PLANNED | No target-PC evidence. |
+| QA-R013 | Master P22/P23; Spec §24 | Critical | GIT | Maintain a working GitHub repo, complete source, Actions pipeline and Windows artifact. | quality and acceptance | Keep source and release pipeline reproducible. | Clean checkout CI and artifact download. | Main exists; CI #68 passed; bootstrap ZIP #67 available. | PARTIALLY IMPLEMENTED | Complete source and final installer absent. |
 
-Every status change must include evidence. IMPLEMENTED is not TESTED or VERIFIED.
+## Legacy ID preservation and migration
+
+The following IDs from the first coarse registry are retained as stable aliases. Each now resolves to the atomic requirement shown; parent aliases must not be counted as separate acceptance evidence. Existing Ara-derived catalog rows remain validation-only and are not promoted into production requirements.
+
+- `GOV-001` → `GOV-R001`
+- `GOV-002` → `GOV-R002`
+- `GOV-003` → `GOV-R006`
+- `GOV-004` → `GOV-R005`
+- `GOV-005` → `GOV-R004`
+- `GOV-006` → `GOV-R007`
+- `GIT-001` → `GIT-R001`
+- `GIT-002` → `GIT-R002`
+- `GIT-003` → `GIT-R004`
+- `GIT-004` → `GIT-R005`
+- `GIT-005` → `GIT-R005`
+- `GIT-006` → `GIT-R006`
+- `OSS-001` → `OSS-R001`
+- `OSS-002` → `OSS-R002`
+- `OSS-003` → `OSS-R004`
+- `OSS-004` → `OSS-R006`
+- `OSS-005` → `LIC-R004`
+- `HW-001` → `HW-R001`
+- `HW-002` → `HW-R002`
+- `HW-003` → `HW-R003`
+- `HW-004` → `HW-R006`
+- `HW-005` → `HW-R005`
+- `APP-001` → `ARCH-R001`
+- `APP-002` → `REL-R001`
+- `APP-003` → `UX-R001`
+- `APP-004` → `STORY-R001`
+- `WORLD-001` → `WORLD-R001`
+- `WORLD-002` → `WORLD-R003`
+- `WORLD-003` → `WORLD-R007`
+- `WORLD-004` → `WORLD-R010`
+- `WORLD-005` → `STORY-R011`
+- `CHAR-001` → `CHAR-R001`
+- `CHAR-002` → `CHAR-R002`
+- `CHAR-003` → `CHAR-R004`
+- `CHAR-004` → `CHAR-R005`
+- `ANIM-001` → `ANIM-R001`
+- `ANIM-002` → `ANIM-R002`
+- `ANIM-003` → `ANIM-R005`
+- `ANIM-004` → `STORY-R011`
+- `ANIM-005` → `STORY-R011`
+- `STORY-001` → `STORY-R001`
+- `STORY-002` → `STORY-R002`
+- `STORY-003` → `STORY-R004`
+- `STORY-004` → `STORY-R005`
+- `STORY-005` → `STORY-R010`
+- `STORY-006` → `STORY-R011` and `STORY-R012`
+- `AI-001` → `AI-R001`
+- `AI-002` → `AI-R003`
+- `AI-003` → `AI-R007`
+- `AI-004` → `AI-R006`
+- `RES-001` → `RES-R001`
+- `RES-002` → `RES-R003`
+- `RES-003` → `RES-R005`
+- `VOICE-001` → `VOICE-R001`
+- `VOICE-002` → `VOICE-R003`
+- `VOICE-003` → `VOICE-R004`
+- `FACE-001` → `VOICE-R005`
+- `AUDIO-001` → `VOICE-R007`
+- `PROD-001` → `PROD-R001`
+- `PROD-002` → `PROD-R004`
+- `PROD-003` → `PROD-R005`
+- `PROD-004` → `PROD-R006`
+- `PROD-005` → `PROD-R003`
+- `UX-001` → `UX-R007`
+- `UX-002` → `UX-R008`
+- `OFF-001` → `OFF-R004`
+- `OFF-002` → `OFF-R001`
+- `LIC-001` → `LIC-R006`
+- `LIC-002` → `LIC-R005`
+- `QA-001` → `QA-R001`
+- `QA-002` → `QA-R006`
+- `QA-003` → `GIT-R004`
+- `REL-001` → `REL-R001`
+- `REL-002` → `REL-R004`
+- `REL-003` → `REL-R006`
+
+## Explicit evidence corrections
+
+- `GIT-003` / `GIT-001D`: CI run #68 succeeded on main HEAD `4171bb320a10c3d7cfec561f706f7e10ebd3bacd`. Run #67 passed Ruff, Python compile, 12 pytest tests and bootstrap ZIP packaging. This does not prove the complete app or installer.
+- `GIT-004` / `GIT-001E`: artifact #67 is a bootstrap ZIP (78,882 bytes; SHA-256 `f307617262c75506d622ad602e204b85935bc88a7b73797d14d2c2344dd97fd7`), not a self-contained installer.
+- `APP-001` through `APP-004`: current tests cover only dashboard/project/story shell workflows.
+- `WORLD-005`, `ANIM-004`, `ANIM-005`: old IDs refer only to temporary Ara-derived location/action/expression validation. They do not prove a persistent world, canonical action vocabulary, animation playback or facial rig.
+- `STORY-006`: current validation rejects invalid fields/IDs; automatic repair/recovery is not implemented.
+- `AI-003`: manual prompt-copy/paste handoff exists; it is not direct provider integration or verified quota-aware orchestration.
+- Ara proof run #6 was CANCELLED during MP4 export testing. It is not an accepted engine proof or a production selection.
+
+## P0.2 exit conditions
+
+- All 25 master parts and all 24 repository-spec sections have explicit source references in the atomic inventory.
+- Every row has all mandatory metadata fields and an evidence-backed status.
+- Every atomic ID appears exactly once in traceability.
+- All old coarse IDs are preserved as aliases.
+- No production feature is marked complete on the basis of documentation or code presence alone.
+
+## Known source-control gap
+
+The exact original 33,223-byte prompt is currently available as the user's uploaded source, but has not yet been committed verbatim into this repository. Its SHA-256 is recorded above so the next batch can add the exact file without silently reconstructing it from a summary.

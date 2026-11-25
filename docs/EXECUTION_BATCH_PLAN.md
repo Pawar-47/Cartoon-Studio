@@ -4,11 +4,13 @@ This is the operational checklist beneath `MASTER_PLAN.md` and the user's origin
 
 ## Phase 0 — Complete specification and GitHub research
 
+P0.2 checkpoint: atomic registry and traceability were expanded on 2026-11-25. Exact master brief SHA-256: `541098eebd96b98e0153770f0bc37a1031a7242fd9cb97bc5a6b52c35c9ddfde`. The verbatim source-file commit remains an explicit open item; the hash is not a substitute for storing the original.
+
 | Batch | Scope | Deliverables | Exit evidence | State |
 |---|---|---|---|---|
 | P0.1 | Repository baseline, preservation, code/tests/workflows/artifacts audit | BASELINE_AUDIT.md | Main branch, commit history, current source, docs, CI and candidate proof inspected | COMPLETE |
-| P0.2 | Atomic decomposition of all 25 master-brief parts and all 24 PROJECT_SPECIFICATION sections | Registry v2 and complete traceability | Every requirement/sub-requirement has ID, source section, priority, dependencies, module, implementation, test, evidence, status and limitations | NEXT — CRITICAL |
-| P0.3 | Comparative source-level GitHub research across 3D editors, character generation/rigging, toon styling, worlds, animation, renderers, TTS/lip-sync, audio, queue/recovery, packaging and AI providers | GITHUB_RESEARCH, REPOSITORY_EVALUATION, OPEN_SOURCE_REUSE_MATRIX, ASSET_LICENSES, RESEARCH_LOG | Multiple serious candidates inspected; exact versions, source, dependencies, tests, compatibility and separate licenses recorded | BLOCKED BY P0.2 |
+| P0.2 | Atomic decomposition of all 25 master-brief parts and all 24 PROJECT_SPECIFICATION sections | Atomic registry and one-to-one traceability | 171 atomic rows and 171 traceability rows; 75 legacy IDs preserved | COMPLETE — CI #70 pending |
+| P0.3 | Comparative source-level GitHub research across 3D editors, character generation/rigging, toon styling, worlds, animation, renderers, TTS/lip-sync, audio, queue/recovery, packaging and AI providers | GITHUB_RESEARCH, REPOSITORY_EVALUATION, OPEN_SOURCE_REUSE_MATRIX, ASSET_LICENSES, RESEARCH_LOG | Multiple serious candidates inspected; exact versions, source, dependencies, tests, compatibility and separate licenses recorded | READY — NEXT |
 | P0.4 | Target hardware, Urdu and provider feasibility | HARDWARE_PROFILE, AI_PROVIDERS, voice research | Intel HD 5500/Windows path, CPU/RAM/disk, Pakistani Urdu samples, model rights, free quotas and Pakistan availability evidenced | BLOCKED BY P0.2 |
 | P0.5 | Engine-neutral architecture and dependency decisions | ARCHITECTURE, DECISION_LOG | Versioned contracts, adapters, data layout, offline mode, queue/cache/recovery, packaging and rejected options documented | BLOCKED BY P0.3–P0.4 |
 | P0.6 | Bounded, diagnostic candidate proofs only where needed | Proof workflow, logs, sample outputs and measurements | Open/import/animate/save/reopen/render and inspect output; Ara run #6 is CANCELLED and not accepted | BLOCKED — diagnose and instrument before rerun |

@@ -1,58 +1,41 @@
-# Project Status
+# Project Status — 2026-11-25
 
-**Active phase:** Phase 0 — Complete Specification and GitHub Research (not exited)  
-**Repository:** https://github.com/Pawar-47/Cartoon-Studio  
-**Branch:** main  
-**Live HEAD audited:** `c389391643a7b1f7b5683e181421291fdba7abb2`
+## Live GitHub checkpoint
 
-## Master-brief compliance result
+- P0.2 atomic requirements and traceability batch is pushed to `main` as the current checkpoint; CI run #70 is in progress.
 
-The original 25-part, 1,133-line master execution brief was read line by line in this audit (SHA-256: `541098eebd96b98e0153770f0bc37a1031a7242fd9cb97bc5a6b52c35c9ddfde`). The audit found material drift: the registry/traceability are not atomic or complete; the Master Plan inserted a separate engine-integration phase and shifted the original phase order; the existing Story Generator/schema was built before the prescribed phase sequence; and the previous checkpoint update created 15 documentation-only commits and 15 CI runs (#53–#67). The phase sequence and batch discipline are being corrected. See `docs/MASTER_BRIEF_COMPLIANCE_AUDIT.md`.
+- Repository: `Pawar-47/Cartoon-Studio`
+- Branch: `main`
+- Starting HEAD for this batch: `4171bb320a10c3d7cfec561f706f7e10ebd3bacd`
+- Latest completed CI before this batch: run #68 — SUCCESS on that exact HEAD.
+- Previous application CI run #67: Ruff, Python compileall, 12 pytest tests and Windows bootstrap ZIP upload passed.
+- Current artifact is bootstrap-only; it is not a self-contained installer.
 
-## Live GitHub evidence
+## Master-brief compliance
 
-- Current `main` HEAD: `c389391643a7b1f7b5683e181421291fdba7abb2`.
-- Only branch returned by branch listing: `main`.
-- Latest Cartoon Studio CI: [run #67](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45489366441), SUCCESS on the exact current HEAD.
-- Steps passed: dependency installation, Ruff, Python compile, pytest, Windows bootstrap ZIP packaging and artifact upload.
-- Artifact: `Cartoon-Studio-Windows-Bootstrap`, ID `14964957829`, 78,882 bytes, SHA-256 `f307617262c75506d622ad602e204b85935bc88a7b73797d14d2c2344dd97fd7`.
-- The artifact remains a bootstrap ZIP, not a self-contained installer and not the finished application.
-- Ara proof run #6: [run #6](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45486950450), CANCELLED during the browser MP4 export test. Studio checks, Vite production build and artifact upload were skipped; no proof artifact exists. Ara is not selected.
+The original 25-part prompt was reread in full (1,133 lines, 4,642 words; SHA-256 `541098eebd96b98e0153770f0bc37a1031a7242fd9cb97bc5a6b52c35c9ddfde`). P0.2 now has 171 atomic requirements with mandatory metadata and a corresponding traceability row for each. The exact prompt file is not yet in GitHub; its verbatim preservation remains open.
 
 ## Implemented and tested foundation
 
-- FastAPI local application shell.
-- Static dashboard and Story Generator workspace.
-- SQLite project create/list and story-plan save/load.
-- Manual external-AI prompt handoff; no direct AI provider integration.
-- Pydantic episode schema: 5–7 scenes, 300–420 seconds, up to five characters, timed dialogue/actions/camera/audio cues.
-- Catalog identifier validation tests. These catalogs are currently Ara-derived and provisional, not an approved production contract.
-- Windows CI and bootstrap ZIP packaging.
+- FastAPI backend, static dashboard and Story Generator workspace.
+- SQLite project metadata and partial story-plan schema/validation.
+- CI pipeline and Windows bootstrap ZIP.
+- CI run #68 passed on the pre-P0.2 alignment HEAD.
 
-The latest CI executes 12 application tests successfully (same source test suite as the audited application baseline). A passing app CI does not prove production rendering or installation on the user's PC.
+## Partial work that must be preserved
 
-## Existing work that must be preserved, but is out of sequence
+- Existing Story Generator and schema are early, out-of-sequence work. Preserve it; freeze feature expansion until Phase 4.
+- Existing Ara-derived action/location/expression IDs are provisional validator catalogs only. Do not treat them as stable engine-neutral IDs or playback proof.
+- Ara proof run #6 was cancelled during MP4 export; no production engine is approved.
 
-The Story Generator UI and schema were created before completion of Phase 0/Phase 1 and ahead of the original Phase 2 Character Studio → Phase 3 World Builder sequence. Keep the work. Freeze further story-feature expansion until Phase 4. Before production use, replace Ara-derived catalog IDs with stable Cartoon Studio IDs and engine adapters.
+## Not implemented or not verified
 
-## Not implemented / not verified
+No production Character Studio, persistent World Builder, canonical animation playback/library, direct multi-provider AI orchestration, research agent, verified Pakistani Urdu TTS, lip-sync, audio mixer, full 3D renderer, MP4 episode pipeline, scene cache/recovery, self-contained installer or target-PC benchmark has been demonstrated. No complete Windows installation has been verified. No requirement is marked VERIFIED.
 
-- Complete atomic requirements registry and one-to-one traceability.
-- Comprehensive comparative GitHub research and final architecture freeze.
-- Accepted production 3D engine and engine adapter.
-- Installable/self-contained Windows installer and clean user-PC install test.
-- Character Studio, original toon character creation, persistent rigs and identity.
-- Persistent World Builder, reusable locations, vehicles and props.
-- Complete Story/Scene Engine and direct provider integration.
-- Animation playback, blending, retargeting, timeline and camera engine.
-- Natural Pakistani Urdu TTS, character voices, lip-sync, audio mix and subtitles.
-- Scene rendering, persistent render queue, cache, retries, recovery and final MP4.
-- Target-PC performance benchmarks and quality presets.
+## Correct phase sequence
 
-## Correct phase order
-
-0. Specification, registry, research, licensing, feasibility and architecture freeze.
-1. GitHub/CI/CD application foundation and verified Windows installation.
+0. Complete specification and GitHub research.
+1. GitHub and CI/CD foundation.
 2. Character Studio.
 3. World Builder.
 4. Story and Scene Engine.
@@ -63,4 +46,4 @@ The Story Generator UI and schema were created before completion of Phase 0/Phas
 
 ## Immediate priority
 
-P0.2 — decompose every requirement and sub-requirement from all 25 master-brief parts and the complete repository specification into atomic registry and traceability rows. Do not begin a new production feature until Phase 0 exits. Preserve the existing foundation and use one coherent commit per substantial batch.
+P0.3 — broad comparative source-level GitHub research, following the completed P0.2 decomposition. P0.4 hardware/Urdu/provider feasibility proceeds after P0.2. P0.5 architecture freeze follows P0.3–P0.4. Do not begin production feature implementation before P0.7 exits. Do not start Phase 2 until Phase 1 installation gate passes.
