@@ -9,7 +9,7 @@ from typing import Any
 # conservative core mapping: optional spine/neck/shoulder/finger bones are not
 # guessed and are not counted as required for the first retarget preflight.
 REQUIRED_HUMANOID_BONES: dict[str, frozenset[str]] = {
-    "Hips": frozenset({"hips", "pelvis"}),
+    "Hips": frozenset({"hips", "hip", "pelvis"}),
     "Spine": frozenset({"spine", "spine1", "spine01", "spine001"}),
     "Head": frozenset({"head"}),
     "LeftUpperLeg": frozenset(
@@ -33,7 +33,19 @@ REQUIRED_HUMANOID_BONES: dict[str, frozenset[str]] = {
     "RightLowerArm": frozenset({"rightforearm", "rightlowerarm", "forearmr", "lowerarmr"}),
     "RightHand": frozenset({"righthand", "handr"}),
 }
-_PREFIXES = ("mixamorig", "armature", "def", "jnt", "bone", "jbipc", "jbip")
+_PREFIXES = (
+    "mixamorig",
+    "armature",
+    "def",
+    "jnt",
+    "bone",
+    "jbipc",
+    "jbip",
+    "ccbase",
+    "bip001",
+    "bip01",
+    "bip",
+)
 _ALIAS_TO_CANONICAL = {
     alias: canonical
     for canonical, aliases in REQUIRED_HUMANOID_BONES.items()
@@ -44,10 +56,30 @@ _ALIAS_TO_CANONICAL = {
 def _normalise_bone_name(value: Any) -> str:
     leaf = re.split(r"[/|:]", str(value).strip())[-1]
     normalised = re.sub(r"[^a-z0-9]", "", leaf.casefold())
-    for prefix in _PREFIXES:
-        candidate = normalised.removeprefix(prefix)
+
+    def resolve(candidate: str) -> str | None:
         if candidate in _ALIAS_TO_CANONICAL:
             return candidate
+        side_name = re.fullmatch(
+            r"([lr])(thigh|calf|shin|foot|upperarm|forearm|lowerarm|hand)",
+            candidate,
+        )
+        if side_name:
+            side = "left" if side_name.group(1) == "l" else "right"
+            expanded = side + side_name.group(2)
+            if expanded in _ALIAS_TO_CANONICAL:
+                return expanded
+        return None
+
+    direct_match = resolve(normalised)
+    if direct_match:
+        return direct_match
+    for prefix in _PREFIXES:
+        candidate = normalised.removeprefix(prefix)
+        if candidate != normalised:
+            matched = resolve(candidate)
+            if matched:
+                return matched
     return normalised
 
 
