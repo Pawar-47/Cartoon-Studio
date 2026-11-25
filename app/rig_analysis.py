@@ -4,30 +4,33 @@ import re
 from collections.abc import Mapping
 from typing import Any
 
+# The keys are Godot SkeletonProfileHumanoid bone names. This is deliberately a
+# conservative core mapping: optional spine/neck/shoulder/finger bones are not
+# guessed and are not counted as required for the first retarget preflight.
 REQUIRED_HUMANOID_BONES: dict[str, frozenset[str]] = {
-    "hips": frozenset({"hips", "pelvis"}),
-    "spine": frozenset({"spine", "spine1", "spine01", "spine001"}),
-    "head": frozenset({"head"}),
-    "leftUpperLeg": frozenset(
+    "Hips": frozenset({"hips", "pelvis"}),
+    "Spine": frozenset({"spine", "spine1", "spine01", "spine001"}),
+    "Head": frozenset({"head"}),
+    "LeftUpperLeg": frozenset(
         {"leftupleg", "leftupperleg", "leftthigh", "uplegl", "thighl", "upperlegl"}
     ),
-    "leftLowerLeg": frozenset(
+    "LeftLowerLeg": frozenset(
         {"leftleg", "leftlowerleg", "leftcalf", "calfl", "lowerlegl", "shinl"}
     ),
-    "leftFoot": frozenset({"leftfoot", "footl"}),
-    "rightUpperLeg": frozenset(
+    "LeftFoot": frozenset({"leftfoot", "footl"}),
+    "RightUpperLeg": frozenset(
         {"rightupleg", "rightupperleg", "rightthigh", "uplegr", "thighr", "upperlegr"}
     ),
-    "rightLowerLeg": frozenset(
+    "RightLowerLeg": frozenset(
         {"rightleg", "rightlowerleg", "rightcalf", "calfr", "lowerlegr", "shinr"}
     ),
-    "rightFoot": frozenset({"rightfoot", "footr"}),
-    "leftUpperArm": frozenset({"leftarm", "leftupperarm", "upperarml", "arml"}),
-    "leftLowerArm": frozenset({"leftforearm", "leftlowerarm", "forearml", "lowerarml"}),
-    "leftHand": frozenset({"lefthand", "handl"}),
-    "rightUpperArm": frozenset({"rightarm", "rightupperarm", "upperarmr", "armr"}),
-    "rightLowerArm": frozenset({"rightforearm", "rightlowerarm", "forearmr", "lowerarmr"}),
-    "rightHand": frozenset({"righthand", "handr"}),
+    "RightFoot": frozenset({"rightfoot", "footr"}),
+    "LeftUpperArm": frozenset({"leftarm", "leftupperarm", "upperarml", "arml"}),
+    "LeftLowerArm": frozenset({"leftforearm", "leftlowerarm", "forearml", "lowerarml"}),
+    "LeftHand": frozenset({"lefthand", "handl"}),
+    "RightUpperArm": frozenset({"rightarm", "rightupperarm", "upperarmr", "armr"}),
+    "RightLowerArm": frozenset({"rightforearm", "rightlowerarm", "forearmr", "lowerarmr"}),
+    "RightHand": frozenset({"righthand", "handr"}),
 }
 _PREFIXES = ("mixamorig", "armature", "def", "jnt", "bone", "jbipc", "jbip")
 _ALIAS_TO_CANONICAL = {
@@ -47,28 +50,41 @@ def _normalise_bone_name(value: Any) -> str:
     return normalised
 
 
+def _empty_result(status: str, skeleton_count: int, note: str) -> dict[str, Any]:
+    return {
+        "status": status,
+        "skeleton_count": skeleton_count,
+        "bone_count": 0,
+        "required_bone_count": len(REQUIRED_HUMANOID_BONES),
+        "matched_bone_count": 0,
+        "bone_mapping": {},
+        "godot_profile_mapping": {},
+        "missing_bones": list(REQUIRED_HUMANOID_BONES),
+        "ambiguous_bones": [],
+        "unmapped_bones": [],
+        "retargeting_ready": False,
+        "retargeting_note": note,
+    }
+
+
 def analyze_rig(inspection: Mapping[str, Any]) -> dict[str, Any]:
-    """Summarise humanoid bone-name coverage without claiming retarget readiness."""
-    skeleton_count = max(0, int(inspection.get("skeleton_count", 0) or 0))
+    """Build a conservative indexed Godot humanoid mapping from one GLB skeleton."""
+    try:
+        skeleton_count = max(0, int(inspection.get("skeleton_count", 0) or 0))
+    except (TypeError, ValueError):
+        skeleton_count = 0
     raw_skeletons = inspection.get("skeletons", [])
     skeletons = raw_skeletons if isinstance(raw_skeletons, list) else []
-    required = len(REQUIRED_HUMANOID_BONES)
     if skeleton_count == 0:
-        return {
-            "status": "no_skeleton", "skeleton_count": 0, "bone_count": 0,
-            "required_bone_count": required, "matched_bone_count": 0,
-            "bone_mapping": {}, "missing_bones": list(REQUIRED_HUMANOID_BONES),
-            "retargeting_ready": False,
-            "retargeting_note": "No Skeleton3D was found in the imported model.",
-        }
+        return _empty_result(
+            "no_skeleton", 0, "No Skeleton3D was found in the imported model."
+        )
     if not skeletons:
-        return {
-            "status": "skeleton_details_unavailable", "skeleton_count": skeleton_count,
-            "bone_count": 0, "required_bone_count": required, "matched_bone_count": 0,
-            "bone_mapping": {}, "missing_bones": list(REQUIRED_HUMANOID_BONES),
-            "retargeting_ready": False,
-            "retargeting_note": "A skeleton exists, but the worker did not return its bone names.",
-        }
+        return _empty_result(
+            "skeleton_details_unavailable",
+            skeleton_count,
+            "A skeleton exists, but the worker did not return its bone names.",
+        )
 
     candidates: list[dict[str, Any]] = []
     for skeleton in skeletons:
@@ -76,41 +92,113 @@ def analyze_rig(inspection: Mapping[str, Any]) -> dict[str, Any]:
             continue
         raw_bones = skeleton.get("bones", [])
         bones = raw_bones if isinstance(raw_bones, list) else []
-        mapping: dict[str, str] = {}
-        for bone in bones:
-            name = bone.get("name", "") if isinstance(bone, Mapping) else bone
+        matches: dict[str, list[dict[str, Any]]] = {}
+        unmapped: list[dict[str, Any]] = []
+        for fallback_index, bone in enumerate(bones):
+            if isinstance(bone, Mapping):
+                name = str(bone.get("name", ""))
+                index_value = bone.get("index", fallback_index)
+                parent_value = bone.get("parent_index", -1)
+                parent_name = str(bone.get("parent_name", ""))
+            else:
+                name = str(bone)
+                index_value = fallback_index
+                parent_value = -1
+                parent_name = ""
+            try:
+                index = int(index_value)
+            except (TypeError, ValueError):
+                index = fallback_index
+            try:
+                parent_index = int(parent_value)
+            except (TypeError, ValueError):
+                parent_index = -1
             canonical = _ALIAS_TO_CANONICAL.get(_normalise_bone_name(name))
-            if canonical and canonical not in mapping:
-                mapping[canonical] = str(name)
-        missing = [name for name in REQUIRED_HUMANOID_BONES if name not in mapping]
+            if canonical is None:
+                if name:
+                    unmapped.append({"bone_index": index, "source_name": name})
+                continue
+            matches.setdefault(canonical, []).append({
+                "bone_index": index,
+                "source_name": name,
+                "parent_index": parent_index,
+                "parent_name": parent_name,
+            })
+
+        mapping: dict[str, str] = {}
+        profile_mapping: dict[str, dict[str, Any]] = {}
+        ambiguous: list[dict[str, Any]] = []
+        for canonical, entries in matches.items():
+            if len(entries) != 1:
+                ambiguous.append({
+                    "profile_bone": canonical,
+                    "candidates": entries,
+                })
+                continue
+            entry = entries[0]
+            mapping[canonical] = entry["source_name"]
+            profile_mapping[canonical] = entry
+
+        missing = [name for name in REQUIRED_HUMANOID_BONES if name not in profile_mapping]
+        bone_count_value = skeleton.get("bone_count", len(bones))
+        try:
+            bone_count = max(0, int(bone_count_value or len(bones)))
+        except (TypeError, ValueError):
+            bone_count = len(bones)
         candidates.append({
             "skeleton_path": str(skeleton.get("node_path", "")),
-            "bone_count": int(skeleton.get("bone_count", len(bones)) or len(bones)),
-            "bone_mapping": mapping, "missing_bones": missing,
-            "matched_bone_count": len(mapping),
+            "bone_count": bone_count,
+            "bone_mapping": mapping,
+            "godot_profile_mapping": profile_mapping,
+            "missing_bones": missing,
+            "ambiguous_bones": ambiguous,
+            "unmapped_bones": unmapped,
+            "matched_bone_count": len(profile_mapping),
         })
-    if not candidates:
-        return {
-            "status": "skeleton_details_unavailable", "skeleton_count": skeleton_count,
-            "bone_count": 0, "required_bone_count": required, "matched_bone_count": 0,
-            "bone_mapping": {}, "missing_bones": list(REQUIRED_HUMANOID_BONES),
-            "retargeting_ready": False,
-            "retargeting_note": "Skeleton details were not readable.",
-        }
 
-    best = max(candidates, key=lambda item: (item["matched_bone_count"], item["bone_count"]))
+    if not candidates:
+        return _empty_result(
+            "skeleton_details_unavailable",
+            skeleton_count,
+            "Skeleton details were not readable.",
+        )
+
+    # Never combine separate Skeleton3D nodes into a synthetic humanoid.
+    best = max(
+        candidates,
+        key=lambda item: (
+            item["matched_bone_count"],
+            -len(item["ambiguous_bones"]),
+            item["bone_count"],
+        ),
+    )
     matched = best["matched_bone_count"]
-    status = "humanoid_names_complete" if matched == required else (
-        "partial_humanoid_names" if matched else "skeleton_unmapped"
+    ambiguous_count = len(best["ambiguous_bones"])
+    status = (
+        "humanoid_names_complete"
+        if matched == len(REQUIRED_HUMANOID_BONES) and not ambiguous_count
+        else "ambiguous_humanoid_names"
+        if ambiguous_count
+        else "partial_humanoid_names"
+        if matched
+        else "skeleton_unmapped"
     )
     return {
-        "status": status, "skeleton_count": skeleton_count,
-        "skeleton_path": best["skeleton_path"], "bone_count": best["bone_count"],
-        "required_bone_count": required, "matched_bone_count": matched,
-        "bone_mapping": best["bone_mapping"], "missing_bones": best["missing_bones"],
+        "status": status,
+        "skeleton_count": skeleton_count,
+        "skeleton_path": best["skeleton_path"],
+        "bone_count": best["bone_count"],
+        "required_bone_count": len(REQUIRED_HUMANOID_BONES),
+        "matched_bone_count": matched,
+        "bone_mapping": best["bone_mapping"],
+        "godot_profile_mapping": best["godot_profile_mapping"],
+        "missing_bones": best["missing_bones"],
+        "ambiguous_bones": best["ambiguous_bones"],
+        "unmapped_bones": best["unmapped_bones"],
         "retargeting_ready": False,
         "retargeting_note": (
-            "Bone-name coverage is only a preflight check. Validate rest pose, bone axes, "
-            "scale, skin weights and actual motion before declaring this rig retargetable."
+            "This indexed mapping is a name-based preflight only. Validate hierarchy, "
+            "rest pose, bone axes, scale, skin weights and real motion before retargeting. "
+            "The imported GLB is not modified."
         ),
     }
