@@ -31,3 +31,10 @@ The GitHub Actions workflow pins Godot to 4.7.2 stable and uploads the JSON repo
 ## Humanoid retargeting proof
 
 The proof scene also builds a canonical humanoid source/target skeleton pair with different limb lengths. A Godot 4.7.2 `RetargetModifier3D` uses `SkeletonProfileHumanoid` to transfer an animated left-upper-arm pose from the source to the target. The JSON report checks modifier creation, source animation playback, different rest lengths, transferred target rotation and scene save/reopen of the retarget pair. This is a native engine API proof with generated skeletons, not yet retarget acceptance for arbitrary imported cartoon GLBs or production animation clips.
+
+
+## Imported humanoid fixture and project retarget operation
+
+The checked-in `fixtures/proof_humanoid.glb` contains a skinned 15-bone humanoid and an imported arm animation. Its GLTF node hierarchy follows the validated core chains: Hips → Spine → Head, both legs, and both upper arms under Spine. The arm local translations are offset relative to Spine so their global rest positions remain unchanged from the previous fixture layout. The Windows worker test validates this hierarchy before it asks Godot to create a separate source-to-target retarget scene.
+
+The application retarget operation requires two distinct project-owned GLBs, a complete unambiguous humanoid mapping on each, valid parent-chain diagnostics, an animated source and a skinned target. It stores a separate Godot scene and JSON retarget record; it does not rewrite either imported GLB. The saved scene starts the selected source animation automatically. This remains a bounded fixture/worker proof until it is exercised against representative user-imported GLB pairs with differing proportions and naming conventions.
