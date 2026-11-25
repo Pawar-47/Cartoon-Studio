@@ -240,3 +240,24 @@ GPL-3.0, latest inspected commit `ee9fa7cc4704d683020526f47a9655f14c8d5f4c`, com
 
 ## Revised facial-animation data contract candidate
 VRM 1.0 offers a useful standard: `happy/angry/sad/relaxed/surprised`, `aa/ih/ou/ee/oh`, `blink`, left/right blink and gaze, plus custom expressions and mouth/blink/look overrides. The actual mesh must supply blendshapes; the spec does not define their shape. Add Cartoon Studio custom Urdu visemes and emotion layering rather than assuming the five vowel presets cover every Urdu consonant.
+
+## Candidate AA — WhisperX Urdu forced alignment
+
+Source: https://github.com/m-bain/whisperX  
+Inspected main commit `8d8e43bf3698dd1df4b011c0f1a8dd1d468ae365`; BSD-2-Clause; current pyproject version `3.8.7rc1`.
+
+- Current alignment source explicitly maps `ur` to `kingabzpro/wav2vec2-large-xls-r-300m-Urdu` and can return character-level alignments as well as word timings.
+- Model card: https://huggingface.co/kingabzpro/wav2vec2-large-xls-r-300m-Urdu — Apache-2.0, 300M parameters, 16 kHz mono, Common Voice 8.0 Urdu; reported WER 39.89% / CER 16.70% with 5-gram decoding.
+- Good candidate for aligning a known Urdu transcript to audio at word/character level. It does not directly output IPA phoneme timing. Combine experimentally with eSpeak NG G2P and VRM custom visemes, then manually correct.
+- Full WhisperX dependency stack is heavy for 8 GB RAM; a minimal align-only package is preferable but not yet implemented or tested. The model card warns of accent, code-switching, noise and domain-vocabulary sensitivity.
+
+**Decision:** HIGH-PRIORITY Urdu alignment proof candidate; no model downloaded, no audio tested, no production approval.
+
+## Updated voice/lip-sync comparison
+1. WhisperX Urdu aligner: word/character timing, Apache2 model + BSD2 code, heavy runtime, quality not yet measured on Pakistani Urdu.
+2. Allosaurus universal model: phone labels/approximate timestamps, possible broad Urdu inventory, but Urdu inventory and timing accuracy not yet verified; GPL3.
+3. eSpeak NG: reliable local Urdu G2P source and phoneme duration output for its own synthetic voice; compact but robotic and GPL3.
+4. Qwen Audio TTS Flash: official Urdu voice option, cloud-only, region/price/privacy and Pakistani accent quality unknown.
+5. Smol Urdu TTS: Apache2 model card but linked code has no explicit license; BF16/PyTorch path and target CPU suitability unproven.
+
+**Decision:** no natural Pakistani Urdu TTS or automatic phone-level lip-sync is selected. Keep human recording, word/character alignment and manual viseme correction as supported fallbacks.

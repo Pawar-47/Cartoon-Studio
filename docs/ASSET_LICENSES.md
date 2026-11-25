@@ -119,3 +119,13 @@ YouTube Content ID status is not the same as copyright permission. For every mus
 | eSpeak NG | https://github.com/espeak-ng/espeak-ng | GPL-3.0 | Urdu phoneme data and formant TTS; copyleft review required before bundling |
 
 No VRM sample model, eSpeak binary or model has been downloaded or included in Cartoon Studio.
+
+## Urdu alignment model license — 2026-11-25
+
+| Component | Source | License evidence | Notes |
+|---|---|---|---|
+| WhisperX alignment code | https://github.com/m-bain/whisperX | BSD-2-Clause | Current main includes an explicit Urdu aligner mapping; full dependency stack is heavy |
+| Urdu Wav2Vec2 aligner | https://huggingface.co/kingabzpro/wav2vec2-large-xls-r-300m-Urdu | Apache-2.0 | 300M parameter model trained on Common Voice 8.0 Urdu; model card reports WER/CER and accent/noise limitations |
+| Multilingual eSpeak CTC model | https://huggingface.co/facebook/wav2vec2-lv-60-espeak-cv-ft | Apache-2.0 | Language list does not include Urdu; not selected for Urdu alignment |
+
+No alignment model weights were downloaded or bundled.

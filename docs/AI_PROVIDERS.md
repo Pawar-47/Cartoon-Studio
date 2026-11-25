@@ -67,3 +67,9 @@ No API key or provider has been connected. No paid service is approved. P0.4 mus
 **eSpeak NG** is not an AI provider, but its current source includes Urdu (`ur`) pronunciation rules and a language list, supports Windows, WAV output and grapheme-to-phoneme output with phoneme pitch/length information. It is compact and fully local. Its formant-synthesized voice is substantially less natural than neural/human speech, so it is not approved as the main episode voice. Use it as an optional offline phonemizer and emergency placeholder only after native Pakistani Urdu quality tests.
 
 License: GPL-3.0. Review distribution obligations before bundling. For neural TTS/human recordings, its phoneme sequence does not provide accurate timing for that separate audio; an audio aligner or manual correction is still required.
+
+## Local Urdu alignment candidate (not a hosted provider)
+
+WhisperX currently maps `ur` to the Apache-2.0 `kingabzpro/wav2vec2-large-xls-r-300m-Urdu` model and can return character-level alignment. It is a local PyTorch/Transformers workload, not an API service. The model card reports 39.89% WER / 16.70% CER on Common Voice 8.0 Urdu and warns about accent/noise/code-switching; use a supplied, approved transcript and evaluate timing on native Pakistani Urdu. The full WhisperX dependency stack is heavy; a minimal align-only implementation must be evaluated before inclusion.
+
+This is only a word/character alignment candidate. It does not provide phone-level viseme timings by itself.

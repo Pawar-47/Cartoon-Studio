@@ -122,3 +122,10 @@ This is the first broad source-level sweep, not P0.3 completion. No production e
 - Inspected eSpeak NG repo, GPL3 COPYING, README and Urdu language data. Latest commit `ee9fa7cc4704d683020526f47a9655f14c8d5f4c`, pushed 2026-11-19. Current source includes `ur`, `ur_rules` and `ur_list`; pronunciation rules credited to Him Prasad Gautam and Ejaz Shah (Pakistan).
 - eSpeak NG is a compact C formant synthesizer with Windows support, WAV output and phoneme output carrying pitch/length information. README warns its voice is less natural than larger recording-based synthesizers. Record as offline Urdu G2P/placeholder TTS only, not main voice.
 - No VRM sample avatar or eSpeak binary was downloaded; no Urdu synthesis or face-animation test was run.
+
+## 2026-11-25 — WhisperX Urdu aligner and P0.3 source-research closeout
+- Inspected WhisperX current main commit `8d8e43bf3698dd1df4b011c0f1a8dd1d468ae365`, BSD-2-Clause, pyproject `3.8.7rc1` and alignment source. The source maps `ur` to `kingabzpro/wav2vec2-large-xls-r-300m-Urdu` and supports optional character-level alignment.
+- Inspected Urdu model card: Apache-2.0, 300M parameters, 16 kHz mono, Common Voice 8.0 Urdu, reported WER 39.89% / CER 16.70% with 5-gram decoding; model card warns about accent, code-switching, noise, vocabulary and utterance length.
+- Full WhisperX dependencies include PyTorch, torchvision, pyannote-audio, faster-whisper, CTranslate2, Transformers, NLTK and related libraries. Minimal alignment-only packaging and 8 GB CPU performance remain untested.
+- Checked Sadda's multilingual phoneme model language list; Urdu is not listed, so it is not a reliable Urdu candidate. Allosaurus remains an unverified universal phone alternative.
+- Concluded P0.3 source-level research coverage across engines, character/facial systems, world, animation, rendering, Urdu voice/lip-sync, audio, queues, packaging, AI providers, hardware and licensing. Added a separate provisional scorecard; no candidate is selected and no target-PC test was run.

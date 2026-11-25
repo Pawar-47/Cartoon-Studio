@@ -48,7 +48,7 @@ All 24 numbered sections are represented in source references across the registr
 
 ## Remaining limitations and follow-on
 
-1. The exact original prompt file is not yet committed verbatim. Hash and size are recorded; preserve the uploaded source rather than reconstructing it.
+1. The exact original prompt is now committed verbatim at `docs/MASTER_EXECUTION_PROMPT.md` (1,133 lines, 4,642 words, 33,223 bytes; SHA-256 `541098eebd96b98e0153770f0bc37a1031a7242fd9cb97bc5a6b52c35c9ddfde`). The GitHub-fetched file was verified to match the uploaded source text exactly; preservation commit `e51ccdb71a9fe813ffe0ecab2ba78a3b096a11f9`.
 2. P0.3 comparative GitHub source research is still required; candidate notes are not enough.
 3. P0.4 target hardware, Urdu TTS and provider availability/quota feasibility remain unverified.
 4. P0.5 architecture is not frozen.
@@ -59,3 +59,11 @@ All 24 numbered sections are represented in source references across the registr
 ## Next active batch
 
 **P0.3 — Comparative source-level GitHub research.** Use the atomic registry to drive subsystem research; do not expand the existing Story Generator or begin production features yet.
+
+## 2026-11-25 addendum — exact source preservation and P0.3 closeout
+
+- The uploaded 25-part master prompt is now preserved verbatim at `docs/MASTER_EXECUTION_PROMPT.md`. It was read from the current conversation file and compared with a fresh GitHub fetch; exact text equality was confirmed.
+- P0.3 source-level research now covers engine/editor, character/face/rigging, world generation, animation/retargeting, toon rendering, Urdu TTS/G2P/alignment/lip-sync, audio/music, render/MP4, queues/recovery, packaging, AI providers, hardware and asset licensing.
+- `docs/CANDIDATE_SCORECARD.md` records provisional weighted scores and trade-offs. Godot 4.7.2 Compatibility is the leading on-paper runtime candidate, but no engine is selected and no target-PC test has been performed.
+- P0.3 is complete as research only. P0.4 is next and must establish actual target-PC/driver compatibility, Pakistani Urdu quality, provider availability/quotas, privacy and cost. P0.5/P0.6/P0.7 remain gated in order.
+- All previous limitations remain: no complete 3D studio, no finished Character Studio/World Builder/Animation Engine/Urdu TTS/lip-sync/episode pipeline, no installer, and no end-to-end MP4 proof.

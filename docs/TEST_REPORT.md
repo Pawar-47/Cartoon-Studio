@@ -86,3 +86,11 @@ A green CI run proves only the checks that actually ran. Source presence, docume
 - VRM 1.0 expressions specification inspected for emotions, vowel visemes, blink/gaze, custom expressions and override behavior.
 - eSpeak NG current source and GPL3 license inspected; Urdu `ur` language source and pronunciation files are present. No Windows binary was executed.
 - No VRM import/export, MToon rendering, Urdu phoneme output, eSpeak speech or Allosaurus audio alignment was tested.
+
+## P0.3 final source-research evidence (not app tests)
+- WhisperX main source/license inspected; current alignment code maps Urdu `ur` to `kingabzpro/wav2vec2-large-xls-r-300m-Urdu` and supports character alignment. Model card is Apache-2.0, 300M parameters, Common Voice 8.0 Urdu, WER 39.89% / CER 16.70%.
+- No Urdu audio inference, Pakistani accent test, character-to-viseme timing test or 8 GB CPU benchmark was run.
+- Candidate scorecard published at `docs/CANDIDATE_SCORECARD.md`; all scores are source-based and provisional.
+- Original uploaded master prompt was added verbatim as `docs/MASTER_EXECUTION_PROMPT.md`; a fresh GitHub fetch matched the text exactly. Source metadata: 1,133 lines, 4,642 words, 33,223 bytes, SHA-256 `541098eebd96b98e0153770f0bc37a1031a7242fd9cb97bc5a6b52c35c9ddfde`.
+- Prompt-preservation commit `e51ccdb71a9fe813ffe0ecab2ba78a3b096a11f9` CI run #83 SUCCESS. P0.3 closeout commit CI is pending.
+- P0.3 is a research gate only. No engine/plugins/assets/providers have been integrated; no target-PC test has been run.

@@ -324,3 +324,18 @@ This is only a research candidate; the full stack has not been imported, tested 
 
 ### Revised character/lip-sync architecture candidate
 Use VRM 1.0 or a Cartoon Studio-owned equivalent face-expression schema for humanoid characters. Import/export through the MIT Godot VRM add-on is a candidate. Map Urdu phonemes to standard and custom viseme blendshapes; use eSpeak NG for offline Urdu G2P/placeholder TTS, Allosaurus only as a candidate audio-to-phone recognizer, and manual correction for final quality. Keep neural TTS (e.g. Qwen Audio TTS Flash) optional and replaceable. No model, plugin or voice is selected.
+
+## 2026-11-25 — Urdu forced-alignment candidate and P0.3 research closeout
+
+### WhisperX Urdu word/character alignment
+- WhisperX: https://github.com/m-bain/whisperX; inspected main commit `8d8e43bf3698dd1df4b011c0f1a8dd1d468ae365`, BSD-2-Clause, pyproject version `3.8.7rc1`. Its alignment source explicitly maps `ur` to `kingabzpro/wav2vec2-large-xls-r-300m-Urdu` and supports optional character-level alignments as well as word timings.
+- Urdu aligner model: https://huggingface.co/kingabzpro/wav2vec2-large-xls-r-300m-Urdu; Apache-2.0, 0.3B parameters, 16 kHz mono, trained on Mozilla Common Voice 8.0 Urdu. Model card reports 39.89% WER / 16.70% CER with its 5-gram decoder on the Common Voice 8.0 test set. It warns accuracy varies with speaker accent, code-switching, noise, domain vocabulary and utterance length.
+- This is a credible Urdu word/character alignment candidate when the correct transcript is already known. It is **not phoneme-level alignment**. A possible pipeline is WhisperX character/word timings + eSpeak NG Urdu G2P + VRM custom viseme mapping, followed by manual correction.
+- Full WhisperX has a heavy stack (PyTorch 2.8, torchvision, pyannote-audio, faster-whisper, CTranslate2, Transformers, NLTK, pandas and related dependencies). An alignment-only path may be reduced to PyTorch/Transformers, but that must be proven; 300M F32 weights and CPU inference are significant for the 8 GB / 2-core target.
+- Model card WER is too high to trust automatic transcription. Supply/approve the story transcript separately; evaluate alignment using known text and native Pakistani Urdu audio. No inference or target-PC benchmark was run.
+
+### Rejected/limited multilingual aligner
+Sadda's provisional `wav2vec2-lv-60-espeak-cv-ft` phone model lists 60 languages but does not list Urdu. Do not treat its eSpeak-based multilingual label as proof of Urdu alignment. Allosaurus remains a separate universal phone-recognition candidate with approximate timestamps and an Urdu inventory still to verify.
+
+### P0.3 research completion boundary
+Source-level research now covers the required candidate categories: 3D engine/editor, character creation/rigging/facial expressions, world generation, animation/retargeting, toon rendering, Urdu TTS/G2P/alignment/lip-sync, audio/music, episode rendering/MP4, local queue/recovery, packaging, AI providers, hardware requirements and asset licenses. The provisional candidate scorecard is recorded separately. P0.3 is complete as a **research and comparison** gate only; it does not mean any engine, plugin, provider, voice, asset or architecture is selected or tested. Target-PC measurements and native Urdu/provider validation belong to P0.4; bounded proofs belong to P0.6.

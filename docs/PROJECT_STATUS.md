@@ -80,10 +80,19 @@ P0.3 — continue the comparative source-level research sweep. P0.4 hardware/Urd
 - Godot MovieWriter supports non-real-time fixed-FPS rendering; exported projects output AVI/MJPEG (4 GB cap) or PNG+WAV. OGV is editor-build only. FFmpeg is required for MP4.
 - FFmpeg default LGPL build is compatible with a more permissive distribution path; avoid GPL libx264/libx265 unless the project license decision allows it. OpenH264 BSD is a possible H.264 encoder candidate, not tested.
 - Kenney CC0 packs cover SFX and short jingles; OpenGameArt CC0 loops are available but need per-track license and YouTube Content ID checks.
-- Urdu lip-sync remains unproven: Allosaurus universal model uses approximate phone timestamps and has no Urdu-specific acoustic model confirmed. Manual correction remains required.
+- Urdu lip-sync remains unproven. WhisperX maps Urdu to a word/character aligner model; eSpeak NG provides Urdu G2P; Allosaurus is an unverified phone-level alternative. No Pakistani sample, timing quality or target-PC performance has been tested. Manual correction remains required.
 
 ## Face-expression and Urdu phoneme research checkpoint
 - VRM 1.0 provides a humanoid expression contract: five vowel visemes, emotion presets, blink/gaze and custom expressions. The MIT Godot VRM add-on imports/exports VRM and includes an MIT MToon shader; several features still need proof.
 - eSpeak NG includes Urdu `ur` language rules and can output phoneme/pitch/length data locally. It is compact but formant TTS is robotic; retain it only as offline G2P/placeholder voice, not the main production voice.
 - Allosaurus remains an unverified audio-to-phone candidate; actual Urdu timing must be measured on native recordings. Manual viseme editing remains required.
 - No VRM avatars, eSpeak binary or voice models have been downloaded or integrated.
+
+## Current checkpoint — 2026-11-25
+
+- **P0.1 baseline audit:** completed in the prior checkpoint.
+- **P0.2 atomic requirement registry and traceability:** completed; the exact original brief is now preserved at `docs/MASTER_EXECUTION_PROMPT.md`.
+- **P0.3 source-level research and candidate scorecard:** complete. See `docs/CANDIDATE_SCORECARD.md`. Godot 4.7.2 Compatibility is the leading on-paper runtime candidate, not a frozen selection.
+- **P0.4 target-hardware, Urdu and provider feasibility:** ready to start. No target-PC tests, Pakistani Urdu voice tests or account-specific provider quota checks have been run yet.
+- **P0.5 architecture freeze:** blocked by P0.4. **P0.6 bounded proofs:** blocked by P0.5. **P0.7 plan freeze:** blocked by P0.2–P0.6.
+- Existing FastAPI/SQLite/browser shell and Story Generator remain preserved; no production feature expansion before P0.7.

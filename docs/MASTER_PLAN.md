@@ -25,7 +25,7 @@ This is a complete production application, not a mockup, theme, prompt generator
 
 ## Current baseline
 
-See `docs/BASELINE_AUDIT.md`. The original user-approved 25-part master execution brief is the binding execution contract. The uploaded copy audited on 2026-11-25 is 1,133 lines (SHA-256 `541098eebd96b98e0153770f0bc37a1031a7242fd9cb97bc5a6b52c35c9ddfde`). The repository's `PROJECT_SPECIFICATION.md` is a durable condensed specification, not a verbatim copy of that brief. Preserve the original brief in the repository when its file can be transferred without altering it. At the audited HEAD:
+See `docs/BASELINE_AUDIT.md`. The original user-approved 25-part master execution brief is the binding execution contract. The uploaded copy audited on 2026-11-25 is 1,133 lines (SHA-256 `541098eebd96b98e0153770f0bc37a1031a7242fd9cb97bc5a6b52c35c9ddfde`). The repository's `PROJECT_SPECIFICATION.md` is a durable condensed specification, not a verbatim copy of that brief. The exact original 25-part brief is now preserved verbatim at `docs/MASTER_EXECUTION_PROMPT.md` (1,133 lines, 4,642 words; SHA-256 `541098eebd96b98e0153770f0bc37a1031a7242fd9cb97bc5a6b52c35c9ddfde`). The GitHub-fetched file was verified to match the uploaded source text exactly. At the audited HEAD:
 - FastAPI/static dashboard, SQLite project metadata and a manual external-AI Story Generator exist.
 - Story-plan schema, validation and save/load exist.
 - Windows GitHub Actions validation and bootstrap ZIP packaging pass.
@@ -211,3 +211,7 @@ On every resume, read the latest main HEAD, this plan, `NEXT_STEPS.md`, `PROJECT
 ## Completion definition
 
 The product is complete only when the full acceptance list in `PROJECT_SPECIFICATION.md` has direct test evidence, including a real 5–7 minute Urdu cartoon MP4, editable project, persistent original characters/world, working animation, voice/lip-sync or explicitly approved fallback, recovery, Windows installation and measured target-hardware performance.
+
+## 2026-11-25 checkpoint — P0.3 research complete
+
+P0.3 source-level research and provisional candidate scoring are complete. The full candidate matrix and trade-offs are recorded in `docs/GITHUB_RESEARCH.md`, `docs/REPOSITORY_EVALUATION.md`, `docs/OPEN_SOURCE_REUSE_MATRIX.md`, `docs/ASSET_LICENSES.md` and `docs/CANDIDATE_SCORECARD.md`. No engine, plugin, voice, provider or asset is selected. P0.4 is now the next gate: actual target-PC compatibility, Pakistani Urdu quality/alignment, Pakistan provider access/quotas, privacy and cost. P0.5 architecture freeze and P0.6 bounded proofs remain blocked until their prerequisites are met.

@@ -79,3 +79,11 @@ Candidate pipeline:
 5. Editing: expose a manual timeline for viseme correction, emotion layering, blinks and gaze.
 
 Godot VRM/MToon is a candidate import/export and shading path. Keep non-humanoid characters on GLB/custom rigs. Do not bundle VRM sample avatars; preserve each external avatar's license metadata.
+
+## Revised Urdu voice and lip-sync candidate pipeline
+
+- **Text/G2P:** eSpeak NG `ur` rules provide local Urdu phoneme conversion. Its formant voice is only a placeholder; keep human recording and optional natural TTS.
+- **Audio alignment:** WhisperX's current source maps Urdu to an Apache-2.0 300M Wav2Vec2 Urdu model and can return word/character timings. It is not phoneme-level; full WhisperX is heavy, so investigate a minimal align-only implementation.
+- **Viseme conversion:** map aligned Urdu characters/words through eSpeak G2P into a compact Urdu phoneme/viseme table, then drive VRM/Cartoon Studio expression weights. This is an experimental approximation; actual coarticulation and timing must be manually correctable.
+- **Alternative phone recognition:** Allosaurus universal model may provide phone labels with approximate timestamps; verify Urdu inventory and quality before use.
+- **Fallbacks:** manual voice recording, word/character alignment, and manual mouth-keyframe correction. Do not claim automatic lip-sync quality until a native Pakistani Urdu sample is reviewed.
