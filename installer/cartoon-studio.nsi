@@ -87,8 +87,23 @@ Section "Uninstall"
     Delete "$DESKTOP\Cartoon Studio.lnk"
     DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CartoonStudio"
     DeleteRegKey HKCU "Software\CartoonStudio"
-    WriteRegStr HKCU "Software\CartoonStudioDebug" "AfterRegistryDelete" "yes"
+    IfErrors reg_delete_failed reg_delete_succeeded
+reg_delete_failed:
+    WriteRegStr HKCU "Software\CartoonStudioDebug" "RegDeleteResult" "error"
+    Goto reg_delete_done
+reg_delete_succeeded:
+    WriteRegStr HKCU "Software\CartoonStudioDebug" "RegDeleteResult" "success"
+reg_delete_done:
+    ReadRegStr $1 HKCU "Software\CartoonStudio" "InstallDir"
+    WriteRegStr HKCU "Software\CartoonStudioDebug" "RegistryAfterDelete" "$1"
     !insertmacro RemoveInstalledFiles
+    IfFileExists "$INSTDIR\CartoonStudio.exe" exe_still_exists exe_removed
+exe_still_exists:
+    WriteRegStr HKCU "Software\CartoonStudioDebug" "ExeAfterCleanup" "exists"
+    Goto exe_check_done
+exe_removed:
+    WriteRegStr HKCU "Software\CartoonStudioDebug" "ExeAfterCleanup" "gone"
+exe_check_done:
     Delete "$INSTDIR\Uninstall.exe"
     RMDir "$INSTDIR"
 

@@ -98,20 +98,32 @@ def uninstall(install_dir: Path) -> None:
             capture_output=True,
             text=True,
         )
-        registry = subprocess.run(
-            ["reg", "query", r"HKCU\Software\CartoonStudio", "/v", "InstallDir"],
+        registry32 = subprocess.run(
+            ["reg", "query", r"HKCU\Software\CartoonStudio", "/s", "/reg:32"],
             check=False,
             capture_output=True,
             text=True,
         )
+        registry64 = subprocess.run(
+            ["reg", "query", r"HKCU\Software\CartoonStudio", "/s", "/reg:64"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        remaining = sorted(path.name for path in install_dir.iterdir()) if install_dir.exists() else []
         raise AssertionError(
             "Uninstaller left the main executable in place.\n"
             + "Uninstaller debug registry:\n"
             + debug.stdout
             + debug.stderr
-            + "\nInstall registry:\n"
-            + registry.stdout
-            + registry.stderr
+            + "\nInstall registry (32-bit):\n"
+            + registry32.stdout
+            + registry32.stderr
+            + "\nInstall registry (64-bit):\n"
+            + registry64.stdout
+            + registry64.stderr
+            + "\nRemaining files:\n"
+            + repr(remaining)
         )
     subprocess.run(
         ["reg", "delete", r"HKCU\Software\CartoonStudioDebug", "/f"],
