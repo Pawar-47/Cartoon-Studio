@@ -129,9 +129,16 @@ func _inspect_glb(payload: Dictionary) -> Dictionary:
 
     var glb_document := _read_glb_json(source_path)
     var animation_count := 0
+    var animation_names: Array[String] = []
     var animation_players := scene.find_children("*", "AnimationPlayer", true, false)
-    for player in animation_players:
-        animation_count += (player as AnimationPlayer).get_animation_list().size()
+    for player_node in animation_players:
+        var player := player_node as AnimationPlayer
+        var player_animations := player.get_animation_list()
+        animation_count += player_animations.size()
+        for animation_value in player_animations:
+            var animation_name := str(animation_value)
+            if animation_name.to_upper() != "RESET" and not animation_names.has(animation_name):
+                animation_names.append(animation_name)
     var mesh_nodes := scene.find_children("*", "MeshInstance3D", true, false)
     var morph_targets: Array[Dictionary] = []
     for mesh_node in mesh_nodes:
@@ -194,6 +201,7 @@ func _inspect_glb(payload: Dictionary) -> Dictionary:
         "skeletons": skeleton_reports,
         "animation_player_count": animation_players.size(),
         "animation_count": animation_count,
+        "animation_names": animation_names,
         "node_count": _count_nodes(scene)
     }
     scene.free()

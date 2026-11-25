@@ -147,6 +147,9 @@ def test_character_studio_page_is_served():
     assert "Godot facial blend shapes" in script.text
     assert "morph_target_count" in script.text
     assert "appearanceRecipe,{playAnimations:false}" in script.text
+    assert 'id="retarget-animation"' in response.text
+    assert "updateRetargetAnimationOptions" in script.text
+    assert "inspection.animation_names" in script.text
 
 
 def test_character_glb_import_profile_round_trip_and_project_reference(tmp_path, monkeypatch):

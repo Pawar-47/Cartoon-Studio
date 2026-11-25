@@ -15,7 +15,7 @@
 ## Current Character Studio capabilities
 
 - Local project-contained GLB 2.0 import, validation, provenance and Godot inspection.
-- Browser GLB preview and imported animation selection.
+- Browser GLB preview and imported animation selection. Godot inspection now returns the actual named clips (excluding the RESET track), and the retarget form selects from the source character's imported clips rather than relying on manually typed names.
 - Persistent versioned character profiles.
 - Non-destructive material appearance recipes and facial morph-target sliders; Godot inspection reports imported blend-shape names/defaults, controls accept signed weights from -1 to 1, and reset restores each imported default. Appearance editing pauses embedded animation playback so an animation track cannot overwrite live expression-slider changes; ordinary character previews continue to play imported animations. A pinned CC0 third-party RobotExpressive GLB adds a real animated character with three facial-expression morph targets on its Head_4 mesh; CI fetches the upstream binary by immutable commit and verifies its SHA-256 before Godot import. A named Smile/Blink fixture continues to exercise deterministic node/mesh default precedence; persistence and range validation are covered by API tests. The new real-asset acceptance test is awaiting its first quick-CI result.
 - Indexed 15-bone humanoid mapping, parent-chain diagnostics and per-bone rest-transform measurements; common 3ds Max Biped, Character Creator, Unreal-style, Blender Rigify and Cesium Rigged Figure bone names are recognized. Duplicate/negative hierarchy indices are rejected.

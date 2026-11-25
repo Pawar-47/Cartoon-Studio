@@ -1,6 +1,6 @@
 import { showCharacterPreview, showRetargetPreview, getCharacterMaterials, applyCharacterAppearance, getCharacterMorphTargets, applyCharacterMorphTargets } from "./character-preview.js";
 const $=id=>document.getElementById(id);
-let activeProject="", importedAsset=null, activeCharacter=null, editingCharacter=null, appearanceRecipe={materials:{},morph_targets:{}};
+let activeProject="", importedAsset=null, activeCharacter=null, editingCharacter=null, appearanceRecipe={materials:{},morph_targets:{}},projectCharacters=[];
 const params=new URLSearchParams(window.location.search);
 function lines(value){return value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean)}
 function resetProfileEditor(){editingCharacter=null;$("character-form").reset();$("profile-heading").textContent="Save reusable profile";$("save-character").textContent="Save character profile";$("cancel-edit-profile").hidden=true;$("save-character").disabled=!importedAsset}
@@ -42,6 +42,24 @@ function documentElementOption(characterDoc){
  const option=window.document.createElement("option");
  option.value=characterDoc.id;option.textContent=characterDoc.data.name||"Unnamed character";return option;
 }
+function updateRetargetAnimationOptions(characters){
+ const sourceId=$("retarget-source").value,select=$("retarget-animation");
+ const character=characters.find(item=>item.id===sourceId);
+ const inspection=character?.data?.asset?.engine_inspection||{};
+ const names=Array.isArray(inspection.animation_names)?inspection.animation_names:[];
+ select.replaceChildren();
+ const fallback=document.createElement("option");fallback.value="";
+ fallback.textContent=names.length?"Use first imported animation…":"No named animation clips available";
+ select.append(fallback);
+ for(const name of names){
+  const option=document.createElement("option");option.value=name;option.textContent=name;select.append(option);
+ }
+ select.disabled=!names.length;
+}
+function updateRetargetButton(){
+ const source=$("retarget-source").value,target=$("retarget-target").value;
+ $("create-retarget").disabled=!source||!target||source===target;
+}
 function updateRetargetCharacterOptions(characters){
  const source=$("retarget-source"),target=$("retarget-target");
  const previousSource=source.value,previousTarget=target.value;
@@ -58,7 +76,8 @@ function updateRetargetCharacterOptions(characters){
  }
  if([...source.options].some(option=>option.value===previousSource))source.value=previousSource;
  if([...target.options].some(option=>option.value===previousTarget))target.value=previousTarget;
- $("create-retarget").disabled=!source.value||!target.value||source.value===target.value;
+ updateRetargetAnimationOptions(characters);
+ updateRetargetButton();
 }
 async function loadRetargets(){
  if(!activeProject)return;
@@ -96,7 +115,7 @@ async function loadRetargets(){
 async function loadCharacters(){
  const response=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/characters");
  if(!response.ok)throw new Error("Could not load saved characters.");
- const characters=await response.json(),list=$("character-list");list.replaceChildren();updateRetargetCharacterOptions(characters);await loadRetargets();
+ const characters=await response.json(),list=$("character-list");projectCharacters=characters;list.replaceChildren();updateRetargetCharacterOptions(characters);await loadRetargets();
  if(!characters.length){list.innerHTML='<div class="empty">No saved characters in this project yet.</div>';return}
  for(const document of characters){
   const data=document.data,card=document.createElement("article");card.className="character-card";
@@ -198,8 +217,8 @@ $("save-appearance").addEventListener("click",async()=>{
  }catch(error){$("appearance-status").textContent=error.message}
  finally{$("save-appearance").disabled=!(getCharacterMaterials().length||getCharacterMorphTargets().length)}
 });
-$("retarget-source").addEventListener("change",()=>{$("create-retarget").disabled=!$("retarget-source").value||!$("retarget-target").value||$("retarget-source").value===$("retarget-target").value});
-$("retarget-target").addEventListener("change",()=>{$("create-retarget").disabled=!$("retarget-source").value||!$("retarget-target").value||$("retarget-source").value===$("retarget-target").value});
+$("retarget-source").addEventListener("change",()=>{updateRetargetAnimationOptions(projectCharacters);updateRetargetButton()});
+$("retarget-target").addEventListener("change",updateRetargetButton);
 $("create-retarget").addEventListener("click",async()=>{
  const sourceId=$("retarget-source").value,targetId=$("retarget-target").value;
  if(!activeProject||!sourceId||!targetId||sourceId===targetId)return;

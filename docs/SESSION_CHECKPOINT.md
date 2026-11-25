@@ -23,7 +23,7 @@ Phase 2 — Character Studio is ACTIVE. Phase 0 and Phase 1 are complete. Do not
 ## Implemented Character Studio capabilities
 
 - Project-contained GLB 2.0 import, validation, SHA-256 provenance and Godot inspection.
-- Browser GLB preview, imported animation selection and camera controls.
+- Browser GLB preview, imported animation selection and camera controls. Godot inspection returns unique imported animation names (excluding RESET); the retarget UI now presents those clips as a source-specific selector instead of a free-text field.
 - Persistent editable character profiles.
 - Non-destructive PBR material recipes and facial morph-target controls. Godot reports imported blend-shape names/defaults; signed weights from -1 to 1 persist; reset restores each model's imported defaults. A pinned CC0 RobotExpressive fixture (three facial morph targets on Head_4) is fetched and SHA-256 verified in CI; its first Godot import acceptance run is pending.
 - Conservative indexed 15-bone humanoid mapping, parent-chain validation and imported rest-transform diagnostics.
