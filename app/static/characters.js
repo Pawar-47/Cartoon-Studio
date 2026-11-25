@@ -253,12 +253,7 @@ function previewSelectedMaterial(){
  $("roughness-value").value=values.roughness.toFixed(2);$("metalness-value").value=values.metalness.toFixed(2);
  $("appearance-status").textContent="Preview updated. Save to keep this appearance with the character.";
 }
-function morphTargetGroup(target){
- const identity=(String(target.name||"")+" "+String(target.meshName||"")).toLowerCase().replace(/[^a-z0-9]+/g,"");
- if(/body|torso|chest|waist|hip|shoulder|arm|leg|muscle|belly|stomach|height|breast|bust|thigh|calf|buttock/.test(identity))return "body";
- if(/eye|brow|lid|blink|mouth|lip|jaw|cheek|nose|face|smile|frown|angry|sad|happy|surpris|tongue|teeth/.test(identity))return "face";
- return "other";
-}
+import { classifyMorphTarget as morphTargetGroup } from "./character-morph-groups.js";
 function appendMorphControls(targets,container,group){
  container.replaceChildren();
  for(const target of targets){
