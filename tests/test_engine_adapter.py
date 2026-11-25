@@ -117,7 +117,7 @@ def test_worker_cancellation_terminates_process(tmp_path, monkeypatch):
     assert process.waited
 
 
-def _make_morph_glb() -> bytes:
+def _make_morph_glb(default_weights: tuple[float, float] = (0.0, 0.0)) -> bytes:
     positions = (
         -0.5, 0.0, 0.0,
         0.5, 0.0, 0.0,
@@ -138,10 +138,10 @@ def _make_morph_glb() -> bytes:
         "asset": {"version": "2.0", "generator": "Cartoon Studio morph fixture"},
         "scene": 0,
         "scenes": [{"nodes": [0]}],
-        "nodes": [{"name": "Face", "mesh": 0, "weights": [0.0, 0.0]}],
+        "nodes": [{"name": "Face", "mesh": 0, "weights": list(default_weights)}],
         "meshes": [{
             "name": "FaceMesh",
-            "weights": [0.0, 0.0],
+            "weights": list(default_weights),
             "extras": {"targetNames": ["Smile", "Blink"]},
             "primitives": [{
                 "attributes": {"POSITION": 0},
@@ -469,6 +469,22 @@ def test_pinned_godot_worker_reports_real_animated_morph_cube(tmp_path):
     }
     assert all(entry["default_value"] == 0.0 for entry in inspection["morph_targets"])
     assert target.read_bytes() == fixture.read_bytes()
+
+
+def test_pinned_godot_worker_preserves_nonzero_imported_morph_defaults(tmp_path):
+    adapter = _real_godot_adapter(tmp_path)
+    asset_dir = tmp_path / "morph-default-assets"
+    asset_dir.mkdir()
+    target = asset_dir / "face-with-default-expression.glb"
+    target.write_bytes(_make_morph_glb((0.35, 0.8)))
+
+    response = adapter.inspect_glb(target, allowed_root=tmp_path)
+
+    assert response["ok"] is True
+    assert {
+        entry["name"]: entry["default_value"]
+        for entry in response["morph_targets"]
+    } == {"Smile": 0.35, "Blink": 0.8}
 
 
 def test_pinned_godot_worker_reports_imported_blend_shape_names_and_defaults(tmp_path):
