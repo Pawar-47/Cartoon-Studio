@@ -259,12 +259,15 @@ def analyze_rig(inspection: Mapping[str, Any]) -> dict[str, Any]:
                 if name:
                     unmapped.append({"bone_index": index, "source_name": name})
                 continue
-            matches.setdefault(canonical, []).append({
+            entry = {
                 "bone_index": index,
                 "source_name": name,
                 "parent_index": parent_index,
                 "parent_name": parent_name,
-            })
+            }
+            if isinstance(bone, Mapping) and isinstance(bone.get("rest_transform"), Mapping):
+                entry["rest_transform"] = dict(bone["rest_transform"])
+            matches.setdefault(canonical, []).append(entry)
 
         mapping: dict[str, str] = {}
         profile_mapping: dict[str, dict[str, Any]] = {}
@@ -278,8 +281,6 @@ def analyze_rig(inspection: Mapping[str, Any]) -> dict[str, Any]:
                 continue
             entry = entries[0]
             mapping[canonical] = entry["source_name"]
-            if isinstance(bone, Mapping) and isinstance(bone.get("rest_transform"), Mapping):
-                entry["rest_transform"] = dict(bone["rest_transform"])
             profile_mapping[canonical] = entry
 
         missing = [name for name in REQUIRED_HUMANOID_BONES if name not in profile_mapping]
