@@ -14,7 +14,7 @@ SetCompressor /SOLID zlib
 
 Name "Cartoon Studio"
 OutFile "${OUTPUT_FILE}"
-InstallDir "$LOCALAPPDATA\Programs\Cartoon Studio"
+InstallDir "$LocalAppData\Programs\Cartoon Studio"
 InstallDirRegKey HKCU "Software\CartoonStudio" "InstallDir"
 Page instfiles
 ShowInstDetails show
@@ -48,6 +48,7 @@ VIAddVersionKey "FileDescription" "Cartoon Studio Installer"
 !macroend
 
 Section "Cartoon Studio" SEC_MAIN
+    SectionIn RO
     SetShellVarContext current
 
     ; Stop an existing process before replacing its program files.
