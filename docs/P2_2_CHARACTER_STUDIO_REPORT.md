@@ -38,7 +38,7 @@
 - The vendored library is pinned in `third_party/threejs-runtime.json`, its license is retained, and the CI SBOM script adds the npm component.
 - This is visual presentation only. Godot remains authoritative for GLB import/inspection; no mesh editing, rig creation, material editing, facial controls or export is included.
 - Browser preview requires WebGL 2. Draco/Meshopt decoders are not bundled; compressed files may be importable by Godot while unsupported by the browser viewer.
-- Windows CI acceptance is pending.
+- Windows CI #212 passed on commit `843ef8d6250b1c442235119911215205fa1bfb6a`: 49 tests passed; lint, compilation, bootstrap smoke, both self-contained builds, installer compilation and the full install/upgrade/uninstall/reinstall lifecycle passed. Visual browser review remains pending.
 
 
 ## Material appearance editor — implementation batch (2026-11-25)
@@ -51,3 +51,14 @@
 - API tests cover valid save/reopen, revision increments, preservation across profile updates, invalid values and missing character handling.
 - This is non-destructive material customization, not mesh/material-slot reassignment, texture painting or GLB export. Facial blend-shape editing, rig editing and export remain future work.
 - Browser preview still requires WebGL 2 and visual inspection with representative models. Windows CI acceptance is pending.
+
+
+## Imported facial morph-target editor — implementation batch
+
+- The browser viewer now discovers glTF morph targets on imported meshes and assigns stable scene-path/index/name keys.
+- Saved character appearance recipes can store morph weights separately from material overrides.
+- The Character Studio creates one slider per morph target found in the loaded GLB, previews weight changes immediately, and offers a reset-to-neutral action.
+- The project API validates each morph weight in the 0–1 range, stores it in the versioned character JSON document and preserves it across ordinary profile updates.
+- The editor reports clearly when a model contains no morph targets; it does not fabricate facial controls for models without blend shapes.
+- This operates existing GLB morph targets only. It does not create new facial geometry, generate new blend shapes, provide VRM expression presets, or edit/export the source GLB.
+- API tests cover persistence and range validation. Windows CI and visual review with a real blend-shape GLB are pending.

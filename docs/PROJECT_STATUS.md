@@ -137,3 +137,8 @@
 ## 2026-11-25 — Character Studio material customization
 
 Implemented a non-destructive PBR appearance recipe for imported GLB characters. Saved character cards can reopen the model, inspect material slots, preview base-colour/roughness/metalness adjustments, and persist those adjustments to the versioned character document. The original GLB remains immutable. Backend validation and persistence tests are added; Windows CI and visual browser review are pending. Mesh editing, facial blend-shape authoring, rig editing and GLB export remain unimplemented.
+
+
+## 2026-11-25 — Imported facial morph-target controls
+
+Added GLB morph-target discovery and a slider-based facial control panel. Existing morph targets can be adjusted in the browser preview, reset to neutral, and persisted in the character's appearance recipe. The editor explicitly reports when the source model contains no morph targets. This is not blend-shape authoring or a VRM expression system. API validation and persistence tests are added; Windows CI and visual review with a real facial-morph GLB are pending.

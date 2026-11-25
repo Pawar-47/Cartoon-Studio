@@ -119,3 +119,11 @@ After CI acceptance, continue with character profile editing and real mesh/mater
 2. Research and prove a facial-expression workflow using imported blend-shape/VRM expression channels; do not fake facial controls when the model has no compatible targets.
 3. Prove humanoid rig compatibility and retargeting using a pinned Godot/VRM integration or a project-owned minimal rig adapter.
 4. Add deterministic export only after appearance and rig recipes can be baked without damaging the original asset.
+
+
+## Character Studio next steps after morph-target controls
+
+1. Validate the morph-target batch in Windows CI and fix any failures.
+2. Test representative cartoon GLBs with actual facial blend shapes; verify sliders affect the intended face regions and stored weights survive reload.
+3. Research VRM expression presets and humanoid retargeting, then integrate only after Godot 4.7.2 compatibility and license proof.
+4. Add character metadata editing and deterministic GLB export without overwriting the original source asset.

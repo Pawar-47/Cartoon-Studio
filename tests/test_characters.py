@@ -167,11 +167,13 @@ def test_material_appearance_recipe_persists_and_survives_profile_updates(tmp_pa
                     "roughness": 0.72,
                     "metalness": 0.08,
                 }
-            }
+            },
+            "morph_targets": {"0:Face#0:Smile": 0.85},
         },
     )
     assert saved.status_code == 200
     assert saved.json()["revision"] == 2
+    assert saved.json()["data"]["appearance_recipe"]["morph_targets"]["0:Face#0:Smile"] == 0.85
     assert saved.json()["data"]["appearance_recipe"]["materials"]["0:Root#material:0"] == {
         "color": "#e85d3f",
         "roughness": 0.72,
@@ -200,7 +202,7 @@ def test_material_appearance_rejects_invalid_values_and_missing_character(tmp_pa
     client, project_id = setup_project(tmp_path, monkeypatch)
     invalid = client.put(
         f"/api/projects/{project_id}/characters/{'a' * 36}/appearance",
-        json={"materials": {"body": {"color": "red", "roughness": 1.5}}},
+        json={"materials": {"body": {"color": "red", "roughness": 1.5}}, "morph_targets": {"smile": 1.5}},
     )
     assert invalid.status_code == 422
     missing = client.put(

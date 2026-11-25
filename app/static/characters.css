@@ -18,3 +18,11 @@
 .material-editor input[type=range]{padding:0;accent-color:#8fe0c8}
 .material-editor output{float:right;color:#8fe0c8;font-variant-numeric:tabular-nums}
 .material-editor select{display:block;width:100%;margin-top:7px;padding:9px;border:1px solid #3a4b60;border-radius:8px;background:#101822;color:#fff}
+
+.morph-editor{margin-top:14px;padding:14px;border:1px solid #3a4b60;border-radius:10px;background:#121b26}
+.morph-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 14px;max-height:260px;overflow:auto}
+.morph-control{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;padding:7px;border:1px solid #2c3a4b;border-radius:7px}
+.morph-control span{overflow-wrap:anywhere;font-size:11px}
+.morph-control output{font-size:10px;color:#8fe0c8;font-variant-numeric:tabular-nums}
+.morph-control input{grid-column:1/-1;width:100%;padding:0;accent-color:#8fe0c8}
+@media(max-width:520px){.morph-controls{grid-template-columns:1fr}}

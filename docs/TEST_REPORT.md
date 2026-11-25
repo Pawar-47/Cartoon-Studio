@@ -157,3 +157,8 @@ New coverage: project-scoped retrieval of a validated imported GLB asset for bro
 ## Character material appearance batch — 2026-11-25
 
 Added API coverage for material recipe validation, persistence, revision increments, reload and preservation through profile updates. The browser editor applies base colour, roughness and metalness to imported GLB materials through the locally bundled Three.js runtime. CI and visual browser review are pending; no mesh mutation or export is claimed.
+
+
+## Imported facial morph-target batch — 2026-11-25
+
+Added API coverage for saving morph-target weights and rejecting values outside 0–1. The browser viewer discovers morph targets from GLB mesh dictionaries and applies slider weights to the live preview. Windows CI and visual validation with a real morph-enabled character are pending.

@@ -20,6 +20,8 @@ let clock = null;
 let cameraDistance = 3;
 let materialCatalog = [];
 let materialByKey = new Map();
+let morphTargetCatalog = [];
+let morphTargetByKey = new Map();
 
 function ensureRenderer() {
   if (renderer) return true;
@@ -103,6 +105,8 @@ function disposeCurrentObject() {
   clips = [];
   materialCatalog = [];
   materialByKey.clear();
+  morphTargetCatalog = [];
+  morphTargetByKey.clear();
 }
 
 function collectMaterials(root) {
@@ -152,6 +156,40 @@ export function applyCharacterAppearance(recipe = {}) {
   }
 }
 
+function collectMorphTargets(root) {
+  const entries = [];
+  const visit = (node, path) => {
+    if (node.morphTargetDictionary && node.morphTargetInfluences) {
+      for (const [name, index] of Object.entries(node.morphTargetDictionary)) {
+        const key = path + "#morph:" + index + ":" + name;
+        entries.push({
+          key,
+          name,
+          value: Number(node.morphTargetInfluences[index] || 0),
+        });
+        morphTargetByKey.set(key, { node, index });
+      }
+    }
+    node.children.forEach((child, index) => {
+      const childName = child.name || child.type || "Node";
+      visit(child, path + "/" + index + ":" + childName);
+    });
+  };
+  visit(root, "0:" + (root.name || root.type || "Scene"));
+  morphTargetCatalog = entries;
+}
+
+export function getCharacterMorphTargets() {
+  return morphTargetCatalog.map((entry) => ({ ...entry }));
+}
+
+export function applyCharacterMorphTargets(recipe = {}) {
+  for (const [key, value] of Object.entries(recipe)) {
+    const target = morphTargetByKey.get(key);
+    if (target) target.node.morphTargetInfluences[target.index] = value;
+  }
+}
+
 export async function showCharacterPreview(buffer, label = "Character", appearance = {}) {
   canvas.style.display = "block";
   if (!ensureRenderer()) return false;
@@ -164,7 +202,9 @@ export async function showCharacterPreview(buffer, label = "Character", appearan
     scene.add(currentObject);
     currentObject.updateMatrixWorld(true);
     collectMaterials(currentObject);
-    applyCharacterAppearance(appearance);
+    collectMorphTargets(currentObject);
+    applyCharacterAppearance(appearance.materials || appearance);
+    applyCharacterMorphTargets(appearance.morph_targets || {});
 
     const bounds = new THREE.Box3().setFromObject(currentObject);
     if (bounds.isEmpty()) throw new Error("The GLB scene contains no visible geometry.");

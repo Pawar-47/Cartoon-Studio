@@ -9,7 +9,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
@@ -122,6 +122,9 @@ class MaterialAppearanceInput(BaseModel):
 
 class CharacterAppearanceInput(BaseModel):
     materials: dict[str, MaterialAppearanceInput] = Field(default_factory=dict, max_length=256)
+    morph_targets: dict[str, Annotated[float, Field(ge=0, le=1)]] = Field(
+        default_factory=dict, max_length=512
+    )
 
 
 class ProjectRecord(BaseModel):
@@ -677,7 +680,7 @@ def create_character(
     data["name"] = payload.name.strip()
     data["description"] = payload.description.strip()
     data["asset"] = manifest["data"]
-    data["appearance_recipe"] = {"materials": {}}
+    data["appearance_recipe"] = {"materials": {}, "morph_targets": {}}
     data["rig_status"] = (
         "ready" if manifest["data"].get("rig_ready") else "unrigged"
     )
@@ -730,7 +733,9 @@ def update_character(
     data["name"] = payload.name.strip()
     data["description"] = payload.description.strip()
     data["asset"] = existing["data"]["asset"]
-    data["appearance_recipe"] = existing["data"].get("appearance_recipe", {"materials": {}})
+    data["appearance_recipe"] = existing["data"].get(
+        "appearance_recipe", {"materials": {}, "morph_targets": {}}
+    )
     data["rig_status"] = existing["data"].get("rig_status", "unrigged")
     document = make_envelope(
         "character",
@@ -761,15 +766,20 @@ def update_character_appearance(
     if exists is None:
         raise HTTPException(status_code=404, detail="Project not found.")
     document = _character_document(DATA_DIR, project_id, character_id)
-    materials = payload.model_dump(mode="json", exclude_none=True)["materials"]
-    if any(not key.strip() or len(key) > 512 for key in materials):
+    appearance = payload.model_dump(mode="json", exclude_none=True)
+    materials = appearance["materials"]
+    morph_targets = appearance["morph_targets"]
+    if any(not key.strip() or len(key) > 512 for key in [*materials, *morph_targets]):
         raise HTTPException(
             status_code=422,
             detail="Material identifiers must be 1–512 characters.",
         )
     now = datetime.now(UTC).isoformat()
     data = dict(document["data"])
-    data["appearance_recipe"] = {"materials": materials}
+    data["appearance_recipe"] = {
+        "materials": materials,
+        "morph_targets": morph_targets,
+    }
     updated = make_envelope(
         "character",
         character_id,
