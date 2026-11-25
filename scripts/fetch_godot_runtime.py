@@ -3,17 +3,17 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import pathlib
 import subprocess
-from pathlib import Path, PurePosixPath
 import urllib.request
 import zipfile
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = pathlib.Path(__file__).resolve().parents[1]
 DEFAULT_MANIFEST = ROOT / "engine" / "godot_runtime.json"
 
 
-def download_and_verify(url: str, expected_sha256: str, destination: Path) -> None:
+def download_and_verify(url: str, expected_sha256: str, destination: pathlib.Path) -> None:
     digest = hashlib.sha256()
     with urllib.request.urlopen(url, timeout=180) as response, destination.open("wb") as output:
         while chunk := response.read(1024 * 1024):
@@ -27,7 +27,7 @@ def download_and_verify(url: str, expected_sha256: str, destination: Path) -> No
         )
 
 
-def sha256_file(path: Path) -> str:
+def sha256_file(path: pathlib.Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as source:
         while chunk := source.read(1024 * 1024):
@@ -35,17 +35,17 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def extract_binary(archive_path: Path, binary_name: str, output_path: Path) -> None:
+def extract_binary(archive_path: pathlib.Path, binary_name: str, output_path: pathlib.Path) -> None:
     with zipfile.ZipFile(archive_path) as archive:
         members = archive.namelist()
         unsafe = [
             name
             for name in members
-            if PurePosixPath(name).is_absolute() or ".." in PurePosixPath(name).parts
+            if pathlib.PurePosixPath(name).is_absolute() or ".." in pathlib.PurePosixPath(name).parts
         ]
         if unsafe:
             raise RuntimeError(f"Godot archive contains unsafe paths: {unsafe[:3]!r}")
-        matches = [name for name in members if PurePosixPath(name).name == binary_name]
+        matches = [name for name in members if pathlib.PurePosixPath(name).name == binary_name]
         if len(matches) != 1:
             raise RuntimeError(
                 f"Expected exactly one {binary_name} in Godot archive; found {matches!r}."
@@ -57,8 +57,8 @@ def extract_binary(archive_path: Path, binary_name: str, output_path: Path) -> N
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Fetch the pinned Godot Windows runtime.")
-    parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
-    parser.add_argument("--output-dir", type=Path, default=ROOT / "build" / "godot-runtime")
+    parser.add_argument("--manifest", type=pathlib.Path, default=DEFAULT_MANIFEST)
+    parser.add_argument("--output-dir", type=pathlib.Path, default=ROOT / "build" / "godot-runtime")
     args = parser.parse_args()
 
     manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
