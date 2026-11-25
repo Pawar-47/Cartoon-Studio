@@ -547,7 +547,7 @@ def status() -> dict[str, Any]:
             if get_engine_adapter().available
             else "not available in current app build"
         ),
-        "next_milestone": "Character Studio engine integration",
+        "next_milestone": "Character Studio visual acceptance and face/hair geometry authoring",
     }
 
 

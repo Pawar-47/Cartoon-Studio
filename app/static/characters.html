@@ -17,7 +17,7 @@
 </section>
 <section class="panel library-panel">
   <span class="eyebrow">00 / START FROM THE CC0 LIBRARY</span><h2>Character model library</h2>
-  <p class="helper">Browse 21 pinned, integrity-verified modular character outfits. Preview a complete source model, then import it into this project to create a character. These are complete outfit models; independent part swapping is being built as the next assembly layer.</p>
+  <p class="helper">Browse 21 pinned, integrity-verified modular character outfits. Preview a complete source model, then import it into this project. Use the assembly controls below to combine compatible head, body, legs and feet meshes.</p>
   <div class="library-controls">
    <label>Character pack<select id="library-pack"><option value="Male">Ultimate Modular Men</option><option value="Female">Ultimate Modular Women</option></select></label>
    <label>Outfit<select id="library-outfit"><option value="">Loading library…</option></select></label>
@@ -139,7 +139,7 @@
  </section>
  <section class="panel" id="profile-panel">
   <span class="eyebrow">02 / CHARACTER IDENTITY</span><h2 id="profile-heading">Save reusable profile</h2>
-  <p class="helper">Define the identity and continuity notes. The imported GLB remains the source model; metadata does not pretend to edit its mesh.</p>
+  <p class="helper">Define identity and continuity notes. Text fields are metadata; use the body-shape and imported-morph controls above to change supported geometry.</p>
   <form id="character-form">
    <label>Character name<input id="character-name" maxlength="80" required placeholder="e.g. Ali"></label>
    <label>Short description<textarea id="character-description" rows="2" maxlength="1000" placeholder="Role and visual identity"></textarea></label>
@@ -179,7 +179,7 @@
   <div id="retarget-list" class="retarget-list"></div>
  </section>
 </div>
-<footer>GLB import and preview are available. Material PBR settings and existing facial morph targets can be saved as non-destructive recipes; mesh editing, rig creation, new blend-shape authoring and animation authoring remain upcoming.</footer>
+<footer>GLB import, preview and compatible outfit assembly are available. Rig-based body proportions and imported face/body morph targets can change existing geometry; material PBR settings remain non-destructive recipes. Original face/hair authoring, arbitrary rig creation, new blend-shape authoring and animation authoring remain upcoming.</footer>
 </main>
 <script type="importmap">
 {"imports":{"three":"/static/vendor/three/build/three.module.js"}}

@@ -58,6 +58,22 @@ def test_health_endpoint():
     assert response.json()["status"] == "ok"
 
 
+def test_status_endpoint_reports_current_character_studio_milestone(
+    tmp_path, monkeypatch
+):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "status.sqlite3")
+    monkeypatch.setattr(main, "_INITIALIZED_DB_KEY", None)
+
+    response = client.get("/api/status")
+    assert response.status_code == 200
+    milestone = response.json()["next_milestone"].lower()
+    assert "visual acceptance" in milestone
+    assert "face/hair geometry authoring" in milestone
+
+
 def test_story_builder_is_served():
     response = client.get("/story")
     assert response.status_code == 200

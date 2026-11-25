@@ -132,4 +132,21 @@ The newer Universal Base Characters + Modular Character Outfits - Fantasy packs 
 
 The app-side library foundation exposes a catalog and lazy-download model route. Every downloaded GLB is pinned to an immutable source commit and checked for exact size and Git blob SHA-1 before caching under the user's Cartoon Studio data directory. The third-party browser creator repository is used only as a host for the CC0 model conversions; its source code is not reused because it has no declared code license.
 
-**Not yet implemented:** cross-outfit mesh assembly, material/color customization, native GLB export, creation-recipe persistence, and the browser-facing modular builder. These are the next P2.2 batches, not reasons to move to World Builder or Story/Scene Engine.
+**At the start of this batch, not yet implemented:** cross-outfit mesh assembly, material/color customization, native GLB export, creation-recipe persistence and the browser-facing modular builder. Subsequent implementation and acceptance checkpoints are recorded above.
+
+
+## 2026-11-25 — Rig-based body-proportion editing
+
+- Main commit `f9a03b9613d22c8bf99e96c5cf3d5de9997e0fd2` adds a body-shape editor for compatible imported humanoid rigs, with torso, shoulder, arm, leg and head controls.
+- Applying non-neutral values asks the Godot worker to update rig transforms, export a new GLB and re-import it to verify changed bones. The source GLB is not modified; the integration test also checks animation names and playback on the exported asset.
+- The project stores the edited asset as a new versioned character-asset manifest, keeping its source path and applied proportions. Imported morph targets are grouped into face, body and other slider sections; these controls use only morphs present in the GLB.
+- Windows quick CI [#417](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45672883272) passed on this commit, including the pinned Godot 4.7.2 worker tests, Node syntax checks, Ruff and the full pytest suite.
+- Scope boundary: this changes an existing humanoid rig or imported morph target; it does not create new mesh topology, author original face/hair geometry, generate blend shapes or convert arbitrary rigs. Local browser functional acceptance is recorded below; broad visual acceptance remains outstanding, so P2.2 remains PARTIAL.
+
+## 2026-11-25 — Local browser acceptance follow-up
+
+- Imported and previewed the pinned CC0 Male Adventurer through the Character Studio library. Godot reported 5 meshes, one skeleton, 24 animations, 13/15 humanoid-name coverage and hierarchy warnings; this is not evidence of general retarget compatibility.
+- Applied `torso_length=1.1`. The Godot worker exported a separate GLB, reported two changed rig bones, and retained animation clips and skin binding. The source copy's SHA-256 matched the pinned library asset (`2caf3ea58a06744c44a360c941c3355b499ba5adf8edf549b98fc347c45faa28`); the edited export had a distinct SHA-256 (`a14529497467da31f4c8af3bd62d80cf141b131aa4352913cc4f55cc711116fa`).
+- Saved the edited character profile, reloaded the page, reopened the profile and confirmed the 1.10 torso value, 24 animation clips and working Walk playback controls. A separate synthetic fixture also passed the same functional edit/save/reopen path; it is not suitable for visual-quality judgment.
+- Browser inspection found and fixed two UI defects: the empty-preview label remained visible because the CSS `display:grid` rule overrode the `hidden` attribute, and the saved-character rendering loop shadowed the global `document`, causing `document.createElement` failures after save. The profile cards and preview placeholder now behave correctly.
+- The pinned Adventurer preview showed an actual rendered character and a visible body-shape change, but its hierarchy warnings and the limited number of inspected models prevent broad visual signoff. Imported face/hair authoring and morph-capable browser acceptance remain open.

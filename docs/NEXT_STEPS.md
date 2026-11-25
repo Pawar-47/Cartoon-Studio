@@ -2,7 +2,9 @@
 
 ## Current checkpoint
 
-Main is `d42a6e766fdae22e9a742435228cfdb4431c656b`. PR #10 (verified baked appearance GLB export) and PR #11 (modular recipe save/reopen/reassembly regression coverage) are merged. Main quick CI run [45663866235 PASSED](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45663866235). Phase 2 Character Studio remains active; no interactive browser acceptance or geometric customization is being claimed from these API/worker tests.
+Main is `f9a03b9613d22c8bf99e96c5cf3d5de9997e0fd2`. PR #15 adds rig-based body-proportion editing and face/body morph grouping; main quick CI run [45672883272 PASSED](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45672883272). Phase 2 remains active. Automated API/worker coverage does not count as interactive browser or visual acceptance.
+
+Local continuation is on `work/p2-2-body-shape-acceptance` from that main commit; changes are uncommitted. The browser now passes functional acceptance on the synthetic humanoid fixture and the pinned CC0 Male Adventurer GLB, but P2.2 remains PARTIAL.
 
 ## Active batch — Phase 2 Character Studio
 
@@ -28,12 +30,13 @@ Saved retarget records now also have a browser preview action. The preview endpo
 
 ## Next substantial batch
 
-The browser retarget path now samples source animation from the full GLTF scene root and plays generated tracks through the target SkinnedMesh skeleton. This handles common GLTF layouts where the mesh and its joint hierarchy are siblings rather than parent/child nodes. The new Node suite exercises the vendored Three.js retarget implementation against a 15-bone pair with different bone names and a rolled target arm, including hip translation and mapping rejection. This batch still needs quick CI and interactive browser acceptance.
+The latest main CI passed the rig-based body-proportion implementation, including the pinned Godot worker tests. A local browser smoke now confirms the edit, export, animation playback and profile-reopen path on a pinned CC0 character. Full visual signoff still requires rigs that pass the project's compatibility diagnostics and morph-capable models.
 
-1. Compare browser retarget preview motion against the authoritative Godot scene across the accepted humanoid, bone-roll and RobotExpressive fixtures.
-2. Add more third-party humanoid rig families with varied rest axes and hierarchy layouts.
-3. Perform interactive browser acceptance of RobotExpressive facial sliders, reset-to-imported-defaults and save/reopen.
-4. Continue deterministic export and animation round-trip after broader compatibility acceptance.
+1. Establish and test the body-edit compatibility boundary on a representative rig that passes hierarchy validation; compare source and export in matched poses.
+2. Exercise imported face/body morph sliders and baked appearance in the browser on a morph-capable GLB.
+3. Complete modular assembly, outfit shuffle, accessories, download and recipe-reopen acceptance in the browser.
+4. Compare browser retarget preview motion against the authoritative Godot scene across accepted humanoid, bone-roll and RobotExpressive fixtures.
+5. Continue original face/hair geometry authoring; imported-rig edits and metadata do not satisfy original-geometry requirements.
 
 ## Deferred to their specified phases
 
@@ -59,10 +62,10 @@ Work in coherent feature batches, preserve all existing work, use GitHub main as
 
 The pinned CC0 library, four-slot Godot assembly/export, browser selectors and versioned recipe manifest are implemented. PR #11 now verifies API-level save/reopen/reassemble using recovered source manifests and a bone-attached accessory. PR #10 adds a separate verified appearance-bake/export path. These automated contracts do not establish browser-level visual quality.
 
-1. Exercise the browser creator end-to-end: library preview/import, choose head/body/legs/feet, shuffle, add/remove accessories, assemble, download, preview expressions, save the profile, reload the project and restore the recipe.
-2. Inspect baked appearance export with a real morph-capable character. Compare material and morph values before/after export, verify animation clips remain usable and confirm the original source GLB is byte-identical.
-3. Add browser-facing playback acceptance for assembled GLBs and compare browser retarget preview with the authoritative saved Godot scene.
-4. Implement real geometric customization for proportions, face and hair using compatible mesh, morph-target or rig operations. Keep metadata-only fields clearly distinguished from geometry changes.
+1. Complete browser acceptance for four-part assembly, shuffle, accessories, download and recipe restoration.
+2. Inspect body-proportion and baked-appearance exports on rigs that pass compatibility checks; compare matched-pose geometry, playback and source hashes.
+3. Exercise imported morph sliders on a morph-capable GLB and compare browser retarget preview with the authoritative saved Godot scene.
+4. Continue original face/hair geometry authoring; keep existing-rig proportion edits and imported morphs distinct from new geometry creation.
 5. Expand rig families only where compatibility tests and visual acceptance justify it.
 
 Phase 2 remains ACTIVE. Do not start Phase 3 until P2.2 exit criteria are met. Physical-PC performance testing and full Windows packaging remain later-stage work, not blockers.
@@ -72,4 +75,4 @@ Phase 2 remains ACTIVE. Do not start Phase 3 until P2.2 exit criteria are met. P
 
 PR #11 merged the deterministic API-level round-trip test for modular character recipes. It exercises assembly with four parts plus a bone-attached accessory, persists the resulting asset manifest, verifies every source manifest can be reopened, saves and reopens a character profile referencing the assembled asset, and submits a second assembly using only the recovered recipe. The fake engine isolates persistence/replay contracts; the separate pinned-Godot integration test remains responsible for real skeleton compatibility and animation playback.
 
-This closes the API-level persistence regression item only. Interactive browser acceptance and geometric customization remain open.
+This closes the API-level persistence regression item only. Interactive browser acceptance and remaining face/hair geometry authoring remain open.

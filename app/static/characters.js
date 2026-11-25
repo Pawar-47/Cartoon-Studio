@@ -220,8 +220,8 @@ async function loadCharacters(){
  if(!response.ok)throw new Error("Could not load saved characters.");
  const characters=await response.json(),list=$("character-list");list.replaceChildren();updateRetargetCharacterOptions(characters);await loadRetargets();
  if(!characters.length){list.innerHTML='<div class="empty">No saved characters in this project yet.</div>';return}
- for(const document of characters){
-  const data=document.data,card=document.createElement("article");card.className="character-card";
+ for(const characterDoc of characters){
+  const data=characterDoc.data,card=document.createElement("article");card.className="character-card";
   const title=document.createElement("h3");title.textContent=data.name;
   const description=document.createElement("p");description.textContent=data.description||"No description";
   const model=document.createElement("p");const asset=data.asset||{};model.textContent=(asset.original_filename||"GLB model")+" · "+(asset.engine_inspection?.mesh_count??asset.container?.mesh_count??0)+" meshes";
@@ -235,13 +235,13 @@ async function loadCharacters(){
   if(rigAnalysis.required_bone_count)rig.textContent+=" · humanoid names "+rigAnalysis.matched_bone_count+"/"+rigAnalysis.required_bone_count;
   rig.title=rigAnalysis.retargeting_note||"Skeleton presence alone does not prove humanoid retarget compatibility";
   const animations=document.createElement("span");animations.className="tag";animations.textContent=(asset.engine_inspection?.animation_count??asset.container?.animation_count??0)+" animations";
-  const revision=document.createElement("p");revision.textContent="Revision "+document.revision+" · "+new Date(document.updated_at).toLocaleDateString();
+  const revision=document.createElement("p");revision.textContent="Revision "+characterDoc.revision+" · "+new Date(characterDoc.updated_at).toLocaleDateString();
   const previewButton=document.createElement("button");previewButton.className="secondary preview-saved";previewButton.type="button";previewButton.textContent="Preview";
   previewButton.addEventListener("click",async()=>{try{const assetId=(asset.relative_path||"").split("/").pop().replace(/\.glb$/i,"");const response=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(assetId));if(!response.ok)throw new Error("Could not load the saved GLB asset.");const buffer=await response.arrayBuffer();await showCharacterPreview(buffer,data.name,data.appearance_recipe||{});document.querySelector(".preview-panel").scrollIntoView({behavior:"smooth",block:"center"})}catch(error){$("project-status").textContent=error.message}});
   const editButton=document.createElement("button");editButton.className="secondary preview-saved";editButton.type="button";editButton.textContent="Edit profile";
-  editButton.addEventListener("click",()=>editCharacterProfile(document).catch(error=>$("profile-status").textContent=error.message));
+  editButton.addEventListener("click",()=>editCharacterProfile(characterDoc).catch(error=>$("profile-status").textContent=error.message));
   const customizeButton=document.createElement("button");customizeButton.className="secondary preview-saved";customizeButton.type="button";customizeButton.textContent="Customize appearance";
-  customizeButton.addEventListener("click",()=>openCharacterAppearance(document).catch(error=>$("project-status").textContent=error.message));
+  customizeButton.addEventListener("click",()=>openCharacterAppearance(characterDoc).catch(error=>$("project-status").textContent=error.message));
   if(asset.assembly){
    const reopenAssemblyButton=document.createElement("button");reopenAssemblyButton.className="secondary preview-saved";reopenAssemblyButton.type="button";reopenAssemblyButton.textContent="Reopen assembly";
    reopenAssemblyButton.addEventListener("click",async()=>{

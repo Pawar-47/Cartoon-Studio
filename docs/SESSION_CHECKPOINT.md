@@ -3,7 +3,7 @@
 Updated: 2026-11-25
 Repository: https://github.com/Pawar-47/Cartoon-Studio
 Branch: main
-Latest implementation checkpoint: `d42a6e766fdae22e9a742435228cfdb4431c656b` (PR #10 baked appearance export and PR #11 modular recipe round-trip coverage merged; main quick CI run 45663866235 passed).
+Latest implementation checkpoint: `f9a03b9613d22c8bf99e96c5cf3d5de9997e0fd2` (PR #15 rig-based body-proportion editing and face/body morph grouping merged; main quick CI run 45672883272 passed).
 
 ## Mission and operating rules
 
@@ -24,13 +24,15 @@ Phase 2 — Character Studio is ACTIVE. Phase 0 and Phase 1 are complete. Do not
 
 - PR #10: appearance recipes can be baked into a new GLB by the Godot worker; baked material and morph values are re-imported and verified, animation clips are retained, and the source GLB remains unchanged.
 - PR #11: modular assembly recipes now have API-level save/reopen/reassemble regression coverage, including all source asset manifests and a bone-attached accessory.
-- Main CI run [45663866235](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45663866235) passed on `d42a6e766fdae22e9a742435228cfdb4431c656b`.
+- PR #15: compatible imported humanoid rigs expose body-proportion controls; the worker exports/re-imports a new GLB and verifies changed bones while retaining animations and preserving the source. Existing face/body morphs are grouped into corresponding controls.
+- Main CI run [45672883272](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45672883272) passed on `f9a03b9613d22c8bf99e96c5cf3d5de9997e0fd2`.
 
 ## Implemented Character Studio capabilities
 
 - Project-contained GLB 2.0 import, validation, SHA-256 provenance and Godot inspection.
 - Browser GLB preview, imported animation selection and camera controls.
 - Persistent editable character profiles.
+- Rig-based torso/shoulder/arm/leg/head proportion controls for compatible imported humanoids; generated GLBs are separately stored and verified, leaving the source unchanged. Existing imported face/body morph targets are grouped and editable; this does not create new geometry or morphs.
 - Non-destructive PBR material recipes and facial morph-target controls. Godot reports imported blend-shape names/defaults; signed weights from -1 to 1 persist; reset restores each model's imported defaults. A pinned CC0 RobotExpressive fixture is fetched and SHA-256 verified; CI #334 passed Godot import, morph-target and multi-clip inspection. The imported clip catalog/source selector passed CI #340. CI #341 and native-worker proof #22 passed bone-roll/non-uniform-scale retarget acceptance. Godot native-worker proof #346 passed RobotExpressive Walking-clip retarget, scene save/reopen and pose-transfer verification; CI #349 passed the source-only IK-foot hierarchy API/UI checks.
 - Conservative indexed 15-bone humanoid mapping, parent-chain validation and imported rest-transform diagnostics.
 - Common 3ds Max Biped, Character Creator, Unreal-style, Blender Rigify and Cesium Rigged Figure bone naming conventions are recognized. Duplicate and negative bone indices are rejected.
@@ -75,10 +77,10 @@ Two real third-party assets have passed native Godot acceptance for tested scena
 
 ## Next substantial implementation batch
 
-1. Perform interactive browser acceptance of the complete modular creator, including outfit selection/shuffle, accessories, assembly, preview, GLB download, profile save/reopen and recipe restoration. PR #11 now covers the API-level recipe replay contract; it does not replace visual acceptance.
-2. Visually accept PR #10's baked appearance export with a real morph-capable character, checking material values, facial weights, animation preservation and source-file immutability.
-3. Compare browser retarget preview motion against the authoritative Godot scene across the accepted humanoid, bone-roll and RobotExpressive fixtures.
-4. Implement genuine geometric customization for proportions, face and hair; do not count text-only profile metadata as geometry editing.
+1. Perform interactive browser acceptance of modular assembly, body-proportion controls and imported face/body morph sliders on representative models; test preview, save/reopen and download.
+2. Inspect body-proportion and baked-appearance exports visually, verify animation playback and source-file immutability.
+3. Compare browser retarget preview motion against the authoritative Godot scene across accepted humanoid, bone-roll and RobotExpressive fixtures.
+4. Continue original face/hair geometry authoring; do not count metadata or imported-morph grouping as new geometry creation.
 
 ## Later phases
 
@@ -90,6 +92,14 @@ Two real third-party assets have passed native Godot acceptance for tested scena
 - Phase 8 — Optimization and Reliability: deferred, including physical-PC performance testing.
 
 Never claim the complete application is finished while Phases 2–7 remain incomplete.
+
+
+## 2026-11-25 — Body-proportion editing checkpoint
+
+- Current GitHub main: `f9a03b9613d22c8bf99e96c5cf3d5de9997e0fd2`; quick CI #417 passed.
+- Local focused tests on Windows/Python 3.12.10: `tests/test_app.py`, `tests/test_characters.py` and `tests/test_engine.py` completed with 39 passed and 5 skipped in 7.54 seconds; the skips require the pinned Godot runtime. CI #417 ran the full suite with Godot and Node configured.
+- The existing downloaded folder at `Downloads/Cartoon-Studio-main` remains untouched. Work is in the separate `Downloads/Cartoon-Studio-main-current` clone on `work/p2-2-body-shape-acceptance`.
+- The Character Studio page loaded in the integrated browser, but no character model was imported or rendered. Keep Phase 2 active and P2.2 partial; next validate the body controls and exported appearance on representative characters.
 
 
 ## 2026-11-25 — Browser retarget scene-root correction batch
@@ -107,3 +117,14 @@ Never claim the complete application is finished while Phases 2–7 remain incom
 - P2.2 is being re-anchored to the master brief's original-character creation requirement. The selected starter assets are Quaternius Ultimate Modular Men/Women CC0 1.0 (21 outfit GLBs, four swappable parts and 24 clips per model; 34.92 MiB total).
 - Current batch adds a pinned asset catalog, lazy-download cache with exact size/Git blob SHA-1 verification, catalog/model API endpoints, and Godot import acceptance for three representative models sharing the 62-bone rig.
 - The browser builder and native four-part assembly/export are not yet complete. Next batch: Godot assembly/export; then browser controls and versioned creation-recipe persistence.
+
+
+## 2026-11-25 — Body-edit browser acceptance and UI fixes
+
+- Current local clone: `C:\Users\Hadi\Downloads\Cartoon-Studio-main-current`, branch `work/p2-2-body-shape-acceptance`, based on main `f9a03b9613d22c8bf99e96c5cf3d5de9997e0fd2`. Changes are uncommitted; the original downloaded folder remains untouched.
+- Integrated-browser acceptance imported the pinned CC0 Male Adventurer, rendered its 24 animation clips, applied `torso_length=1.1`, saved the new asset/profile and reopened the profile after a page reload. The worker reported two changed bones and preserved animation and skin binding. The source copy SHA-256 matched the pinned catalog asset (`2caf3ea58a06744c44a360c941c3355b499ba5adf8edf549b98fc347c45faa28`); the edited GLB had a different hash (`a14529497467da31f4c8af3bd62d80cf141b131aa4352913cc4f55cc711116fa`).
+- The Adventurer inspection reports 13/15 humanoid-name coverage and hierarchy warnings. The edit succeeded, but this asset does not establish broad retarget compatibility; keep Phase 2/P2.2 PARTIAL.
+- Fixed the hidden preview placeholder CSS override and the saved-character `document` variable shadowing bug. Browser verification confirmed the placeholder hides while a GLB is loaded, saved character cards render, and profile edit/reopen restores the body value and animation list.
+- A separate synthetic-fixture browser edit/save/reopen passed; do not use it as visual-quality evidence.
+- Local targeted suite with pinned Godot 4.7.2: 44 passed in 39.72 seconds across `tests/test_app.py`, `tests/test_characters.py` and `tests/test_engine.py`. The pinned RobotExpressive fixture was fetched with the repository script and SHA-256 verified. Node CLI is unavailable locally; the changed module was loaded and exercised in the integrated browser.
+- No commit or push was made. Remaining work: morph-capable browser acceptance, full modular assembly/download and recipe-reopen acceptance, compatibility review on hierarchy-valid rigs, retarget-preview comparison, and original face/hair geometry authoring.

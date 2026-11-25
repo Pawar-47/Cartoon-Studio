@@ -4,11 +4,12 @@
 
 - Repository: Pawar-47/Cartoon-Studio
 - Branch: main
-- Latest implementation checkpoint: `d42a6e766fdae22e9a742435228cfdb4431c656b` (PR #10 merged; verified baked appearance GLB export; PR #11 recipe save/reopen/reassembly regression coverage already merged; main quick CI passed).
-- Latest main quick CI: [run 45663866235 PASSED](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45663866235) on `d42a6e766fdae22e9a742435228cfdb4431c656b` (locked dependency install, Ruff, Node syntax check, compileall and full pytest).
+- Latest implementation checkpoint: `f9a03b9613d22c8bf99e96c5cf3d5de9997e0fd2` (PR #15 adds verified rig-based body-proportion editing and groups imported face/body morph controls; main quick CI passed).
+- Latest main quick CI: [run 45672883272 PASSED](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45672883272) on `f9a03b9613d22c8bf99e96c5cf3d5de9997e0fd2` (locked dependencies, pinned Godot and CC0 facial-morph fixture, Ruff, Node syntax, Python compile and full pytest).
+- Local continuation branch: `work/p2-2-body-shape-acceptance`, based on that main commit; current UI fixes and acceptance notes are uncommitted and are not on GitHub main.
 - Phase 0: COMPLETE.
 - Phase 1: COMPLETE.
-- Phase 2 — Character Studio: ACTIVE; import, preview, profiles, appearance recipes, rig diagnostics and the first user-facing imported-rig retarget workflow are implemented. Phase 2 is not complete.
+- Phase 2 — Character Studio: ACTIVE; import, preview, profiles, appearance recipes, rig-based body-proportion export, rig diagnostics and retargeting are implemented. Local browser acceptance now covers a pinned CC0 Adventurer edit and profile reopen; broader visual signoff and face/hair authoring remain.
 - Windows CI #326: full pipeline PASSED on `696929595b2d03e64e46a568ec9d163860ae3239`, including lint, Python compilation, full pytest, pinned Godot 4.7.2 worker, Windows bootstrap, both self-contained application builds, NSIS installers and clean install/upgrade/uninstall/reinstall lifecycle.
 - Windows CI #334: quick CI PASSED on `00b4ed9f97360cba1a304054a8285fd4df1cc827`; pinned RobotExpressive download/checksum, Ruff, Python compilation and full pytest passed. The complete application and installer were intentionally not rebuilt.
 - Windows CI #340: quick CI PASSED on `fba0ad5cec13a5738a2807a2af7bebf0317451cd`; animation-name catalog, explicit/default clip selection, legacy compatibility and unknown-clip rejection passed.
@@ -26,6 +27,8 @@
 - Local project-contained GLB 2.0 import, validation, provenance and Godot inspection.
 - Browser GLB preview and imported animation selection.
 - Persistent versioned character profiles.
+- Rig-based proportion controls for compatible imported humanoids. Godot exports a new GLB, re-imports it to verify changed bone transforms and retained animation clips, and leaves the source GLB unchanged. This edits an existing rig; it does not create new mesh topology or author face/hair geometry.
+- Imported morph targets are grouped into face, body and other controls; sliders affect only blend shapes already present in the source GLB.
 - Non-destructive material appearance recipes and facial morph-target sliders; Godot inspection reports imported blend-shape names/defaults, controls accept signed weights from -1 to 1, and reset restores each imported default. Appearance editing pauses embedded animation playback so an animation track cannot overwrite live expression-slider changes; ordinary character previews continue to play imported animations. The pinned CC0 RobotExpressive asset was successfully imported by Godot in CI with at least three facial morph targets, numeric defaults and ten or more named animation clips. A pinned CC0 third-party RobotExpressive GLB adds a real animated character with three facial-expression morph targets on its Head_4 mesh; CI fetches the upstream binary by immutable commit and verifies its SHA-256 before Godot import. A named Smile/Blink fixture continues to exercise deterministic node/mesh default precedence; persistence and range validation are covered by API tests. RobotExpressive import passed CI #334, and its Walking clip passed native retarget/save/reopen/pose-transfer proof #346. Its bilateral Blender IK-foot hierarchy is represented as a verified source-only variant; target rigs still require a standard valid hierarchy.
 - Indexed 15-bone humanoid mapping, parent-chain diagnostics and per-bone rest-transform measurements; common 3ds Max Biped, Character Creator, Unreal-style, Blender Rigify and Cesium Rigged Figure bone names are recognized. Duplicate/negative hierarchy indices are rejected.
 - Imported-GLB retarget workflow with source/target selection, strict preflight, source-specific clip selection, Godot scene creation, persistent history and scene download. A generated target with altered bone-roll rotations and non-uniform per-bone scale passed native Godot retarget acceptance in CI #341; inverse-bind matrices are recalculated from full TRS transforms.
@@ -48,7 +51,7 @@ Godot may normalize raw skin-joint ordering during import. The application uses 
 |---|---|---|
 | Phase 0 — Specification/research/architecture | COMPLETE | Baseline, requirements, research and architecture documented |
 | Phase 1 — GitHub and CI/CD foundation | COMPLETE | Windows bootstrap and installer lifecycle verified |
-| Phase 2 — Character Studio | ACTIVE | Import, preview, profiles, appearance, rig diagnostics and initial imported-pair retarget workflow implemented; broader rig acceptance, preview and deterministic export remain |
+| Phase 2 — Character Studio | ACTIVE | Import, preview, profiles, appearance, verified rig-based body-proportion export, rig diagnostics and retargeting are implemented; interactive visual acceptance and face/hair authoring remain |
 | Phase 3 — World Builder | NOT STARTED | No persistent production world/location builder |
 | Phase 4 — Story and Scene Engine | PARTIAL / FROZEN | Preserve existing Story Generator and saved story plan |
 | Phase 5 — Animation Engine | NOT STARTED | No production timeline/action library |
@@ -58,10 +61,10 @@ Godot may normalize raw skin-joint ordering during import. The application uses 
 
 ## Next implementation batch
 
-1. Perform interactive browser acceptance of the complete modular creator: library preview/import, four-slot selection, shuffle, accessory add/remove, assembly, GLB download, expression preview, profile save/reopen and recipe restoration.
-2. Visually accept PR #10's baked appearance export using a real morph-capable character: compare pre/post material values, facial weights and animation playback; confirm the source GLB remains unchanged.
-3. Compare browser retarget preview against the authoritative saved Godot scene across the accepted humanoid, bone-roll and RobotExpressive fixtures.
-4. Implement genuine geometric customization for proportions, face and hair using compatible mesh, morph-target or rig operations; distinguish real geometry changes from metadata-only profile fields.
+1. Extend browser acceptance to modular assembly, imported morph controls and baked appearance on representative, hierarchy-validated rigs.
+2. Resolve and document the body-edit compatibility boundary: the pinned Adventurer edit succeeded, but its import report still flags 13/15 humanoid names and a hierarchy needing review.
+3. Compare browser retarget preview against the authoritative saved Godot scene across accepted humanoid, bone-roll and RobotExpressive fixtures.
+4. Implement remaining original face/hair geometry authoring; distinguish edits to existing rigs/morphs from newly authored geometry.
 5. Broaden third-party rig families only where direct compatibility tests and visual acceptance justify support.
 
 ## Frozen architecture and constraints
@@ -75,7 +78,7 @@ Godot may normalize raw skin-joint ordering during import. The application uses 
 
 ## Active P2.2 direction — modular character creator (2026-11-25)
 
-- Main HEAD: `d42a6e766fdae22e9a742435228cfdb4431c656b`. PRs #3, #4, #6, #7, #9 and #11 provide the modular assembly, accessories, shuffle, playback probe, expression presets and recipe round-trip coverage. PR #10 adds verified baked appearance GLB export. Main quick CI run `45663866235` passed.
+- Main HEAD: `f9a03b9613d22c8bf99e96c5cf3d5de9997e0fd2`. PRs #3, #4, #6, #7, #9, #10 and #11 provide modular assembly, accessories, shuffle, playback probe, expression presets, baked appearance export and recipe round-trip coverage. PR #15 adds rig-based body-proportion editing and face/body morph grouping. Main quick CI run `45672883272` passed.
 - The pinned Quaternius Ultimate Modular Men/Women CC0 library contains 21 outfit GLBs (34.92 MiB) with four candidate slots and 24 animation clips per model. Downloads are lazy, cached and verified against the pinned source commit, byte size and Git blob SHA-1.
 - Character Studio now offers head/body/legs/feet selectors, filtered by skinned mesh slot candidates. Godot performs exact shared-skeleton, hierarchy, rest-pose, rig-transform and skin-bind checks; it removes base skinned outfit meshes, attaches the selected meshes to the base skeleton, exports and re-imports the GLB, then verifies the four selected meshes and base animation names.
 - A real CI integration test combines Beach head, Casual_2 body, Farmer legs and King feet on the Male Adventurer base and verifies all 24 base animation clips survive. Assembly manifests persist the base/part recipe and allow source restoration.
@@ -83,4 +86,4 @@ Godot may normalize raw skin-joint ordering during import. The application uses 
 - PR #6 adds one-click outfit shuffling with unique source meshes and direct GLB downloads for saved and newly assembled characters.
 - PR #7 adds a Godot playback probe: after GLB export/re-import it plays the Walk clip, compares bone poses, counts skinned meshes bound to the rig and reports bone attachments. The mixed-outfit-plus-Backpack test verifies pose changes and at least four skinned meshes.
 - PR #9 adds Smile/Frown/Surprise/Angry presets for imported morph targets. Presets are name-matched, do not fabricate geometry and remain disabled when no morph targets are present. Node 22 syntax checking is now part of CI.
-- Phase 2 remains ACTIVE; P2.2 remains PARTIAL. Interactive browser visual acceptance, real geometry/face/proportion/hair authoring and cross-scene visual consistency remain open. Strict shared-rig matching is supported; automatic conversion of arbitrary incompatible rigs is not claimed.
+- Phase 2 remains ACTIVE; P2.2 remains PARTIAL. Rig-based proportion changes and existing imported morphs are implemented, but interactive visual acceptance, original face/hair geometry authoring and cross-scene visual consistency remain open. Strict shared-rig matching is supported; automatic conversion of arbitrary incompatible rigs is not claimed.

@@ -252,3 +252,23 @@ Added API coverage for saving morph-target weights and rejecting values outside 
 - PR #9 feature CI [45656755304](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45656755304): SUCCESS. Main CI run 45657010942 was pending at this checkpoint.
 - Added Smile/Frown/Surprise/Angry semantic presets for imported morph targets, with name matching, unmatched-target preservation, manual slider integration, live preview and versioned appearance persistence. Presets are disabled when the model has no morph targets.
 - PR #5 added Node 22 syntax validation for `app/static/characters.js`; feature CI 45655204627 and main CI 45655471623 passed.
+
+
+## Phase 2 — rig-based body-proportion editing and morph grouping — 2026-11-25
+
+- Main commit: `f9a03b9613d22c8bf99e96c5cf3d5de9997e0fd2`.
+- Windows quick CI #417: [SUCCESS](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45672883272), completed in 73 seconds. Locked dependencies, pinned Godot 4.7.2 and the CC0 facial-morph fixture, Ruff, Node syntax checks, Python compilation and the full pytest step all passed. This quick workflow did not build the Windows application or installer.
+- The new API/worker coverage checks that body-proportion edits create a verified new GLB, report changed bones, preserve animation clips/playback and leave the input GLB byte-identical. Face/body morph groups expose only morph targets already in the imported GLB; this does not create new blend shapes.
+- Local Windows/Python 3.12.10 run (`.venv312\Scripts\python.exe`): `python -m pytest -o addopts= -q -r s tests/test_app.py tests/test_characters.py tests/test_engine.py`; exit code 0, 39 passed and 5 skipped in 7.54 seconds. The five skips require the pinned Godot runtime, which was unavailable locally; the same integration tests ran in CI.
+- Local Ruff: `python -m ruff check app/main.py tests/test_app.py` passed. The isolated app smoke returned HTTP 200 for `/characters`, `ok` for `/api/health`, and the updated Character Studio milestone from `/api/status`.
+- Earlier smoke only loaded the Character Studio shell; the later browser acceptance below supersedes that limited check.
+
+## 2026-11-25 — Local integrated-browser acceptance
+
+- With pinned Godot 4.7.2 enabled, imported the pinned CC0 Male Adventurer through the Character Studio library and confirmed browser rendering with 24 selectable animations. The Godot inspection reported 5 meshes, one skeleton, 13/15 humanoid-name coverage and hierarchy warnings.
+- Applied a 1.10 torso-length edit in the browser. Godot exported a new GLB, reported two changed rig bones, and retained skin binding and all 24 animation clips. The source asset hash matched the pinned library SHA-256 (`2caf3ea58a06744c44a360c941c3355b499ba5adf8edf549b98fc347c45faa28`); the edited export hash differed (`a14529497467da31f4c8af3bd62d80cf141b131aa4352913cc4f55cc711116fa`).
+- Saved the edited character profile, reloaded the page, reopened the profile and confirmed the stored 1.10 proportion and Walk playback. Also exercised the same UI path with the synthetic humanoid fixture; that fixture proves plumbing only, not character visual quality.
+- Fixed two browser defects found during acceptance: the CSS grid rule overrode the preview placeholder's `hidden` state, and a loop variable shadowed the global DOM `document`, breaking saved-character card rendering. After the fixes, the preview placeholder was hidden while a model was loaded and both saved character cards rendered/reopened.
+- Local targeted suite with the pinned Godot runtime: `tests/test_app.py tests/test_characters.py tests/test_engine.py` — 44 passed in 39.72 seconds. The first attempt lacked the CI-fetched RobotExpressive fixture; `scripts/fetch_robot_expressive_fixture.py` downloaded and checksum-verified it before the successful rerun.
+- Node was not available on the local PATH for `node --check`; the changed browser module was fetched with a cache-busted URL and executed by the integrated browser during the acceptance workflow. CI #417's Node syntax checks apply to main, not this local branch.
+- The Quaternius sample's rig warnings remain a compatibility limitation. This is functional browser acceptance, not blanket visual signoff, full modular-assembly acceptance, or original face/hair geometry authoring.
