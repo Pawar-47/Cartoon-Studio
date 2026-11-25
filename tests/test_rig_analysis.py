@@ -32,7 +32,7 @@ def test_partial_skeleton_reports_missing_humanoid_bones():
     }]})
     assert result["status"] == "partial_humanoid_names"
     assert result["matched_bone_count"] == 3
-    assert "leftUpperLeg" in result["missing_bones"]
+    assert "LeftUpperLeg" in result["missing_bones"]
 
 
 def test_multiple_skeletons_are_not_combined_into_a_fake_humanoid():
@@ -48,3 +48,68 @@ def test_missing_skeleton_is_reported_explicitly():
     result = _analyze_rig({"skeleton_count": 0, "skeletons": []})
     assert result["status"] == "no_skeleton"
     assert result["retargeting_ready"] is False
+
+
+
+def test_mapping_preserves_godot_profile_bone_names_and_source_indices():
+    bones = [
+        {"index": 0, "name": "mixamorig:Hips", "parent_index": -1, "parent_name": ""},
+        {"index": 1, "name": "mixamorig:Spine", "parent_index": 0, "parent_name": "mixamorig:Hips"},
+        {"index": 2, "name": "mixamorig:Head", "parent_index": 1, "parent_name": "mixamorig:Spine"},
+    ]
+    result = _analyze_rig({"skeleton_count": 1, "skeletons": [{"bones": bones}]})
+    assert result["godot_profile_mapping"]["Hips"] == {
+        "bone_index": 0, "source_name": "mixamorig:Hips",
+        "parent_index": -1, "parent_name": "",
+    }
+    assert result["godot_profile_mapping"]["Spine"]["parent_index"] == 0
+    assert result["bone_mapping"]["Head"] == "mixamorig:Head"
+    assert result["retargeting_ready"] is False
+
+
+def test_duplicate_aliases_are_reported_as_ambiguous_not_silently_selected():
+    result = _analyze_rig({"skeleton_count": 1, "skeletons": [{
+        "bones": [
+            {"index": 0, "name": "Hips"},
+            {"index": 1, "name": "Pelvis"},
+            {"index": 2, "name": "Spine"},
+        ],
+    }]})
+    assert result["status"] == "ambiguous_humanoid_names"
+    assert "Hips" not in result["godot_profile_mapping"]
+    assert "Hips" in result["missing_bones"]
+    ambiguity = result["ambiguous_bones"][0]
+    assert ambiguity["profile_bone"] == "Hips"
+    assert [item["bone_index"] for item in ambiguity["candidates"]] == [0, 1]
+
+
+def test_unmapped_bones_are_reported_without_polluting_profile_mapping():
+    result = _analyze_rig({"skeleton_count": 1, "skeletons": [{
+        "bones": [
+            {"index": 0, "name": "Root"},
+            {"index": 1, "name": "Hips"},
+            {"index": 2, "name": "FaceControl"},
+        ],
+    }]})
+    assert result["bone_mapping"] == {"Hips": "Hips"}
+    assert result["unmapped_bones"] == [
+        {"bone_index": 0, "source_name": "Root"},
+        {"bone_index": 2, "source_name": "FaceControl"},
+    ]
+
+
+def test_best_skeleton_prefers_unambiguous_mapping_over_duplicate_candidates():
+    result = _analyze_rig({"skeleton_count": 2, "skeletons": [
+        {"bone_count": 4, "bones": [
+            {"index": 0, "name": "Hips"},
+            {"index": 1, "name": "Pelvis"},
+            {"index": 2, "name": "Spine"},
+        ]},
+        {"bone_count": 2, "bones": [
+            {"index": 0, "name": "Hips"},
+            {"index": 1, "name": "Spine"},
+        ]},
+    ]})
+    assert result["skeleton_path"] == ""
+    assert result["ambiguous_bones"] == []
+    assert result["matched_bone_count"] == 2
