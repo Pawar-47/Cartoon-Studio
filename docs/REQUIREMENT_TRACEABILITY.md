@@ -1,6 +1,8 @@
 # Requirement Traceability
 
-This matrix records only source/test/evidence relationships that have been inspected. It is not yet a complete decomposition of the specification; unlisted sub-requirements remain open and must be added during P0.2.
+This matrix records only source/test/evidence relationships that have been inspected. It is not yet a complete decomposition of the 25-part master brief plus the repository specification; unlisted sub-requirements remain open and must be added during P0.2.
+
+The current Story Generator/schema is an early, out-of-sequence partial slice. Its catalog checks are Ara-derived and provisional; they do not establish the canonical engine-neutral Cartoon Studio data contract. Preserve the code, freeze feature expansion until Phase 4, and migrate identifiers through explicit engine adapters.
 
 | Requirement IDs | Area | Implementation | Test/evidence | Status / limitation |
 |---|---|---|---|---|
@@ -24,4 +26,4 @@ This matrix records only source/test/evidence relationships that have been inspe
 
 Character persistence and rigging; original toon style; complete world builder and vehicle interactions; stable engine-neutral action vocabulary; animation blending/retargeting/timeline; direct AI provider integration and free-quota policy; research-agent execution; Urdu TTS quality and rights; character-specific voices; Urdu lip-sync; audio mixing and subtitles; renderer/MP4 assembly; job queue/cache/recovery; offline operation; installer; actual Windows install; target-hardware benchmarks; complete visual/audio acceptance.
 
-No item is VERIFIED. The registry and traceability still need a full requirement-by-requirement coverage pass against every section and acceptance bullet in `PROJECT_SPECIFICATION.md`.
+No item is VERIFIED. The registry and traceability still need a full requirement-by-requirement coverage pass against all 25 parts of the original master brief and every section/acceptance bullet in `PROJECT_SPECIFICATION.md`.

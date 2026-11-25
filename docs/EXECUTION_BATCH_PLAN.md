@@ -1,91 +1,96 @@
 # Execution Batch Plan
 
-This file is the operational checklist beneath `MASTER_PLAN.md`. Batches are sequential. Do not start a later batch while its dependency gate is open.
+This is the operational checklist beneath `MASTER_PLAN.md` and the user's original 25-part master execution brief. The numbered phases below intentionally match the original brief exactly. Batches are sequential; do not start a dependent batch while its gate is open.
 
-## Phase 0 — planning and research
-
-| Batch | Scope | Deliverables | Exit evidence | State |
-|---|---|---|---|---|
-| P0.1 | Audit repository, preserve existing work, identify actual vs claimed capabilities | BASELINE_AUDIT.md | Main tree, commit history, CI and current code reviewed | COMPLETE |
-| P0.2 | Decompose all 24 specification sections into atomic requirements | Registry and traceability v2 | Every requirement has ID, dependencies, module, test and evidence field | NEXT |
-| P0.3 | Research candidate 3D editors, character creation, rigging, toon style and animation | Comparative research records | Multiple candidates inspected at source level; licenses and build/test evidence recorded | BLOCKED BY P0.2 |
-| P0.4 | Research persistent worlds, assets, vehicles, Blender/renderer and hardware paths | Research and reuse matrix | Compatibility and target hardware risks compared | BLOCKED BY P0.2 |
-| P0.5 | Research Urdu TTS, lip-sync, audio, free AI providers and offline workflow | AI_PROVIDERS, voice research, license register | Real language, quota, rights and CPU evidence | BLOCKED BY P0.2 |
-| P0.6 | Compare candidates and test only bounded PoCs | Candidate decision records | Selected/rejected options have evidence, costs and limitations | BLOCKED BY P0.3–P0.5 |
-| P0.7 | Freeze engine-neutral architecture and detailed implementation dependencies | ARCHITECTURE, DECISION_LOG, MASTER_PLAN | P0 exit gate satisfied; no critical unknown silently assumed | BLOCKED BY P0.2–P0.6 |
-
-## Phase 1 — application foundation
+## Phase 0 — Complete specification and GitHub research
 
 | Batch | Scope | Deliverables | Exit evidence | State |
 |---|---|---|---|---|
-| P1.1 | Audit and harden existing app/project persistence | App tests and storage contract | Create/list/save/load/restart tests | PARTIAL |
-| P1.2 | Reproducible dependency and CI policy | CI workflow, dependency lock/constraints | Clean Windows runner build and test | PARTIAL |
-| P1.3 | Portable Windows runtime package | Bootstrap/portable package | Clean Windows install and launch test | PARTIAL |
-| P1.4 | Self-contained installer and update/data migration design | Installer/release pipeline | Install, upgrade, preserve projects, uninstall tests | NOT STARTED |
+| P0.1 | Repository baseline, preservation, code/tests/workflows/artifacts audit | BASELINE_AUDIT.md | Main branch, commit history, current source, docs, CI and candidate proof inspected | COMPLETE |
+| P0.2 | Atomic decomposition of all 25 master-brief parts and all 24 PROJECT_SPECIFICATION sections | Registry v2 and complete traceability | Every requirement/sub-requirement has ID, source section, priority, dependencies, module, implementation, test, evidence, status and limitations | NEXT — CRITICAL |
+| P0.3 | Comparative source-level GitHub research across 3D editors, character generation/rigging, toon styling, worlds, animation, renderers, TTS/lip-sync, audio, queue/recovery, packaging and AI providers | GITHUB_RESEARCH, REPOSITORY_EVALUATION, OPEN_SOURCE_REUSE_MATRIX, ASSET_LICENSES, RESEARCH_LOG | Multiple serious candidates inspected; exact versions, source, dependencies, tests, compatibility and separate licenses recorded | BLOCKED BY P0.2 |
+| P0.4 | Target hardware, Urdu and provider feasibility | HARDWARE_PROFILE, AI_PROVIDERS, voice research | Intel HD 5500/Windows path, CPU/RAM/disk, Pakistani Urdu samples, model rights, free quotas and Pakistan availability evidenced | BLOCKED BY P0.2 |
+| P0.5 | Engine-neutral architecture and dependency decisions | ARCHITECTURE, DECISION_LOG | Versioned contracts, adapters, data layout, offline mode, queue/cache/recovery, packaging and rejected options documented | BLOCKED BY P0.3–P0.4 |
+| P0.6 | Bounded, diagnostic candidate proofs only where needed | Proof workflow, logs, sample outputs and measurements | Open/import/animate/save/reopen/render and inspect output; Ara run #6 is CANCELLED and not accepted | BLOCKED — diagnose and instrument before rerun |
+| P0.7 | Phase 0 compliance review and architecture freeze | MASTER_PLAN, EXECUTION_BATCH_PLAN, decision record | Every requirement traced; critical risks explicit; architecture and downstream dependencies frozen | BLOCKED BY P0.2–P0.6 |
 
-## Phase 2 — production engine selection/integration (requires P0)
+**Phase 0 rule:** no new production-feature implementation before P0.7 exits. Preserve existing source. The existing Story Generator/schema is an early partial slice; do not expand it until Phase 4.
 
-| Batch | Scope | Deliverables | Exit evidence | State |
-|---|---|---|---|---|
-| P2.1 | One bounded proof against the selected candidate | Reproducible proof branch/workflow | Open/import/animate/save/reopen/render, inspected output and measured resource use | CANDIDATE PROOF IN PROGRESS; NOT ACCEPTED |
-| P2.2 | Production engine adapter and pinned integration | Engine module, notices, reproducible patches | Build and integration tests | BLOCKED BY P0 AND P2.1 |
-| P2.3 | Render backend and scene/job contracts | Render adapter and persistent queue | Short clip render, retry/cache/restart tests | BLOCKED BY P2.2 |
-
-## Phase 3 — Character Studio
+## Phase 1 — GitHub and CI/CD Foundation
 
 | Batch | Scope | Deliverables | Exit evidence | State |
 |---|---|---|---|---|
-| P3.1 | Character data contract and original visual style | Versioned character schema and design presets | Schema migration and visual style approval through tests | NOT STARTED |
-| P3.2 | Character creation/import and rigging | Working create/import/rig workflow | Save/reopen and rigged animation test | NOT STARTED |
-| P3.3 | Expressions, outfits, relationships and persistence | Character library | Cross-scene and cross-project identity tests | NOT STARTED |
+| P1.1 | Harden existing FastAPI app, project lifecycle, SQLite persistence and versioned local data layout | App/storage contract and tests | Create/list/save/load/restart/data-preservation integration tests | PARTIAL |
+| P1.2 | Reproducible dependencies, lint/static checks and CI | Pinned/locked dependencies and CI workflow | Clean Windows runner builds/tests with reproducible logs | PARTIAL |
+| P1.3 | Portable Windows package and simple launcher | Bootstrap/portable package | Clean Windows install, launch, shutdown and diagnostics test | PARTIAL — bootstrap only; no target-PC install evidence |
+| P1.4 | Self-contained installer, upgrade and data migration | Installer and release pipeline | Install/upgrade/uninstall tests; project data survives upgrades | NOT STARTED |
 
-## Phase 4 — World Builder
+**Phase 1 exit gate:** tested local app, repeatable Windows artifact, documented clean installation, persistent user data. Do not start Phase 2 until it passes.
 
-| Batch | Scope | Deliverables | Exit evidence | State |
-|---|---|---|---|---|
-| P4.1 | Persistent world/location schema | Versioned world database | Save/reopen and stable IDs | NOT STARTED |
-| P4.2 | Modular town, street, building and interior kits | Reusable environment assets | Multi-location scene test | NOT STARTED |
-| P4.3 | Vegetation, props, vehicles and interactions | Reusable asset/animation kits | Movement and persistence test | NOT STARTED |
-
-## Phase 5 — Story, scenes and animation
+## Phase 2 — Character Studio
 
 | Batch | Scope | Deliverables | Exit evidence | State |
 |---|---|---|---|---|
-| P5.1 | Engine-neutral episode schema and story prompt pipeline | Versioned JSON schema, migration and validation | Valid/invalid/repair tests; Urdu RTL UI | PARTIAL |
-| P5.2 | Character/location continuity and story approval | Story continuity service | Same cast and world reused across episodes | NOT STARTED |
-| P5.3 | Action vocabulary and engine adapters | Animation catalog/adapter | Every accepted action maps to a tested clip or explicit fallback | NOT STARTED |
-| P5.4 | Timeline, camera, expressions, transitions and blocking | Scene editor workflow | Playable multi-scene animation test | NOT STARTED |
+| P2.1 | Integrate the Phase 0-selected engine adapter as required by Character Studio | Pinned engine component, adapter, notices and reproducible patches | Build, import, adapter and license tests | BLOCKED BY PHASE 0 AND PHASE 1 |
+| P2.2 | Original toon character creation/import, rigging and skinning | Character create/import/rig workflow | Create/import, preview, save/reopen and animate test | NOT STARTED |
+| P2.3 | Character identity, expressions, clothing, relationships and persistence | Persistent character library | Cross-scene and cross-episode identity tests | NOT STARTED |
 
-## Phase 6 — voice and audio
-
-| Batch | Scope | Deliverables | Exit evidence | State |
-|---|---|---|---|---|
-| P6.1 | Urdu TTS benchmark and adapter | Voice adapter and benchmark report | Naturalness, pronunciation, speed, RAM and license measured | RESEARCH REQUIRED |
-| P6.2 | Character voice profiles and recorded fallback | Voice library | Repeatable voice identity across lines | NOT STARTED |
-| P6.3 | Urdu lip-sync and facial expression | Viseme/face adapter | Real Urdu speech-to-mouth synchronization inspection | NOT STARTED |
-| P6.4 | Music, ambience, effects and subtitles | Audio mixer and subtitle exporter | Mixed scene with intelligible dialogue | NOT STARTED |
-
-## Phase 7 — episode production
+## Phase 3 — World Builder
 
 | Batch | Scope | Deliverables | Exit evidence | State |
 |---|---|---|---|---|
-| P7.1 | Scene render orchestration, cache and recovery | Persistent job queue | Failure/retry/restart test | NOT STARTED |
-| P7.2 | End-to-end scene-to-MP4 pipeline | Exporter and editable project package | Real multi-scene MP4 | NOT STARTED |
-| P7.3 | Full 5–7 minute sample episode | Release candidate episode | Visual/audio/story quality review and continuity pass | NOT STARTED |
+| P3.1 | Persistent world/location schema and asset registry | Versioned world model | Save/reopen, stable IDs and migrations | NOT STARTED |
+| P3.2 | Reusable town, streets, buildings, shops and interiors | Modular environment kits | Multi-location scene and visual inspection | NOT STARTED |
+| P3.3 | Vegetation, props, lighting, weather and vehicle systems | Reusable asset/interaction kits | Vehicle movement/interactions and world persistence tests | NOT STARTED |
 
-## Phase 8 — optimization and release
+## Phase 4 — Story and Scene Engine
 
 | Batch | Scope | Deliverables | Exit evidence | State |
 |---|---|---|---|---|
-| P8.1 | Target-PC performance and quality presets | Benchmark report and presets | Measured target-PC runs | NOT STARTED |
-| P8.2 | Installer, backup, update and diagnostics | Windows release package | Clean install/upgrade/recovery tests | PARTIAL |
-| P8.3 | Final acceptance and release | Versioned release and full test report | All specification acceptance criteria have evidence | NOT STARTED |
+| P4.1 | Engine-neutral versioned episode/scene schema; normalize existing early schema | Schema, migrations, validation and repair | Valid/invalid/repair tests; no engine-specific IDs in canonical data | PARTIAL — current Ara-derived catalogs need replacement |
+| P4.2 | Single-prompt story generation, Urdu dialogue, continuity and approval | Story provider adapters and editor workflow | Story edit/approve test in Urdu and English; persistent cast/location continuity | PARTIAL — manual external-AI handoff only |
+| P4.3 | Complete scene breakdown and production mapping | Scene planner | Every scene maps to persistent characters, world, props, camera, lighting and audio | NOT STARTED |
+
+## Phase 5 — Animation Engine
+
+| Batch | Scope | Deliverables | Exit evidence | State |
+|---|---|---|---|---|
+| P5.1 | Stable action/expression vocabulary and engine adapters | Animation catalog and adapters | Every accepted action maps to a real tested clip or explicit fallback | NOT STARTED — current IDs are validation-only |
+| P5.2 | Timeline, camera, blocking, blending, retargeting and transitions | Animation/timeline editor | Playable multi-scene animation test and inspected clip | NOT STARTED |
+| P5.3 | Character interactions and facial/body animation | Reusable animation library | Motion quality and interaction tests | NOT STARTED |
+
+## Phase 6 — Urdu Voice and Lip-Sync
+
+| Batch | Scope | Deliverables | Exit evidence | State |
+|---|---|---|---|---|
+| P6.1 | Urdu TTS benchmark and pluggable adapter | Voice adapter and report | Naturalness, Pakistani pronunciation, speed, RAM, license and sample evaluation | RESEARCH REQUIRED |
+| P6.2 | Character voice profiles and recorded fallback | Persistent voice library | Stable repeatable character voices | NOT STARTED |
+| P6.3 | Urdu lip-sync, visemes and facial expression | Face/viseme adapter | Real Urdu speech-to-mouth synchronization inspection | NOT STARTED |
+| P6.4 | Music, ambience, effects, mixing and subtitles | Audio mixer/subtitle exporter | Intelligible balanced Urdu scene with exported subtitles | NOT STARTED |
+
+## Phase 7 — Episode Generator
+
+| Batch | Scope | Deliverables | Exit evidence | State |
+|---|---|---|---|---|
+| P7.1 | Persistent render queue, sequential rendering, cache and recovery | Render orchestrator | Failure/retry/cancel/restart/cache-hit tests | NOT STARTED |
+| P7.2 | Scene-to-MP4 pipeline and editable project packaging | Renderer/media assembler | Real multi-scene MP4 with editable source project | NOT STARTED |
+| P7.3 | Complete 5–7 minute Urdu episode | Sample episode and QA report | Full visual/audio/story/continuity review | NOT STARTED |
+
+## Phase 8 — Optimization and Reliability
+
+| Batch | Scope | Deliverables | Exit evidence | State |
+|---|---|---|---|---|
+| P8.1 | Target-PC benchmarks and quality presets | Benchmark report and presets | Actual i3-5005U/HD 5500/8 GB runs | NOT STARTED |
+| P8.2 | Installer, backup, updates, diagnostics and recovery | Final Windows release package | Clean install/upgrade/recovery tests | PARTIAL — bootstrap only |
+| P8.3 | Full acceptance and release | Versioned release and complete test report | Every final acceptance criterion has direct evidence | NOT STARTED |
 
 ## Batch discipline
 
-- One active implementation batch at a time.
-- Planning/research tasks may be parallelized only when they do not depend on an unresolved architecture decision.
-- A batch may contain many file changes; it should end in one coherent commit, not many tiny commits.
-- A failed check is fixed within the active batch. Do not create a new feature batch to hide an unresolved failure.
+- One active batch at a time.
+- Research may be parallelized only when it does not depend on an unresolved architecture decision.
+- Each batch can change many files but ends with one coherent commit.
+- Update registry, traceability, status, test report, research/decision log and next steps together.
+- Run CI once after the complete batch, not after every documentation or code edit.
+- Fix failures in the same active batch.
 - Never promote a candidate proof to production integration automatically.
-- User does not need to run commands or manually trigger workflows for ordinary development.
+- The user does not need to run developer commands or coordinate ordinary batches.

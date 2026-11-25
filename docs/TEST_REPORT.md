@@ -77,3 +77,19 @@ There are no artifacts for this run. Do not describe it as a successful proof. T
 ## Evidence policy
 
 A type-check, source inspection or partial test is not a production proof. Visual features require inspection of actual rendered output. No requirement is VERIFIED without direct evidence for its acceptance criteria.
+
+
+## Latest live-main CI — run #67
+
+Run: https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45489366441  
+Run ID: `45489366441`; run number: `67`  
+Commit: `c389391643a7b1f7b5683e181421291fdba7abb2` (exact live `main` HEAD at audit)  
+Conclusion: **SUCCESS**. The Windows job completed dependency installation, Ruff, Python compile, pytest, bootstrap ZIP assembly and artifact upload.
+
+Artifact: `Cartoon-Studio-Windows-Bootstrap`  
+Artifact ID: `14964957829`  
+Size: 78,882 bytes  
+SHA-256: `f307617262c75506d622ad602e204b85935bc88a7b73797d14d2c2344dd97fd7`  
+Expires: 2026-12-08 21:16:41 UTC
+
+This is the latest verified build artifact. It remains a bootstrap ZIP, not a self-contained installer or completed production studio. The 15 docs-only commits from #53 through #67 each triggered CI; this is recorded as a process violation, not as 15 meaningful development batches.

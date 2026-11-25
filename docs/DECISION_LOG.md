@@ -14,3 +14,13 @@ Date: 2026-11-25. FastAPI + static HTML/CSS/JavaScript + SQLite for project mana
 
 ## D-005 — Ara 3D Gen is the leading 3D foundation candidate, not yet accepted as production dependency
 Date: 2026-11-25. Source has character builder, procedural sets, timeline, animation, audio and browser MP4 export. It is early preview, currently capped at five scenes of up to 60 seconds each, has a realistic MakeHuman-derived style, and its Supertonic 2 voices do not support Urdu. Next step is a Windows build and low-end rendering proof, then decide on submodule/upstream integration and cartoon-style patches. No external code has been copied.
+
+
+## D-006 — Preserve the exact original phase order
+Date: 2026-11-25. The user-approved master brief's numbered sequence is binding: Phase 0 research/architecture; Phase 1 installable foundation; Phase 2 Character Studio; Phase 3 World Builder; Phase 4 Story/Scene Engine; Phase 5 Animation; Phase 6 Urdu Voice/Lip-Sync; Phase 7 Episode Generator; Phase 8 Optimization/Reliability. Candidate engine proofs belong in Phase 0 research; selected-engine integration is performed as needed within Phase 2, not as a separate numbered phase. Accepted.
+
+## D-007 — Freeze out-of-sequence Story Generator expansion
+Date: 2026-11-25. The existing Story Generator/schema is preserved as early partial work. Do not expand it before Phase 4. Its Ara-derived location/action/expression IDs are provisional and must be replaced by stable Cartoon Studio IDs and engine adapters before production use. Accepted.
+
+## D-008 — One coherent commit per substantial batch
+Date: 2026-11-25. The previous checkpoint update created 15 documentation-only commits and 15 CI runs (#53–#67), contrary to the anti-stall/batch rules. Going forward, related source, tests, docs and traceability updates must be committed together once per coherent batch; do not trigger CI for each documentation edit. Accepted.

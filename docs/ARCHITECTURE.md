@@ -29,3 +29,8 @@ GET /api/health
 GET /api/status  
 GET /api/projects  
 POST /api/projects
+
+
+## Current schema caveat — corrective action required
+
+The current `app/story.py` validates `location_id`, `action_id` and expression values against hard-coded catalogs copied/derived from the unapproved Ara candidate. These identifiers are currently useful only for validating the early Story Generator prototype. They are not approved Cartoon Studio canonical IDs and must not become the permanent project format. During Phase 0 architecture freeze, define stable engine-neutral Cartoon Studio identifiers and explicit engine adapters. During Phase 4, migrate the existing schema and tests to those contracts. Preserve the existing story data and UI; do not discard or rewrite the foundation wholesale.

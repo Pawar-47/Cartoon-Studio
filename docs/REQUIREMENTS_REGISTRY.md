@@ -41,7 +41,7 @@ Statuses: NOT REVIEWED, RESEARCH REQUIRED, PLANNED, IN PROGRESS, IMPLEMENTED, PA
 | WORLD-002 | Reusable streets, buildings, shops, schools, parks and interiors | High | PLANNED |
 | WORLD-003 | Reusable vehicles and interactive movement | High | PLANNED |
 | WORLD-004 | Persistent layouts, props, materials and scene templates | High | PLANNED |
-| WORLD-005 | Validate story location IDs against the pinned 3D set catalog | High | TESTED |
+| WORLD-005 | Validate temporary Ara-derived location IDs in the early Story Generator prototype | High | PARTIALLY IMPLEMENTED |
 | CHAR-001 | Create and save original reusable characters | Critical | PLANNED |
 | CHAR-002 | Persistent face, body, clothing, hair and accessories | High | PLANNED |
 | CHAR-003 | Personality, relationships, voice and dialogue profiles | High | PLANNED |
@@ -49,17 +49,17 @@ Statuses: NOT REVIEWED, RESEARCH REQUIRED, PLANNED, IN PROGRESS, IMPLEMENTED, PA
 | ANIM-001 | Reusable body animation library | Critical | PLANNED |
 | ANIM-002 | Facial expressions, blinking, talking and gestures | High | PLANNED |
 | ANIM-003 | Smooth transitions, blending and retargeting | High | PLANNED |
-| ANIM-004 | Validate story action IDs against the pinned production animation catalog | High | TESTED |
-| ANIM-005 | Validate facial expression IDs against the pinned expression catalog | High | TESTED |
+| ANIM-004 | Validate temporary Ara-derived action IDs in the early Story Generator prototype | High | PARTIALLY IMPLEMENTED |
+| ANIM-005 | Validate temporary Ara-derived expression IDs in the early Story Generator prototype | High | PARTIALLY IMPLEMENTED |
 | STORY-001 | One-prompt original story generation in Urdu or English | Critical | PARTIALLY IMPLEMENTED |
 | STORY-002 | Title, summary, cast, scenes, actions, camera and audio plan | High | PARTIALLY IMPLEMENTED |
 | STORY-003 | Natural conversational Pakistani Urdu | Critical | PARTIALLY IMPLEMENTED |
 | STORY-004 | Urdu script, RTL and optional Roman Urdu | Critical | PARTIALLY IMPLEMENTED |
 | STORY-005 | Edit and approve story before production | High | PARTIALLY IMPLEMENTED |
-| STORY-006 | Validate scene data and recover invalid output | High | TESTED |
+| STORY-006 | Validate scene data and repair/recover invalid output | High | PARTIALLY IMPLEMENTED |
 | AI-001 | Modular multi-provider AI architecture | High | PLANNED |
 | AI-002 | Verify free quotas, refill cycles, terms and Pakistan availability | High | PLANNED |
-| AI-003 | Manual handoff where official APIs are unavailable | High | TESTED |
+| AI-003 | Manual AI copy/paste handoff for providers without an approved API | High | PARTIALLY IMPLEMENTED |
 | AI-004 | Never bypass quotas or use unauthorized APIs | Critical | PLANNED |
 | RES-001 | Research agent searches docs, GitHub, issues and alternatives | High | PLANNED |
 | RES-002 | Compare capability, compatibility, license, cost and hardware | High | PLANNED |
@@ -93,5 +93,12 @@ Statuses: NOT REVIEWED, RESEARCH REQUIRED, PLANNED, IN PROGRESS, IMPLEMENTED, PA
 - `APP-001` through `APP-004` are tested only for the current lightweight dashboard/project/story workflow.
 - `GIT-003` and `GIT-004` refer to current Windows CI and the bootstrap ZIP, not a final installer.
 - `STORY-001` through `STORY-005` remain partial because story creation is a manual external-AI handoff, not an integrated AI story-production pipeline.
+
+## Critical coverage gaps identified by the master-brief audit
+
+- The current inventory is not yet atomic: several rows combine multiple distinct requirements. Required per-row fields (source section, dependencies, module, implementation approach, test method, evidence and remaining limitations) are not present in this compact table. P0.2 must replace/expand it without losing IDs or history.
+- The existing location/action/expression checks are provisional Ara-derived catalog validation, not production world or animation requirements.
+- Story-plan validation does not implement automatic repair/recovery; that part remains open.
+- Manual provider handoff exists, but current provider terms/quotas/Pakistan availability have not been fully verified.
 
 Every status change must include evidence. IMPLEMENTED is not TESTED or VERIFIED.

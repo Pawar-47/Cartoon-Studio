@@ -109,3 +109,16 @@ Therefore Phase 0 remains active. Do not begin engine-dependent production featu
 - Do not promote Ara from candidate to selected engine based on partial checks.
 - Do not call the bootstrap ZIP a final installer.
 - Do not mark requirements VERIFIED from code presence or unrelated CI success.
+
+
+## 2026-11-25 — Master-brief compliance reconciliation addendum
+
+- User re-uploaded the original `MASTER_EXECUTION_PROMPT.md`; full 1,133 lines and all 25 parts were read line by line. SHA-256: `541098eebd96b98e0153770f0bc37a1031a7242fd9cb97bc5a6b52c35c9ddfde`.
+- Live `main` HEAD at audit: `c389391643a7b1f7b5683e181421291fdba7abb2`. The only listed branch is `main`.
+- Compared source baseline `40bec8c423e953a0753c62f53c8a173274ac72e1` to live HEAD: 15 commits, and every changed path was documentation. No application source or tests changed in those 15 commits.
+- Those 15 documentation commits triggered 15 separate successful Cartoon Studio CI runs (#53–#67). This was unnecessary CI churn and directly violated the master brief's one-coherent-commit-per-batch rule.
+- Latest run #67 (`45489366441`) passed on exact live HEAD `c389391643a7b1f7b5683e181421291fdba7abb2`; bootstrap artifact ID `14964957829`, 78,882 bytes, SHA-256 `f307617262c75506d622ad602e204b85935bc88a7b73797d14d2c2344dd97fd7`.
+- The exact uploaded master brief is not yet a verbatim version-controlled file in `docs/`; `PROJECT_SPECIFICATION.md` is a condensed companion. This is a continuity gap to close.
+- The current master plan had inserted a separate numbered production-engine phase and shifted Character Studio, World Builder, Story/Scene and Animation phases. This contradicted the original numbered phase sequence. The phase plan is being realigned: engine candidate proofs remain within Phase 0; selected-engine integration occurs as needed inside Phase 2 Character Studio.
+- The current Story Generator/schema is preserved but was implemented ahead of the original sequence. Freeze its feature expansion until Phase 4. Its current location/action/expression IDs are Ara-derived and provisional, not canonical engine-neutral project IDs.
+- Requirement registry has only coarse rows and lacks mandatory per-requirement dependencies, implementation plan, test method, evidence and limitations. Traceability is partial. P0.2 remains the next active batch.
