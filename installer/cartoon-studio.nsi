@@ -15,6 +15,7 @@ SetCompressor /SOLID zlib
 Name "Cartoon Studio"
 OutFile "${OUTPUT_FILE}"
 InstallDir "$LOCALAPPDATA\Programs\Cartoon Studio"
+InstallDirRegKey HKCU "Software\CartoonStudio" "InstallDir"
 ShowInstDetails show
 ShowUnInstDetails show
 UninstPage uninstConfirm
@@ -47,14 +48,13 @@ VIAddVersionKey "FileDescription" "Cartoon Studio Installer"
 
 Section "Cartoon Studio" SEC_MAIN
     SetShellVarContext current
-    SetRegView 64
 
     ; Stop an existing process before replacing its program files.
     ExecWait '"$SYSDIR\taskkill.exe" /F /IM CartoonStudio.exe'
 
     ; Run the previous uninstaller on upgrade. User data is outside $INSTDIR.
     IfFileExists "$INSTDIR\Uninstall.exe" 0 no_previous_install
-        ExecWait '"$INSTDIR\Uninstall.exe" /S _?=$INSTDIR'
+        ExecWait '"$INSTDIR\Uninstall.exe" /S'
     no_previous_install:
 
     !insertmacro RemoveInstalledFiles
@@ -72,7 +72,7 @@ Section "Cartoon Studio" SEC_MAIN
     WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CartoonStudio" "DisplayName" "Cartoon Studio"
     WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CartoonStudio" "DisplayVersion" "${APP_VERSION}"
     WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CartoonStudio" "InstallLocation" "$INSTDIR"
-    WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CartoonStudio" "UninstallString" '"$INSTDIR\Uninstall.exe" _?=$INSTDIR'
+    WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CartoonStudio" "UninstallString" '"$INSTDIR\Uninstall.exe"'
     WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CartoonStudio" "NoModify" 1
     WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CartoonStudio" "NoRepair" 1
 SectionEnd
