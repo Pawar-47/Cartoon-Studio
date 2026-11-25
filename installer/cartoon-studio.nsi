@@ -24,6 +24,18 @@ VIAddVersionKey "ProductVersion" "${APP_VERSION}"
 VIAddVersionKey "FileVersion" "${APP_VERSION}"
 VIAddVersionKey "FileDescription" "Cartoon Studio Installer"
 
+!macro RemoveInstalledFiles
+    ; Never recursively delete the user's selected install root. Remove only known app-owned paths.
+    SetOutPath "$TEMP"
+    RMDir /r "$INSTDIR\_internal"
+    RMDir /r "$INSTDIR\LICENSES"
+    Delete "$INSTDIR\CartoonStudio.exe"
+    Delete "$INSTDIR\dependency-sbom.cdx.json"
+    Delete "$INSTDIR\THIRD_PARTY_NOTICES.md"
+    Delete "$INSTDIR\Uninstall.exe"
+    RMDir "$INSTDIR"
+!macroend
+
 Section "Cartoon Studio" SEC_MAIN
     SetShellVarContext current
 
@@ -35,7 +47,7 @@ Section "Cartoon Studio" SEC_MAIN
         ExecWait '"$INSTDIR\Uninstall.exe" /S _?=$INSTDIR'
     no_previous_install:
 
-    RMDir /r "$INSTDIR"
+    !insertmacro RemoveInstalledFiles
     CreateDirectory "$INSTDIR"
     SetOutPath "$INSTDIR"
     File /r "${APP_DIST_DIR}\*"
@@ -62,11 +74,9 @@ Section "Uninstall"
     Delete "$SMPROGRAMS\Cartoon Studio\Cartoon Studio.lnk"
     RMDir "$SMPROGRAMS\Cartoon Studio"
     Delete "$DESKTOP\Cartoon Studio.lnk"
+    !insertmacro RemoveInstalledFiles
     DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CartoonStudio"
     DeleteRegKey HKCU "Software\CartoonStudio"
-    WriteRegStr HKCU "Software\CartoonStudioDebug" "SectionEntered" "yes"
-    WriteRegStr HKCU "Software\CartoonStudioDebug" "SectionPath" "$INSTDIR"
-    RMDir /r "$INSTDIR"
 
     ; Deliberately preserve %LOCALAPPDATA%\CartoonStudio and all project data.
 SectionEnd
