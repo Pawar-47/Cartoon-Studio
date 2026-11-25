@@ -64,6 +64,7 @@ APP_VERSION = "0.1.0"
       - name: Build self-contained application v2
         shell: pwsh
         run: |
+          $staticPath = (Resolve-Path "app/static").Path
           Set-Content -Path app/version.py -Value @'
 """Single source for the installed application version."""
 
