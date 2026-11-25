@@ -10,6 +10,8 @@
 - Phase 2 — Character Studio: ACTIVE; import, preview, profiles, appearance recipes, rig diagnostics and the first user-facing imported-rig retarget workflow are implemented. Phase 2 is not complete.
 - Windows CI #326: full pipeline PASSED on `696929595b2d03e64e46a568ec9d163860ae3239`, including lint, Python compilation, full pytest, pinned Godot 4.7.2 worker, Windows bootstrap, both self-contained application builds, NSIS installers and clean install/upgrade/uninstall/reinstall lifecycle.
 - Windows CI #334: quick CI PASSED on `00b4ed9f97360cba1a304054a8285fd4df1cc827`; pinned RobotExpressive download/checksum, Ruff, Python compilation and full pytest passed. The complete application and installer were intentionally not rebuilt.
+- Windows CI #340: quick CI PASSED on `fba0ad5cec13a5738a2807a2af7bebf0317451cd`; animation-name catalog, explicit/default clip selection, legacy compatibility and unknown-clip rejection passed.
+- Windows CI #341 and native-worker proof #22: PASSED on `57e252c922acae58831da5b966cab8edcd9b4408`; third-party retargeting plus rolled-bone and non-uniform target-scale fixture coverage passed.
 - Dedicated Godot native-worker proof #18 PASSED.
 - Chat-independent continuation record: `docs/SESSION_CHECKPOINT.md`.
 

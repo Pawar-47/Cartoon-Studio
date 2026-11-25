@@ -9,6 +9,8 @@ Saved retarget records now also have a browser preview action. The preview endpo
 ## Verification
 
 - Windows CI #334 passed: fixture acquisition/checksum, Ruff, Python compilation and full pytest including Godot 4.7.2 facial morph import and multi-clip inspection. This quick CI intentionally did not build the complete Windows app or installer.
+- Windows CI #340 passed: clip catalog, selected/default clip persistence, legacy metadata compatibility and unknown-clip rejection.
+- Windows CI #341 and native-worker proof #22 passed: third-party retargeting and synthetic bone-roll/non-uniform-scale target compatibility.
 - The full packaging/installer workflow is now isolated in `.github/workflows/release-windows.yml` and is manually dispatched at phase/release milestones.
 - Windows CI #326 passed the complete Windows build and installer lifecycle after the appearance-editor playback isolation change.
 - Windows CI #303 passed on commit `0bfce71625d6e3084b4ceda9b64a9825cca95101`: Ruff lint, Python compilation, full pytest including pinned Godot 4.7.2 tests, third-party GLB inspection/retarget, morph-target inspection, bootstrap smoke, both self-contained builds, NSIS installer and full install/upgrade/uninstall/reinstall lifecycle.

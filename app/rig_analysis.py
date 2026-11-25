@@ -10,7 +10,7 @@ from typing import Any
 # guessed and are not counted as required for the first retarget preflight.
 REQUIRED_HUMANOID_BONES: dict[str, frozenset[str]] = {
     "Hips": frozenset({"hips", "hip", "pelvis", "torsojoint1"}),
-    "Spine": frozenset({"spine", "spine1", "spine01", "spine001", "torsojoint2"}),
+    "Spine": frozenset({"spine", "spine1", "spine01", "spine001", "torsojoint2", "abdomen"}),
     "Head": frozenset({"head", "neckjoint2"}),
     "LeftUpperLeg": frozenset(
         {"leftupleg", "leftupperleg", "leftthigh", "uplegl", "thighl", "upperlegl", "legjointl1"}
@@ -30,12 +30,12 @@ REQUIRED_HUMANOID_BONES: dict[str, frozenset[str]] = {
     "LeftLowerArm": frozenset(
         {"leftforearm", "leftlowerarm", "forearml", "lowerarml", "armjointl2"}
     ),
-    "LeftHand": frozenset({"lefthand", "handl", "armjointl3"}),
+    "LeftHand": frozenset({"lefthand", "handl", "armjointl3", "palm2l"}),
     "RightUpperArm": frozenset({"rightarm", "rightupperarm", "upperarmr", "armr", "armjointr1"}),
     "RightLowerArm": frozenset(
         {"rightforearm", "rightlowerarm", "forearmr", "lowerarmr", "armjointr2"}
     ),
-    "RightHand": frozenset({"righthand", "handr", "armjointr3"}),
+    "RightHand": frozenset({"righthand", "handr", "armjointr3", "palm2r"}),
 }
 _PREFIXES = (
     "mixamorig",

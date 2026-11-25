@@ -25,7 +25,7 @@ Phase 2 — Character Studio is ACTIVE. Phase 0 and Phase 1 are complete. Do not
 - Project-contained GLB 2.0 import, validation, SHA-256 provenance and Godot inspection.
 - Browser GLB preview, imported animation selection and camera controls.
 - Persistent editable character profiles.
-- Non-destructive PBR material recipes and facial morph-target controls. Godot reports imported blend-shape names/defaults; signed weights from -1 to 1 persist; reset restores each model's imported defaults. A pinned CC0 RobotExpressive fixture (three facial morph targets on Head_4) is fetched and SHA-256 verified in CI; its first Godot import acceptance run is pending.
+- Non-destructive PBR material recipes and facial morph-target controls. Godot reports imported blend-shape names/defaults; signed weights from -1 to 1 persist; reset restores each model's imported defaults. A pinned CC0 RobotExpressive fixture (three facial morph targets on Head_4) is fetched and SHA-256 verified; CI #334 passed its Godot import and multi-clip inspection. The imported clip catalog and source-clip selector are implemented and validated by CI #340. CI #341 and native-worker proof #22 passed third-party retargeting plus bone-roll and non-uniform target-scale acceptance.
 - Conservative indexed 15-bone humanoid mapping, parent-chain validation and imported rest-transform diagnostics.
 - Common 3ds Max Biped, Character Creator, Unreal-style, Blender Rigify and Cesium Rigged Figure bone naming conventions are recognized. Duplicate and negative bone indices are rejected.
 - Character-to-character retarget UI with source/target selectors, imported animation dropdown, strict clip-name preflight, saved Godot scene, persistent JSON record and scene download.

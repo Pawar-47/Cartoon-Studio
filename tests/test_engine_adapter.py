@@ -344,6 +344,62 @@ def test_pinned_godot_worker_inspects_real_cc0_robot_expressive_facial_morphs(tm
     assert target.read_bytes() == payload
 
 
+def test_pinned_godot_worker_retargets_robot_expressive_selected_clip(tmp_path):
+    adapter = _real_godot_adapter(tmp_path)
+    fixture_dir = Path(__file__).resolve().parent / "fixtures" / "third_party"
+    source_fixture = fixture_dir / "robot_expressive_cc0.glb"
+    target_fixture = (
+        Path(__file__).resolve().parents[1]
+        / "tools"
+        / "godot_engine_proof"
+        / "fixtures"
+        / "proof_humanoid_retarget_target.glb"
+    )
+    assert source_fixture.is_file(), "The pinned RobotExpressive fixture is unavailable."
+    assert target_fixture.is_file(), "The canonical retarget target fixture is unavailable."
+
+    project_root = tmp_path / "robot-expressive-retarget-project"
+    project_root.mkdir()
+    source = project_root / "robot-expressive.glb"
+    target = project_root / "canonical-target.glb"
+    shutil.copyfile(source_fixture, source)
+    shutil.copyfile(target_fixture, target)
+
+    source_inspection = adapter.inspect_glb(source, allowed_root=project_root)
+    target_inspection = adapter.inspect_glb(target, allowed_root=project_root)
+    source_rig = analyze_rig(source_inspection)
+    target_rig = analyze_rig(target_inspection)
+    assert source_rig["status"] == "humanoid_names_complete", source_rig
+    assert source_rig["hierarchy_validation"]["status"] == "valid"
+    assert source_rig["godot_profile_mapping"]["Spine"]["source_name"] == "Abdomen"
+    assert source_rig["godot_profile_mapping"]["LeftHand"]["source_name"] == "Palm2L"
+    assert target_rig["status"] == "humanoid_names_complete"
+
+    animation_names = source_inspection["animation_names"]
+    walking_clip = next(
+        name for name in animation_names if name.rsplit("/", 1)[-1] == "Walking"
+    )
+    output = project_root / "retargets" / "robot-expressive-walking.tscn"
+    response = adapter.retarget_glb_pair(
+        source,
+        target,
+        output,
+        allowed_root=project_root,
+        source_profile_mapping=source_rig["godot_profile_mapping"],
+        target_profile_mapping=target_rig["godot_profile_mapping"],
+        animation_name=walking_clip,
+    )
+
+    assert response["ok"] is True
+    assert response["animation_name"] == walking_clip
+    assert response["scene_reopened"] is True
+    assert response["source_animation_playing"] is True
+    assert response["pose_transferred"] is True
+    assert output.is_file()
+    assert source.read_bytes() == source_fixture.read_bytes()
+    assert target.read_bytes() == target_fixture.read_bytes()
+
+
 def test_pinned_godot_worker_retargets_real_third_party_rigged_figure(tmp_path):
     adapter = _real_godot_adapter(tmp_path)
     fixture_dir = Path(__file__).resolve().parent / "fixtures" / "third_party"
