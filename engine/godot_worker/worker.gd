@@ -64,7 +64,7 @@ func _handle_request(request_value: Variant) -> Dictionary:
     if operation == "ping":
         response["ok"] = true
         response["capabilities"] = [
-            "ping", "glb_inspect", "scene_metrics", "skeleton_report", "retarget_glb_pair", "assemble_modular_character"
+            "ping", "glb_inspect", "scene_metrics", "skeleton_report", "retarget_glb_pair", "assemble_modular_character", "probe_glb_animation"
         ]
         return response
 
@@ -78,6 +78,12 @@ func _handle_request(request_value: Variant) -> Dictionary:
         var assembly_result: Dictionary = await _assemble_modular_character(payload)
         for key in assembly_result:
             response[key] = assembly_result[key]
+        return response
+
+    if operation == "probe_glb_animation":
+        var probe_result: Dictionary = await _probe_glb_animation(payload)
+        for key in probe_result:
+            response[key] = probe_result[key]
         return response
 
     if operation == "retarget_glb_pair":
@@ -256,6 +262,107 @@ func _inspect_glb(payload: Dictionary) -> Dictionary:
         "node_count": _count_nodes(scene)
     }
     scene.free()
+    return result
+
+
+func _probe_glb_animation(payload: Dictionary) -> Dictionary:
+    var project_root := _normalise_path(str(payload.get("project_root", "")))
+    var source_path := _normalise_path(str(payload.get("source_path", "")))
+    if project_root.is_empty() or not DirAccess.dir_exists_absolute(project_root):
+        return {"error_code": "invalid_project_root", "error": "A valid project root is required."}
+    var root_prefix := project_root.trim_suffix("/") + "/"
+    if not source_path.to_lower().begins_with(root_prefix.to_lower()):
+        return {"error_code": "path_outside_project", "error": "The animation probe GLB resolves outside the project."}
+    if not source_path.to_lower().ends_with(".glb") or not FileAccess.file_exists(source_path):
+        return {"error_code": "invalid_glb_path", "error": "Animation probe requires an existing GLB file."}
+
+    var document := GLTFDocument.new()
+    var state := GLTFState.new()
+    var import_error := document.append_from_file(source_path, state)
+    if import_error != OK:
+        return {"error_code": "animation_probe_import_failed", "error": "Godot could not import the animation probe GLB.", "godot_error": import_error}
+    var scene := document.generate_scene(state)
+    if scene == null:
+        return {"error_code": "animation_probe_scene_failed", "error": "Godot could not create the animation probe scene."}
+    root.add_child(scene)
+    await process_frame
+
+    var skeletons := scene.find_children("*", "Skeleton3D", true, false)
+    if skeletons.size() != 1:
+        scene.queue_free()
+        return {"error_code": "animation_probe_skeleton_count", "error": "Animation playback probe requires exactly one Skeleton3D."}
+    var skeleton := skeletons[0] as Skeleton3D
+    var requested_name := str(payload.get("animation_name", ""))
+    var selected_player: AnimationPlayer = null
+    var selected_name := ""
+    var selected_animation: Animation = null
+    for player_node in scene.find_children("*", "AnimationPlayer", true, false):
+        var player := player_node as AnimationPlayer
+        for animation_value in player.get_animation_list():
+            var candidate := str(animation_value)
+            if candidate.get_file().to_upper() == "RESET":
+                continue
+            if not requested_name.is_empty() and candidate != requested_name:
+                continue
+            var animation := player.get_animation(candidate)
+            if animation == null or animation.length <= 0.0:
+                continue
+            selected_player = player
+            selected_name = candidate
+            selected_animation = animation
+            break
+        if selected_player != null:
+            break
+    if selected_player == null or selected_animation == null:
+        scene.queue_free()
+        return {"error_code": "animation_not_found", "error": "The requested playable animation clip was not found."}
+
+    var sample_ratio := clampf(float(payload.get("sample_ratio", 0.37)), 0.0, 1.0)
+    var sample_time := selected_animation.length * sample_ratio
+    selected_player.stop()
+    var before_poses: Array[Transform3D] = []
+    for bone_index in range(skeleton.get_bone_count()):
+        before_poses.append(skeleton.get_bone_pose(bone_index))
+    selected_player.play(selected_name)
+    selected_player.seek(sample_time, true)
+    for frame_index in range(3):
+        await process_frame
+
+    var changed_bones: Array[String] = []
+    for bone_index in range(skeleton.get_bone_count()):
+        var after_pose := skeleton.get_bone_pose(bone_index)
+        if not _transforms_compatible(before_poses[bone_index], after_pose):
+            changed_bones.append(skeleton.get_bone_name(bone_index))
+
+    var skinned_mesh_count := 0
+    for mesh_node in scene.find_children("*", "MeshInstance3D", true, false):
+        var mesh := mesh_node as MeshInstance3D
+        if mesh.skin == null:
+            continue
+        var bound_skeleton := mesh.get_node_or_null(mesh.get_skeleton_path()) as Skeleton3D
+        if bound_skeleton == skeleton:
+            skinned_mesh_count += 1
+
+    var attachment_bones: Array[String] = []
+    for attachment_node in scene.find_children("*", "BoneAttachment3D", true, false):
+        var attachment := attachment_node as BoneAttachment3D
+        if skeleton.find_bone(attachment.bone_name) >= 0 and not attachment_bones.has(attachment.bone_name):
+            attachment_bones.append(attachment.bone_name)
+
+    var result := {
+        "ok": true,
+        "animation_name": selected_name,
+        "animation_duration": selected_animation.length,
+        "sample_time": sample_time,
+        "sample_ratio": sample_ratio,
+        "bone_count": skeleton.get_bone_count(),
+        "changed_bone_count": changed_bones.size(),
+        "changed_bones": changed_bones,
+        "pose_changed": not changed_bones.is_empty(),
+        "skinned_mesh_count": skinned_mesh_count,
+        "bone_attachment_bones": attachment_bones
+    }
+    scene.queue_free()
     return result
 
 

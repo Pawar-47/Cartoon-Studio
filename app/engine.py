@@ -123,6 +123,43 @@ class GodotEngineAdapter:
 
 
 
+    def probe_glb_animation(
+        self,
+        source_path: Path,
+        animation_name: str,
+        allowed_root: Path,
+        sample_ratio: float = 0.37,
+        timeout_seconds: float | None = None,
+        cancel_event: threading.Event | None = None,
+    ) -> dict[str, Any]:
+        root = Path(allowed_root).resolve(strict=False)
+        source = Path(source_path).resolve(strict=True)
+        if source == root or root not in source.parents:
+            raise EnginePathError("Animation probe path escapes the allowed project directory.")
+        if not root.is_dir():
+            raise EnginePathError("The allowed project root does not exist.")
+        if source.suffix.lower() != ".glb" or not source.is_file():
+            raise EnginePathError("Animation probe requires an existing .glb file.")
+        if source.stat().st_size > MAX_GLB_BYTES:
+            raise EnginePathError("The GLB exceeds the 512 MiB animation probe limit.")
+        if not 0.0 <= sample_ratio <= 1.0:
+            raise EnginePathError("Animation sample ratio must be between 0 and 1.")
+        if len(animation_name) > 128:
+            raise EnginePathError("Animation name is too long.")
+        return self._run(
+            "probe_glb_animation",
+            {
+                "project_root": str(root),
+                "source_path": str(source),
+                "animation_name": animation_name,
+                "sample_ratio": sample_ratio,
+            },
+            timeout_seconds=timeout_seconds,
+            cancel_event=cancel_event,
+        )
+
+
+
     def assemble_modular_character(
         self,
         base_path: Path,
