@@ -168,7 +168,7 @@ def _make_morph_glb() -> bytes:
     }
     json_chunk = json.dumps(document, separators=(",", ":")).encode("utf-8")
     json_chunk += b" " * ((-len(json_chunk)) % 4)
-    binary_chunk = binary + b"\\x00" * ((-len(binary)) % 4)
+    binary_chunk = binary + b"\x00" * ((-len(binary)) % 4)
     total_length = 12 + 8 + len(json_chunk) + 8 + len(binary_chunk)
     return (
         struct.pack("<4sII", b"glTF", 2, total_length)
