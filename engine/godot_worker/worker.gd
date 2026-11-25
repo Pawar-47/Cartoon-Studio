@@ -429,7 +429,10 @@ func _export_character_appearance(payload: Dictionary) -> Dictionary:
         var index := int(edit["surface_index"])
         for mesh_record in verification.get("mesh_inventory", []):
             var node_name_matches := str(mesh_record.get("node_name", "")) == str(edit["mesh_name"])
-            var resource_name_matches := str(mesh_record.get("mesh_resource_name", "")) == str(edit["mesh_resource_name"])
+            var exported_resource_name := str(mesh_record.get("mesh_resource_name", ""))
+            var resource_name_matches := exported_resource_name == str(edit["mesh_resource_name"])
+            if not resource_name_matches:
+                resource_name_matches = exported_resource_name == "customized_" + str(edit["mesh_resource_name"])
             if not node_name_matches and not resource_name_matches:
                 continue
             var properties: Array = mesh_record.get("material_properties", [])
@@ -454,19 +457,8 @@ func _export_character_appearance(payload: Dictionary) -> Dictionary:
                 verified_material_surfaces.append(surface_key)
                 break
         if not material_verified:
-            var diagnostic_records: Array[Dictionary] = []
-            for mesh_record in verification.get("mesh_inventory", []):
-                diagnostic_records.append({
-                    "node_name": str(mesh_record.get("node_name", "")),
-                    "mesh_resource_name": str(mesh_record.get("mesh_resource_name", "")),
-                    "material_properties": mesh_record.get("material_properties", [])
-                })
-            var diagnostic_text := JSON.stringify({
-                "expected": edit,
-                "meshes": diagnostic_records
-            })
             DirAccess.remove_absolute(output_path)
-            return {"error_code": "appearance_material_verification_failed", "error": "Customized material PBR values were not found after GLB export/re-import. " + diagnostic_text.substr(0, 1800)}
+            return {"error_code": "appearance_material_verification_failed", "error": "Customized material PBR values were not found after GLB export/re-import."}
     for edit in applied_morphs:
         var morph_verified := false
         for record in verification.get("morph_targets", []):
