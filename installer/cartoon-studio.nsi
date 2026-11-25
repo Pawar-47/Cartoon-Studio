@@ -33,12 +33,10 @@ VIAddVersionKey "FileDescription" "Cartoon Studio Installer"
     SetFileAttributes "$INSTDIR\CartoonStudio.exe" NORMAL
     SetFileAttributes "$INSTDIR\dependency-sbom.cdx.json" NORMAL
     SetFileAttributes "$INSTDIR\THIRD_PARTY_NOTICES.md" NORMAL
-    SetFileAttributes "$INSTDIR\Uninstall.exe" NORMAL
     RMDir /r "$INSTDIR\_internal"
     WriteRegStr HKCU "Software\CartoonStudioDebug" "Step2" "Internal removed"
     RMDir /r "$INSTDIR\LICENSES"
     WriteRegStr HKCU "Software\CartoonStudioDebug" "Step3" "Licenses removed"
-    Delete "$INSTDIR\CartoonStudio.exe"
     Delete "$INSTDIR\CartoonStudio.exe"
     WriteRegStr HKCU "Software\CartoonStudioDebug" "Step4" "Executable delete attempted"
     IfFileExists "$INSTDIR\CartoonStudio.exe" 0 +2
@@ -89,6 +87,7 @@ Section "Uninstall"
     Delete "$DESKTOP\Cartoon Studio.lnk"
     DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CartoonStudio"
     DeleteRegKey HKCU "Software\CartoonStudio"
+    WriteRegStr HKCU "Software\CartoonStudioDebug" "AfterRegistryDelete" "yes"
     !insertmacro RemoveInstalledFiles
     Delete "$INSTDIR\Uninstall.exe"
     RMDir "$INSTDIR"
