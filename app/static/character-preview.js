@@ -123,6 +123,8 @@ function collectMaterials(root) {
         const entry = {
           key,
           name: material.name || node.name || "Material",
+          meshName: node.name || "Mesh",
+          surfaceIndex: slot,
           color: material.color ? "#" + material.color.getHexString() : "#ffffff",
           roughness: Number.isFinite(material.roughness) ? material.roughness : 0.5,
           metalness: Number.isFinite(material.metalness) ? material.metalness : 0,
@@ -170,6 +172,7 @@ function collectMorphTargets(root) {
           key,
           name,
           meshName: node.name || "Mesh",
+          targetIndex: index,
           value: Number(node.morphTargetInfluences[index] || 0),
         });
         morphTargetByKey.set(key, { node, index });

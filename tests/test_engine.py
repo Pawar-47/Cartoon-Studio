@@ -42,6 +42,12 @@ FIXTURE = (
     / "fixtures"
     / "proof_triangle.glb"
 )
+ROBOT_FIXTURE = (
+    Path(__file__).resolve().parent
+    / "fixtures"
+    / "third_party"
+    / "robot_expressive_cc0.glb"
+)
 GODOT_PATH = Path(os.environ.get("CARTOON_STUDIO_GODOT_PATH", ""))
 HAS_GODOT = bool(os.environ.get("CARTOON_STUDIO_GODOT_PATH")) and GODOT_PATH.is_file()
 
@@ -80,6 +86,7 @@ def test_godot_worker_ping_and_glb_inspection(tmp_path):
     assert "glb_inspect" in ping["capabilities"]
     assert "skeleton_report" in ping["capabilities"]
     assert "probe_glb_animation" in ping["capabilities"]
+    assert "export_character_appearance" in ping["capabilities"]
 
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -283,3 +290,80 @@ def test_adapter_timeout_is_logged_and_raised(tmp_path, monkeypatch):
     assert record["operation"] == "ping"
     assert record["ok"] is False
     assert record["error"].startswith("Godot ping exceeded")
+
+@pytest.mark.skipif(not HAS_GODOT, reason="Pinned Godot runtime is supplied by Windows CI.")
+def test_godot_worker_bakes_and_reimports_material_and_facial_edits(tmp_path):
+    assert ROBOT_FIXTURE.is_file(), "CI must fetch the pinned CC0 RobotExpressive fixture"
+    adapter = GodotEngineAdapter(data_dir=tmp_path, timeout_seconds=120)
+    project_root = tmp_path / "appearance-project"
+    project_root.mkdir()
+    source_path = project_root / "robot-expressive.glb"
+    shutil.copy2(ROBOT_FIXTURE, source_path)
+    before = adapter.inspect_glb(source_path, allowed_root=project_root)
+    assert before["morph_targets"], "The facial fixture must expose blend shapes"
+    mesh_name_counts = {}
+    for item in before["mesh_inventory"]:
+        mesh_name_counts[item["node_name"]] = mesh_name_counts.get(item["node_name"], 0) + 1
+    morph = next(
+        item for item in before["morph_targets"]
+        if mesh_name_counts.get(item["mesh_name"]) == 1
+    )
+    material_mesh = next(
+        item for item in before["mesh_inventory"]
+        if item["surface_count"] > 0
+        and item["material_properties"]
+        and item["material_properties"][0]
+        and mesh_name_counts.get(item["node_name"]) == 1
+    )
+    output_path = project_root / "assets" / "customized.glb"
+    result = adapter.export_character_appearance(
+        source_path,
+        materials=[{
+            "mesh_name": material_mesh["node_name"], "surface_index": 0,
+            "material_name": material_mesh["material_names"][0],
+            "color": "#e85d3f", "roughness": 0.72, "metalness": 0.08,
+        }],
+        morph_targets=[{
+            "mesh_name": morph["mesh_name"], "target_index": morph["index"],
+            "target_name": morph["name"], "value": 0.65,
+        }],
+        output_path=output_path, allowed_root=project_root, timeout_seconds=120,
+    )
+    assert result["appearance_verified"] is True
+    assert result["applied_material_count"] == 1
+    assert result["applied_morph_count"] == 1
+    after = adapter.inspect_glb(output_path, allowed_root=project_root)
+    assert set(after["animation_names"]) == set(before["animation_names"])
+    baked_morph = next(
+        item for item in after["morph_targets"]
+        if item["mesh_name"] == morph["mesh_name"] and item["index"] == morph["index"]
+    )
+    assert baked_morph["default_value"] == pytest.approx(0.65, abs=0.02)
+    baked_mesh = next(
+        item for item in after["mesh_inventory"]
+        if item["node_name"] == material_mesh["node_name"]
+    )
+    baked_material = baked_mesh["material_properties"][0]
+    assert baked_material["color"][:3] == pytest.approx([232 / 255, 93 / 255, 63 / 255], abs=0.02)
+    assert baked_material["roughness"] == pytest.approx(0.72, abs=0.02)
+    assert baked_material["metalness"] == pytest.approx(0.08, abs=0.02)
+
+
+def test_appearance_export_rejects_invalid_mesh_and_morph_bindings(tmp_path):
+    root = tmp_path / "project"
+    root.mkdir()
+    source = root / "source.glb"
+    source.write_bytes(b"fixture")
+    adapter = GodotEngineAdapter(data_dir=tmp_path)
+    with pytest.raises(ValueError, match="mesh name"):
+        adapter.export_character_appearance(
+            source, [{"surface_index": 0, "color": "#ffffff"}], [],
+            root / "out.glb", allowed_root=root,
+        )
+    with pytest.raises(ValueError, match="target index"):
+        adapter.export_character_appearance(
+            source,
+            [],
+            [{"mesh_name": "Face", "target_name": "Smile", "target_index": -1, "value": 0.5}],
+            root / "out.glb", allowed_root=root,
+        )

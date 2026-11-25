@@ -62,6 +62,20 @@ class FakeEngine:
             "node_count": 1,
         }
 
+    def export_character_appearance(
+        self, source_path, materials, morph_targets, output_path, allowed_root
+    ):
+        assert source_path.is_relative_to(allowed_root)
+        assert materials and morph_targets
+        output_path.write_bytes(make_glb())
+        result = self.inspect_glb(source_path, allowed_root)
+        result.update({
+            "appearance_verified": True,
+            "applied_material_count": len(materials),
+            "applied_morph_count": len(morph_targets),
+        })
+        return result
+
 
 def setup_project(tmp_path, monkeypatch):
     monkeypatch.setattr(main, "DATA_DIR", tmp_path)
@@ -359,3 +373,62 @@ def test_character_profiles_recover_from_portable_files_after_database_loss(tmp_
         assert connection.execute(
             "SELECT COUNT(*) FROM project_documents WHERE document_type = 'character'"
         ).fetchone()[0] == 1
+
+def test_customized_character_glb_export_persists_manifest_and_download(tmp_path, monkeypatch):
+    client, project_id = setup_project(tmp_path, monkeypatch)
+    imported = import_asset(client, project_id)
+    created = client.post(
+        f"/api/projects/{project_id}/characters",
+        json=profile_payload(imported["relative_path"]),
+    )
+    character_id = created.json()["id"]
+    appearance = {
+        "materials": {
+            "0:Root#material:0": {
+                "color": "#e85d3f", "roughness": 0.72, "metalness": 0.08,
+                "mesh_name": "Root", "surface_index": 0, "material_name": "Paint",
+            }
+        },
+        "morph_targets": {"0:Face#0:Smile": 0.85},
+        "morph_bindings": {
+            "0:Face#0:Smile": {"mesh_name": "Face", "target_index": 0, "target_name": "Smile"}
+        },
+    }
+    saved = client.put(
+        f"/api/projects/{project_id}/characters/{character_id}/appearance",
+        json=appearance,
+    )
+    assert saved.status_code == 200
+    exported = client.post(
+        f"/api/projects/{project_id}/characters/{character_id}/export",
+        json=appearance,
+    )
+    assert exported.status_code == 201
+    result = exported.json()
+    assert result["appearance_verified"] is True
+    assert result["applied_material_count"] == 1
+    assert result["applied_morph_count"] == 1
+    downloaded = client.get(result["download_url"])
+    assert downloaded.status_code == 200
+    assert downloaded.content == make_glb()
+    asset_id = result["asset_id"]
+    manifest = client.get(f"/api/projects/{project_id}/character-assets/{asset_id}/manifest")
+    assert manifest.status_code == 200
+    assert manifest.json()["appearance_export_verified"] is True
+    assert manifest.json()["source_character_id"] == character_id
+
+
+def test_customized_character_export_requires_saved_mesh_bindings(tmp_path, monkeypatch):
+    client, project_id = setup_project(tmp_path, monkeypatch)
+    imported = import_asset(client, project_id)
+    created = client.post(
+        f"/api/projects/{project_id}/characters",
+        json=profile_payload(imported["relative_path"]),
+    )
+    character_id = created.json()["id"]
+    response = client.post(
+        f"/api/projects/{project_id}/characters/{character_id}/export",
+        json={"morph_targets": {"face:Smile": 0.8}},
+    )
+    assert response.status_code == 422
+    assert "mesh/target bindings" in response.json()["detail"]

@@ -68,7 +68,11 @@
      <label>Metalness <output id="metalness-value">0.00</output><input id="material-metalness" type="range" min="0" max="1" step="0.01" value="0"></label>
     </div>
     <p id="appearance-status" class="inline-status" role="status">Choose a saved character to customize its materials.</p>
-    <button id="save-appearance" type="button" disabled>Save appearance to character</button>
+    <div class="appearance-actions">
+     <button id="save-appearance" type="button" disabled>Save appearance to character</button>
+     <button id="export-appearance" class="secondary" type="button" disabled>Export customized GLB</button>
+    </div>
+    <a id="download-appearance" class="appearance-download" hidden>Download verified customized GLB</a>
    <section id="morph-editor" class="morph-editor" hidden>
     <div class="editor-heading"><strong>Facial expression controls</strong><span>Imported GLB morph targets</span></div>
     <p id="morph-status" class="inline-status">No facial morph targets detected.</p>
