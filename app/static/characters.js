@@ -171,7 +171,7 @@ function buildMorphControls(){
   const title=window.document.createElement("span");title.textContent=target.name;
   const value=appearanceRecipe.morph_targets[target.key]??target.value;
   const output=window.document.createElement("output");output.value=Number(value).toFixed(2);
-  const input=window.document.createElement("input");input.type="range";input.min="0";input.max="1";input.step="0.01";input.value=String(value);
+  const input=window.document.createElement("input");input.type="range";input.min="-1";input.max="1";input.step="0.01";input.value=String(value);
   input.addEventListener("input",()=>{
    const weight=Number(input.value);appearanceRecipe.morph_targets[target.key]=weight;
    output.value=weight.toFixed(2);applyCharacterMorphTargets({[target.key]:weight});
@@ -181,9 +181,9 @@ function buildMorphControls(){
  }
 }
 $("reset-expressions").addEventListener("click",()=>{
- for(const target of getCharacterMorphTargets())appearanceRecipe.morph_targets[target.key]=0;
+ for(const target of getCharacterMorphTargets())appearanceRecipe.morph_targets[target.key]=target.value;
  applyCharacterMorphTargets(appearanceRecipe.morph_targets);buildMorphControls();
- $("appearance-status").textContent="Facial controls reset. Save to keep the neutral expression.";
+ $("appearance-status").textContent="Facial controls restored to imported defaults. Save to keep these values.";
 });
 $("material-select").addEventListener("change",event=>selectMaterial(event.target.value));
 for(const id of ["material-color","material-roughness","material-metalness"])$(id).addEventListener("input",previewSelectedMaterial);

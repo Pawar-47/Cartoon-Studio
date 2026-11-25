@@ -236,6 +236,33 @@ def test_material_appearance_recipe_persists_and_survives_profile_updates(tmp_pa
     ] == 0.72
 
 
+def test_appearance_recipe_accepts_negative_morph_weights_and_reopens_them(
+    tmp_path, monkeypatch
+):
+    client, project_id = setup_project(tmp_path, monkeypatch)
+    imported = import_asset(client, project_id)
+    created = client.post(
+        f"/api/projects/{project_id}/characters",
+        json=profile_payload(imported["relative_path"]),
+    )
+    character_id = created.json()["id"]
+
+    saved = client.put(
+        f"/api/projects/{project_id}/characters/{character_id}/appearance",
+        json={"morph_targets": {"0:Face#0:Frown": -0.35}},
+    )
+    assert saved.status_code == 200
+    assert saved.json()["data"]["appearance_recipe"]["morph_targets"][
+        "0:Face#0:Frown"
+    ] == -0.35
+
+    reopened = client.get(f"/api/projects/{project_id}/characters/{character_id}")
+    assert reopened.status_code == 200
+    assert reopened.json()["data"]["appearance_recipe"]["morph_targets"][
+        "0:Face#0:Frown"
+    ] == -0.35
+
+
 def test_material_appearance_rejects_invalid_values_and_missing_character(tmp_path, monkeypatch):
     client, project_id = setup_project(tmp_path, monkeypatch)
     invalid = client.put(

@@ -130,7 +130,7 @@ class MaterialAppearanceInput(BaseModel):
 
 class CharacterAppearanceInput(BaseModel):
     materials: dict[str, MaterialAppearanceInput] = Field(default_factory=dict, max_length=256)
-    morph_targets: dict[str, Annotated[float, Field(ge=0, le=1)]] = Field(
+    morph_targets: dict[str, Annotated[float, Field(ge=-1, le=1)]] = Field(
         default_factory=dict, max_length=512
     )
 
