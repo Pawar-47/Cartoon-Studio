@@ -64,3 +64,6 @@
 .assembly-panel a.secondary{display:inline-flex;align-items:center;justify-content:center;margin-top:8px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;text-decoration:none}
 .character-card a.secondary{display:inline-flex;align-items:center;justify-content:center;margin:4px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;text-decoration:none}
 @media(max-width:520px){.assembly-actions{grid-template-columns:1fr}}
+
+.expression-presets{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0}
+.expression-presets button{padding:7px 11px;font-size:11px}

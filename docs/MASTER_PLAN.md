@@ -300,3 +300,12 @@ The next P2.2 sub-phase is the **Modular Character Builder**:
 - The Godot worker validates accessory source paths, duplicate mesh selections, skeleton/rest-pose/transform compatibility, skin bind references and attachment-bone identity. It verifies accessory meshes survive GLB export/re-import.
 - The real integration test adds the Adventurer Backpack to the Beach/Casual_2/Farmer/King mixed outfit and verifies the base animation set remains intact. Assembly manifests store and restore accessory selections and attachment bones.
 - This adds accessory attachment, not general-purpose hair/face sculpting, arbitrary-rig conversion or interactive visual acceptance. Phase 2 and P2.2 remain PARTIAL.
+
+
+## 2026-11-25 — P2.2 semantic facial expression presets
+
+- Added Smile, Frown, Surprise and Angry presets for imported morph targets.
+- Presets only affect targets whose imported names contain supported semantic tokens; unmatched targets remain at imported default values. No facial geometry or morph targets are fabricated.
+- Presets update the live preview, individual sliders and the existing versioned appearance save endpoint. Manual slider fine-tuning and reset remain available.
+- Added Node unit coverage for matching, baseline restoration, unmatched-target safety and invalid preset names, wired into pytest.
+- Semantic mapping is best-effort for compatible imported assets, not a universal guarantee across arbitrary GLBs.
