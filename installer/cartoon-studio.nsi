@@ -64,9 +64,8 @@ Section "Uninstall"
     Delete "$DESKTOP\Cartoon Studio.lnk"
     DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CartoonStudio"
     DeleteRegKey HKCU "Software\CartoonStudio"
-    FileOpen $0 "$TEMP\CartoonStudio-uninstall-debug.txt" a
-    FileWrite $0 "Removing program directory: $INSTDIR$\r$\n"
-    FileClose $0
+    WriteRegStr HKCU "Software\CartoonStudioDebug" "SectionEntered" "yes"
+    WriteRegStr HKCU "Software\CartoonStudioDebug" "SectionPath" "$INSTDIR"
     RMDir /r "$INSTDIR"
 
     ; Deliberately preserve %LOCALAPPDATA%\CartoonStudio and all project data.
@@ -75,9 +74,7 @@ SectionEnd
 Function un.onInit
     SetShellVarContext current
     ReadRegStr $INSTDIR HKCU "Software\CartoonStudio" "InstallDir"
-    FileOpen $0 "$TEMP\CartoonStudio-uninstall-debug.txt" a
-    FileWrite $0 "Uninstaller resolved install directory: $INSTDIR$\r$\n"
-    FileClose $0
+    WriteRegStr HKCU "Software\CartoonStudioDebug" "InitPath" "$INSTDIR"
     StrCmp $INSTDIR "" set_default_install_dir done_init
 set_default_install_dir:
     StrCpy $INSTDIR "$LOCALAPPDATA\Programs\Cartoon Studio"
