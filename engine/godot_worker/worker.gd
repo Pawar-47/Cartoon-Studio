@@ -353,6 +353,7 @@ func _export_character_appearance(payload: Dictionary) -> Dictionary:
         mesh_instance.set_surface_override_material(surface_index, edited_material)
         applied_materials.append({"mesh_name": mesh_name, "material_name": str(edit.get("material_name", "")), "surface_index": surface_index, "color": color_value, "roughness": edited_material.roughness, "metalness": edited_material.metallic})
     var applied_morphs: Array[Dictionary] = []
+    var morph_export_meshes: Array[MeshInstance3D] = []
     for morph_value in morphs_value:
         if typeof(morph_value) != TYPE_DICTIONARY:
             scene.queue_free()
@@ -381,6 +382,8 @@ func _export_character_appearance(payload: Dictionary) -> Dictionary:
             scene.queue_free()
             return {"error_code": "morph_weight_invalid", "error": "Morph weight must be between minus one and one."}
         morph_mesh.set_blend_shape_value(target_index, weight)
+        if not morph_export_meshes.has(morph_mesh):
+            morph_export_meshes.append(morph_mesh)
         applied_morphs.append({"mesh_name": mesh_name, "target_index": target_index, "target_name": target_name, "value": weight})
     var export_document := GLTFDocument.new()
     var export_state := GLTFState.new()
@@ -388,6 +391,21 @@ func _export_character_appearance(payload: Dictionary) -> Dictionary:
     if export_error != OK:
         scene.queue_free()
         return {"error_code": "appearance_export_prepare_failed", "error": "Godot could not prepare the edited character for GLB export.", "godot_error": export_error}
+    var export_json: Dictionary = export_state.json
+    var export_nodes: Array = export_json.get("nodes", [])
+    for morph_mesh in morph_export_meshes:
+        var gltf_node_index := export_state.get_node_index(morph_mesh)
+        if gltf_node_index < 0 or gltf_node_index >= export_nodes.size():
+            scene.queue_free()
+            return {"error_code": "morph_node_export_mapping_failed", "error": "Godot could not map an edited facial mesh to its exported glTF node."}
+        var weights: Array = []
+        for shape_index in range(morph_mesh.get_blend_shape_count()):
+            weights.append(morph_mesh.get_blend_shape_value(shape_index))
+        var node_data: Dictionary = export_nodes[gltf_node_index]
+        node_data["weights"] = weights
+        export_nodes[gltf_node_index] = node_data
+    export_json["nodes"] = export_nodes
+    export_state.json = export_json
     var output_error := export_document.write_to_filesystem(export_state, output_path)
     scene.queue_free()
     if output_error != OK or not FileAccess.file_exists(output_path):
