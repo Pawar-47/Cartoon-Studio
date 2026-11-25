@@ -76,73 +76,59 @@ def install(installer: Path) -> None:
     subprocess.run([str(installer), "/S"], check=True, timeout=180)
 
 
+def assert_registry_key_absent(key: str) -> None:
+    for view in ("/reg:32", "/reg:64"):
+        result = subprocess.run(
+            ["reg", "query", key, view],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode == 0:
+            raise AssertionError(
+                f"Uninstall left registry key {key} in {view}: {result.stdout}"
+            )
+
+
 def uninstall(install_dir: Path) -> None:
     uninstaller = install_dir / "Uninstall.exe"
     if not uninstaller.is_file():
         raise AssertionError("Installed uninstaller is missing.")
-    for registry_view in ("/reg:32", "/reg:64"):
-        subprocess.run(
-            ["reg", "delete", r"HKCU\Software\CartoonStudioDebug", "/f", registry_view],
-            check=False,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
     subprocess.run([str(uninstaller), "/S"], check=True, timeout=180)
 
-    # NSIS starts a temporary copy of the uninstaller and exits the original
-    # process first. Wait for that child process to finish its cleanup.
+    # NSIS runs a temporary copy of the uninstaller. Wait for that copy to
+    # finish deleting the original installation directory.
     deadline = time.monotonic() + 45
-    while uninstaller.exists() or (install_dir / "CartoonStudio.exe").exists():
+    while install_dir.exists():
         if time.monotonic() >= deadline:
             break
         time.sleep(0.25)
 
-    if (install_dir / "CartoonStudio.exe").exists() or uninstaller.exists():
-        debug_views = [
+    if install_dir.exists():
+        remaining = sorted(path.name for path in install_dir.iterdir())
+        registry = [
             subprocess.run(
-                ["reg", "query", r"HKCU\Software\CartoonStudioDebug", "/s", view],
+                ["reg", "query", key, "/s", view],
                 check=False,
                 capture_output=True,
                 text=True,
             )
+            for key in (
+                r"HKCU\\Software\\CartoonStudio",
+                r"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\CartoonStudio",
+            )
             for view in ("/reg:32", "/reg:64")
         ]
-        registry32 = subprocess.run(
-            ["reg", "query", r"HKCU\Software\CartoonStudio", "/s", "/reg:32"],
-            check=False,
-            capture_output=True,
-            text=True,
-        )
-        registry64 = subprocess.run(
-            ["reg", "query", r"HKCU\Software\CartoonStudio", "/s", "/reg:64"],
-            check=False,
-            capture_output=True,
-            text=True,
-        )
-        remaining = (
-            sorted(path.name for path in install_dir.iterdir())
-            if install_dir.exists()
-            else []
-        )
         raise AssertionError(
-            "Uninstaller left the main executable in place.\n"
-            + "Uninstaller debug registry:\n"
-            + "\n".join(result.stdout + result.stderr for result in debug_views)
-            + "\nInstall registry (32-bit):\n"
-            + registry32.stdout
-            + registry32.stderr
-            + "\nInstall registry (64-bit):\n"
-            + registry64.stdout
-            + registry64.stderr
-            + "\nRemaining files:\n"
-            + repr(remaining)
+            f"Uninstaller left program directory {install_dir}; files={remaining!r}; "
+            f"registry={[item.stdout + item.stderr for item in registry]!r}"
         )
-    subprocess.run(
-        ["reg", "delete", r"HKCU\Software\CartoonStudioDebug", "/f"],
-        check=False,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+
+    assert_registry_key_absent(r"HKCU\\Software\\CartoonStudio")
+    assert_registry_key_absent(
+        r"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\CartoonStudio"
     )
+
 
 def main() -> int:
     if len(os.sys.argv) != 3:
@@ -273,6 +259,7 @@ def main() -> int:
 
         uninstall(install_dir)
         assert not executable.exists()
+        assert not install_dir.exists(), "Uninstall left the program directory behind."
         assert project_file.is_file(), "Uninstall deleted the user's project data."
         assert not start_menu.exists()
         assert not desktop_shortcut.exists()
@@ -289,6 +276,7 @@ def main() -> int:
             stop_application(process)
 
         uninstall(install_dir)
+        assert not install_dir.exists(), "Final uninstall left the program directory behind."
         assert project_file.is_file(), "Final uninstall deleted the user's project data."
 
     print(

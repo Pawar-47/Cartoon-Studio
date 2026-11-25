@@ -75,22 +75,16 @@ Function un.onInit
     ; NSIS normally runs a temporary copy of the uninstaller. Restore the real
     ; application directory from the per-user registry before touching files.
     SetRegView 64
-    WriteRegStr HKCU "Software\CartoonStudioDebug" "OnInit" "entered"
     ReadRegStr $INSTDIR HKCU "Software\CartoonStudio" "InstallDir"
-    WriteRegStr HKCU "Software\CartoonStudioDebug" "InstallDir" "$INSTDIR"
     IfFileExists "$INSTDIR\CartoonStudio.exe" un_install_path_valid
-        WriteRegStr HKCU "Software\CartoonStudioDebug" "PathCheck" "executable missing"
         SetErrorLevel 2
         Abort
     un_install_path_valid:
-    WriteRegStr HKCU "Software\CartoonStudioDebug" "PathCheck" "executable found"
 FunctionEnd
 
 Section "Uninstall"
     SetShellVarContext current
     SetRegView 64
-    WriteRegStr HKCU "Software\CartoonStudioDebug" "UninstallSection" "entered"
-    WriteRegStr HKCU "Software\CartoonStudioDebug" "SectionInstallDir" "$INSTDIR"
     ExecWait '"$SYSDIR\taskkill.exe" /F /IM CartoonStudio.exe'
 
     Delete "$SMPROGRAMS\Cartoon Studio\Cartoon Studio.lnk"
@@ -99,12 +93,9 @@ Section "Uninstall"
     DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CartoonStudio"
     DeleteRegKey HKCU "Software\CartoonStudio"
 
-    WriteRegStr HKCU "Software\CartoonStudioDebug" "BeforeRemoveFiles" "$INSTDIR"
     !insertmacro RemoveInstalledFiles
-    WriteRegStr HKCU "Software\CartoonStudioDebug" "AfterRemoveFiles" "$INSTDIR"
     Delete "$INSTDIR\Uninstall.exe"
     RMDir "$INSTDIR"
-    WriteRegStr HKCU "Software\CartoonStudioDebug" "AfterRemoveDirectory" "$INSTDIR"
 
     ; Deliberately preserve %LOCALAPPDATA%\CartoonStudio and all project data.
 SectionEnd
