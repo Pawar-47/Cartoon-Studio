@@ -475,11 +475,15 @@ func _retarget_glb_pair(payload: Dictionary) -> Dictionary:
                 * target_parent_global_rest.basis
                 * target_rest.basis
             )
+            var motion_scale_ratio := (
+                target_skeleton_after_reopen.get_motion_scale()
+                / reopened_source.get_motion_scale()
+            )
             var expected_target_origin := (
                 target_parent_global_rest.basis.inverse()
                 * (
                     source_parent_global_rest.basis
-                    * (source_pose.origin - source_rest.origin)
+                    * ((source_pose.origin - source_rest.origin) * motion_scale_ratio)
                 )
                 + target_rest.origin
             )
