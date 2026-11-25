@@ -335,7 +335,17 @@ func _retarget_glb_pair(payload: Dictionary) -> Dictionary:
     modifier.profile = SkeletonProfileHumanoid.new()
     modifier.use_global_pose = false
     source_skeleton.add_child(modifier)
-    target_skeleton.reparent(modifier, true)
+    var target_parent := target_skeleton.get_parent() as Node3D
+    if target_parent == null:
+        combined_root.queue_free()
+        return {"error_code": "invalid_target_parent", "error": "Target skeleton must have a Node3D parent."}
+    var target_global_transform := target_parent.global_transform * target_skeleton.transform
+    var modifier_global_transform := modifier.global_transform
+    target_skeleton.owner = null
+    target_skeleton.reparent(modifier, false)
+    target_skeleton.transform = (
+        modifier_global_transform.affine_inverse() * target_global_transform
+    )
     for mesh in bound_target_meshes:
         mesh.skeleton = mesh.get_path_to(target_skeleton)
 
