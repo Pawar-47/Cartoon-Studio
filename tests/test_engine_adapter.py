@@ -502,7 +502,7 @@ def test_pinned_godot_worker_preserves_nonzero_imported_morph_defaults(tmp_path)
     asset_dir = tmp_path / "morph-default-assets"
     asset_dir.mkdir()
     target = asset_dir / "face-with-default-expression.glb"
-    target.write_bytes(_make_morph_glb((0.35, 0.8)))
+    target.write_bytes(_make_morph_glb((0.0, 0.0), (0.35, 0.8)))
 
     response = adapter.inspect_glb(target, allowed_root=tmp_path)
 
@@ -511,6 +511,10 @@ def test_pinned_godot_worker_preserves_nonzero_imported_morph_defaults(tmp_path)
         entry["name"]: entry["default_value"]
         for entry in response["morph_targets"]
     } == {"Smile": 0.35, "Blink": 0.8}
+    assert {
+        entry["name"]: entry["default_value_source"]
+        for entry in response["morph_targets"]
+    } == {"Smile": "gltf_node", "Blink": "gltf_node"}
 
 
 def test_pinned_godot_worker_reports_imported_blend_shape_names_and_defaults(tmp_path):
