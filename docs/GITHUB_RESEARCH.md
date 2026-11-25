@@ -64,7 +64,7 @@ Urdu fine-tune, 1.6B parameters, model card cites RTX 3090 24GB VRAM. Not suitab
 Approximately 5.65 GB weights; model card says MIT but it is based on XTTS-v2, whose upstream model uses Coqui Public Model License. Resolve derivative/base model rights and resource requirements before use. Too large for the 8 GB target machine as a default local dependency.
 
 ## Current research conclusion (revised)
-No production engine, character generator, world generator, toon renderer, Urdu TTS or lip-sync system is selected. Blender 4.5.17 LTS plus a browser-first UI is a plausible local architecture candidate, but the target PC is below Blender's published CPU minimum and has a documented legacy Intel driver risk. Bene Procgen Maps and Blender Level Architect are strong world-generation candidates but GPL-3.0 and not target-tested. Ara and Ekza remain editor candidates with incomplete/cancelled CI evidence. The next proof work must be bounded and hardware-aware. Keep the system modular, local-first, offline-capable, and preserve a manual voice-recording fallback.
+No production engine, character generator, world generator, toon renderer, Urdu TTS or lip-sync system is selected. Godot 4.7.2 is now the strongest on-paper runtime candidate for the target PC because its Compatibility renderer uses OpenGL 3.3 and its minimum CPU/RAM requirements fit the target better than Blender; it still needs a real target-PC proof. Blender 4.5.17 remains a possible optional asset-authoring path but the target is below its published CPU minimum and has a documented Intel driver risk. Godot-native candidates (Terrain3D, Road Generator, Building Generator, Roommate and OpenCity) now form the primary environment shortlist. Ara and Ekza remain browser-editor candidates with incomplete/cancelled CI evidence. No candidate is selected; keep the system modular, local-first, offline-capable, and preserve a manual voice-recording fallback.
 
 ## 2026-11-25 — Source-level research sweep 2
 
@@ -163,3 +163,57 @@ Initial conclusions:
 - Copilot Free, ChatGPT Free, Claude Free, Perplexity Standard and FreeMilk are manual agent/UI workflows, not interchangeable free API endpoints.
 - GitHub Models was retired on 2026-07-30; remove it from any provider plan.
 - No provider is selected. P0.4 must check Pakistan access, actual account limits, official terms, data handling, model suitability and current prices.
+
+## 2026-11-25 — Godot runtime and Godot-native subsystem sweep
+
+### Godot engine: target-hardware fit
+- Inspected Godot source repository, MIT license, 4.7.2-stable tag, system requirements, Compatibility renderer documentation, animation/GLTF/material APIs and MovieWriter class.
+- Godot 4.7.2 is stable; 4.8 is still beta in the current release stream. Pin 4.7.2 for evaluation, not a beta.
+- Compatibility renderer uses OpenGL 3.3. Intel HD 5500 reports OpenGL 4.3, so it meets the API floor on paper. Godot's minimum CPU requirement is x86_64/SSE4.2 and 4 GB RAM; recommended is 4 physical cores and 8 GB. The i3-5005U meets the minimum CPU instruction set and RAM recommendation but has only 2 physical cores, below recommended.
+- Godot 4.7 Compatibility renderer has feature/performance limitations versus Forward+: use low light counts, baked lighting and a custom toon shader. The renderer is a better hardware fit than Blender 4.5 on paper, not yet tested on the target PC.
+- Godot provides GLTF import, Skeleton3D, AnimationPlayer/AnimationTree, retargeting, path following, audio tracks and built-in toon diffuse/specular material modes. It does not provide a full character sculpting/auto-rig studio; that must be built or supplied by imported GLB assets.
+- Godot MovieWriter supports non-real-time recording with fixed frame pacing. Its built-in outputs are OGV, AVI or PNG sequence plus WAV, not MP4; FFmpeg is still required for final MP4 assembly. Non-real-time recording is promising for slow hardware because rendering need not sustain real-time FPS, but 5–7 minute output speed remains unmeasured.
+
+### Godot-native world and environment candidates
+
+**Terrain3D** — https://github.com/TokisanGames/Terrain3D
+- MIT; inspected latest main commit `69699ff0e3b629230dd1a0d7e6e7dda84cca2d26`, pushed 2026-11-21. Upstream Actions #96 and #2685 passed on commit `43734bbada0b65fb5a642cfad0d9caeccfafade8`.
+- C++ GDExtension for Godot 4; current v1.1.0 asset listing says Godot 4.3–4.8 builds. Supports clipmap LOD terrain, up to 10 LOD levels, foliage instancing, sculpting, holes, texture painting, heightmap import and large non-contiguous regions.
+- Its platform documentation explicitly says Compatibility/OpenGL ES 3 is fully supported since Terrain3D 1.0 and Godot 4.4. This is important for HD 5500; still benchmark the C++ extension and GPU cost.
+
+**Godot Road Generator** — https://github.com/TheDuckCow/godot-road-generator
+- MIT; main release 0.9.5, Godot 4.4+; current development occurs on dev branch. Upstream Actions #169 succeeded on dev commit `648f07295a6d1cd9e0607c71196f7a2de98e6fc5`.
+- Cross-section-based roads, reusable RoadContainers, intersections, snapping/gizmos, terrain flattening integration with Terrain3D, AI lanes and traffic agents. README explicitly says the project is not feature complete. Strong road/traffic proof candidate, not a frozen dependency.
+
+**Building Generator** — https://github.com/Oli4k/building-generator
+- MIT; Godot 4.7; latest inspected commit `c6e662360dbd8d51fb1e62e0d9ce03190ee5fa79`, pushed 2026-11-06. No upstream Actions workflow found.
+- Procedural houses, shops, offices, churches, chalets, hangars, warehouses and stations. Version 0.2.0 catalog has 26 variants, three LODs, shared materials/textures and low triangle counts (most house/shop/station/church LOD0 examples 312–990 triangles). Includes manual test scripts for build, catalog, ground, normals, seed and render preview.
+- Good low-poly building candidate; limited catalog, no automated CI evidence and no target benchmark.
+
+**Roommate** — https://github.com/hoork/roommate
+- MPL-2.0; latest inspected commit `fd9381b5e833807c83e10af50fd95fb4ca0b6bb3`, pushed 2026-11-13. Godot 4 plugin.
+- Editor plugin generates meshes, collision, scenes and navigation from block-based room layouts; declarative style rules and custom block types. README says it runs no background tasks after generation. Actions #12 is a documentation workflow, not evidence of runtime tests.
+- Good indoor/room/prop placement candidate; MPL-2.0 file-level obligations and no runtime test evidence need review.
+
+**OpenCity** — https://github.com/webgl-games/opencity
+- MIT code; Godot 4.7; only two commits inspected and no CI workflow found. Its CREDITS file identifies the player mannequin as Quaternius CC0.
+- Procedural city, roads/sidewalks/towers, traffic, pedestrians, enterable cars/truck and helicopter. It includes headless test modes for boot screenshot, walking, driving, boost and flying.
+- README explicitly says all other visible geometry is placeholder. Excellent architecture/behavior proof reference, not a finished art pack or production solution.
+
+### Godot animation and toon candidates
+**Godot AI Animation Toolkit 2.0.0** — https://github.com/michaltomczykowski/godot-ai-animation-toolkit
+- MIT; latest release commit `e8f57c27c0374a6c76fce0e4b5d35d443ba3510b`; upstream Actions #386 succeeded.
+- Requires Godot 4.7.2 stable and separate Godot AI 4.4.2+ plugin/MCP client. Provides 10 tool families / 103 operations: procedural humanoid idle/walk/run/strafe/jump/turn, clips/sequences, rigs, IK, retargeting, AnimationTree graphs, editing, library and inspection.
+- This is an AI-agent authoring toolkit, not a mandatory runtime dependency. Windows and Linux clean-install checks passed upstream; README reports an intermittent Linux editor scene-save crash. Use only if the separate Godot AI/MCP dependency is acceptable and if the tools can be safely bounded.
+
+**Godot Toon Shader demo** — https://godotlearning.com/shaders/toon-shader
+- CC0 sample for Godot 4.7; lists Forward+, Mobile and Compatibility support.
+- Compatibility renderer caveat: shadow-casting lights make toon lit bands much brighter in the demo; its author disables sun shadows there. Use as a visual reference only; create and test Cartoon Studio's own shader/lighting solution.
+
+### Character-creation reference
+**Ducz.CharacterCreator** — https://github.com/LuanDucate/Ducz.CharacterCreator
+- README describes modular low-poly characters assembled from Quaternius packs, 24 animations, shared skeleton, recoloring and GLB export. Quaternius UAL asset license is listed as CC0 in its credits.
+- No code license file or SPDX license was found for the repository. Do not copy or redistribute its code. The character-assembly concept may be independently implemented using separately verified CC0 assets.
+
+### Godot candidate architecture (not frozen)
+Godot 4.7.2 Compatibility renderer is now the leading target-hardware runtime candidate. A possible modular stack is Terrain3D (terrain), Road Generator (roads/lanes), Building Generator (buildings), Roommate (interiors), imported CC0 GLB characters/animation and a Cartoon Studio-owned toon shader. OpenCity is a reference for traffic/pedestrian behavior; Godot AI Animation Toolkit is optional authoring support. This stack still needs target-PC proof, license review, memory/scene-size measurements and a decision on how the existing FastAPI/browser UI communicates with the Godot runtime.

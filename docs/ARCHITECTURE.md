@@ -42,3 +42,11 @@ A plausible candidate architecture is a browser-first FastAPI UI, a local engine
 Bene Procgen Maps and Blender Level Architect are world-generation candidates; MPFB2/CharacterCreator are character-generation candidates; Parrot/Allosaurus and Charley3d are lip-sync research candidates. Their GPL obligations and target compatibility must be reviewed before integration. FFmpeg must be pinned to a known license/configuration; the default LGPL build differs from builds enabling GPL codecs.
 
 Do not mix engine-specific identifiers into canonical project data. Use stable Cartoon Studio IDs, versioned asset/scene contracts and adapters only after P0.5. Keep provider/TTS optional, local-first and replaceable. No engine or queue is selected at this checkpoint.
+
+## P0.3 Godot candidate architecture — not yet frozen
+
+Godot 4.7.2 Compatibility renderer is now the leading on-paper runtime candidate for the target i3-5005U/HD 5500/8 GB machine. A Godot-native environment stack is under review: Terrain3D for terrain/foliage, Road Generator for roads/lanes, Building Generator for low-poly structures, Roommate for interiors, and a Cartoon Studio-owned toon shader. Imported GLB assets and an original modular character editor may avoid making Blender a mandatory runtime dependency.
+
+The existing FastAPI/SQLite project/story backend and browser UI must be preserved. P0.5 must compare three integration paths: (1) Godot as the native app/editor shell with FastAPI as local service, (2) Godot as a local renderer sidecar controlled by the browser UI, or (3) Godot Web export embedded as a browser viewport. Each has IPC, memory, windowing and performance trade-offs.
+
+Blender 4.5.17 remains an optional asset-authoring candidate, not the current target-runtime leader. Godot plugins are candidates only; their individual licenses, versions, renderer support, scene sizes and target-PC performance must be verified. No engine is selected at this checkpoint.

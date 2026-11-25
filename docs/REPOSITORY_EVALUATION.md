@@ -111,3 +111,54 @@ Parrot Lipsync + Allosaurus are GPL-3.0; custom phoneme table is promising but U
 sqlite-workqueue is MIT and implements SQLite leases/retries/idempotency, but lacks cancellation/results/migrations. Huey is MIT and richer, but in-flight crash recovery needs explicit handling. PyInstaller + NSIS are plausible packaging; Tauri 2 / pywebview are alternate shells with WebView2/toolchain costs. FFmpeg build configuration and codec licenses must be pinned.
 
 **Decision:** compare queue designs and packaging only after P0.4; no dependency selected.
+
+## Candidate L — Godot 4.7.2 as local runtime/editor
+
+Source: https://github.com/godotengine/godot  
+Inspected tag: `4.7.2-stable`; MIT license; 4.8 is still beta.
+
+**Advantages:** Compatibility renderer uses OpenGL 3.3; target HD 5500 reports OpenGL 4.3. Minimum CPU instruction set is x86_64/SSE4.2 and minimum RAM 4 GB; target i3-5005U meets those minimums and 8 GB meets the recommended memory, though 2 physical cores are below the recommended 4. Native 3D scene editor, GLTF, Skeleton3D, AnimationPlayer/Tree, retargeting, toon diffuse/specular modes, audio tracks, custom editor plugins and MovieWriter.
+
+**Limitations:** no full mesh sculpting or auto-rig character studio. Compatibility renderer is more limited than Forward+. MovieWriter produces OGV/AVI or PNG+WAV, not MP4; FFmpeg needed for MP4. Target driver/performance still untested. Existing FastAPI/browser UI integration requires a design decision.
+
+**Decision:** LEADING TARGET-HARDWARE RUNTIME CANDIDATE, NOT SELECTED. Test 4.7.2 Compatibility on the target PC and compare native Godot shell versus Godot sidecar with the existing FastAPI UI.
+
+## Candidate M — Terrain3D
+Source: https://github.com/TokisanGames/Terrain3D  
+MIT, C++ GDExtension, current v1.1.0 supports Godot 4.3–4.8 builds. Upstream CI passed. Compatibility/OpenGL ES 3 is documented as fully supported since v1.0/Godot 4.4. Provides clipmap LOD terrain, foliage instancing, sculpting, texture painting and heightmap import.
+
+**Decision:** HIGH-PRIORITY Godot terrain proof candidate; benchmark low-LOD settings on HD 5500.
+
+## Candidate N — Godot Road Generator
+Source: https://github.com/TheDuckCow/godot-road-generator  
+MIT, release 0.9.5, Godot 4.4+, upstream Actions #169 success. Procedural cross-section roads, intersections, lanes, reusable containers, terrain flattening and AI traffic helpers. README explicitly says it is not feature complete.
+
+**Decision:** HIGH-PRIORITY road/traffic proof candidate; no integration yet.
+
+## Candidate O — Building Generator
+Source: https://github.com/Oli4k/building-generator  
+MIT, Godot 4.7, commit `c6e662360dbd8d51fb1e62e0d9ce03190ee5fa79`. 26 procedural building variants, 3 LOD levels, low polygon counts, demo and manual test scripts; no CI workflow found.
+
+**Decision:** HIGH-PRIORITY building proof candidate; expand catalog only after performance proof.
+
+## Candidate P — Roommate
+Source: https://github.com/hoork/roommate  
+MPL-2.0, Godot 4 plugin. Generates indoor meshes, collisions, scenes and navigation from block layouts and style rules; no background tasks. Its current CI checks docs, not runtime. MPL-2.0 obligations need review.
+
+**Decision:** interior-layout reference/proof candidate; not selected.
+
+## Candidate Q — OpenCity
+Source: https://github.com/webgl-games/opencity  
+MIT code, Godot 4.7, procedural city/traffic/pedestrians and vehicle controls with headless test modes. Only two commits, no CI and most visible geometry is placeholder; player mannequin is Quaternius CC0.
+
+**Decision:** behavior/architecture reference, not production world art.
+
+## Candidate R — Godot AI Animation Toolkit 2.0.0
+Source: https://github.com/michaltomczykowski/godot-ai-animation-toolkit  
+MIT, release commit `e8f57c27c0374a6c76fce0e4b5d35d443ba3510b`, upstream CI #386 success. Godot 4.7.2 + Godot AI 4.4.2/MCP required; 103 operations for motion, rigs, IK, retargeting, AnimationTree and clip editing.
+
+**Decision:** optional authoring tool only; avoid mandatory external AI/MCP dependency in runtime.
+
+## Updated architecture comparison
+
+Godot 4.7.2 now has the best on-paper target-hardware fit. Blender 4.5 remains useful as an optional asset-authoring path but is below the target CPU minimum and carries Intel driver risk. A Godot-native world stack (Terrain3D + Road Generator + Building Generator + Roommate) is more compatible with the target than Blender-only procedural addons, but must be tested together for renderer compatibility, memory, object counts, license compatibility and visual quality. The existing FastAPI/browser shell must be preserved; P0.5 must decide native Godot UI vs sidecar/local IPC vs browser-hosted preview.

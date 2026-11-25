@@ -45,3 +45,19 @@ For every future code/model/voice/texture/animation/dataset, record exact versio
 | Qwen-Audio-TTS Flash | https://www.alibabacloud.com/help/en/model-studio/tts-model/ | Cloud service; model/API terms and pricing to verify | No integration without P0.4 review |
 
 No code or asset from these candidates has been copied into Cartoon Studio in this research batch.
+
+## Godot-native candidates inspected — 2026-11-25
+
+| Project / asset | Source | License evidence | Current decision |
+|---|---|---|---|
+| Godot Engine 4.7.2 | https://github.com/godotengine/godot | MIT | Leading runtime candidate; retain third-party notices |
+| Terrain3D | https://github.com/TokisanGames/Terrain3D | MIT | Candidate; use official release binaries and preserve license |
+| Godot Road Generator | https://github.com/TheDuckCow/godot-road-generator | MIT | Candidate; no code copied |
+| Building Generator | https://github.com/Oli4k/building-generator | MIT | Candidate; no code copied |
+| Roommate | https://github.com/hoork/roommate | MPL-2.0 | Candidate; review file-level copyleft obligations |
+| OpenCity | https://github.com/webgl-games/opencity | MIT code; Quaternius player mannequin CC0 per credits | Reference; other art is placeholder |
+| Godot AI Animation Toolkit | https://github.com/michaltomczykowski/godot-ai-animation-toolkit | MIT; separate Godot AI/MCP dependency | Optional authoring candidate; inspect dependency license |
+| Godot Toon Shader demo | https://godotlearning.com/shaders/toon-shader | CC0 | Visual reference only |
+| Ducz CharacterCreator | https://github.com/LuanDucate/Ducz.CharacterCreator | No code license found; Quaternius assets credited CC0 | Do not copy code; only separately verified CC0 assets may be used |
+
+No Godot plugin or asset was copied into Cartoon Studio in this research batch.

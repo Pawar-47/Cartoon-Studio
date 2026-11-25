@@ -22,3 +22,19 @@ Record exact Windows build, driver version, Blender 4.5.17 startup result, viewp
 
 ## Performance policy
 Use sequential scene generation/rendering, strict object/vertex budgets, low-density procedural presets, low-resolution previews, cached assets and bounded worker concurrency. Do not assume CPU/GPU parallel rendering. The 5–7 minute episode target is a product requirement, not a render-time promise; measure first.
+
+## Godot 4.7.2 compatibility findings
+
+- Godot 4.7.2 stable is the pinned runtime candidate; 4.8 is beta in the current release stream.
+- Godot Compatibility renderer requires OpenGL 3.3. Intel HD 5500 reports OpenGL 4.3, so it meets the API floor on paper. Use Compatibility renderer, not Forward+, until Vulkan/driver support is proven.
+- Godot's minimum CPU is x86_64 with SSE4.2 and minimum RAM 4 GB; recommended is 4 cores and 8 GB. The i3-5005U meets minimum instruction-set and RAM requirements, but 2 physical cores are below recommended CPU.
+- Compatibility renderer has reduced advanced lighting/post-processing features. Use low light counts, baked lighting and toon shaders; inspect shadows and color bands carefully.
+- Godot's MovieWriter can record non-real-time with fixed frame pacing; built-in output is OGV, AVI or PNG sequence plus WAV. FFmpeg is needed for MP4. It can render slower than real time without losing frame pacing, but the 5–7 minute episode render time is unknown.
+- No Godot 4.7.2 target-PC startup, preview, render or memory benchmark has been run.
+
+## Revised engine shortlist
+1. Godot 4.7.2 Compatibility — leading on-paper runtime candidate for i3-5005U / HD 5500 / 8 GB.
+2. Blender 4.5.17 LTS — optional asset authoring candidate; below CPU minimum and has legacy Intel driver crash warnings.
+3. Browser WebGL2 editor/preview (Ara/Ekza/Three.js) — alternative preview/editor candidate; must measure browser memory and GPU stability.
+
+The actual installed Intel driver and Windows build must be recorded before selecting the engine.
