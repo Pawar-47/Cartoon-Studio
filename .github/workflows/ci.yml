@@ -7,8 +7,187 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: write
 jobs:
+  cleanup-actions-history:
+    if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[actions-cleanup]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Cancel other runs and delete all repository Actions artifacts and run history
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          CURRENT_RUN_ID: ${{ github.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Current cleanup run: $CURRENT_RUN_ID"
+          echo "Cancelling every other queued or running workflow run..."
+          list_runs() {
+            gh api --paginate "repos/$REPOSITORY/actions/runs?per_page=100" --jq '.workflow_runs[] | [.id, .status] | @tsv'
+          }
+          while IFS=
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        name: Checkout
+      - uses: actions/setup-python@v5
+        name: Set up Python
+        with:
+          python-version: "3.11"
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e
+        name: Set up uv
+        with:
+          version: "0.13.10"
+          enable-cache: true
+      - name: Verify committed dependency lock
+        run: |
+          uv --version
+          uv lock --check
+      - name: Install exact locked environment
+        run: uv sync --locked --group dev
+      - name: Fetch pinned Godot 4.7.2 runtime
+        run: uv run --locked python scripts/fetch_godot_runtime.py --output-dir build/godot-runtime
+      - name: Lint
+        run: uv run --locked ruff check app tests scripts/fetch_godot_runtime.py scripts/augment_sbom.py
+      - name: Compile Python
+        run: uv run --locked python -m compileall -q app scripts
+      - name: Test
+        env:
+          CARTOON_STUDIO_GODOT_PATH: ${{ github.workspace }}/build/godot-runtime/Godot_v4.7.2-stable_win64.exe
+        run: uv run --locked python -m pytest -q
+      - name: Export locked runtime requirements
+        run: uv export --locked --no-dev --format requirements.txt --output-file requirements.lock
+      - name: Verify runtime lock is committed and current
+        run: git diff --exit-code -- requirements.lock
+      - name: Export dependency inventory
+        run: uv export --locked --all-groups --format cyclonedx1.5 --output-file dependency-sbom.cdx.json
+      - name: Add Godot runtime to CycloneDX inventory
+        run: uv run --locked python scripts/augment_sbom.py --sbom dependency-sbom.cdx.json --manifest engine/godot_runtime.json --runtime-report build/godot-runtime/godot-runtime-report.json --web-runtime-manifest third_party/threejs-runtime.json
+      - name: Package Windows bootstrap
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Compress-Archive -Path README.md, start.bat, requirements.lock, app, docs -DestinationPath dist/Cartoon-Studio-Windows-Bootstrap.zip -Force
+      - name: Smoke-test extracted Windows bootstrap
+        run: uv run --locked python tests/smoke_windows_package.py dist/Cartoon-Studio-Windows-Bootstrap.zip
+      - name: Build self-contained application v1
+        shell: pwsh
+        run: |
+          $staticPath = (Resolve-Path "app/static").Path
+          uv run --locked python scripts/set_build_version.py 0.1.0
+          uv run --locked pyinstaller --noconfirm --clean --onedir --windowed --name CartoonStudio --specpath build/pyinstaller-v1 --workpath build/pyinstaller-v1/work --distpath dist/installer-v1 --add-data "$staticPath;app/static" --collect-submodules uvicorn app/desktop.py
+          $bundle = (Resolve-Path "dist/installer-v1/CartoonStudio").Path
+          Copy-Item LICENSES -Destination $bundle -Recurse -Force
+          Copy-Item docs/THIRD_PARTY_NOTICES.md, dependency-sbom.cdx.json -Destination $bundle -Force
+          $engineRoot = Join-Path $bundle "engine"
+          New-Item -ItemType Directory -Force -Path $engineRoot | Out-Null
+          Copy-Item build/godot-runtime/Godot_v4.7.2-stable_win64.exe -Destination $engineRoot -Force
+          Copy-Item engine/godot_worker -Destination $engineRoot -Recurse -Force
+          $engineNotices = Join-Path $engineRoot "notices"
+          New-Item -ItemType Directory -Force -Path $engineNotices | Out-Null
+          Copy-Item "third_party/godot-4.7.2/LICENSE.txt", "third_party/godot-4.7.2/COPYRIGHT.txt", "third_party/godot-4.7.2/AUTHORS.md" -Destination $engineNotices -Force
+      - name: Build self-contained application v2
+        shell: pwsh
+        run: |
+          $staticPath = (Resolve-Path "app/static").Path
+          uv run --locked python scripts/set_build_version.py 0.1.1
+          uv run --locked pyinstaller --noconfirm --clean --onedir --windowed --name CartoonStudio --specpath build/pyinstaller-v2 --workpath build/pyinstaller-v2/work --distpath dist/installer-v2 --add-data "$staticPath;app/static" --collect-submodules uvicorn app/desktop.py
+          $bundle = (Resolve-Path "dist/installer-v2/CartoonStudio").Path
+          Copy-Item LICENSES -Destination $bundle -Recurse -Force
+          Copy-Item docs/THIRD_PARTY_NOTICES.md, dependency-sbom.cdx.json -Destination $bundle -Force
+          $engineRoot = Join-Path $bundle "engine"
+          New-Item -ItemType Directory -Force -Path $engineRoot | Out-Null
+          Copy-Item build/godot-runtime/Godot_v4.7.2-stable_win64.exe -Destination $engineRoot -Force
+          Copy-Item engine/godot_worker -Destination $engineRoot -Recurse -Force
+          $engineNotices = Join-Path $engineRoot "notices"
+          New-Item -ItemType Directory -Force -Path $engineNotices | Out-Null
+          Copy-Item "third_party/godot-4.7.2/LICENSE.txt", "third_party/godot-4.7.2/COPYRIGHT.txt", "third_party/godot-4.7.2/AUTHORS.md" -Destination $engineNotices -Force
+          uv run --locked python scripts/set_build_version.py 0.1.0
+      - name: Install pinned NSIS compiler
+        run: choco install nsis --version=3.13.0 --yes --no-progress
+      - name: Compile versioned Windows installers
+        shell: pwsh
+        run: |
+          $makensis = Join-Path ${env:ProgramFiles(x86)} "NSIS\makensis.exe"
+          if (-not (Test-Path $makensis)) {
+            $makensis = Join-Path $env:ProgramFiles "NSIS\makensis.exe"
+          }
+          if (-not (Test-Path $makensis)) { throw "NSIS 3.13.0 makensis.exe was not found." }
+          $distRoot = (Resolve-Path "dist").Path
+          $v1Dir = (Resolve-Path "dist/installer-v1/CartoonStudio").Path
+          $v2Dir = (Resolve-Path "dist/installer-v2/CartoonStudio").Path
+          $v1Out = Join-Path $distRoot "Cartoon-Studio-0.1.0-Setup.exe"
+          $v2Out = Join-Path $distRoot "Cartoon-Studio-0.1.1-Setup.exe"
+          & $makensis "/DAPP_VERSION=0.1.0" "/DAPP_DIST_DIR=$v1Dir" "/DOUTPUT_FILE=$v1Out" "installer/cartoon-studio.nsi"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & $makensis "/DAPP_VERSION=0.1.1" "/DAPP_DIST_DIR=$v2Dir" "/DOUTPUT_FILE=$v2Out" "installer/cartoon-studio.nsi"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Smoke-test clean install, upgrade, uninstall and reinstall
+        run: uv run --locked python tests/smoke_windows_installer.py dist/Cartoon-Studio-0.1.0-Setup.exe dist/Cartoon-Studio-0.1.1-Setup.exe
+      - name: Upload Windows bootstrap
+        uses: actions/upload-artifact@v4
+        with:
+          name: Cartoon-Studio-Windows-Bootstrap
+          path: dist/Cartoon-Studio-Windows-Bootstrap.zip
+          if-no-files-found: error
+          retention-days: 14
+      - name: Upload self-contained Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: Cartoon-Studio-Windows-Installer
+          path: dist/Cartoon-Studio-0.1.1-Setup.exe
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload dependency inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: Cartoon-Studio-Dependency-SBOM
+          path: dependency-sbom.cdx.json
+          if-no-files-found: error
+          retention-days: 30
+\\t' read -r run_id status; do
+            [[ -z "$run_id" || "$run_id" == "$CURRENT_RUN_ID" ]] && continue
+            case "$status" in
+              queued|requested|waiting|pending|in_progress)
+                echo "Cancelling run $run_id ($status)"
+                gh api -X POST "repos/$REPOSITORY/actions/runs/$run_id/cancel" >/dev/null || true
+                ;;
+            esac
+          done < <(list_runs)
+
+          echo "Waiting for other runs to stop..."
+          for attempt in $(seq 1 120); do
+            active="$(list_runs | awk -v current="$CURRENT_RUN_ID" '$1 != current && ($2 == "queued" || $2 == "requested" || $2 == "waiting" || $2 == "pending" || $2 == "in_progress") { print $1 }')"
+            if [[ -z "$active" ]]; then
+              break
+            fi
+            if [[ "$attempt" == "120" ]]; then
+              echo "Some runs did not stop in time: $active"
+              exit 1
+            fi
+            sleep 5
+          done
+
+          echo "Deleting every Actions artifact in the repository..."
+          while read -r artifact_id; do
+            [[ -z "$artifact_id" ]] && continue
+            gh api -X DELETE "repos/$REPOSITORY/actions/artifacts/$artifact_id" >/dev/null
+            echo "Deleted artifact $artifact_id"
+          done < <(gh api --paginate "repos/$REPOSITORY/actions/artifacts?per_page=100" --jq '.artifacts[].id')
+
+          echo "Deleting all workflow-run records except this cleanup run..."
+          while read -r run_id; do
+            [[ -z "$run_id" || "$run_id" == "$CURRENT_RUN_ID" ]] && continue
+            gh api -X DELETE "repos/$REPOSITORY/actions/runs/$run_id" >/dev/null || echo "Could not delete run $run_id (it may already have been removed)"
+            echo "Deleted run record $run_id"
+          done < <(gh api --paginate "repos/$REPOSITORY/actions/runs?per_page=100" --jq '.workflow_runs[].id')
+
+          echo "Cleanup finished. Workflow definitions and repository source files were preserved."
+
   test-and-package-windows:
+    if: ${{ github.event_name != 'push' || !contains(github.event.head_commit.message, '[actions-cleanup]') }}
     runs-on: windows-latest
     timeout-minutes: 45
     steps:
