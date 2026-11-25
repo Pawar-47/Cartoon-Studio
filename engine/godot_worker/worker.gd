@@ -135,15 +135,15 @@ func _inspect_glb(payload: Dictionary) -> Dictionary:
     var morph_targets: Array[Dictionary] = []
     for mesh_node in mesh_nodes:
         var mesh_instance := mesh_node as MeshInstance3D
-        var mesh_resource := mesh_instance.mesh
-        if mesh_resource == null:
+        var array_mesh := mesh_instance.mesh as ArrayMesh
+        if array_mesh == null:
             continue
-        for shape_index in range(mesh_resource.get_blend_shape_count()):
+        for shape_index in range(mesh_instance.get_blend_shape_count()):
             morph_targets.append({
                 "mesh_path": str(scene.get_path_to(mesh_instance)),
                 "mesh_name": str(mesh_instance.name),
                 "index": shape_index,
-                "name": str(mesh_resource.get_blend_shape_name(shape_index)),
+                "name": str(array_mesh.get_blend_shape_name(shape_index)),
                 "default_value": mesh_instance.get_blend_shape_value(shape_index)
             })
     var skeleton_nodes := scene.find_children("*", "Skeleton3D", true, false)
