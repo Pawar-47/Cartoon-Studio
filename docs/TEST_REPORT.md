@@ -1,5 +1,15 @@
 # Test Report — 2026-11-25
 
+## Phase 2 — imported morph metadata and appearance persistence — 2026-11-25
+
+- Windows CI #303: [SUCCESS](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45631358729) on commit `0bfce71625d6e3084b4ceda9b64a9825cca95101`. Full lint, compile, pytest, pinned Godot 4.7.2 worker, bootstrap, both self-contained builds, NSIS installer and clean install/upgrade/uninstall/reinstall lifecycle passed.
+- Added third-party animated morph fixture `tests/fixtures/third_party/animated_morph_cube_cc0.glb`. Godot imports it, reports two morph targets, deterministic fallback names `morph_0` / `morph_1`, default weights, and the embedded animation. Source fixture remains unchanged.
+- A separate compact GLB fixture verifies named `Smile` and `Blink` targets, mesh association and imported default weights. This fixture is synthetic, not a production facial character.
+- Added a FastAPI regression test for saving facial morph weights into the persistent character appearance recipe and rejecting weights outside [-1, 1].
+- Windows CI #304: [IN PROGRESS](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45631770407) on commit `7b703ec14b116440f5d6f1401ffce8bec5c7a16c`. Lint, Python compilation and the full pytest suite passed, including the new persistence test; Windows packaging and installer lifecycle remain in progress at this checkpoint.
+- Facial morph controls already preview in Three.js, save as a non-destructive appearance recipe, and reset to imported defaults. No genuinely facial third-party morph model or native Godot expression playback has yet been accepted; keep those requirements PARTIAL.
+
+
 ## Phase 2 — third-party humanoid retarget and facial morph inspection — 2026-11-25
 
 - Windows CI #299: [SUCCESS](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45629963495) on commit `570c6f9b2d0fe35b64ec74e84ab8d0e702d7665d`.

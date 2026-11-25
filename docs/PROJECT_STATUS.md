@@ -4,11 +4,12 @@
 
 - Repository: Pawar-47/Cartoon-Studio
 - Branch: main
-- Latest implementation checkpoint: `570c6f9b2d0fe35b64ec74e84ab8d0e702d7665d`
+- Latest implementation checkpoint: `7b703ec14b116440f5d6f1401ffce8bec5c7a16c`
 - Phase 0: COMPLETE.
 - Phase 1: COMPLETE.
 - Phase 2 — Character Studio: ACTIVE; import, preview, profiles, appearance recipes, rig diagnostics and the first user-facing imported-rig retarget workflow are implemented. Phase 2 is not complete.
-- Windows CI #299: full Windows pipeline PASSED on `570c6f9b2d0fe35b64ec74e84ab8d0e702d7665d`, including lint, Python compilation, full pytest, pinned Godot 4.7.2 worker, bootstrap, both self-contained builds, NSIS installer and clean install/upgrade/uninstall/reinstall lifecycle.
+- Windows CI #303: full Windows pipeline PASSED on `0bfce71625d6e3084b4ceda9b64a9825cca95101`, including lint, Python compilation, full pytest, pinned Godot 4.7.2 worker, bootstrap, both self-contained builds, NSIS installer and clean install/upgrade/uninstall/reinstall lifecycle. It includes the third-party animated morph GLB import test.
+- Windows CI #304: current commit `7b703ec14b116440f5d6f1401ffce8bec5c7a16c`; lint, compilation and full pytest (including facial appearance persistence and validation) passed. Windows packaging and installer lifecycle are still running.
 - Dedicated Godot native-worker proof #18 PASSED.
 - Chat-independent continuation record: `docs/SESSION_CHECKPOINT.md`.
 
@@ -17,7 +18,7 @@
 - Local project-contained GLB 2.0 import, validation, provenance and Godot inspection.
 - Browser GLB preview and imported animation selection.
 - Persistent versioned character profiles.
-- Non-destructive material appearance recipes and facial morph-target sliders; Godot inspection reports imported blend-shape names/defaults, controls accept signed weights from -1 to 1, and reset restores each imported default.
+- Non-destructive material appearance recipes and facial morph-target sliders; Godot inspection reports imported blend-shape names/defaults, controls accept signed weights from -1 to 1, and reset restores each imported default. A CC0 animated third-party morph GLB and a named Smile/Blink fixture now exercise import metadata; the API also has a persistence/range-validation test.
 - Indexed 15-bone humanoid mapping, parent-chain diagnostics and per-bone rest-transform measurements; common 3ds Max Biped, Character Creator, Unreal-style, Blender Rigify and Cesium Rigged Figure bone names are recognized. Duplicate/negative hierarchy indices are rejected.
 - Imported-GLB retarget workflow with source/target selection, strict preflight, Godot scene creation, persistent history and scene download.
 - Worker verifies that the reopened source AnimationPlayer starts, the source pose changes, and the target upper-arm pose matches Godot's model-space rest-corrected retarget transform after 72 frames. This validates different rest axes without incorrectly requiring raw local rotation angles to match. Failed pose verification removes the generated scene.
@@ -29,7 +30,7 @@
 
 The synthetic source/target fixture pair still verifies Mixamo-style animation track remapping, different limb proportions, reordered raw skin joints, scene save/reopen and byte-identical source preservation. In addition, `tests/fixtures/third_party/rigged_figure_ccby.glb` is an unchanged Khronos Cesium Rigged Figure asset (CC-BY-4.0) with a different 19-joint hierarchy and naming convention. The worker maps its 15 core humanoid bones and successfully retargets its real animation to the canonical target in Godot after scene save/reopen. Attribution and the upstream license are retained beside the fixture.
 
-Godot may normalize raw skin-joint ordering during import. The application uses the actual bone names and indices returned by the Godot inspection worker, not raw GLB array positions. Windows CI #299 passed the full real third-party Rigged Figure inspection and retarget test. This is one accepted third-party model, not blanket compatibility. Other rig families, extreme rest-pose axes, bone roll, scale variation, multi-clip animation and broader facial morph models still require fixture-based acceptance.
+Godot may normalize raw skin-joint ordering during import. The application uses the actual bone names and indices returned by the Godot inspection worker, not raw GLB array positions. Windows CI #299 passed the full real third-party Rigged Figure inspection and retarget test. This is one accepted third-party model, not blanket compatibility. Other rig families, extreme rest-pose axes, bone roll, scale variation, multi-clip animation and a genuinely facial third-party morph model still require fixture-based acceptance.
 
 ## Phase status
 
