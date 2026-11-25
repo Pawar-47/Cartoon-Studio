@@ -97,3 +97,14 @@
 - Regression tests cover canonical profile keys, source indices/parents, duplicate aliases, unmapped bones and strongest unambiguous skeleton selection.
 - This is name-based preflight, not proof of imported rest-pose, axis, skin-weight or animation compatibility. Imported-character RetargetModifier3D integration remains open.
 - Windows CI for this batch is pending.
+
+
+
+## Indexed humanoid hierarchy validation — implementation batch
+
+- The Python rig analyzer now validates required parent/ancestor chains from Godot's indexed Skeleton3D report when the importer provides index and parent-index data.
+- Checks cover the spine/head chain, both upper/lower leg and foot chains, and both upper/lower arm and hand chains. Intermediate helper bones are allowed because the validator checks ancestry rather than requiring direct parent equality.
+- Invalid parent references, self-parenting, cycles and broken required chains are surfaced as structured issues.
+- The Character Studio import report now shows hierarchy status and the concrete issues (or states when indexed hierarchy data is unavailable).
+- This is structural validation only. A valid hierarchy does not establish compatible rest pose, axes, skin weights, scale or real animation transfer; `retargeting_ready` remains false.
+- Regression coverage includes valid chains, a broken leg chain and legacy name-only importer data. Windows CI #229 is running for commit `1cac9e93adff60bd051c4029df829ebc5fc662f0`.

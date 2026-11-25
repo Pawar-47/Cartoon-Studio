@@ -57,3 +57,11 @@ There are also lint/test correction commits between feature batches. They are no
 - tests/test_rig_analysis.py adds coverage for indexed mapping, parent metadata, ambiguity, unmapped bones and candidate selection.
 - Source/test commits: 80d68935994ce014b3a3a3f8ca9d97dff32391ab and ec17ed2ae5139f4033c86058f61a3464c596aa43. Documentation update and batch CI pending.
 - Next: bind imported skeletons to Godot retarget hierarchies, then prove retargeting on a real imported source/target GLB pair. Generated-skeleton proof #5 is not imported-asset acceptance.
+
+
+## 2026-11-25 — latest continuation checkpoint
+
+- Latest code batch: `1cac9e93adff60bd051c4029df829ebc5fc662f0` — indexed humanoid hierarchy validation and Character Studio diagnostics.
+- The analyzer checks required humanoid parent chains when Godot supplies indexed parent data; the UI exposes valid/invalid/unavailable status and issues. This remains preflight, not production retargeting.
+- Previous checkpoint `dd3b3a91a4f03373496f185ff85160b3f57b055b` passed Windows CI #228. The corrected indexed-name tests passed in CI #227.
+- CI #229 is running for the hierarchy-validation batch. Next: use a real skinned humanoid GLB fixture to exercise imported Skeleton3D, skin binding, rest pose and animation paths; then integrate a production-safe retarget workflow. Keep Character Studio active and do not call Phase 2 complete.

@@ -157,10 +157,15 @@ $("import-model").addEventListener("click",async()=>{
   const rigAnalysis=data.rig_analysis||{};
   const coverage=rigAnalysis.required_bone_count?rigAnalysis.matched_bone_count+"/"+rigAnalysis.required_bone_count:"Unavailable";
   const missing=Array.isArray(rigAnalysis.missing_bones)?rigAnalysis.missing_bones.join(", "):"Not reported";
-  const items=[["Meshes",data.engine_inspection.mesh_count],["Skeletons",data.engine_inspection.skeleton_count],["Animations",data.engine_inspection.animation_count],["Nodes",data.engine_inspection.node_count],["File size",(data.container.size_bytes/1048576).toFixed(2)+" MiB"],["Humanoid bone-name coverage",coverage],["Missing core humanoid names",missing]];
+  const hierarchy=rigAnalysis.hierarchy_validation||{};
+  const hierarchyLabel=hierarchy.status==="valid"?"Valid":hierarchy.status==="invalid"?"Needs review":hierarchy.status==="incomplete"?"Incomplete":"Not available";
+  const items=[["Meshes",data.engine_inspection.mesh_count],["Skeletons",data.engine_inspection.skeleton_count],["Animations",data.engine_inspection.animation_count],["Nodes",data.engine_inspection.node_count],["File size",(data.container.size_bytes/1048576).toFixed(2)+" MiB"],["Humanoid bone-name coverage",coverage],["Missing core humanoid names",missing],["Humanoid hierarchy",hierarchyLabel]];
   for(const [label,value] of items){const span=document.createElement("span");const b=document.createElement("b");b.textContent=String(value);span.append(document.createTextNode(label+": "),b);metrics.append(span)}
   const rigNote=document.createElement("p");rigNote.className="inline-status";rigNote.textContent=rigAnalysis.retargeting_note||"Skeleton presence is not proof of retarget compatibility.";
-  $("asset-report").append(heading,metrics,rigNote);$("import-status").textContent="Asset stored inside this project. Complete the profile to save it."; $("save-character").disabled=false;
+  const hierarchyNote=document.createElement("p");hierarchyNote.className="inline-status";
+  const hierarchyIssues=Array.isArray(hierarchy.issues)?hierarchy.issues:[];
+  hierarchyNote.textContent=hierarchy.status==="valid"?"Required humanoid parent chains are structurally consistent; rest pose, axes, scale, skin weights and real animation transfer remain unverified.":hierarchyIssues.length?hierarchyIssues.join(" "):(hierarchy.note||"Parent-chain validation is not available for this asset.");
+  $("asset-report").append(heading,metrics,rigNote,hierarchyNote);$("import-status").textContent="Asset stored inside this project. Complete the profile to save it."; $("save-character").disabled=false;
  }catch(error){$("import-status").textContent=error.message}
  finally{$("import-model").disabled=!activeProject||!$("model-file").files.length}
 });

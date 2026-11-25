@@ -39,3 +39,11 @@ Work in coherent feature batches, preserve all existing work, use GitHub main as
 - tests/test_rig_analysis.py adds coverage for indexed mapping, parent metadata, ambiguity, unmapped bones and candidate selection.
 - Source/test commits: 80d68935994ce014b3a3a3f8ca9d97dff32391ab and ec17ed2ae5139f4033c86058f61a3464c596aa43. Documentation update and batch CI pending.
 - Next: bind imported skeletons to Godot retarget hierarchies, then prove retargeting on a real imported source/target GLB pair. Generated-skeleton proof #5 is not imported-asset acceptance.
+
+
+## Immediate continuation — 2026-11-25
+
+1. Complete and inspect CI #229 for indexed humanoid hierarchy validation.
+2. Add a deterministic, genuinely skinned humanoid GLB fixture (not the existing triangle-only fixture) and exercise Godot import, skin-to-skeleton binding, rest transforms and imported animation tracks.
+3. Implement a non-destructive imported-rig retarget path only after the fixture proves the correct Godot node hierarchy and profile mapping.
+4. Continue Character Studio authoring/export capabilities; do not treat PC testing as an early gate.
