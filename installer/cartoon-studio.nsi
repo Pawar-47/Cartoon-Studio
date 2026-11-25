@@ -15,7 +15,6 @@ SetCompressor /SOLID zlib
 Name "Cartoon Studio"
 OutFile "${OUTPUT_FILE}"
 InstallDir "$LOCALAPPDATA\Programs\Cartoon Studio"
-InstallDirRegKey HKCU "Software\CartoonStudio" "InstallDir"
 ShowInstDetails show
 ShowUnInstDetails show
 UninstPage uninstConfirm
@@ -48,6 +47,7 @@ VIAddVersionKey "FileDescription" "Cartoon Studio Installer"
 
 Section "Cartoon Studio" SEC_MAIN
     SetShellVarContext current
+    SetRegView 64
 
     ; Stop an existing process before replacing its program files.
     ExecWait '"$SYSDIR\taskkill.exe" /F /IM CartoonStudio.exe'
@@ -79,6 +79,7 @@ SectionEnd
 
 Section "Uninstall"
     SetShellVarContext current
+    SetRegView 64
     WriteRegStr HKCU "Software\CartoonStudioDebug" "SectionEntered" "yes"
     ExecWait '"$SYSDIR\taskkill.exe" /F /IM CartoonStudio.exe'
 
@@ -112,8 +113,18 @@ SectionEnd
 
 Function un.onInit
     SetShellVarContext current
+    SetRegView 64
     ReadRegStr $INSTDIR HKCU "Software\CartoonStudio" "InstallDir"
     WriteRegStr HKCU "Software\CartoonStudioDebug" "InitPath" "$INSTDIR"
+    StrCmp $INSTDIR "" set_default_install_dir done_init
+set_default_install_dir:
+    StrCpy $INSTDIR "$LOCALAPPDATA\Programs\Cartoon Studio"
+done_init:
+FunctionEnd
+
+Function .onInit
+    SetRegView 64
+    ReadRegStr $INSTDIR HKCU "Software\CartoonStudio" "InstallDir"
     StrCmp $INSTDIR "" set_default_install_dir done_init
 set_default_install_dir:
     StrCpy $INSTDIR "$LOCALAPPDATA\Programs\Cartoon Studio"
