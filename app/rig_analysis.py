@@ -63,6 +63,18 @@ def _empty_result(status: str, skeleton_count: int, note: str) -> dict[str, Any]
         "missing_bones": list(REQUIRED_HUMANOID_BONES),
         "ambiguous_bones": [],
         "unmapped_bones": [],
+        "hierarchy_validation": {
+            "status": "not_available",
+            "checked_relationships": 0,
+            "issues": [],
+            "note": "No indexed humanoid hierarchy is available.",
+        },
+        "rest_pose_summary": {
+            "status": "not_available",
+            "measured_bone_count": 0,
+            "local_offset_lengths": {},
+            "units_note": "No imported rest-pose transforms are available.",
+        },
         "retargeting_ready": False,
         "retargeting_note": note,
     }

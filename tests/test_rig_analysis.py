@@ -48,6 +48,8 @@ def test_missing_skeleton_is_reported_explicitly():
     result = _analyze_rig({"skeleton_count": 0, "skeletons": []})
     assert result["status"] == "no_skeleton"
     assert result["retargeting_ready"] is False
+    assert result["hierarchy_validation"]["status"] == "not_available"
+    assert result["rest_pose_summary"]["status"] == "not_available"
 
 
 
