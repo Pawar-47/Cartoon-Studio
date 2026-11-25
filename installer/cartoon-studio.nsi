@@ -33,7 +33,9 @@ VIAddVersionKey "FileDescription" "Cartoon Studio Installer"
     SetFileAttributes "$INSTDIR\CartoonStudio.exe" NORMAL
     SetFileAttributes "$INSTDIR\dependency-sbom.cdx.json" NORMAL
     SetFileAttributes "$INSTDIR\THIRD_PARTY_NOTICES.md" NORMAL
+    SetFileAttributes "$INSTDIR\engine\Godot_v4.7.2-stable_win64.exe" NORMAL
     RMDir /r "$INSTDIR\_internal"
+    RMDir /r "$INSTDIR\engine"
     RMDir /r "$INSTDIR\LICENSES"
     Delete "$INSTDIR\CartoonStudio.exe"
     Delete "$INSTDIR\dependency-sbom.cdx.json"
