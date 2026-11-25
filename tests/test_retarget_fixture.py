@@ -28,7 +28,11 @@ def test_retarget_target_fixture_is_reproducible(tmp_path):
     )
     source_nodes = {node.get("name"): node for node in source_document["nodes"]}
     target_nodes = {node.get("name"): node for node in target_document["nodes"]}
-    assert source_nodes["Spine"]["children"] != target_nodes["Spine"]["children"]
+    assert source_nodes["Spine"]["children"] != (
+        target_nodes["mixamorig:Spine"]["children"]
+    )
+    assert target_nodes["mixamorig:LeftArm"]["name"] == "mixamorig:LeftArm"
+    assert target_document["animations"] == []
     assert source_nodes["LeftLowerArm"]["translation"] != (
-        target_nodes["LeftLowerArm"]["translation"]
+        target_nodes["mixamorig:LeftForeArm"]["translation"]
     )

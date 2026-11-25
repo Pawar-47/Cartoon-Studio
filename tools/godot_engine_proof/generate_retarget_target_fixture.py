@@ -13,6 +13,23 @@ import struct
 from pathlib import Path
 
 JOINT_ORDER = (0, 10, 13, 1, 4, 7, 2, 11, 14, 3, 5, 8, 12, 6, 9)
+NAME_MAP = {
+    "Hips": "mixamorig:Hips",
+    "Spine": "mixamorig:Spine",
+    "Head": "mixamorig:Head",
+    "LeftUpperLeg": "mixamorig:LeftUpLeg",
+    "LeftLowerLeg": "mixamorig:LeftLeg",
+    "LeftFoot": "mixamorig:LeftFoot",
+    "RightUpperLeg": "mixamorig:RightUpLeg",
+    "RightLowerLeg": "mixamorig:RightLeg",
+    "RightFoot": "mixamorig:RightFoot",
+    "LeftUpperArm": "mixamorig:LeftArm",
+    "LeftLowerArm": "mixamorig:LeftForeArm",
+    "LeftHand": "mixamorig:LeftHand",
+    "RightUpperArm": "mixamorig:RightArm",
+    "RightLowerArm": "mixamorig:RightForeArm",
+    "RightHand": "mixamorig:RightHand",
+}
 REST_FACTORS = {
     "LeftLowerArm": 1.32,
     "RightLowerArm": 1.32,
@@ -154,6 +171,9 @@ def generate_target_fixture(source_path: Path, output_path: Path) -> None:
         struct.pack_into("<16f", binary, inverse_bind_offset + new_index * 64, *matrix)
 
     skin["joints"] = [old_joints[index] for index in JOINT_ORDER]
+    for canonical_name, imported_name in NAME_MAP.items():
+        nodes[node_by_name[canonical_name]]["name"] = imported_name
+    document["animations"] = []
     document["buffers"][0]["byteLength"] = len(binary)
     json_bytes = json.dumps(document, separators=(",", ":")).encode("utf-8")
     json_bytes += b" " * ((-len(json_bytes)) % 4)
