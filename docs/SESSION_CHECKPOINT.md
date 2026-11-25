@@ -3,7 +3,7 @@
 Updated: 2026-11-25
 Repository: https://github.com/Pawar-47/Cartoon-Studio
 Branch: main
-Checkpoint HEAD: 09911e3b7210bfb1eb98ef218110f8ef4ecdded0
+Checkpoint HEAD: pending CI
 
 ## Mission and source of truth
 
@@ -24,6 +24,13 @@ Phase 2 — Character Studio remains ACTIVE. Phase 0 and Phase 1 are complete. D
 - Per-bone imported rest transforms (local origin, rotation, scale) and local-offset summaries.
 - Deterministic skinned 15-bone humanoid GLB fixture with imported arm animation.
 - Native Godot proof that imports the fixture, confirms skin binding and animation, then transfers the imported source animation to a differently proportioned target skeleton.
+
+## Imported-pair retarget workflow batch — 2026-11-25
+
+- Added Character Studio source/target selection, optional animation name, scene creation and retarget history.
+- Added project API preflight and persistent retarget records. The API requires distinct characters, complete unambiguous 15-bone mappings, valid parent chains, a source animation and target skin binding.
+- Godot saves a separate scene and starts the chosen source animation on scene load. Original GLB files are not edited.
+- CI #245 exposed an imported fixture hierarchy mismatch. The next successful worker test must include the hierarchy diagnostics; no arbitrary-import acceptance is claimed.
 
 ## Current verification
 

@@ -4,7 +4,7 @@
 
 - Repository: Pawar-47/Cartoon-Studio
 - Branch: main
-- Latest implementation HEAD: 09911e3b7210bfb1eb98ef218110f8ef4ecdded0
+- Latest implementation HEAD: pending CI
 - Phase 0: COMPLETE.
 - Phase 1: COMPLETE.
 - Phase 2 — Character Studio: ACTIVE. P2.1 worker/runtime integration is accepted; P2.2 import, preview and profile workflow is implemented and expanding. Phase 2 is not complete.
@@ -12,6 +12,13 @@
 - Windows CI #225 passed on pre-batch HEAD `8649ae66d364d0b434a69a6f6e17a0683370ad1c`, including full install/upgrade/uninstall/reinstall lifecycle.
 - Current native Godot proof: [run #10](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45611397302) PASSED. The later imported-pair worker operation is being integrated and has a real Godot worker test; CI #244 stopped at Ruff import ordering before tests ran.
 - A durable chat-independent resume record is maintained in `docs/SESSION_CHECKPOINT.md`.
+
+## Imported-pair retarget workflow integration (pending CI)
+
+- Character Studio provides source/target selectors, animation selection, retarget scene creation and saved retarget history.
+- API preflight rejects incomplete/ambiguous mappings, invalid parent chains, missing source animation and unskinned target assets.
+- Retarget scene and JSON record are saved inside the project; original imported GLBs remain untouched.
+- CI #245 exposed a real imported fixture hierarchy mismatch. This batch remains pending until that is resolved and CI passes.
 
 ## Current implemented Character Studio capabilities
 
