@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import struct
+
+import pytest
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -26,6 +28,10 @@ def make_glb() -> bytes:
 
 
 class FakeEngine:
+    def __init__(self):
+        self.proportion_source_paths = []
+        self.proportion_values = []
+
     def inspect_glb(self, source_path, allowed_root):
         assert source_path.is_relative_to(allowed_root)
         return {
@@ -94,9 +100,12 @@ class FakeEngine:
         return result
 
     def customize_character_proportions(
-        self, source_path, proportions, destination, allowed_root
+        self, source_path, proportions, destination, allowed_root, bone_mapping=None
     ):
         assert source_path.is_relative_to(allowed_root)
+        assert bone_mapping and bone_mapping.get("Spine") == "mixamorig:Spine"
+        self.proportion_source_paths.append(source_path)
+        self.proportion_values.append(dict(proportions))
         assert any(abs(value - 1.0) > 0.0001 for value in proportions.values())
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(make_glb())
@@ -395,6 +404,8 @@ def test_modular_assembly_recipe_survives_profile_reopen_and_reassembly(
 
 def test_body_proportion_edit_creates_verified_asset_without_mutating_source(tmp_path, monkeypatch):
     client, project_id = setup_project(tmp_path, monkeypatch)
+    engine = FakeEngine()
+    monkeypatch.setattr(main, "get_engine_adapter", lambda: engine)
     source = import_asset(client, project_id)
     source_path = tmp_path / "projects" / project_id / source["relative_path"]
     original_bytes = source_path.read_bytes()
@@ -410,6 +421,40 @@ def test_body_proportion_edit_creates_verified_asset_without_mutating_source(tmp
     assert result["geometry_edit"]["changed_bones"]
     assert result["geometry_edit"]["source_relative_path"] == source["relative_path"]
     assert source_path.read_bytes() == original_bytes
+    second_proportions = {
+        "torso_length": 1.2, "shoulder_width": 1.04, "arm_length": 1.0,
+        "leg_length": 1.1, "head_size": 1.0,
+    }
+    second = client.post(
+        f"/api/projects/{project_id}/character-assets/{result['asset_id']}/proportions",
+        json=second_proportions,
+    )
+    assert second.status_code == 201, second.text
+    second_result = second.json()
+    assert engine.proportion_source_paths == [source_path, source_path]
+    assert engine.proportion_values[1]["torso_length"] == pytest.approx(1.2)
+    hair = client.post(
+        f"/api/projects/{project_id}/character-assets/{second_result['asset_id']}/hair",
+        json={"style": "bob", "color": "#4b2d1e"},
+    )
+    assert hair.status_code == 201, hair.text
+    hair_result = hair.json()
+    hair_path = tmp_path / "projects" / project_id / hair_result["relative_path"]
+    third_proportions = {
+        "torso_length": 1.1, "shoulder_width": 1.12, "arm_length": 0.96,
+        "leg_length": 1.04, "head_size": 1.08,
+    }
+    third = client.post(
+        f"/api/projects/{project_id}/character-assets/{hair_result['asset_id']}/proportions",
+        json=third_proportions,
+    )
+    assert third.status_code == 201, third.text
+    third_result = third.json()
+    assert engine.proportion_source_paths[2] == hair_path
+    assert engine.proportion_values[2]["torso_length"] == pytest.approx(1.1 / 1.2)
+    assert third_result["geometry_edit"]["source_relative_path"] == hair_result["relative_path"]
+    assert third_result["geometry_edit"]["source_proportions"] == second_proportions
+    assert third_result["geometry_edit_history"][-1]["type"] == "procedural_hair"
     manifest = client.get(
         f"/api/projects/{project_id}/character-assets/{result['asset_id']}/manifest"
     )

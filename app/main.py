@@ -882,7 +882,47 @@ def customize_character_asset_proportions(
         )
         source_manifest = read_json(source_manifest_path)
         source_data = source_manifest.get("data", {})
-        source_relative_path = str(source_data.get("relative_path", ""))
+        current_relative_path = str(source_data.get("relative_path", ""))
+        current_geometry_edit = source_data.get("geometry_edit") or {}
+        history = list(source_data.get("geometry_edit_history") or [])
+        for prior_edit in (
+            source_data.get("previous_geometry_edit"),
+            current_geometry_edit,
+        ):
+            if isinstance(prior_edit, dict) and prior_edit:
+                if not history or history[-1] != prior_edit:
+                    history.append(prior_edit)
+        last_body_edit = next(
+            (
+                item for item in reversed(history)
+                if item.get("type") == "humanoid_body_proportions"
+            ),
+            {},
+        )
+        if current_geometry_edit.get("type") == "humanoid_body_proportions":
+            source_relative_path = str(
+                current_geometry_edit.get("source_relative_path") or current_relative_path
+            )
+            source_proportions = current_geometry_edit.get("source_proportions") or {}
+        elif last_body_edit:
+            source_relative_path = current_relative_path
+            source_proportions = last_body_edit.get("proportions") or {}
+        else:
+            source_relative_path = current_relative_path
+            source_proportions = {}
+        rig_analysis = source_data.get("rig_analysis") or {}
+        bone_mapping = rig_analysis.get("bone_mapping", {})
+        if (
+            rig_analysis.get("status") != "humanoid_names_complete"
+            or not isinstance(bone_mapping, dict)
+        ):
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "Body-proportion editing requires a complete, unambiguous "
+                    "humanoid bone mapping."
+                ),
+            )
         project_root = project_directory(DATA_DIR, project_id)
         source_path = resolve_project_relative(DATA_DIR, project_id, source_relative_path)
     except (ValueError, OSError) as error:
@@ -903,13 +943,30 @@ def customize_character_asset_proportions(
             status_code=422,
             detail="Change at least one body proportion before applying.",
         )
+    worker_proportions: dict[str, float] = {}
+    for name, value in proportions.items():
+        baseline = source_proportions.get(name, 1.0)
+        if (
+            isinstance(baseline, bool)
+            or not isinstance(baseline, (int, float))
+            or not 0.75 <= float(baseline) <= 1.25
+        ):
+            raise HTTPException(
+                status_code=422,
+                detail="The saved source body-proportion baseline is invalid.",
+            )
+        worker_proportions[name] = float(value) / float(baseline)
     new_asset_id = str(uuid.uuid4())
     relative_path = f"assets/characters/{new_asset_id}.glb"
     destination = resolve_project_relative(DATA_DIR, project_id, relative_path)
     destination.parent.mkdir(parents=True, exist_ok=True)
     try:
         inspection = get_engine_adapter().customize_character_proportions(
-            source_path, proportions, destination, allowed_root=project_root
+            source_path,
+            worker_proportions,
+            destination,
+            allowed_root=project_root,
+            bone_mapping=bone_mapping,
         )
         if not inspection.get("proportions_verified"):
             raise HTTPException(
@@ -932,15 +989,17 @@ def customize_character_asset_proportions(
             "geometry_edit": {
                 "type": "humanoid_body_proportions",
                 "source_relative_path": source_relative_path,
+                "source_proportions": source_proportions,
                 "proportions": proportions,
                 "changed_bones": inspection.get("changed_bones", []),
                 "verified": True,
             },
+            "geometry_edit_history": history[-20:],
         }
         if source_data.get("assembly"):
             asset_data["assembly"] = source_data["assembly"]
-        if source_data.get("geometry_edit"):
-            asset_data["previous_geometry_edit"] = source_data["geometry_edit"]
+        if current_geometry_edit:
+            asset_data["previous_geometry_edit"] = current_geometry_edit
         manifest = make_envelope("character_asset", new_asset_id, asset_data, now, now, 1)
         manifest_path = resolve_project_relative(
             DATA_DIR, project_id, f"assets/characters/{new_asset_id}.json"
@@ -1042,6 +1101,15 @@ def add_character_asset_hair(
         }
         if source_data.get("assembly"):
             asset_data["assembly"] = source_data["assembly"]
+        history = list(source_data.get("geometry_edit_history") or [])
+        for prior_edit in (
+            source_data.get("previous_geometry_edit"),
+            source_data.get("geometry_edit"),
+        ):
+            if isinstance(prior_edit, dict) and prior_edit:
+                if not history or history[-1] != prior_edit:
+                    history.append(prior_edit)
+        asset_data["geometry_edit_history"] = history[-20:]
         if source_data.get("geometry_edit"):
             asset_data["previous_geometry_edit"] = source_data["geometry_edit"]
         manifest = make_envelope("character_asset", new_asset_id, asset_data, now, now, 1)

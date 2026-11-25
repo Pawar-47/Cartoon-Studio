@@ -32,6 +32,8 @@ let materialCatalog = [];
 let materialByKey = new Map();
 let morphTargetCatalog = [];
 let morphTargetByKey = new Map();
+let proportionBones = new Map();
+let proportionBoneBaseline = new Map();
 
 function ensureRenderer() {
   if (renderer) return true;
@@ -122,6 +124,8 @@ function disposeCurrentObject() {
   materialByKey.clear();
   morphTargetCatalog = [];
   morphTargetByKey.clear();
+  proportionBones.clear();
+  proportionBoneBaseline.clear();
 }
 
 function updatePlaybackControls() {
@@ -250,6 +254,55 @@ export function applyCharacterMorphTargets(recipe = {}) {
   }
 }
 
+function collectProportionBones(root) {
+  proportionBones.clear();
+  proportionBoneBaseline.clear();
+  root.traverse((node) => {
+    if (!node.isBone || !node.name) return;
+    if (proportionBones.has(node.name)) {
+      proportionBones.set(node.name, null);
+      return;
+    }
+    proportionBones.set(node.name, node);
+    proportionBoneBaseline.set(node.name, {
+      position: node.position.toArray(),
+      scale: node.scale.toArray(),
+    });
+  });
+}
+
+export function applyCharacterBodyProportions(proportions = {}, boneMapping = {}) {
+  if (!currentObject || !proportionBones.size) return;
+  if (activeAction && !playbackPaused) setPlaybackPaused(true);
+  for (const [name, node] of proportionBones) {
+    if (!node) continue;
+    const baseline = proportionBoneBaseline.get(name);
+    node.position.fromArray(baseline.position);
+    node.scale.fromArray(baseline.scale);
+  }
+  const groups = [
+    { factor: "torso_length", bones: ["Spine", "Head"], mode: "vertical" },
+    { factor: "shoulder_width", bones: ["LeftUpperArm", "RightUpperArm"], mode: "horizontal" },
+    { factor: "arm_length", bones: ["LeftUpperArm", "LeftLowerArm", "LeftHand", "RightUpperArm", "RightLowerArm", "RightHand"], mode: "vector" },
+    { factor: "leg_length", bones: ["LeftUpperLeg", "LeftLowerLeg", "LeftFoot", "RightUpperLeg", "RightLowerLeg", "RightFoot"], mode: "vector" },
+    { factor: "head_size", bones: ["Head"], mode: "basis" },
+  ];
+  for (const group of groups) {
+    const factor = Number(proportions[group.factor] ?? 1);
+    if (!Number.isFinite(factor) || Math.abs(factor - 1) < 0.0001) continue;
+    for (const canonicalName of group.bones) {
+      const actualName = boneMapping[canonicalName] || canonicalName;
+      const bone = proportionBones.get(actualName);
+      if (!bone) continue;
+      if (group.mode === "vertical") bone.position.y *= factor;
+      else if (group.mode === "horizontal") bone.position.x *= factor;
+      else if (group.mode === "vector") bone.position.multiplyScalar(factor);
+      else if (group.mode === "basis") bone.scale.multiplyScalar(factor);
+    }
+  }
+  currentObject.updateMatrixWorld(true);
+}
+
 export async function showCharacterPreview(buffer, label = "Character", appearance = {}, options = {}) {
   const playAnimations = options.playAnimations !== false;
   canvas.style.display = "block";
@@ -264,6 +317,7 @@ export async function showCharacterPreview(buffer, label = "Character", appearan
     currentObject.updateMatrixWorld(true);
     collectMaterials(currentObject);
     collectMorphTargets(currentObject);
+    collectProportionBones(currentObject);
     applyCharacterAppearance(appearance.materials || appearance);
     applyCharacterMorphTargets(appearance.morph_targets || {});
 

@@ -281,7 +281,9 @@ class GodotEngineAdapter:
         allowed_root: Path,
         timeout_seconds: float | None = None,
         cancel_event: threading.Event | None = None,
+        bone_mapping: dict[str, str] | None = None,
     ) -> dict[str, Any]:
+        bone_mapping = bone_mapping or {}
         root = Path(allowed_root).resolve(strict=False)
         source = Path(source_path).resolve(strict=True)
         output = Path(output_path).resolve(strict=False)
@@ -303,16 +305,36 @@ class GodotEngineAdapter:
             value = proportions.get(name, 1.0)
             if isinstance(value, bool) or not isinstance(value, (int, float)):
                 raise EnginePathError(f"{name} must be a numeric scale factor.")
-            if not 0.75 <= float(value) <= 1.25:
-                raise EnginePathError(f"{name} must be between 0.75 and 1.25.")
+            if not 0.5 <= float(value) <= 2.0:
+                raise EnginePathError(f"{name} must be between 0.5 and 2.0.")
             validated[name] = float(value)
         if all(abs(value - 1.0) < 0.0001 for value in validated.values()):
             raise EnginePathError("Change at least one body proportion before applying.")
+        allowed_bones = {
+            "Hips", "Spine", "Head", "LeftUpperLeg", "LeftLowerLeg", "LeftFoot",
+            "RightUpperLeg", "RightLowerLeg", "RightFoot", "LeftUpperArm",
+            "LeftLowerArm", "LeftHand", "RightUpperArm", "RightLowerArm", "RightHand",
+        }
+        validated_mapping: dict[str, str] = {}
+        for canonical, actual in bone_mapping.items():
+            if (
+                canonical not in allowed_bones
+                or not isinstance(actual, str)
+                or not actual
+                or len(actual) > 128
+            ):
+                raise EnginePathError("The humanoid bone mapping contains an invalid entry.")
+            validated_mapping[canonical] = actual
         output.parent.mkdir(parents=True, exist_ok=True)
         return self._run(
             "customize_character_proportions",
-            {"project_root": str(root), "source_path": str(source),
-             "output_path": str(output), "proportions": validated},
+            {
+                "project_root": str(root),
+                "source_path": str(source),
+                "output_path": str(output),
+                "proportions": validated,
+                "bone_mapping": validated_mapping,
+            },
             timeout_seconds=timeout_seconds, cancel_event=cancel_event,
         )
 
