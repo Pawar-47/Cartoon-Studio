@@ -9,29 +9,29 @@ from typing import Any
 # conservative core mapping: optional spine/neck/shoulder/finger bones are not
 # guessed and are not counted as required for the first retarget preflight.
 REQUIRED_HUMANOID_BONES: dict[str, frozenset[str]] = {
-    "Hips": frozenset({"hips", "hip", "pelvis"}),
-    "Spine": frozenset({"spine", "spine1", "spine01", "spine001"}),
-    "Head": frozenset({"head"}),
+    "Hips": frozenset({"hips", "hip", "pelvis", "torsojoint1"}),
+    "Spine": frozenset({"spine", "spine1", "spine01", "spine001", "torsojoint2"}),
+    "Head": frozenset({"head", "neckjoint2"}),
     "LeftUpperLeg": frozenset(
-        {"leftupleg", "leftupperleg", "leftthigh", "uplegl", "thighl", "upperlegl"}
+        {"leftupleg", "leftupperleg", "leftthigh", "uplegl", "thighl", "upperlegl", "legjointl1"}
     ),
     "LeftLowerLeg": frozenset(
-        {"leftleg", "leftlowerleg", "leftcalf", "calfl", "lowerlegl", "shinl"}
+        {"leftleg", "leftlowerleg", "leftcalf", "calfl", "lowerlegl", "shinl", "legjointl2"}
     ),
-    "LeftFoot": frozenset({"leftfoot", "footl"}),
+    "LeftFoot": frozenset({"leftfoot", "footl", "legjointl3"}),
     "RightUpperLeg": frozenset(
-        {"rightupleg", "rightupperleg", "rightthigh", "uplegr", "thighr", "upperlegr"}
+        {"rightupleg", "rightupperleg", "rightthigh", "uplegr", "thighr", "upperlegr", "legjointr1"}
     ),
     "RightLowerLeg": frozenset(
-        {"rightleg", "rightlowerleg", "rightcalf", "calfr", "lowerlegr", "shinr"}
+        {"rightleg", "rightlowerleg", "rightcalf", "calfr", "lowerlegr", "shinr", "legjointr2"}
     ),
-    "RightFoot": frozenset({"rightfoot", "footr"}),
-    "LeftUpperArm": frozenset({"leftarm", "leftupperarm", "upperarml", "arml"}),
-    "LeftLowerArm": frozenset({"leftforearm", "leftlowerarm", "forearml", "lowerarml"}),
-    "LeftHand": frozenset({"lefthand", "handl"}),
-    "RightUpperArm": frozenset({"rightarm", "rightupperarm", "upperarmr", "armr"}),
-    "RightLowerArm": frozenset({"rightforearm", "rightlowerarm", "forearmr", "lowerarmr"}),
-    "RightHand": frozenset({"righthand", "handr"}),
+    "RightFoot": frozenset({"rightfoot", "footr", "legjointr3"}),
+    "LeftUpperArm": frozenset({"leftarm", "leftupperarm", "upperarml", "arml", "armjointl1"}),
+    "LeftLowerArm": frozenset({"leftforearm", "leftlowerarm", "forearml", "lowerarml", "armjointl2"}),
+    "LeftHand": frozenset({"lefthand", "handl", "armjointl3"}),
+    "RightUpperArm": frozenset({"rightarm", "rightupperarm", "upperarmr", "armr", "armjointr1"}),
+    "RightLowerArm": frozenset({"rightforearm", "rightlowerarm", "forearmr", "lowerarmr", "armjointr2"}),
+    "RightHand": frozenset({"righthand", "handr", "armjointr3"}),
 }
 _PREFIXES = (
     "mixamorig",

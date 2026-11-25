@@ -264,6 +264,40 @@ def test_pinned_godot_worker_reports_imported_humanoid_rest_transforms(tmp_path)
     )
 
 
+def test_pinned_godot_worker_inspects_real_third_party_rigged_figure(tmp_path):
+    adapter = _real_godot_adapter(tmp_path)
+    fixture = (
+        Path(__file__).resolve().parents[1]
+        / "tests"
+        / "fixtures"
+        / "third_party"
+        / "rigged_figure_ccby.glb"
+    )
+    assert fixture.is_file(), "The licensed third-party Rigged Figure fixture is unavailable."
+    asset_dir = tmp_path / "third-party-assets"
+    asset_dir.mkdir()
+    target = asset_dir / "rigged-figure.glb"
+    shutil.copyfile(fixture, target)
+
+    inspection = adapter.inspect_glb(target, allowed_root=tmp_path)
+    rig = analyze_rig(inspection)
+
+    assert inspection["ok"] is True
+    assert inspection["mesh_count"] == 1
+    assert inspection["skeleton_count"] == 1
+    assert inspection["animation_count"] >= 1
+    assert rig["status"] == "humanoid_names_complete"
+    assert rig["matched_bone_count"] == 15
+    assert rig["hierarchy_validation"]["status"] == "valid"
+    mapping = rig["godot_profile_mapping"]
+    assert mapping["Hips"]["source_name"] == "torso_joint_1"
+    assert mapping["Spine"]["source_name"] == "torso_joint_2"
+    assert mapping["Head"]["source_name"] == "neck_joint_2"
+    assert mapping["LeftUpperLeg"]["source_name"] == "leg_joint_L_1"
+    assert mapping["LeftUpperArm"]["source_name"] == "arm_joint_L_1"
+    assert target.read_bytes() == fixture.read_bytes()
+
+
 def test_pinned_godot_worker_creates_non_destructive_retarget_scene(tmp_path):
     adapter = _real_godot_adapter(tmp_path)
     fixture_dir = (
