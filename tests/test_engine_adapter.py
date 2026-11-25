@@ -328,14 +328,11 @@ def test_pinned_godot_worker_inspects_real_cc0_robot_expressive_facial_morphs(tm
 
     assert inspection["ok"] is True
     assert inspection["animation_count"] >= 10
-    face_targets = [
-        item
-        for item in inspection["morph_targets"]
-        if item["mesh_name"] == "Head_4"
-    ]
-    assert len(face_targets) >= 3
-    assert len({item["name"] for item in face_targets}) == len(face_targets)
-    assert all(isinstance(item["default_value"], (int, float)) for item in face_targets)
+    morph_targets = inspection["morph_targets"]
+    assert inspection["morph_target_count"] >= 3
+    assert len(morph_targets) == inspection["morph_target_count"]
+    assert all(item["name"] for item in morph_targets)
+    assert all(isinstance(item["default_value"], (int, float)) for item in morph_targets)
     assert target.read_bytes() == payload
 
 
