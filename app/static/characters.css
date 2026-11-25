@@ -67,3 +67,5 @@
 
 .expression-presets{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0}
 .expression-presets button{padding:7px 11px;font-size:11px}
+
+.appearance-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.appearance-actions button{margin:0}.appearance-download{display:inline-block;margin-top:9px;color:#8fe0c8;font-size:11px}

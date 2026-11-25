@@ -64,7 +64,7 @@ func _handle_request(request_value: Variant) -> Dictionary:
     if operation == "ping":
         response["ok"] = true
         response["capabilities"] = [
-            "ping", "glb_inspect", "scene_metrics", "skeleton_report", "retarget_glb_pair", "assemble_modular_character", "probe_glb_animation"
+            "ping", "glb_inspect", "scene_metrics", "skeleton_report", "retarget_glb_pair", "assemble_modular_character", "probe_glb_animation", "export_character_appearance"
         ]
         return response
 
@@ -72,6 +72,12 @@ func _handle_request(request_value: Variant) -> Dictionary:
         var inspection := _inspect_glb(payload)
         for key in inspection:
             response[key] = inspection[key]
+        return response
+
+    if operation == "export_character_appearance":
+        var appearance_result: Dictionary = await _export_character_appearance(payload)
+        for key in appearance_result:
+            response[key] = appearance_result[key]
         return response
 
     if operation == "assemble_modular_character":
@@ -160,10 +166,21 @@ func _inspect_glb(payload: Dictionary) -> Dictionary:
             continue
         var surface_names: Array[String] = []
         var material_names: Array[String] = []
+        var material_properties: Array[Dictionary] = []
         for surface_index in range(mesh_resource.get_surface_count()):
             surface_names.append(str(mesh_resource.surface_get_name(surface_index)))
             var surface_material := mesh_instance.get_active_material(surface_index)
             material_names.append(str(surface_material.resource_name) if surface_material != null else "")
+            if surface_material is BaseMaterial3D:
+                var base_material := surface_material as BaseMaterial3D
+                var albedo := base_material.albedo_color
+                material_properties.append({
+                    "color": [albedo.r, albedo.g, albedo.b, albedo.a],
+                    "roughness": base_material.roughness,
+                    "metalness": base_material.metallic
+                })
+            else:
+                material_properties.append({})
         var blend_shape_names: Array[String] = []
         for shape_index in range(mesh_instance.get_blend_shape_count()):
             blend_shape_names.append(str(mesh_resource.get_blend_shape_name(shape_index)))
@@ -185,6 +202,7 @@ func _inspect_glb(payload: Dictionary) -> Dictionary:
             "surface_count": mesh_resource.get_surface_count(),
             "surface_names": surface_names,
             "material_names": material_names,
+            "material_properties": material_properties,
             "blend_shape_names": blend_shape_names,
             "skin_bound": mesh_instance.skin != null,
             "skeleton_path": skeleton_path,
@@ -263,6 +281,200 @@ func _inspect_glb(payload: Dictionary) -> Dictionary:
     }
     scene.free()
     return result
+
+
+func _export_character_appearance(payload: Dictionary) -> Dictionary:
+    var project_root := _normalise_path(str(payload.get("project_root", "")))
+    var source_path := _normalise_path(str(payload.get("source_path", "")))
+    var output_path := _normalise_path(str(payload.get("output_path", "")))
+    if project_root.is_empty() or not DirAccess.dir_exists_absolute(project_root):
+        return {"error_code": "invalid_project_root", "error": "A valid project root is required."}
+    var root_prefix := project_root.trim_suffix("/") + "/"
+    for path in [source_path, output_path]:
+        if not path.to_lower().begins_with(root_prefix.to_lower()):
+            return {"error_code": "path_outside_project", "error": "An appearance export path resolves outside the project."}
+    if not source_path.to_lower().ends_with(".glb") or not FileAccess.file_exists(source_path):
+        return {"error_code": "source_glb_missing", "error": "The appearance source GLB does not exist."}
+    if not output_path.to_lower().ends_with(".glb") or FileAccess.file_exists(output_path):
+        return {"error_code": "invalid_output_path", "error": "Appearance export must create a new GLB file."}
+    var materials_value: Variant = payload.get("materials", [])
+    var morphs_value: Variant = payload.get("morph_targets", [])
+    if typeof(materials_value) != TYPE_ARRAY or materials_value.size() > 256:
+        return {"error_code": "invalid_material_edits", "error": "Material edits must be an array of at most 256 entries."}
+    if typeof(morphs_value) != TYPE_ARRAY or morphs_value.size() > 512:
+        return {"error_code": "invalid_morph_edits", "error": "Morph edits must be an array of at most 512 entries."}
+    if materials_value.is_empty() and morphs_value.is_empty():
+        return {"error_code": "empty_appearance", "error": "There are no appearance edits to export."}
+    var document := GLTFDocument.new()
+    var state := GLTFState.new()
+    var import_error := document.append_from_file(source_path, state)
+    if import_error != OK:
+        return {"error_code": "appearance_import_failed", "error": "Godot could not import the appearance source GLB.", "godot_error": import_error}
+    var scene := document.generate_scene(state)
+    if scene == null:
+        return {"error_code": "appearance_scene_failed", "error": "Godot could not generate the appearance source scene."}
+    root.add_child(scene)
+    await process_frame
+    var mesh_nodes := scene.find_children("*", "MeshInstance3D", true, false)
+    var applied_materials: Array[Dictionary] = []
+    for material_value in materials_value:
+        if typeof(material_value) != TYPE_DICTIONARY:
+            scene.queue_free()
+            return {"error_code": "invalid_material_edit", "error": "Each material edit must be an object."}
+        var edit: Dictionary = material_value
+        var mesh_name := str(edit.get("mesh_name", ""))
+        var surface_index := int(edit.get("surface_index", -1))
+        var matches: Array[MeshInstance3D] = []
+        for mesh_node in mesh_nodes:
+            if str(mesh_node.name) == mesh_name:
+                matches.append(mesh_node as MeshInstance3D)
+        if matches.size() != 1:
+            scene.queue_free()
+            return {"error_code": "material_mesh_ambiguous", "error": "Material edit mesh name must resolve to exactly one mesh: " + mesh_name}
+        var mesh_instance := matches[0]
+        if mesh_instance.mesh == null or surface_index < 0 or surface_index >= mesh_instance.mesh.get_surface_count():
+            scene.queue_free()
+            return {"error_code": "material_surface_missing", "error": "Material surface index is invalid for mesh: " + mesh_name}
+        var source_material := mesh_instance.get_active_material(surface_index)
+        if not (source_material is BaseMaterial3D):
+            scene.queue_free()
+            return {"error_code": "material_type_unsupported", "error": "Only imported BaseMaterial3D surfaces can be baked safely: " + mesh_name}
+        var edited_material := (source_material as BaseMaterial3D).duplicate() as BaseMaterial3D
+        if edited_material == null:
+            scene.queue_free()
+            return {"error_code": "material_clone_failed", "error": "Godot could not clone a material surface."}
+        var color_value := str(edit.get("color", ""))
+        if not color_value.is_empty():
+            edited_material.albedo_color = Color.from_string(color_value, Color.WHITE)
+        if edit.has("roughness"):
+            edited_material.roughness = float(edit["roughness"])
+        if edit.has("metalness"):
+            edited_material.metallic = float(edit["metalness"])
+        mesh_instance.set_surface_override_material(surface_index, edited_material)
+        applied_materials.append({"mesh_name": mesh_name, "mesh_resource_name": str(mesh_instance.mesh.resource_name), "material_name": str(edit.get("material_name", "")), "surface_index": surface_index, "color": color_value, "roughness": edited_material.roughness, "metalness": edited_material.metallic})
+    var applied_morphs: Array[Dictionary] = []
+    var morph_export_meshes: Array[MeshInstance3D] = []
+    for morph_value in morphs_value:
+        if typeof(morph_value) != TYPE_DICTIONARY:
+            scene.queue_free()
+            return {"error_code": "invalid_morph_edit", "error": "Each morph edit must be an object."}
+        var morph: Dictionary = morph_value
+        var mesh_name := str(morph.get("mesh_name", ""))
+        var target_index := int(morph.get("target_index", -1))
+        var target_name := str(morph.get("target_name", ""))
+        var mesh_matches: Array[MeshInstance3D] = []
+        for mesh_node in mesh_nodes:
+            if str(mesh_node.name) == mesh_name:
+                mesh_matches.append(mesh_node as MeshInstance3D)
+        if mesh_matches.size() != 1:
+            scene.queue_free()
+            return {"error_code": "morph_mesh_ambiguous", "error": "Morph mesh name must resolve to exactly one mesh: " + mesh_name}
+        var morph_mesh := mesh_matches[0]
+        if morph_mesh.mesh == null or target_index < 0 or target_index >= morph_mesh.get_blend_shape_count():
+            scene.queue_free()
+            return {"error_code": "morph_target_missing", "error": "Morph target index is invalid for mesh: " + mesh_name}
+        var actual_target_name := str(morph_mesh.mesh.get_blend_shape_name(target_index))
+        if actual_target_name != target_name:
+            scene.queue_free()
+            return {"error_code": "morph_target_mismatch", "error": "Morph target name no longer matches its imported index: " + mesh_name}
+        var weight := float(morph.get("value", 0.0))
+        if weight < -1.0 or weight > 1.0:
+            scene.queue_free()
+            return {"error_code": "morph_weight_invalid", "error": "Morph weight must be between minus one and one."}
+        morph_mesh.set_blend_shape_value(target_index, weight)
+        if not morph_export_meshes.has(morph_mesh):
+            morph_export_meshes.append(morph_mesh)
+        applied_morphs.append({"mesh_name": mesh_name, "target_index": target_index, "target_name": target_name, "value": weight})
+    var export_document := GLTFDocument.new()
+    var export_state := GLTFState.new()
+    var export_error := export_document.append_from_scene(scene, export_state)
+    if export_error != OK:
+        scene.queue_free()
+        return {"error_code": "appearance_export_prepare_failed", "error": "Godot could not prepare the edited character for GLB export.", "godot_error": export_error}
+    var export_meshes: Array[GLTFMesh] = export_state.get_meshes()
+    for morph_mesh in morph_export_meshes:
+        var mesh_resource_name := str(morph_mesh.mesh.resource_name)
+        var matching_mesh_indices: Array[int] = []
+        for candidate_index in range(export_meshes.size()):
+            var candidate_mesh: GLTFMesh = export_meshes[candidate_index]
+            var candidate_name := candidate_mesh.get_original_name()
+            if candidate_name.is_empty() and candidate_mesh.get_mesh() != null:
+                candidate_name = candidate_mesh.get_mesh().get_name()
+            if not mesh_resource_name.is_empty() and candidate_name == mesh_resource_name:
+                matching_mesh_indices.append(candidate_index)
+        if matching_mesh_indices.size() != 1:
+            scene.queue_free()
+            return {"error_code": "morph_mesh_export_mapping_failed", "error": "Godot could not uniquely map facial mesh resource " + mesh_resource_name + " to its exported GLTFMesh."}
+        var export_mesh: GLTFMesh = export_meshes[matching_mesh_indices[0]]
+        var weights: PackedFloat32Array = export_mesh.get_blend_weights()
+        if weights.size() != morph_mesh.get_blend_shape_count():
+            scene.queue_free()
+            return {"error_code": "morph_weight_count_mismatch", "error": "Exported facial mesh blend-weight count does not match its imported blend shapes."}
+        for shape_index in range(morph_mesh.get_blend_shape_count()):
+            weights[shape_index] = morph_mesh.get_blend_shape_value(shape_index)
+        export_mesh.set_blend_weights(weights)
+    var output_error := export_document.write_to_filesystem(export_state, output_path)
+    scene.queue_free()
+    if output_error != OK or not FileAccess.file_exists(output_path):
+        if FileAccess.file_exists(output_path):
+            DirAccess.remove_absolute(output_path)
+        return {"error_code": "appearance_export_failed", "error": "Godot could not write the customized GLB.", "godot_error": output_error}
+    var verification := _inspect_glb({"project_root": project_root, "source_path": output_path})
+    if not bool(verification.get("ok", false)):
+        DirAccess.remove_absolute(output_path)
+        return {"error_code": "appearance_reimport_failed", "error": str(verification.get("error", "The customized GLB failed re-import verification."))}
+    var verified_material_surfaces: Array[String] = []
+    for edit in applied_materials:
+        var material_verified := false
+        var index := int(edit["surface_index"])
+        for mesh_record in verification.get("mesh_inventory", []):
+            var node_name_matches := str(mesh_record.get("node_name", "")) == str(edit["mesh_name"])
+            var exported_resource_name := str(mesh_record.get("mesh_resource_name", ""))
+            var resource_name_matches := exported_resource_name == str(edit["mesh_resource_name"])
+            if not resource_name_matches:
+                resource_name_matches = exported_resource_name == "customized_" + str(edit["mesh_resource_name"])
+            if not node_name_matches and not resource_name_matches:
+                continue
+            var properties: Array = mesh_record.get("material_properties", [])
+            if index >= properties.size() or properties[index].is_empty():
+                continue
+            var surface_key := str(mesh_record.get("node_name", "")) + ":" + str(index)
+            if verified_material_surfaces.has(surface_key):
+                continue
+            var actual: Dictionary = properties[index]
+            var matches_pbr := absf(float(actual.get("roughness", -1.0)) - float(edit["roughness"])) <= 0.02
+            matches_pbr = matches_pbr and absf(float(actual.get("metalness", -1.0)) - float(edit["metalness"])) <= 0.02
+            if not str(edit["color"]).is_empty():
+                var expected_color := Color.from_string(str(edit["color"]), Color.WHITE)
+                var actual_color: Array = actual.get("color", [])
+                matches_pbr = matches_pbr and actual_color.size() >= 3
+                if actual_color.size() >= 3:
+                    matches_pbr = matches_pbr and absf(float(actual_color[0]) - expected_color.r) <= 0.02
+                    matches_pbr = matches_pbr and absf(float(actual_color[1]) - expected_color.g) <= 0.02
+                    matches_pbr = matches_pbr and absf(float(actual_color[2]) - expected_color.b) <= 0.02
+            if matches_pbr:
+                material_verified = true
+                verified_material_surfaces.append(surface_key)
+                break
+        if not material_verified:
+            DirAccess.remove_absolute(output_path)
+            return {"error_code": "appearance_material_verification_failed", "error": "Customized material PBR values were not found after GLB export/re-import."}
+    for edit in applied_morphs:
+        var morph_verified := false
+        for record in verification.get("morph_targets", []):
+            if str(record.get("mesh_name", "")) == str(edit["mesh_name"]) and int(record.get("index", -1)) == int(edit["target_index"]) and str(record.get("name", "")) == str(edit["target_name"]):
+                if absf(float(record.get("default_value", 0.0)) - float(edit["value"])) <= 0.02:
+                    morph_verified = true
+                break
+        if not morph_verified:
+            DirAccess.remove_absolute(output_path)
+            return {"error_code": "appearance_morph_verification_failed", "error": "A facial morph value did not survive GLB export/re-import."}
+    verification["appearance_verified"] = true
+    verification["applied_material_count"] = applied_materials.size()
+    verification["applied_morph_count"] = applied_morphs.size()
+    verification["applied_materials"] = applied_materials
+    verification["applied_morph_targets"] = applied_morphs
+    return verification
 
 
 func _probe_glb_animation(payload: Dictionary) -> Dictionary:

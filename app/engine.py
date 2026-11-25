@@ -160,6 +160,86 @@ class GodotEngineAdapter:
 
 
 
+    def export_character_appearance(
+        self, source_path: Path, materials: list[dict[str, Any]],
+        morph_targets: list[dict[str, Any]], output_path: Path, allowed_root: Path,
+        timeout_seconds: float | None = None, cancel_event: threading.Event | None = None,
+    ) -> dict[str, Any]:
+        root = Path(allowed_root).resolve(strict=False)
+        source = Path(source_path).resolve(strict=True)
+        output = Path(output_path).resolve(strict=False)
+        if source == root or root not in source.parents:
+            raise EnginePathError("Appearance source path escapes the allowed project directory.")
+        if not root.is_dir():
+            raise EnginePathError("The allowed project root does not exist.")
+        if source.suffix.lower() != ".glb" or not source.is_file():
+            raise EnginePathError("Appearance export requires an existing .glb source.")
+        if source.stat().st_size > MAX_GLB_BYTES:
+            raise EnginePathError("The appearance source GLB exceeds the 512 MiB limit.")
+        if output == root or root not in output.parents:
+            raise EnginePathError("Appearance export output escapes the allowed project directory.")
+        if output.suffix.lower() != ".glb" or output.exists():
+            raise EnginePathError("Appearance export output must be a new .glb file.")
+        if len(materials) > 256 or len(morph_targets) > 512:
+            raise EnginePathError(
+                "Appearance export exceeds the supported material or morph-target limit."
+            )
+        validated_materials: list[dict[str, Any]] = []
+        for item in materials:
+            mesh_name = str(item.get("mesh_name", "")).strip()
+            surface_index = item.get("surface_index")
+            color = str(item.get("color", ""))
+            if not mesh_name or len(mesh_name) > 256:
+                raise EnginePathError("Every material edit requires a valid mesh name.")
+            if not isinstance(surface_index, int) or surface_index < 0 or surface_index > 255:
+                raise EnginePathError("Every material edit requires a valid surface index.")
+            if color and (
+                len(color) != 7
+                or color[0] != "#"
+                or any(c not in "0123456789abcdefABCDEF" for c in color[1:])
+            ):
+                raise EnginePathError("Material color must be a six-digit hexadecimal value.")
+            edit: dict[str, Any] = {"mesh_name": mesh_name, "surface_index": surface_index}
+            if item.get("material_name"):
+                edit["material_name"] = str(item["material_name"])[:256]
+            if color:
+                edit["color"] = color
+            for field in ("roughness", "metalness"):
+                value = item.get(field)
+                if value is not None:
+                    if not isinstance(value, (int, float)) or not 0 <= value <= 1:
+                        raise EnginePathError(f"Material {field} must be between zero and one.")
+                    edit[field] = float(value)
+            if len(edit) == 2:
+                raise EnginePathError("A material edit must change color, roughness or metalness.")
+            validated_materials.append(edit)
+        validated_morphs: list[dict[str, Any]] = []
+        for item in morph_targets:
+            mesh_name = str(item.get("mesh_name", "")).strip()
+            target_name = str(item.get("target_name", "")).strip()
+            target_index = item.get("target_index")
+            value = item.get("value")
+            if not mesh_name or len(mesh_name) > 256 or not target_name or len(target_name) > 256:
+                raise EnginePathError("Every morph edit requires a valid mesh and target name.")
+            if not isinstance(target_index, int) or target_index < 0 or target_index > 1023:
+                raise EnginePathError("Every morph edit requires a valid target index.")
+            if not isinstance(value, (int, float)) or not -1 <= value <= 1:
+                raise EnginePathError("Morph weights must be between minus one and one.")
+            validated_morphs.append({
+                "mesh_name": mesh_name, "target_name": target_name,
+                "target_index": target_index, "value": float(value),
+            })
+        if not validated_materials and not validated_morphs:
+            raise EnginePathError("There are no material or morph edits to export.")
+        output.parent.mkdir(parents=True, exist_ok=True)
+        return self._run(
+            "export_character_appearance",
+            {"project_root": str(root), "source_path": str(source),
+             "output_path": str(output), "materials": validated_materials,
+             "morph_targets": validated_morphs},
+            timeout_seconds=timeout_seconds, cancel_event=cancel_event,
+        )
+
     def assemble_modular_character(
         self,
         base_path: Path,

@@ -1,7 +1,7 @@
 import { buildExpressionPreset } from "./character-expression-presets.js";
 import { showCharacterPreview, showRetargetPreview, getCharacterMaterials, applyCharacterAppearance, getCharacterMorphTargets, applyCharacterMorphTargets } from "./character-preview.js";
 const $=id=>document.getElementById(id);
-let activeProject="", importedAsset=null, activeCharacter=null, editingCharacter=null, appearanceRecipe={materials:{},morph_targets:{}}, retargetCharacters=[], assemblyAssets=[], assemblyAccessories=[];
+let activeProject="", importedAsset=null, activeCharacter=null, editingCharacter=null, appearanceRecipe={materials:{},morph_targets:{},morph_bindings:{}}, retargetCharacters=[], assemblyAssets=[], assemblyAccessories=[];
 const params=new URLSearchParams(window.location.search);
 function lines(value){return value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean)}
 function resetProfileEditor(){editingCharacter=null;$("character-form").reset();$("profile-heading").textContent="Save reusable profile";$("save-character").textContent="Save character profile";$("cancel-edit-profile").hidden=true;$("save-character").disabled=!importedAsset}
@@ -33,7 +33,7 @@ async function loadProjects(){
  await selectProject(select.value);
 }
 async function selectProject(id){
- activeProject=id;assemblyAssets=[];assemblyAccessories=[];renderAssemblyAccessories();refreshAssemblyControls();$("library-import").disabled=!id||!selectedLibraryModel();importedAsset=null;activeCharacter=null;resetProfileEditor();appearanceRecipe={materials:{},morph_targets:{}};$("material-editor").hidden=true;$("morph-editor").hidden=true;$("save-appearance").disabled=true;$("asset-report").hidden=true;$("profile-status").textContent="";$("save-character").disabled=true;$("refresh-characters").disabled=!id;
+ activeProject=id;assemblyAssets=[];assemblyAccessories=[];renderAssemblyAccessories();refreshAssemblyControls();$("library-import").disabled=!id||!selectedLibraryModel();importedAsset=null;activeCharacter=null;resetProfileEditor();appearanceRecipe={materials:{},morph_targets:{},morph_bindings:{}};$("export-appearance").disabled=true;$("download-appearance").hidden=true;$("material-editor").hidden=true;$("morph-editor").hidden=true;$("save-appearance").disabled=true;$("asset-report").hidden=true;$("profile-status").textContent="";$("save-character").disabled=true;$("refresh-characters").disabled=!id;
  $("project-status").textContent=id?"Project selected. Import a GLB model to begin.":"Choose a project to begin.";
  $("character-list").replaceChildren();
  if(!id){$("character-list").innerHTML='<div class="empty">Select a project to see its characters.</div>';return}
@@ -209,11 +209,15 @@ async function openCharacterAppearance(characterDoc){
  if(!response.ok)throw new Error("Could not load the saved GLB asset.");
  const buffer=await response.arrayBuffer();
  activeCharacter=characterDoc;
- appearanceRecipe=JSON.parse(JSON.stringify(data.appearance_recipe||{materials:{},morph_targets:{}}));
- appearanceRecipe.materials=appearanceRecipe.materials||{};appearanceRecipe.morph_targets=appearanceRecipe.morph_targets||{};
+ appearanceRecipe=JSON.parse(JSON.stringify(data.appearance_recipe||{materials:{},morph_targets:{},morph_bindings:{}}));
+ appearanceRecipe.materials=appearanceRecipe.materials||{};appearanceRecipe.morph_targets=appearanceRecipe.morph_targets||{};appearanceRecipe.morph_bindings=appearanceRecipe.morph_bindings||{};
  const loaded=await showCharacterPreview(buffer,data.name,appearanceRecipe,{playAnimations:false});
  if(!loaded)throw new Error("The browser could not preview this GLB. Check WebGL 2 and model compression.");
  const materials=getCharacterMaterials(),select=$("material-select");
+ for(const material of materials){
+  const saved=appearanceRecipe.materials[material.key];
+  if(saved)Object.assign(saved,{mesh_name:material.meshName,surface_index:material.surfaceIndex,material_name:material.name});
+ }
  select.replaceChildren();
  for(const material of materials){
   const option=window.document.createElement("option");
@@ -224,6 +228,8 @@ async function openCharacterAppearance(characterDoc){
  $("material-editor").hidden=false;
  $("morph-editor").hidden=false;
  $("save-appearance").disabled=!materials.length&&!getCharacterMorphTargets().length;
+ $("export-appearance").disabled=!(Object.keys(appearanceRecipe.materials).length||Object.keys(appearanceRecipe.morph_targets).length);
+ $("download-appearance").hidden=true;
  buildMorphControls();
  $("appearance-status").textContent=materials.length?materials.length+" editable material slot(s). Changes are a saved recipe; the source GLB is unchanged.":"No editable materials were found in this model.";
  if(materials.length)selectMaterial(materials[0].key);
@@ -240,8 +246,10 @@ function selectMaterial(key){
 }
 function previewSelectedMaterial(){
  const key=$("material-select").value;if(!key)return;
- const values={color:$("material-color").value,roughness:Number($("material-roughness").value),metalness:Number($("material-metalness").value)};
+ const material=getCharacterMaterials().find(item=>item.key===key);if(!material)return;
+ const values={color:$("material-color").value,roughness:Number($("material-roughness").value),metalness:Number($("material-metalness").value),mesh_name:material.meshName,surface_index:material.surfaceIndex,material_name:material.name};
  appearanceRecipe.materials[key]=values;applyCharacterAppearance({[key]:values});
+ $("export-appearance").disabled=false;$("download-appearance").hidden=true;
  $("roughness-value").value=values.roughness.toFixed(2);$("metalness-value").value=values.metalness.toFixed(2);
  $("appearance-status").textContent="Preview updated. Save to keep this appearance with the character.";
 }
@@ -252,6 +260,7 @@ function buildMorphControls(){
  $("reset-expressions").disabled=!targets.length;
  for(const button of document.querySelectorAll("[data-expression-preset]"))button.disabled=!targets.length;
  for(const target of targets){
+  appearanceRecipe.morph_bindings[target.key]={mesh_name:target.meshName,target_index:target.targetIndex,target_name:target.name};
   const label=window.document.createElement("label");label.className="morph-control";
   const title=window.document.createElement("span");title.textContent=(target.meshName?target.meshName+" · ":"")+target.name;
   const value=appearanceRecipe.morph_targets[target.key]??target.value;
@@ -260,6 +269,7 @@ function buildMorphControls(){
   input.addEventListener("input",()=>{
    const weight=Number(input.value);appearanceRecipe.morph_targets[target.key]=weight;
    output.value=weight.toFixed(2);applyCharacterMorphTargets({[target.key]:weight});
+   $("export-appearance").disabled=false;$("download-appearance").hidden=true;
    $("appearance-status").textContent="Facial preview updated. Save to keep these expression values.";
   });
   label.append(title,output,input);container.append(label);
@@ -268,6 +278,7 @@ function buildMorphControls(){
 $("reset-expressions").addEventListener("click",()=>{
  for(const target of getCharacterMorphTargets())appearanceRecipe.morph_targets[target.key]=target.value;
  applyCharacterMorphTargets(appearanceRecipe.morph_targets);buildMorphControls();
+ $("export-appearance").disabled=false;$("download-appearance").hidden=true;
  $("appearance-status").textContent="Facial controls restored to imported defaults. Save to keep these values.";
 });
 function applyExpressionPreset(name){
@@ -297,6 +308,18 @@ $("save-appearance").addEventListener("click",async()=>{
   await loadCharacters();
  }catch(error){$("appearance-status").textContent=error.message}
  finally{$("save-appearance").disabled=!(getCharacterMaterials().length||getCharacterMorphTargets().length)}
+});
+$("export-appearance").addEventListener("click",async()=>{
+ if(!activeCharacter||!activeProject)return;
+ const button=$("export-appearance");button.disabled=true;
+ $("appearance-status").textContent="Godot is baking material and facial edits into a new GLB, then re-importing it for verification…";
+ try{
+  const response=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/characters/"+encodeURIComponent(activeCharacter.id)+"/export",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(appearanceRecipe)});
+  const result=await response.json();if(!response.ok)throw new Error(result.detail||"Could not export customized character.");
+  const link=$("download-appearance");link.href=result.download_url;link.download=result.original_filename;link.hidden=false;
+  $("appearance-status").textContent="Customized GLB exported and verified · "+result.applied_material_count+" material edit(s), "+result.applied_morph_count+" facial morph(s). The original asset remains unchanged."; 
+ }catch(error){$("appearance-status").textContent=error.message}
+ finally{button.disabled=!(Object.keys(appearanceRecipe.materials).length||Object.keys(appearanceRecipe.morph_targets).length)}
 });
 $("retarget-source").addEventListener("change",()=>{$("create-retarget").disabled=!$("retarget-source").value||!$("retarget-target").value||$("retarget-source").value===$("retarget-target").value});
 $("retarget-target").addEventListener("change",()=>{$("create-retarget").disabled=!$("retarget-source").value||!$("retarget-target").value||$("retarget-source").value===$("retarget-target").value});

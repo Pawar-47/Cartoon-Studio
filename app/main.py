@@ -151,6 +151,15 @@ class MaterialAppearanceInput(BaseModel):
     color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
     roughness: float | None = Field(default=None, ge=0, le=1)
     metalness: float | None = Field(default=None, ge=0, le=1)
+    mesh_name: str | None = Field(default=None, max_length=256)
+    surface_index: int | None = Field(default=None, ge=0, le=255)
+    material_name: str | None = Field(default=None, max_length=256)
+
+
+class MorphBindingInput(BaseModel):
+    mesh_name: str = Field(min_length=1, max_length=256)
+    target_index: int = Field(ge=0, le=1023)
+    target_name: str = Field(min_length=1, max_length=256)
 
 
 class CharacterAppearanceInput(BaseModel):
@@ -158,6 +167,7 @@ class CharacterAppearanceInput(BaseModel):
     morph_targets: dict[str, Annotated[float, Field(ge=-1, le=1)]] = Field(
         default_factory=dict, max_length=512
     )
+    morph_bindings: dict[str, MorphBindingInput] = Field(default_factory=dict, max_length=512)
 
 
 class ProjectRecord(BaseModel):
@@ -1201,7 +1211,7 @@ def create_character(
     data["name"] = payload.name.strip()
     data["description"] = payload.description.strip()
     data["asset"] = manifest["data"]
-    data["appearance_recipe"] = {"materials": {}, "morph_targets": {}}
+    data["appearance_recipe"] = {"materials": {}, "morph_targets": {}, "morph_bindings": {}}
     data["rig_status"] = (
         "ready" if manifest["data"].get("rig_ready") else "unrigged"
     )
@@ -1255,7 +1265,7 @@ def update_character(
     data["description"] = payload.description.strip()
     data["asset"] = existing["data"]["asset"]
     data["appearance_recipe"] = existing["data"].get(
-        "appearance_recipe", {"materials": {}, "morph_targets": {}}
+        "appearance_recipe", {"materials": {}, "morph_targets": {}, "morph_bindings": {}}
     )
     data["rig_status"] = existing["data"].get("rig_status", "unrigged")
     document = make_envelope(
@@ -1290,7 +1300,11 @@ def update_character_appearance(
     appearance = payload.model_dump(mode="json", exclude_none=True)
     materials = appearance["materials"]
     morph_targets = appearance["morph_targets"]
-    if any(not key.strip() or len(key) > 512 for key in [*materials, *morph_targets]):
+    morph_bindings = appearance["morph_bindings"]
+    if any(
+        not key.strip() or len(key) > 512
+        for key in [*materials, *morph_targets, *morph_bindings]
+    ):
         raise HTTPException(
             status_code=422,
             detail="Material identifiers must be 1–512 characters.",
@@ -1300,6 +1314,7 @@ def update_character_appearance(
     data["appearance_recipe"] = {
         "materials": materials,
         "morph_targets": morph_targets,
+        "morph_bindings": morph_bindings,
     }
     updated = make_envelope(
         "character",
@@ -1316,6 +1331,118 @@ def update_character_appearance(
         upsert_document_index(connection, project_id, updated, relative_path, digest)
         sync_character_reference(connection, DATA_DIR, project_id, updated)
     return updated
+
+@app.post("/api/projects/{project_id}/characters/{character_id}/export", status_code=201)
+def export_character_appearance(
+    project_id: str, character_id: str, payload: CharacterAppearanceInput
+) -> dict[str, Any]:
+    initialize_database()
+    with connect_db() as connection:
+        project = connection.execute(
+            "SELECT id FROM projects WHERE id = ?", (project_id,)
+        ).fetchone()
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    document = _character_document(DATA_DIR, project_id, character_id)
+    data = document.get("data", {})
+    source_relative_path = str(data.get("asset", {}).get("relative_path", ""))
+    try:
+        project_root = project_directory(DATA_DIR, project_id)
+        source_path = resolve_project_relative(DATA_DIR, project_id, source_relative_path)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=422, detail="Character source asset path is invalid."
+        ) from error
+    if not source_path.is_file() or source_path.suffix.lower() != ".glb":
+        raise HTTPException(status_code=404, detail="Character source GLB was not found.")
+    appearance = payload.model_dump(mode="json", exclude_none=True)
+    materials: list[dict[str, Any]] = []
+    for key, values in appearance["materials"].items():
+        if not values.get("mesh_name") or values.get("surface_index") is None:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "Material edits need imported mesh/surface bindings. "
+                    "Reopen and resave the editor."
+                ),
+            )
+        if not any(
+            values.get(field) is not None
+            for field in ("color", "roughness", "metalness")
+        ):
+            raise HTTPException(
+                status_code=422, detail="A material edit must change a PBR value."
+            )
+        materials.append({"key": key, **values})
+    morph_targets: list[dict[str, Any]] = []
+    for key, value in appearance["morph_targets"].items():
+        binding = appearance["morph_bindings"].get(key)
+        if binding is None:
+            raise HTTPException(
+                status_code=422,
+                detail="Morph edits must include their imported mesh/target bindings.",
+            )
+        morph_targets.append({"key": key, **binding, "value": value})
+    if not materials and not morph_targets:
+        raise HTTPException(status_code=422, detail="There are no appearance edits to export.")
+    asset_id = str(uuid.uuid4())
+    relative_path = f"assets/characters/{asset_id}.glb"
+    destination = resolve_project_relative(DATA_DIR, project_id, relative_path)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        inspection = get_engine_adapter().export_character_appearance(
+            source_path, materials, morph_targets, destination, allowed_root=project_root
+        )
+        if not inspection.get("appearance_verified"):
+            raise HTTPException(
+                status_code=422,
+                detail="Godot did not verify the customized GLB after export and re-import.",
+            )
+        container = _validate_glb_container(destination)
+        now = datetime.now(UTC).isoformat()
+        asset_data = {
+            "original_filename": "customized-character.glb",
+            "relative_path": relative_path,
+            "container": container,
+            "engine_inspection": inspection,
+            "rig_analysis": analyze_rig(inspection),
+            "rig_ready": int(inspection.get("skeleton_count", 0)) > 0,
+            "animation_ready": int(inspection.get("animation_count", 0)) > 0,
+            "source_character_id": character_id,
+            "source_relative_path": source_relative_path,
+            "appearance_recipe": appearance,
+            "appearance_export_verified": True,
+        }
+        manifest = make_envelope("character_asset", asset_id, asset_data, now, now, 1)
+        manifest_path = resolve_project_relative(
+            DATA_DIR, project_id, f"assets/characters/{asset_id}.json"
+        )
+        digest = write_json_atomic(manifest_path, manifest)
+        with connect_db() as connection:
+            upsert_document_index(
+                connection, project_id, manifest,
+                f"assets/characters/{asset_id}.json", digest
+            )
+        return {
+            "asset_id": asset_id,
+            "relative_path": relative_path,
+            "download_url": f"/api/projects/{project_id}/character-assets/{asset_id}",
+            "original_filename": asset_data["original_filename"],
+            "appearance_verified": True,
+            "applied_material_count": inspection.get("applied_material_count", 0),
+            "applied_morph_count": inspection.get("applied_morph_count", 0),
+        }
+    except EngineUnavailableError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    except EngineTimeoutError as error:
+        raise HTTPException(status_code=504, detail=str(error)) from error
+    except EnginePathError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    except EngineError as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error
+    except Exception:
+        destination.unlink(missing_ok=True)
+        raise
 
 
 @app.get("/story", include_in_schema=False)

@@ -319,3 +319,12 @@ The next P2.2 sub-phase is the **Modular Character Builder**:
 - PR #5 added Node 22 browser-JavaScript syntax validation to the main CI workflow; its feature and main CI runs `45655204627` and `45655471623` passed.
 - Main CI for the expression-preset merge was run `45657010942` and was pending when this checkpoint was written.
 - Phase 2 and P2.2 remain PARTIAL: automated native assembly and pose verification are now covered, but interactive browser visual acceptance, saved-profile recipe round-trip/reassemble, browser playback review and real geometric proportions/face/hair authoring remain.
+
+
+## 2026-11-25 — P2.2 native appearance baking and GLB export
+
+- Character appearance recipes now retain imported mesh/surface and blend-shape bindings alongside editable PBR and morph values.
+- Added a native Godot worker operation to apply supported BaseMaterial3D color/roughness/metallic changes and blend-shape weights to a fresh imported scene, export a new GLB, re-import it, and verify the baked values.
+- Added a project-scoped export endpoint that creates a new versioned asset manifest and download URL. The original source GLB and character asset reference remain unchanged.
+- Added browser export controls and integration coverage using the pinned CC0 RobotExpressive facial-morph fixture.
+- This batch supports named imported morph targets and BaseMaterial3D surfaces; arbitrary shader materials and ambiguous duplicate mesh names are rejected rather than guessed.
