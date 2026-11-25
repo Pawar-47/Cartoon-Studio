@@ -1,24 +1,17 @@
-# Next Steps — 2026-11-25
+# Next Steps — 2026-11-26
 
 ## Current checkpoint
 
-GitHub `main` now contains the proportion-preview/composable-edit work, PR #20 turnaround export, PR #21 Idle-preview behavior and hairstyle-fit fix. The integration's local suite passed 122 tests with four environment-related skips; run #431 found an import-order lint issue, fixed in `7d396e5`, and Actions run #432 passed. Browser visual acceptance remains outstanding; Phase 2 remains active and P2.2 remains PARTIAL.
+GitHub `main` is at `062400e58cbbf491ec92869dc140b60a9b354d7f`; the active work branch is `work/mainline-followup`. Latest main CI [#471](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45791209337) failed because the Godot episode worker has a duplicate `action_cue_count` dictionary key. The working-branch fix and regression test pass locally: pinned-Godot episode test 1 passed; full pytest 136 passed, 4 skipped. The fix has not yet been pushed or run in CI.
 
-The original checkout remains on `work/character-hair-fit` pending final CI and branch cleanup; the WIP stash is preserved. P2.2 remains PARTIAL.
+Phase 2 remains ACTIVE and P2.2 remains PARTIAL. Main also contains partial/out-of-order World Builder, story binding, episode scene generation and procedural action/camera timeline code; these do not constitute phase acceptance. Preserve this work, but do not claim the Phase 2 gate is closed or bypass phase gates.
 
-## Branch consolidation — locally validated
+## Immediate next steps
 
-- The isolated integration includes the proportion-preview/composable-edit work, PR #20 turnaround export, PR #21 Idle-preview behavior and the hairstyle-fit fix.
-- Local validation in the isolated integration worktree passed: 14 pinned-Godot engine tests and 122 full-suite tests; four skips require Node.js or symlink support.
-- PRs #20 and #21 are merged and run #432 passed. Push the final documentation sync, verify its CI, then remove redundant branches and leave the working checkout on `main`; preserve the WIP stash.
-
-## Completed continuation batch — Character preview defaults
-
-- Added default clip resolution that prefers exact normalized `Idle`, then an Idle variant, then the first playable clip; the internal `RESET` clip is excluded by the existing playable-clip resolver.
-- RESET-only assets now display “No playable animations” instead of attempting playback.
-- Local targeted tests: `python -m pytest -o addopts= -q -rs tests/test_characters.py` — 16 passed.
-- Windows GitHub Actions CI #429 passed the Node-backed browser helper tests, JavaScript syntax checks, lint, compilation and full pytest suite.
-- No fresh visual browser acceptance was completed in this batch. Keep Phase 2 active and P2.2 partial.
+1. Review the working-branch diff and run lint/compile checks.
+2. Commit and push only `work/mainline-followup`; verify the resulting Windows CI before treating the parse regression as resolved.
+3. Continue P2.2 visual acceptance and remaining character-creation work. Only after its exit criteria are met should the planned Phase 3 batch become active.
+4. Reassess the existing world/story/episode code against the phase requirements and acceptance evidence; keep it marked partial/out-of-order until those gates are met.
 
 ## Active batch — Phase 2 Character Studio
 

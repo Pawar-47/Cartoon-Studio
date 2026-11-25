@@ -1,14 +1,15 @@
-# Project Status — 2026-11-25
+# Project Status — 2026-11-26
 
 ## Live checkpoint
 
 - Repository: Pawar-47/Cartoon-Studio
-- Source-of-truth branch: `main`; integrated code commit: `7d396e5b9e3b07033240b9f02fb1020003a58a36`. PRs #20 and #21 are merged.
-- The integration was built in an isolated worktree and pushed via fast-forward. Local validation in that worktree: full pytest **122 passed, 4 skipped**; pinned Godot engine suite **14 passed**; Ruff and Python compilation passed.
-- GitHub Actions run [#432](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45703715915) passed. Initial run #431 exposed import ordering in `tests/test_characters.py`; the issue was corrected in the pushed follow-up commit.
+- Source-of-truth branch: `main`, at `062400e58cbbf491ec92869dc140b60a9b354d7f`. The active follow-up branch is `work/mainline-followup`, based on that commit.
+- Latest main CI run [#471](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45791209337) failed because `engine/godot_worker/worker.gd` declared `"action_cue_count"` twice in the episode result dictionary; the parse error prevented the worker from loading.
+- The working-branch fix removes the duplicate key and tests action/camera timeline cues using pinned Godot 4.7.2. Local validation: full pytest **136 passed, 4 skipped**; targeted episode-scene integration **1 passed**. These results are for the unpushed working-tree fix, not a GitHub Actions run.
 - Phase 0: COMPLETE.
 - Phase 1: COMPLETE.
 - Phase 2 — Character Studio: ACTIVE; import, preview, profiles, appearance recipes, rig-based body-proportion export, procedural Head-attached hairstyles, transparent PNG portrait export, rig diagnostics and retargeting are implemented. Preview defaults now prefer an Idle clip and safely handle RESET-only assets. CI validates this behavior; P2.2 remains PARTIAL, with broader visual acceptance and original face geometry still open.
+- Out-of-order partial work is present on `main`: persistent/editable worlds, Godot world-scene export and browser previews; world-linked story plans and cast GLB binding; generated editable episode scenes and GLB previews with procedural action-anchor and camera keyframes. This does not close the Phase 2 gate or constitute phase acceptance.
 - Windows CI #326: full pipeline PASSED on `696929595b2d03e64e46a568ec9d163860ae3239`, including lint, Python compilation, full pytest, pinned Godot 4.7.2 worker, Windows bootstrap, both self-contained application builds, NSIS installers and clean install/upgrade/uninstall/reinstall lifecycle.
 - Windows CI #334: quick CI PASSED on `00b4ed9f97360cba1a304054a8285fd4df1cc827`; pinned RobotExpressive download/checksum, Ruff, Python compilation and full pytest passed. The complete application and installer were intentionally not rebuilt.
 - Windows CI #340: quick CI PASSED on `fba0ad5cec13a5738a2807a2af7bebf0317451cd`; animation-name catalog, explicit/default clip selection, legacy compatibility and unknown-clip rejection passed.
@@ -53,21 +54,22 @@ Godot may normalize raw skin-joint ordering during import. The application uses 
 | Phase 0 — Specification/research/architecture | COMPLETE | Baseline, requirements, research and architecture documented |
 | Phase 1 — GitHub and CI/CD foundation | COMPLETE | Windows bootstrap and installer lifecycle verified |
 | Phase 2 — Character Studio | ACTIVE | Import, preview, profiles, appearance, body-proportion export, geometry-aware hairstyles, PNG portrait and four-view turnaround export are implemented; visual acceptance and original face geometry remain |
-| Phase 3 — World Builder | NOT STARTED | No persistent production world/location builder |
-| Phase 4 — Story and Scene Engine | PARTIAL / FROZEN | Preserve existing Story Generator and saved story plan |
-| Phase 5 — Animation Engine | NOT STARTED | No production timeline/action library |
+| Phase 3 — World Builder | PARTIAL / OUT-OF-ORDER | Persistent/editable worlds, Godot world-scene export and browser previews exist; multi-location reuse and phase acceptance remain open |
+| Phase 4 — Story and Scene Engine | PARTIAL / FROZEN, OUT-OF-ORDER WORK PRESENT | World-linked plans and cast binding exist; the canonical schema, integrated generation, approval and complete production mapping remain incomplete |
+| Phase 5 — Animation Engine | PARTIAL / OUT-OF-ORDER | Generated scenes contain procedural action-anchor and camera keyframes; no reusable clip library, animation editor, blending or visual acceptance |
 | Phase 6 — Urdu Voice and Lip-Sync | RESEARCH COMPLETE; IMPLEMENTATION NOT STARTED | No production TTS/lip-sync |
-| Phase 7 — Episode Generator | NOT STARTED | No complete 5–7 minute production pipeline |
+| Phase 7 — Episode Generator | PARTIAL / OUT-OF-ORDER | Editable scene files and GLB previews are generated; no render queue, voice/lip-sync, audio mix or final 5–7 minute MP4 |
 | Phase 8 — Optimization and Reliability | DEFERRED | Physical-PC benchmarks remain late-stage work |
 
 ## Next implementation batch
 
-1. Complete browser acceptance for procedural hairstyles and transparent PNG exports; verify saved-profile hair selection and output appearance.
-2. Extend acceptance to modular assembly, imported morph controls and baked appearance on representative, hierarchy-validated rigs.
-3. Resolve and document the body-edit compatibility boundary: the pinned Adventurer edit succeeded, but its import report still flags 13/15 humanoid names and a hierarchy needing review.
-4. Compare browser retarget preview against the authoritative saved Godot scene across accepted humanoid, bone-roll and RobotExpressive fixtures.
-5. Continue original face geometry authoring; generated hairstyles do not establish original face authoring or broad visual signoff.
-6. Broaden third-party rig families only where direct compatibility tests and visual acceptance justify support.
+1. Re-run CI on `work/mainline-followup` to verify the Godot worker parse fix on Windows.
+2. Complete browser acceptance for procedural hairstyles and transparent PNG exports; verify saved-profile hair selection and output appearance.
+3. Extend acceptance to modular assembly, imported morph controls and baked appearance on representative, hierarchy-validated rigs.
+4. Resolve and document the body-edit compatibility boundary: the pinned Adventurer edit succeeded, but its import report still flags 13/15 humanoid names and a hierarchy needing review.
+5. Compare browser retarget preview against the authoritative saved Godot scene across accepted humanoid, bone-roll and RobotExpressive fixtures.
+6. Continue original face geometry authoring; generated hairstyles do not establish original face authoring or broad visual signoff.
+7. Resume Phase 3 only after P2.2 exit criteria are met; preserve existing out-of-order world/episode work without claiming it is phase-complete.
 
 ## Frozen architecture and constraints
 

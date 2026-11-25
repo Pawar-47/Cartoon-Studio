@@ -897,8 +897,31 @@ def test_pinned_godot_worker_builds_episode_scenes_with_world_and_character_glb(
                 "location_id": "street-cafe",
                 "character_ids": ["ali"],
                 "dialogue": [],
-                "actions": [],
-                "camera": [],
+                "actions": (
+                    [
+                        {
+                            "character_id": "ali",
+                            "action_id": "wave",
+                            "start_seconds": 1,
+                            "duration_seconds": 3,
+                        }
+                    ]
+                    if index == 1
+                    else []
+                ),
+                "camera": (
+                    [
+                        {
+                            "shot": "medium",
+                            "movement": "dolly",
+                            "target": "ali",
+                            "start_seconds": 1,
+                            "duration_seconds": 3,
+                        }
+                    ]
+                    if index == 1
+                    else []
+                ),
                 "audio": [],
                 "props": [],
             }
@@ -919,3 +942,12 @@ def test_pinned_godot_worker_builds_episode_scenes_with_world_and_character_glb(
     assert all(scene["reopened_character_count"] == 1 for scene in result["scenes"])
     assert all(Path(scene["scene_path"]).is_file() for scene in result["scenes"])
     assert all(Path(scene["preview_path"]).is_file() for scene in result["scenes"])
+    assert result["scenes"][0]["action_cue_count"] == 1
+    assert result["scenes"][0]["camera_cue_count"] == 1
+    assert result["scenes"][0]["animation_track_count"] == 5
+    assert all(
+        scene["action_cue_count"] == 0
+        and scene["camera_cue_count"] == 0
+        and scene["animation_track_count"] == 3
+        for scene in result["scenes"][1:]
+    )
