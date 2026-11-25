@@ -131,6 +131,21 @@ func _inspect_glb(payload: Dictionary) -> Dictionary:
     var animation_players := scene.find_children("*", "AnimationPlayer", true, false)
     for player in animation_players:
         animation_count += (player as AnimationPlayer).get_animation_list().size()
+    var mesh_nodes := scene.find_children("*", "MeshInstance3D", true, false)
+    var morph_targets: Array[Dictionary] = []
+    for mesh_node in mesh_nodes:
+        var mesh_instance := mesh_node as MeshInstance3D
+        var mesh_resource := mesh_instance.mesh
+        if mesh_resource == null:
+            continue
+        for shape_index in range(mesh_resource.get_blend_shape_count()):
+            morph_targets.append({
+                "mesh_path": str(scene.get_path_to(mesh_instance)),
+                "mesh_name": str(mesh_instance.name),
+                "index": shape_index,
+                "name": str(mesh_resource.get_blend_shape_name(shape_index)),
+                "default_value": mesh_instance.get_blend_shape_value(shape_index)
+            })
     var skeleton_nodes := scene.find_children("*", "Skeleton3D", true, false)
     var skeleton_reports: Array[Dictionary] = []
     for skeleton_node in skeleton_nodes:
@@ -160,7 +175,9 @@ func _inspect_glb(payload: Dictionary) -> Dictionary:
 
     var result := {
         "ok": true,
-        "mesh_count": scene.find_children("*", "MeshInstance3D", true, false).size(),
+        "mesh_count": mesh_nodes.size(),
+        "morph_target_count": morph_targets.size(),
+        "morph_targets": morph_targets,
         "skeleton_count": skeleton_nodes.size(),
         "skeletons": skeleton_reports,
         "animation_player_count": animation_players.size(),
