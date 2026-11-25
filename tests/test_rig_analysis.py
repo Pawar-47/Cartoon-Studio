@@ -345,3 +345,54 @@ def test_robot_expressive_imported_bone_names_map_to_humanoid_profile():
     assert result["godot_profile_mapping"]["Head"]["source_name"] == "Head_2"
     assert result["godot_profile_mapping"]["LeftHand"]["source_name"] == "Palm2.L"
     assert result["godot_profile_mapping"]["RightHand"]["source_name"] == "Palm2.R"
+
+
+
+def test_robot_expressive_ik_foot_hierarchy_is_supported_as_a_verified_variant():
+    names = [
+        "Bone", "Foot.L", "Body", "Hips", "Abdomen", "Torso_2", "Neck",
+        "Head_2", "Shoulder.L", "UpperArm.L", "LowerArm.L", "Palm2.L",
+        "Shoulder.R", "UpperArm.R", "LowerArm.R", "Palm2.R",
+        "UpperLeg.L", "LowerLeg.L", "UpperLeg.R", "LowerLeg.R",
+        "Foot.R", "PoleTarget.L", "PoleTarget.R",
+    ]
+    parents = [
+        -1, 0, 0, 2, 3, 4, 5, 6, 5, 8, 9, 10,
+        5, 12, 13, 14, 2, 16, 2, 18, 0, 0, 0,
+    ]
+    bones = [
+        {"index": index, "name": name, "parent_index": parents[index]}
+        for index, name in enumerate(names)
+    ]
+    result = _analyze_rig({
+        "skeleton_count": 1,
+        "skeletons": [{"bone_count": len(bones), "bones": bones}],
+    })
+
+    assert result["status"] == "humanoid_names_complete"
+    assert result["hierarchy_validation"]["status"] == "valid_with_ik_foot_hierarchy"
+    assert result["hierarchy_validation"]["issues"] == []
+    assert "IK controller layout" in result["hierarchy_validation"]["note"]
+
+
+def test_detached_feet_without_bilateral_ik_controllers_remain_invalid():
+    names = [
+        "Bone", "Foot.L", "Body", "Hips", "Abdomen", "Torso_2", "Neck",
+        "Head_2", "Shoulder.L", "UpperArm.L", "LowerArm.L", "Palm2.L",
+        "Shoulder.R", "UpperArm.R", "LowerArm.R", "Palm2.R",
+        "UpperLeg.L", "LowerLeg.L", "UpperLeg.R", "LowerLeg.R", "Foot.R",
+    ]
+    parents = [
+        -1, 0, 0, 2, 3, 4, 5, 6, 5, 8, 9, 10,
+        5, 12, 13, 14, 2, 16, 2, 18, 0,
+    ]
+    bones = [
+        {"index": index, "name": name, "parent_index": parents[index]}
+        for index, name in enumerate(names)
+    ]
+    result = _analyze_rig({
+        "skeleton_count": 1,
+        "skeletons": [{"bone_count": len(bones), "bones": bones}],
+    })
+
+    assert result["hierarchy_validation"]["status"] == "invalid"

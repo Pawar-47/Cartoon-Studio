@@ -9,7 +9,7 @@ from typing import Any
 # conservative core mapping: optional spine/neck/shoulder/finger bones are not
 # guessed and are not counted as required for the first retarget preflight.
 REQUIRED_HUMANOID_BONES: dict[str, frozenset[str]] = {
-    "Hips": frozenset({"hips", "hip", "pelvis", "torsojoint1"}),
+    "Hips": frozenset({"hips", "hip", "pelvis", "torsojoint1", "body"}),
     "Spine": frozenset({"spine", "spine1", "spine01", "spine001", "torsojoint2", "abdomen"}),
     "Head": frozenset({"head", "head2", "neckjoint2"}),
     "LeftUpperLeg": frozenset(
@@ -198,12 +198,15 @@ def _validate_humanoid_hierarchy(
             }
         parents[index] = parent
 
-    issues: list[str] = []
+    structural_issues: list[str] = []
+    failed_chains: list[tuple[str, str]] = []
     for index, parent in parents.items():
         if parent != -1 and parent not in parents:
-            issues.append(f"Bone index {index} references missing parent index {parent}.")
+            structural_issues.append(
+                f"Bone index {index} references missing parent index {parent}."
+            )
         if parent == index:
-            issues.append(f"Bone index {index} is its own parent.")
+            structural_issues.append(f"Bone index {index} is its own parent.")
 
     def is_descendant(child_index: int, ancestor_index: int) -> bool:
         visited: set[int] = set()
@@ -217,7 +220,9 @@ def _validate_humanoid_hierarchy(
                 return False
             current = parent
         if current in visited:
-            issues.append(f"Parent cycle detected while traversing bone index {child_index}.")
+            structural_issues.append(
+                f"Parent cycle detected while traversing bone index {child_index}."
+            )
         return False
 
     required_chains = (
@@ -248,21 +253,102 @@ def _validate_humanoid_hierarchy(
         if child_index not in parents or ancestor_index not in parents:
             issues.append(f"{child_name} or {ancestor_name} has no indexed hierarchy entry.")
         elif not is_descendant(child_index, ancestor_index):
-            issues.append(
-                f"{child_name} (index {child_index}) is not a descendant of "
-                f"{ancestor_name} (index {ancestor_index})."
-            )
+            failed_chains.append((child_name, ancestor_name))
 
-    status = "invalid" if issues else "valid" if checked == len(required_chains) else "incomplete"
+    allowed_ik_foot_failures = {
+        ("LeftUpperLeg", "Hips"),
+        ("RightUpperLeg", "Hips"),
+        ("LeftFoot", "LeftLowerLeg"),
+        ("RightFoot", "RightLowerLeg"),
+    }
+
+    def ancestor_chain(index: int) -> list[int]:
+        chain: list[int] = []
+        visited: set[int] = set()
+        current = index
+        while current in parents and current not in visited:
+            visited.add(current)
+            chain.append(current)
+            parent = parents[current]
+            if parent == -1 or parent not in parents:
+                break
+            current = parent
+        return chain
+
+    def common_ancestor(indices: list[int]) -> int | None:
+        chains = [ancestor_chain(index) for index in indices]
+        if not chains or any(not chain for chain in chains):
+            return None
+        shared = set(chains[0])
+        for chain in chains[1:]:
+            shared.intersection_update(chain)
+        return next((index for index in chains[0] if index in shared), None)
+
+    normalized_names: set[str] = set()
+    indexed_names: dict[str, int] = {}
+    for fallback_index, bone in enumerate(bones):
+        if isinstance(bone, Mapping):
+            name = str(bone.get("name", ""))
+            try:
+                bone_index = int(bone.get("index", fallback_index))
+            except (TypeError, ValueError):
+                bone_index = fallback_index
+        else:
+            name = str(bone)
+            bone_index = fallback_index
+        normalized = _normalise_bone_name(name)
+        normalized_names.add(normalized)
+        indexed_names[normalized] = bone_index
+
+    ik_foot_layout = False
+    if (
+        not structural_issues
+        and set(failed_chains) == allowed_ik_foot_failures
+        and {"poletargetl", "poletargetr"}.issubset(normalized_names)
+    ):
+        required_indices = [
+            int(profile_mapping[name]["bone_index"])
+            for name in ("Hips", "LeftUpperLeg", "RightUpperLeg", "LeftFoot", "RightFoot")
+        ]
+        shared_root = common_ancestor(required_indices)
+        pole_indices = [indexed_names["poletargetl"], indexed_names["poletargetr"]]
+        if shared_root is not None and all(
+            shared_root in ancestor_chain(index) for index in pole_indices
+        ):
+            ik_foot_layout = True
+
+    if ik_foot_layout:
+        status = "valid_with_ik_foot_hierarchy"
+        issues: list[str] = []
+        note = (
+            "Core humanoid chains are valid; both feet use a separate shared-root "
+            "Blender IK controller layout verified by native retarget testing."
+        )
+    else:
+        issues = list(structural_issues)
+        for child_name, ancestor_name in failed_chains:
+            child = profile_mapping.get(child_name, {})
+            ancestor = profile_mapping.get(ancestor_name, {})
+            issues.append(
+                f"{child_name} (index {child.get('bone_index', -1)}) is not a descendant of "
+                f"{ancestor_name} (index {ancestor.get('bone_index', -1)})."
+            )
+        status = (
+            "invalid" if issues
+            else "valid" if checked == len(required_chains)
+            else "incomplete"
+        )
+        note = (
+            "Required humanoid parent chains are structurally consistent."
+            if status == "valid"
+            else "Required humanoid parent chains need correction or review."
+        )
+
     return {
         "status": status,
         "checked_relationships": checked,
         "issues": issues,
-        "note": (
-            "Required humanoid parent chains are structurally consistent."
-            if status == "valid"
-            else "Required humanoid parent chains need correction or review."
-        ),
+        "note": note,
     }
 
 def analyze_rig(inspection: Mapping[str, Any]) -> dict[str, Any]:

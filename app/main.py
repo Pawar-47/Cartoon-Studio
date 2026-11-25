@@ -656,7 +656,10 @@ def create_character_retarget(
                     "15-bone humanoid mapping."
                 ),
             )
-        if hierarchy.get("status") != "valid":
+        allowed_hierarchy_statuses = {"valid"}
+        if label == "source":
+            allowed_hierarchy_statuses.add("valid_with_ik_foot_hierarchy")
+        if hierarchy.get("status") not in allowed_hierarchy_statuses:
             raise HTTPException(
                 status_code=422,
                 detail=(

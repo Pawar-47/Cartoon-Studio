@@ -72,12 +72,18 @@ function updateRetargetCharacterOptions(characters){
  }
  for(const characterDoc of characters){
   const data=characterDoc.data||{},asset=data.asset||{},inspection=asset.engine_inspection||{},container=asset.container||{},rig=asset.rig_analysis||{},hierarchy=rig.hierarchy_validation||{};
-  const compatible=rig.status==="humanoid_names_complete"&&hierarchy.status==="valid"&&Number(inspection.skeleton_count||0)===1;
+  const sourceHierarchyAllowed=["valid","valid_with_ik_foot_hierarchy"].includes(hierarchy.status);
+  const sourceCompatible=rig.status==="humanoid_names_complete"&&sourceHierarchyAllowed&&Number(inspection.skeleton_count||0)===1;
+  const targetCompatible=rig.status==="humanoid_names_complete"&&hierarchy.status==="valid"&&Number(inspection.skeleton_count||0)===1;
   const clipNames=inspection.animation_names;
   const hasPlayableClips=Array.isArray(clipNames)?clipNames.length>0:Number(inspection.animation_count||0)>0;
   const skinCount=Number(container.skin_count??inspection.skin_count??0);
-  if(compatible&&hasPlayableClips)source.append(documentElementOption(characterDoc));
-  if(compatible&&skinCount>0)target.append(documentElementOption(characterDoc));
+  if(sourceCompatible&&hasPlayableClips){
+   const option=documentElementOption(characterDoc);
+   if(hierarchy.status==="valid_with_ik_foot_hierarchy")option.textContent+=" · IK-foot rig";
+   source.append(option);
+  }
+  if(targetCompatible&&skinCount>0)target.append(documentElementOption(characterDoc));
  }
  if([...source.options].some(option=>option.value===previousSource))source.value=previousSource;
  if([...target.options].some(option=>option.value===previousTarget))target.value=previousTarget;

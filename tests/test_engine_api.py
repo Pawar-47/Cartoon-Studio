@@ -241,6 +241,61 @@ def test_character_retarget_api_saves_scene_and_persistent_record(tmp_path, monk
     assert preview_data["authoritative_scene"].endswith("/scene")
 
 
+def test_character_retarget_api_allows_verified_ik_foot_source_only(
+    tmp_path, monkeypatch
+):
+    project_id = _new_project(tmp_path, monkeypatch)
+    source_id = _seed_retarget_character(tmp_path, project_id, "IK source")
+    target_id = _seed_retarget_character(tmp_path, project_id, "Target")
+    source_path = (
+        tmp_path / "projects" / project_id / "characters" / f"{source_id}.json"
+    )
+    source = json.loads(source_path.read_text(encoding="utf-8"))
+    source["data"]["asset"]["rig_analysis"]["hierarchy_validation"]["status"] = (
+        "valid_with_ik_foot_hierarchy"
+    )
+    source_path.write_text(json.dumps(source), encoding="utf-8")
+    monkeypatch.setattr(main, "get_engine_adapter", _FakeRetargetAdapter)
+
+    response = client.post(
+        f"/api/projects/{project_id}/retargets",
+        json={
+            "source_character_id": source_id,
+            "target_character_id": target_id,
+            "animation_name": "Run",
+        },
+    )
+    assert response.status_code == 201
+    assert response.json()["data"]["animation_name"] == "Run"
+
+
+def test_character_retarget_api_rejects_ik_foot_variant_as_target(
+    tmp_path, monkeypatch
+):
+    project_id = _new_project(tmp_path, monkeypatch)
+    source_id = _seed_retarget_character(tmp_path, project_id, "Source")
+    target_id = _seed_retarget_character(tmp_path, project_id, "IK target")
+    target_path = (
+        tmp_path / "projects" / project_id / "characters" / f"{target_id}.json"
+    )
+    target = json.loads(target_path.read_text(encoding="utf-8"))
+    target["data"]["asset"]["rig_analysis"]["hierarchy_validation"]["status"] = (
+        "valid_with_ik_foot_hierarchy"
+    )
+    target_path.write_text(json.dumps(target), encoding="utf-8")
+
+    class MustNotRun:
+        def retarget_glb_pair(self, *args, **kwargs):
+            raise AssertionError("The IK-foot hierarchy exception is source-only.")
+
+    monkeypatch.setattr(main, "get_engine_adapter", MustNotRun)
+    response = client.post(
+        f"/api/projects/{project_id}/retargets",
+        json={"source_character_id": source_id, "target_character_id": target_id},
+    )
+    assert response.status_code == 422
+
+
 def test_character_retarget_api_rejects_unknown_animation_before_engine_call(
     tmp_path, monkeypatch
 ):
