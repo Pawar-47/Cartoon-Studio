@@ -1,7 +1,25 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFile } from "node:fs/promises";
 import * as THREE from "../app/static/vendor/three/build/three.module.js";
-import { retargetClip } from "../app/static/vendor/three/examples/jsm/utils/SkeletonUtils.js";
+
+const skeletonUtilsPath = new URL(
+  "../app/static/vendor/three/examples/jsm/utils/SkeletonUtils.js",
+  import.meta.url
+);
+const threeModulePath = new URL(
+  "../app/static/vendor/three/build/three.module.js",
+  import.meta.url
+);
+let skeletonUtilsSource = await readFile(skeletonUtilsPath, "utf8");
+skeletonUtilsSource = skeletonUtilsSource.replace(
+  /from\\s+["']three["']/g,
+  'from "' + threeModulePath.href + '"'
+);
+const skeletonUtils = await import(
+  "data:text/javascript;base64," + Buffer.from(skeletonUtilsSource).toString("base64")
+);
+const { retargetClip } = skeletonUtils;
 
 function makeSkinnedMesh(rootName, armName) {
   const mesh = new THREE.SkinnedMesh(
