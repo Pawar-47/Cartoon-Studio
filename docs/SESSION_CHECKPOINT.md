@@ -2,8 +2,8 @@
 
 Updated: 2026-11-25
 Repository: https://github.com/Pawar-47/Cartoon-Studio
-Branch: `work/p2-2-body-shape-acceptance`
-Latest upstream main: `6a3406efb320a0895d4b2a7253395a107d6a394d` (PR #17 generated hairstyles and PR #19 transparent PNG portraits merged; CI #421 and #423 passed).
+Branch: `work/character-preview-polish` at `4945beb7555c55fed2477de405e4e1a1b5b0f9a9`
+Latest upstream main: `4d2a7848b7c123358b868f56eac0704a80f6c58d` (CI #426 passed; PR #20 turnaround export remains open with CI #428 passed; PR #21 preview polish is open with CI #429 passed).
 
 ## Mission and operating rules
 
@@ -32,7 +32,7 @@ Phase 2 — Character Studio is ACTIVE. Phase 0 and Phase 1 are complete. Do not
 ## Implemented Character Studio capabilities
 
 - Project-contained GLB 2.0 import, validation, SHA-256 provenance and Godot inspection.
-- Browser GLB preview, imported animation selection and camera controls.
+- Browser GLB preview, imported animation selection and camera controls; default selection prefers Idle and RESET-only assets report no playable animations.
 - Persistent editable character profiles.
 - Rig-based torso/shoulder/arm/leg/head proportion controls for compatible imported humanoids; generated GLBs are separately stored and verified, leaving the source unchanged. Existing imported face/body morph targets are grouped and editable; this does not create new geometry or morphs.
 - Seven procedural hairstyle choices generate Head-attached geometry; the worker verifies export and animation retention while preserving the original GLB. Transparent PNG portrait export is available from the browser preview.
@@ -140,3 +140,10 @@ Never claim the complete application is finished while Phases 2–7 remain incom
 - Upstream PR #20 adds a four-view turnaround sheet; its latest CI #425 passed, but the PR remains open and its changes are not in this branch.
 - Full local test suite: 96 passed, 28 skipped. The skips cover unavailable pinned Godot and Node.js runtimes plus symlink support. Ruff, Python compilation and `git diff --check` passed.
 - P2.2 remains PARTIAL. The new hair and portrait features have CI coverage but have not received local interactive visual acceptance; original face geometry and broader rig/visual acceptance remain open.
+
+## 2026-11-25 — Character preview polish
+
+- Continued on `work/character-preview-polish`, based on main `4d2a7848b7c123358b868f56eac0704a80f6c58d`; the earlier WIP stash remains preserved.
+- Commit `4945beb7555c55fed2477de405e4e1a1b5b0f9a9` adds Idle-first animation selection, Idle-variant fallback, first-playable fallback and safe handling for RESET-only assets. PR #21 is open, separate from PR #20.
+- Local targeted Python tests passed: 16 tests. Windows CI #429 passed Node-backed animation helper tests, JavaScript syntax checks, lint, Python compilation and the full pytest suite.
+- The fresh visual browser check could not be completed in this batch. Character Studio remains PARTIAL; continue with browser acceptance and original face geometry rather than claiming completion.

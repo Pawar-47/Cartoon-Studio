@@ -280,3 +280,11 @@ Added API coverage for saving morph-target weights and rejecting values outside 
 - `python -m ruff check app tests`, `python -m compileall -q app tests` and `git diff --check` passed. Pytest emitted one Starlette deprecation warning about using `httpx`; it did not fail tests.
 - PR #20's four-view turnaround export remains open and separate; CI #425 passed. Its feature is not included in this branch.
 - No local visual acceptance was performed for generated hairstyles or PNG export. Existing Adventurer hierarchy warnings and the absence of original face geometry keep P2.2 PARTIAL.
+
+## 2026-11-25 — Character preview default animation
+
+- Added `resolveDefaultAnimationClip`: exact normalized `Idle` takes priority, followed by an Idle variant and then the first playable clip. RESET-only assets now show “No playable animations” without starting playback.
+- Added Node tests for exact Idle preference, Idle-variant fallback, first-playable fallback and RESET-only behavior, plus a Python preview-wiring assertion.
+- Local targeted run: `python -m pytest -o addopts= -q -rs tests/test_characters.py` — **16 passed**. Node.js was unavailable on the local PATH.
+- Windows GitHub Actions [CI #429](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45691314081) passed on `4945beb7555c55fed2477de405e4e1a1b5b0f9a9`, including Node-backed helper tests, JavaScript syntax checks, Ruff, Python compilation and the full pytest suite. Packaging/installer validation was not part of this quick workflow.
+- PR #21 remains open and separate from PR #20. No fresh visual browser acceptance was performed for this batch; Phase 2 and P2.2 remain active/partial.
