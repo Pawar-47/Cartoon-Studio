@@ -52,7 +52,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--output-dir",
-        type=Path,
+        type=pathlib.Path,
         default=pathlib.Path("tests/fixtures/third_party"),
     )
     args = parser.parse_args()
