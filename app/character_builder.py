@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Any, Callable
 from urllib.request import Request, urlopen
 
-
 SOURCE_REPOSITORY = "LuanDucate/Ducz.CharacterCreator"
 SOURCE_COMMIT = "fcd215b58eec5c9ed97d0ba5f696d0e7dc085e08"
 SOURCE_BASE_URL = (
