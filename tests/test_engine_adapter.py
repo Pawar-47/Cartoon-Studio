@@ -10,9 +10,9 @@ import pytest
 from app import engine
 from app.engine import (
     EngineCancelledError,
+    EngineExecutionError,
     EnginePathError,
     EngineTimeoutError,
-    EngineWorkerError,
     GodotEngineAdapter,
 )
 
@@ -42,20 +42,26 @@ class _FakeProcess:
         return self.returncode
 
 
+def _fake_adapter(tmp_path, timeout=1):
+    executable = tmp_path / "godot.exe"
+    executable.write_bytes(b"fake executable")
+    worker = tmp_path / "worker"
+    worker.mkdir()
+    (worker / "project.godot").write_text("config_version=5\n", encoding="utf-8")
+    return GodotEngineAdapter(
+        data_dir=tmp_path / "data",
+        executable=executable,
+        worker_project=worker,
+        timeout_seconds=timeout,
+    )
+
+
 def test_engine_adapter_rejects_parent_traversal(tmp_path):
     root = tmp_path / "project"
     root.mkdir()
-    adapter = GodotEngineAdapter(executable=tmp_path / "missing.exe", worker_project=tmp_path)
-    with pytest.raises(EnginePathError, match="inside the project"):
-        adapter.inspect_glb(root, "../outside.glb")
-
-
-def test_engine_adapter_rejects_absolute_paths(tmp_path):
-    root = tmp_path / "project"
-    root.mkdir()
-    adapter = GodotEngineAdapter(executable=tmp_path / "missing.exe", worker_project=tmp_path)
-    with pytest.raises(EnginePathError):
-        adapter.inspect_glb(root, str((tmp_path / "outside.glb").resolve()))
+    adapter = _fake_adapter(tmp_path)
+    with pytest.raises(EnginePathError, match="escapes"):
+        adapter.inspect_glb(root / ".." / "outside.glb", allowed_root=root)
 
 
 def test_engine_adapter_rejects_symlink_escape(tmp_path):
@@ -68,92 +74,94 @@ def test_engine_adapter_rejects_symlink_escape(tmp_path):
         link.symlink_to(outside)
     except (OSError, NotImplementedError):
         pytest.skip("Symlink creation is not available in this runner.")
-    adapter = GodotEngineAdapter(executable=tmp_path / "missing.exe", worker_project=tmp_path)
+    adapter = _fake_adapter(tmp_path)
     with pytest.raises(EnginePathError):
-        adapter.inspect_glb(root, "escape.glb")
+        adapter.inspect_glb(link, allowed_root=root)
+
+
+def test_engine_adapter_rejects_non_glb_files(tmp_path):
+    root = tmp_path / "project"
+    root.mkdir()
+    source = root / "model.gltf"
+    source.write_text("{}", encoding="utf-8")
+    adapter = _fake_adapter(tmp_path)
+    with pytest.raises(EnginePathError, match="Only .glb"):
+        adapter.inspect_glb(source, allowed_root=root)
 
 
 def test_worker_timeout_terminates_process(tmp_path, monkeypatch):
-    executable = tmp_path / "godot.exe"
-    executable.write_bytes(b"test executable placeholder")
-    worker = tmp_path / "worker"
-    worker.mkdir()
-    (worker / "project.godot").write_text("config_version=5\n", encoding="utf-8")
+    adapter = _fake_adapter(tmp_path, timeout=0.01)
     process = _FakeProcess()
     monkeypatch.setattr(engine.subprocess, "Popen", lambda *args, **kwargs: process)
-    adapter = GodotEngineAdapter(executable, worker, timeout_seconds=0)
     with pytest.raises(EngineTimeoutError):
-        adapter.handshake()
+        adapter.ping()
     assert process.terminated
     assert process.waited
     assert not process.killed
 
 
 def test_worker_cancellation_terminates_process(tmp_path, monkeypatch):
-    executable = tmp_path / "godot.exe"
-    executable.write_bytes(b"test executable placeholder")
-    worker = tmp_path / "worker"
-    worker.mkdir()
-    (worker / "project.godot").write_text("config_version=5\n", encoding="utf-8")
+    adapter = _fake_adapter(tmp_path, timeout=5)
     process = _FakeProcess()
     monkeypatch.setattr(engine.subprocess, "Popen", lambda *args, **kwargs: process)
     cancellation = threading.Event()
     cancellation.set()
-    adapter = GodotEngineAdapter(executable, worker, timeout_seconds=5)
     with pytest.raises(EngineCancelledError):
-        adapter.handshake(cancel_event=cancellation)
+        adapter.ping(cancel_event=cancellation)
     assert process.terminated
     assert process.waited
 
 
-def _real_godot_adapter() -> GodotEngineAdapter:
+def _real_godot_adapter(tmp_path=None) -> GodotEngineAdapter:
     if not os.environ.get("CARTOON_STUDIO_GODOT_PATH"):
         pytest.skip("The pinned Godot runtime is installed only in the Windows CI job.")
-    return GodotEngineAdapter()
+    return GodotEngineAdapter(data_dir=tmp_path or Path.cwd() / ".godot-test-data")
 
 
-def test_pinned_godot_worker_handshake():
-    response = _real_godot_adapter().handshake()
-    assert response["status"] == "ok"
-    assert response["protocol_version"] == 1
-    assert response["engine"]["version"].startswith("4.7.2")
-    assert "glb.inspect" in response["capabilities"]
+def test_pinned_godot_worker_handshake(tmp_path):
+    response = _real_godot_adapter(tmp_path).ping()
+    assert response["ok"] is True
+    assert response["engine_version"].startswith("4.7.2")
+    assert "glb_inspect" in response["capabilities"]
 
 
 def test_pinned_godot_worker_imports_glb_fixture(tmp_path):
-    adapter = _real_godot_adapter()
-    fixture = Path(__file__).resolve().parents[1] / "tools" / "godot_engine_proof" / "fixtures" / "proof_triangle.glb"
+    adapter = _real_godot_adapter(tmp_path)
+    fixture = (
+        Path(__file__).resolve().parents[1]
+        / "tools"
+        / "godot_engine_proof"
+        / "fixtures"
+        / "proof_triangle.glb"
+    )
     if not fixture.is_file():
         pytest.skip("The checked-in GLB proof fixture is unavailable.")
     asset_dir = tmp_path / "assets"
     asset_dir.mkdir()
     target = asset_dir / "proof_triangle.glb"
     shutil.copyfile(fixture, target)
-    response = adapter.inspect_glb(tmp_path, "assets/proof_triangle.glb")
-    assert response["status"] == "ok"
-    assert response["asset"]["file_name"] == "proof_triangle.glb"
-    assert response["metrics"]["mesh_count"] >= 1
+    response = adapter.inspect_glb(target, allowed_root=tmp_path)
+    assert response["ok"] is True
+    assert response["mesh_count"] >= 1
 
 
 def test_pinned_godot_worker_rejects_invalid_glb(tmp_path):
     asset_dir = tmp_path / "assets"
     asset_dir.mkdir()
-    (asset_dir / "broken.glb").write_bytes(b"not a glb")
-    with pytest.raises(EngineWorkerError, match="could not import"):
-        _real_godot_adapter().inspect_glb(tmp_path, "assets/broken.glb")
+    broken = asset_dir / "broken.glb"
+    broken.write_bytes(b"not a glb")
+    with pytest.raises(EngineExecutionError, match="could not import"):
+        _real_godot_adapter(tmp_path).inspect_glb(broken, allowed_root=tmp_path)
 
 
 def test_worker_rechecks_path_boundary_independently(tmp_path):
-    adapter = _real_godot_adapter()
+    adapter = _real_godot_adapter(tmp_path)
     project = tmp_path / "project"
     project.mkdir()
     outside = tmp_path / "outside.glb"
     outside.write_bytes(b"not used")
-    with pytest.raises(EngineWorkerError, match="outside"):
-        adapter._invoke(
+    with pytest.raises(EngineExecutionError, match="outside"):
+        adapter._run(
             "inspect_glb",
-            payload={
-                "project_root": str(project.resolve()),
-                "source_path": str(outside.resolve()),
-            },
+            {"project_root": str(project.resolve()), "source_path": str(outside.resolve())},
         )

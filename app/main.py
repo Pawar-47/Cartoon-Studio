@@ -101,15 +101,6 @@ class ProjectRecord(BaseModel):
     metadata: dict[str, Any]
 
 
-class EngineAssetInspectRequest(BaseModel):
-    project_id: str = Field(min_length=36, max_length=36)
-    asset_path: str = Field(min_length=1, max_length=1024)
-
-
-def get_engine_adapter() -> GodotEngineAdapter:
-    return GodotEngineAdapter()
-
-
 def _project_record(row: Any) -> ProjectRecord:
     return ProjectRecord(
         id=row["id"],
@@ -226,48 +217,6 @@ def inspect_project_glb(
         raise HTTPException(status_code=502, detail=str(error)) from error
 
 
-
-
-@app.get("/api/engine/status")
-def engine_status() -> dict[str, Any]:
-    try:
-        return get_engine_adapter().handshake()
-    except EngineUnavailableError as error:
-        raise HTTPException(status_code=503, detail=str(error)) from error
-    except EngineTimeoutError as error:
-        raise HTTPException(status_code=504, detail=str(error)) from error
-    except EngineAdapterError as error:
-        raise HTTPException(status_code=502, detail=str(error)) from error
-
-
-@app.post("/api/engine/inspect-glb")
-def inspect_project_glb(payload: EngineAssetInspectRequest) -> dict[str, Any]:
-    initialize_database()
-    with connect_db() as connection:
-        project = connection.execute(
-            "SELECT id FROM projects WHERE id = ?", (payload.project_id,)
-        ).fetchone()
-    if project is None:
-        raise HTTPException(status_code=404, detail="Project not found.")
-
-    try:
-        root = project_directory(DATA_DIR, payload.project_id)
-        asset = resolve_project_relative(DATA_DIR, payload.project_id, payload.asset_path)
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
-    if not asset.is_file():
-        raise HTTPException(status_code=404, detail="Project GLB asset not found.")
-
-    try:
-        return get_engine_adapter().inspect_glb(root, payload.asset_path)
-    except EnginePathError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
-    except EngineTimeoutError as error:
-        raise HTTPException(status_code=504, detail=str(error)) from error
-    except EngineUnavailableError as error:
-        raise HTTPException(status_code=503, detail=str(error)) from error
-    except EngineAdapterError as error:
-        raise HTTPException(status_code=502, detail=str(error)) from error
 
 
 @app.get("/api/status")
