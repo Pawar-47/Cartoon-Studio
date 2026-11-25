@@ -3,7 +3,7 @@
 Updated: 2026-11-25
 Repository: https://github.com/Pawar-47/Cartoon-Studio
 Branch: main
-Checkpoint HEAD: pending CI
+Checkpoint HEAD: pending verification commit
 
 ## Mission and source of truth
 
@@ -66,3 +66,11 @@ The imported animation is currently retargeted in a Godot proof from the importe
 - Do not claim full project completion while Phases 3–7 remain unimplemented.
 - No mandatory paid APIs, cloud rendering or online activation.
 - Always respond in English for this project.
+
+
+## Imported retarget integration correction — 2026-11-25
+
+- Imported humanoid fixture hierarchy corrected: both upper arms are children of Spine, with local offsets adjusted to preserve their previous global rest positions.
+- The real Godot worker test now reaches the adapter's complete mapping validation. It exposed a Python set-versus-dict comparison bug; the adapter now compares mapping keys with the set of required profile names.
+- A focused adapter regression test verifies that a complete 15-bone mapping is accepted and forwarded to the worker.
+- The full Windows and dedicated Godot workflows must pass before this retarget batch is accepted.

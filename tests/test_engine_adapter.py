@@ -15,7 +15,7 @@ from app.engine import (
     EngineTimeoutError,
     GodotEngineAdapter,
 )
-from app.rig_analysis import analyze_rig
+from app.rig_analysis import REQUIRED_HUMANOID_BONES, analyze_rig
 
 
 class _FakeProcess:
@@ -241,3 +241,42 @@ def test_pinned_godot_worker_creates_non_destructive_retarget_scene(tmp_path):
     assert output.is_file()
     assert source.read_bytes() == fixture.read_bytes()
     assert target.read_bytes() == fixture.read_bytes()
+
+
+def test_retarget_adapter_accepts_complete_humanoid_mapping_and_builds_request(
+    tmp_path, monkeypatch
+):
+    adapter = _fake_adapter(tmp_path)
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    source = project_root / "source.glb"
+    target = project_root / "target.glb"
+    source.write_bytes(b"source")
+    target.write_bytes(b"target")
+    mapping = {
+        profile_name: {"bone_index": index}
+        for index, profile_name in enumerate(REQUIRED_HUMANOID_BONES)
+    }
+    captured = {}
+
+    def fake_run(operation, payload, **kwargs):
+        captured["operation"] = operation
+        captured["payload"] = payload
+        return {"ok": True}
+
+    monkeypatch.setattr(adapter, "_run", fake_run)
+    output = project_root / "retargets" / "pair.tscn"
+    response = adapter.retarget_glb_pair(
+        source,
+        target,
+        output,
+        allowed_root=project_root,
+        source_profile_mapping=mapping,
+        target_profile_mapping=mapping,
+    )
+    assert response["ok"] is True
+    assert captured["operation"] == "retarget_glb_pair"
+    assert set(captured["payload"]["source_profile_mapping"]) == set(
+        REQUIRED_HUMANOID_BONES
+    )
+    assert output.parent.is_dir()

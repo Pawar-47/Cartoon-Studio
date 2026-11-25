@@ -150,9 +150,9 @@ class GodotEngineAdapter:
             raise EnginePathError("Retarget output must use the .tscn extension.")
         if output.exists():
             raise EnginePathError("Refusing to overwrite an existing retarget scene.")
-        if set(source_profile_mapping) != REQUIRED_HUMANOID_BONES or set(
+        if set(source_profile_mapping) != set(REQUIRED_HUMANOID_BONES) or set(
             target_profile_mapping
-        ) != REQUIRED_HUMANOID_BONES:
+        ) != set(REQUIRED_HUMANOID_BONES):
             raise EnginePathError("Both rigs must have complete, unambiguous humanoid mappings.")
         output.parent.mkdir(parents=True, exist_ok=True)
         return self._run(

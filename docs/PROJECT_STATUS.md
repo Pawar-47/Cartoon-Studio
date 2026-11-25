@@ -4,7 +4,7 @@
 
 - Repository: Pawar-47/Cartoon-Studio
 - Branch: main
-- Latest implementation HEAD: pending CI
+- Latest implementation HEAD: pending verification commit
 - Phase 0: COMPLETE.
 - Phase 1: COMPLETE.
 - Phase 2 — Character Studio: ACTIVE. P2.1 worker/runtime integration is accepted; P2.2 import, preview and profile workflow is implemented and expanding. Phase 2 is not complete.
@@ -91,3 +91,11 @@
 - Dedicated proof #9 also passed after the target rest-offset assignment correction. Proof #10 adds a save/reopen assertion for the imported retarget pair and is running.
 - This is not yet a production retarget feature for arbitrary user-supplied source/target GLBs. The imported source animation is transferred to a target skeleton generated from the fixture's source hierarchy with altered rest lengths.
 - Intermediate CI failures #232–#235 exposed lint formatting and a rest-transform association bug; both were corrected. CI #236, #237 and #238 subsequently passed.
+
+
+## Imported retarget integration correction — pending CI
+
+- The fixture hierarchy now places both upper arms under Spine and preserves their global rest offsets.
+- Fixed the adapter's complete mapping check to compare key sets with the required profile-name set.
+- Added a focused regression test for the complete 15-bone mapping request.
+- Waiting for full Windows CI and dedicated Godot proof before acceptance.
