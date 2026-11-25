@@ -167,6 +167,7 @@ function collectMorphTargets(root) {
         entries.push({
           key,
           name,
+          meshName: node.name || "Mesh",
           value: Number(node.morphTargetInfluences[index] || 0),
         });
         morphTargetByKey.set(key, { node, index });

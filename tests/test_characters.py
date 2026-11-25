@@ -151,6 +151,10 @@ def test_character_studio_page_is_served():
     assert 'valid_with_ik_foot_hierarchy' in script.text
     assert "morph_target_count" in script.text
     assert "appearanceRecipe,{playAnimations:false}" in script.text
+    assert 'meshName: node.name || "Mesh"' in preview.text
+    assert 'target.meshName?target.meshName+" · ":""' in script.text
+    assert "morph weight" in script.text
+    assert "appearanceRecipe.morph_targets[target.key]=target.value" in script.text
 
 
 def test_character_glb_import_profile_round_trip_and_project_reference(tmp_path, monkeypatch):

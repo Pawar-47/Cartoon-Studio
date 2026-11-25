@@ -198,10 +198,10 @@ function buildMorphControls(){
  $("reset-expressions").disabled=!targets.length;
  for(const target of targets){
   const label=window.document.createElement("label");label.className="morph-control";
-  const title=window.document.createElement("span");title.textContent=target.name;
+  const title=window.document.createElement("span");title.textContent=(target.meshName?target.meshName+" · ":"")+target.name;
   const value=appearanceRecipe.morph_targets[target.key]??target.value;
   const output=window.document.createElement("output");output.value=Number(value).toFixed(2);
-  const input=window.document.createElement("input");input.type="range";input.min="-1";input.max="1";input.step="0.01";input.value=String(value);
+  const input=window.document.createElement("input");input.type="range";input.min="-1";input.max="1";input.step="0.01";input.value=String(value);input.setAttribute("aria-label",(target.meshName?target.meshName+" ":"")+target.name+" morph weight");
   input.addEventListener("input",()=>{
    const weight=Number(input.value);appearanceRecipe.morph_targets[target.key]=weight;
    output.value=weight.toFixed(2);applyCharacterMorphTargets({[target.key]:weight});
