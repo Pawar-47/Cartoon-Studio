@@ -265,6 +265,58 @@ def test_character_retarget_api_rejects_unknown_animation_before_engine_call(
     assert "not present" in response.json()["detail"]
 
 
+def test_character_retarget_api_rejects_empty_playable_clip_catalog(
+    tmp_path, monkeypatch
+):
+    project_id = _new_project(tmp_path, monkeypatch)
+    source_id = _seed_retarget_character(tmp_path, project_id, "Source")
+    target_id = _seed_retarget_character(tmp_path, project_id, "Target")
+    source_path = (
+        tmp_path / "projects" / project_id / "characters" / f"{source_id}.json"
+    )
+    source = json.loads(source_path.read_text(encoding="utf-8"))
+    source["data"]["asset"]["engine_inspection"]["animation_names"] = []
+    source_path.write_text(json.dumps(source), encoding="utf-8")
+
+    class MustNotRun:
+        def retarget_glb_pair(self, *args, **kwargs):
+            raise AssertionError("Godot must not run without a playable source clip.")
+
+    monkeypatch.setattr(main, "get_engine_adapter", MustNotRun)
+    response = client.post(
+        f"/api/projects/{project_id}/retargets",
+        json={"source_character_id": source_id, "target_character_id": target_id},
+    )
+    assert response.status_code == 422
+    assert "no playable imported animation clips" in response.json()["detail"]
+
+
+def test_character_retarget_api_keeps_legacy_clip_metadata_compatible(
+    tmp_path, monkeypatch
+):
+    project_id = _new_project(tmp_path, monkeypatch)
+    source_id = _seed_retarget_character(tmp_path, project_id, "Legacy source")
+    target_id = _seed_retarget_character(tmp_path, project_id, "Target")
+    source_path = (
+        tmp_path / "projects" / project_id / "characters" / f"{source_id}.json"
+    )
+    source = json.loads(source_path.read_text(encoding="utf-8"))
+    del source["data"]["asset"]["engine_inspection"]["animation_names"]
+    source_path.write_text(json.dumps(source), encoding="utf-8")
+    monkeypatch.setattr(main, "get_engine_adapter", _FakeRetargetAdapter)
+
+    response = client.post(
+        f"/api/projects/{project_id}/retargets",
+        json={
+            "source_character_id": source_id,
+            "target_character_id": target_id,
+            "animation_name": "LegacyWalk",
+        },
+    )
+    assert response.status_code == 201
+    assert response.json()["data"]["animation_name"] == "LegacyWalk"
+
+
 def test_character_retarget_api_rejects_invalid_hierarchy_before_engine_call(
     tmp_path, monkeypatch
 ):

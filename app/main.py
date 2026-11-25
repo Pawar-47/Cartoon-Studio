@@ -685,7 +685,10 @@ def create_character_retarget(
     ):
         raise HTTPException(
             status_code=422,
-            detail="The selected animation is not present in the source character's imported clips.",
+            detail=(
+                "The selected animation is not present in the "
+                "source character's imported clips."
+            ),
         )
     target_skin_count = target_container.get(
         "skin_count", target_inspection.get("skin_count", 0)
