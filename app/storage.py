@@ -283,6 +283,36 @@ def upsert_document_index(
     )
 
 
+def sync_character_reference(
+    connection: sqlite3.Connection,
+    data_dir: Path,
+    project_id: str,
+    character_document: dict[str, Any],
+) -> None:
+    project_path = project_directory(data_dir, project_id) / "project.json"
+    if not project_path.exists():
+        return
+    project_document = read_json(project_path)
+    references = project_document.setdefault("data", {}).setdefault("references", {})
+    character_ids = references.setdefault("characters", [])
+    if character_document["id"] in character_ids:
+        return
+    character_ids.append(character_document["id"])
+    updated_at = character_document["updated_at"]
+    project_document["updated_at"] = max(
+        project_document.get("updated_at", ""), updated_at
+    )
+    project_document["revision"] = int(project_document.get("revision", 1)) + 1
+    digest = write_json_atomic(project_path, project_document)
+    upsert_document_index(
+        connection, project_id, project_document, "project.json", digest
+    )
+    connection.execute(
+        "UPDATE projects SET updated_at = ? WHERE id = ?",
+        (project_document["updated_at"], project_id),
+    )
+
+
 def sync_episode_reference(
     connection: sqlite3.Connection,
     data_dir: Path,
