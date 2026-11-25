@@ -380,18 +380,27 @@ func _retarget_glb_pair(payload: Dictionary) -> Dictionary:
         and reopened_skin_count == bound_target_meshes.size()
     )
     var pose_transferred := false
+    var source_angle := 0.0
+    var target_angle := 0.0
+    var source_animation_playing := false
     if scene_reopened:
         root.add_child(reopened_instance)
-        for frame_index in range(4):
+        for frame_index in range(72):
             await process_frame
         var reopened_source := reopened_modifier.get_parent() as Skeleton3D
+        var source_players_after_reopen := reopened_instance.find_children(
+            "*", "AnimationPlayer", true, false
+        )
+        if not source_players_after_reopen.is_empty():
+            var reopened_player := source_players_after_reopen[0] as AnimationPlayer
+            source_animation_playing = reopened_player.is_playing()
         var source_arm_index := reopened_source.find_bone("LeftUpperArm")
         var target_arm_index := (reopened_target as Skeleton3D).find_bone("LeftUpperArm")
         if source_arm_index >= 0 and target_arm_index >= 0:
             var source_rotation := reopened_source.get_bone_pose_rotation(source_arm_index)
             var target_rotation := (reopened_target as Skeleton3D).get_bone_pose_rotation(target_arm_index)
-            var source_angle := source_rotation.angle_to(Quaternion.IDENTITY)
-            var target_angle := target_rotation.angle_to(Quaternion.IDENTITY)
+            source_angle = source_rotation.angle_to(Quaternion.IDENTITY)
+            target_angle = target_rotation.angle_to(Quaternion.IDENTITY)
             pose_transferred = (
                 source_angle > deg_to_rad(10.0)
                 and absf(source_angle - target_angle) < deg_to_rad(3.0)
@@ -408,7 +417,15 @@ func _retarget_glb_pair(payload: Dictionary) -> Dictionary:
         DirAccess.remove_absolute(output_path)
         return {
             "error_code": "pose_transfer_failed",
-            "error": "The reopened retarget scene did not transfer the animated source upper-arm pose to the target skeleton.",
+            "error": (
+                "The reopened retarget scene did not transfer the animated source upper-arm pose "
+                + "to the target skeleton. source_angle_deg="
+                + str(rad_to_deg(source_angle))
+                + ", target_angle_deg="
+                + str(rad_to_deg(target_angle))
+                + ", animation_playing="
+                + str(source_animation_playing)
+            ),
             "scene_reopened": true
         }
 
