@@ -1,5 +1,8 @@
 from pathlib import Path
 
+from tools.godot_engine_proof.generate_mixamo_source_fixture import (
+    generate_mixamo_source_fixture,
+)
 from tools.godot_engine_proof.generate_retarget_target_fixture import (
     _read_glb,
     generate_target_fixture,
@@ -38,11 +41,7 @@ def test_retarget_target_fixture_is_reproducible(tmp_path):
     )
 
 
-def test_retarget_source_fixture_is_reproducible_and_keeps_animation(tmp_path):
-    from tools.godot_engine_proof.generate_retarget_source_fixture import (
-        generate_source_fixture,
-    )
-
+def test_mixamo_source_fixture_is_reproducible_and_keeps_animation(tmp_path):
     fixture_dir = (
         Path(__file__).resolve().parents[1]
         / "tools"
@@ -50,16 +49,14 @@ def test_retarget_source_fixture_is_reproducible_and_keeps_animation(tmp_path):
         / "fixtures"
     )
     source = fixture_dir / "proof_humanoid.glb"
-    expected = fixture_dir / "proof_humanoid_retarget_source.glb"
-    generated = tmp_path / "generated-source.glb"
+    expected = fixture_dir / "proof_humanoid_source_mixamo.glb"
+    generated = tmp_path / "generated-mixamo-source.glb"
 
-    generate_source_fixture(source, generated)
+    generate_mixamo_source_fixture(source, generated)
 
     assert generated.read_bytes() == expected.read_bytes()
-    source_document, _ = _read_glb(source.read_bytes())
-    generated_document, _ = _read_glb(expected.read_bytes())
-    assert len(generated_document["animations"]) == len(source_document["animations"])
+    document, _ = _read_glb(generated.read_bytes())
+    assert len(document["animations"]) == 1
     assert any(
-        node.get("name") == "mixamorig:LeftArm"
-        for node in generated_document["nodes"]
+        node.get("name") == "mixamorig:LeftArm" for node in document["nodes"]
     )

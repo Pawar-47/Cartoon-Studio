@@ -61,7 +61,7 @@ It does not yet prove that a Mixamo-named *animated source* retains its imported
 
 ## Next substantial implementation batch
 
-1. Add a Mixamo-named animated source fixture and verify imported animation tracks still drive the source skeleton after retarget-profile name normalization.
+1. Run the Mixamo-named animated source fixture through full Windows CI and verify its imported animation tracks still drive the source skeleton after bone-name normalization.
 2. Add an in-app preview/open action for saved retarget scenes rather than only scene download.
 3. Exercise representative third-party GLBs, including unusual skeleton hierarchies and multiple animation clips, and document supported/unsupported cases.
 4. Validate facial morph controls on real blend-shape GLBs.

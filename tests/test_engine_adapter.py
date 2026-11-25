@@ -208,7 +208,7 @@ def test_pinned_godot_worker_creates_non_destructive_retarget_scene(tmp_path):
         / "godot_engine_proof"
         / "fixtures"
     )
-    source_fixture = fixture_dir / "proof_humanoid_retarget_source.glb"
+    source_fixture = fixture_dir / "proof_humanoid.glb"
     target_fixture = fixture_dir / "proof_humanoid_retarget_target.glb"
     assert source_fixture.is_file(), "The source humanoid fixture is unavailable."
     assert target_fixture.is_file(), "The retarget target fixture is unavailable."
@@ -233,9 +233,6 @@ def test_pinned_godot_worker_creates_non_destructive_retarget_scene(tmp_path):
     source_mapping = source_rig["godot_profile_mapping"]
     target_mapping = target_rig["godot_profile_mapping"]
     assert len(source_mapping) == len(target_mapping) == 15
-    assert source_mapping["LeftUpperArm"]["source_name"] == "mixamorig:LeftArm"
-    assert target_mapping["LeftUpperArm"]["source_name"] == "mixamorig:LeftArm"
-    assert source_mapping["LeftUpperArm"]["bone_index"] != target_mapping["LeftUpperArm"]["bone_index"]
     assert (
         target_mapping["LeftLowerArm"]["source_name"]
         != source_mapping["LeftLowerArm"]["source_name"]
@@ -300,3 +297,58 @@ def test_retarget_adapter_accepts_complete_humanoid_mapping_and_builds_request(
         REQUIRED_HUMANOID_BONES
     )
     assert output.parent.is_dir()
+
+
+def test_pinned_godot_worker_preserves_mixamo_source_animation_tracks(tmp_path):
+    adapter = _real_godot_adapter(tmp_path)
+    fixture_dir = (
+        Path(__file__).resolve().parents[1]
+        / "tools"
+        / "godot_engine_proof"
+        / "fixtures"
+    )
+    source_fixture = fixture_dir / "proof_humanoid_source_mixamo.glb"
+    target_fixture = fixture_dir / "proof_humanoid.glb"
+    assert source_fixture.is_file()
+    assert target_fixture.is_file()
+    project_root = tmp_path / "mixamo-source-project"
+    project_root.mkdir()
+    source = project_root / "source-mixamo.glb"
+    target = project_root / "target-canonical.glb"
+    shutil.copyfile(source_fixture, source)
+    shutil.copyfile(target_fixture, target)
+
+    source_inspection = adapter.inspect_glb(source, allowed_root=project_root)
+    target_inspection = adapter.inspect_glb(target, allowed_root=project_root)
+    source_rig = analyze_rig(source_inspection)
+    target_rig = analyze_rig(target_inspection)
+    assert source_inspection["animation_count"] >= 1
+    assert source_rig["status"] == "humanoid_names_complete"
+    assert target_rig["status"] == "humanoid_names_complete"
+    assert source_rig["hierarchy_validation"]["status"] == "valid"
+    assert target_rig["hierarchy_validation"]["status"] == "valid"
+    source_mapping = source_rig["godot_profile_mapping"]
+    target_mapping = target_rig["godot_profile_mapping"]
+    assert source_mapping["LeftUpperArm"]["source_name"].lower().endswith(
+        "leftarm"
+    )
+    assert len(source_mapping) == len(target_mapping) == 15
+
+    output = project_root / "retargets" / "mixamo-source-to-canonical-target.tscn"
+    response = adapter.retarget_glb_pair(
+        source,
+        target,
+        output,
+        allowed_root=project_root,
+        source_profile_mapping=source_mapping,
+        target_profile_mapping=target_mapping,
+    )
+    assert response["source_animation_playing"] is True
+    assert response["pose_transferred"] is True
+    assert response["source_pose_angle_degrees"] > 10.0
+    assert abs(
+        response["source_pose_angle_degrees"] - response["target_pose_angle_degrees"]
+    ) < 3.0
+    assert output.is_file()
+    assert source.read_bytes() == source_fixture.read_bytes()
+    assert target.read_bytes() == target_fixture.read_bytes()

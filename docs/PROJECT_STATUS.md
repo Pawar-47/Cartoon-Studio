@@ -48,7 +48,7 @@ This is bounded fixture acceptance, not arbitrary third-party GLB acceptance. An
 
 ## Next implementation batch
 
-1. Verify animation-track compatibility using a Mixamo-named animated source GLB.
+1. Validate the Mixamo-named animated source fixture in full Windows CI, including imported track playback after bone-name normalization.
 2. Add an in-app preview/open action for saved retarget scenes.
 3. Exercise representative third-party GLBs and document compatibility limits.
 4. Validate real facial morph controls.
