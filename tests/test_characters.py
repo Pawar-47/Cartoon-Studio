@@ -204,6 +204,8 @@ def test_browser_preview_modules_are_served_from_local_static_assets():
     assert 'data-camera-frame="head"' in page.text
     assert 'id="preview-speed"' in page.text
     assert 'id="export-preview-png"' in page.text
+    assert 'id="export-turnaround-png"' in page.text
+    assert "exportCharacterTurnaround" in client.get("/static/character-preview.js").text
     assert 'id="preview-transparent"' in page.text
     assert "exportCharacterPreview" in client.get("/static/character-preview.js").text
     assert 'id="body-morph-controls"' in page.text
@@ -231,6 +233,21 @@ def test_browser_preview_modules_are_served_from_local_static_assets():
         response = client.get(path)
         assert response.status_code == 200, path
         assert len(response.content) > 1000, path
+
+
+def test_turnaround_setup_is_inside_preview_state_restoration_scope():
+    source = (
+        Path(__file__).parents[1] / "app" / "static" / "character-preview.js"
+    ).read_text(encoding="utf-8")
+    start = source.index("export async function exportCharacterTurnaround")
+    end = source.index("export async function exportCharacterPreview", start)
+    function_body = source[start:end]
+    try_start = function_body.index("  try {")
+    finally_start = function_body.index("  } finally {", try_start)
+    protected_setup = function_body[try_start:finally_start]
+
+    assert 'frameCharacter("full");' in protected_setup
+    assert 'const context = sheet.getContext("2d");' in protected_setup
 
 
 def test_character_studio_page_is_served():
