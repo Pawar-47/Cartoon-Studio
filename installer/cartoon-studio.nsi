@@ -75,7 +75,9 @@ Function un.onInit
     ; NSIS normally runs a temporary copy of the uninstaller. Restore the real
     ; application directory from the per-user registry before touching files.
     SetRegView 64
+    WriteRegStr HKCU "Software\CartoonStudioDebug" "UnInitEntered" "yes"
     ReadRegStr $INSTDIR HKCU "Software\CartoonStudio" "InstallDir"
+    WriteRegStr HKCU "Software\CartoonStudioDebug" "UnInitInstallDir" "$INSTDIR"
     IfFileExists "$INSTDIR\CartoonStudio.exe" un_install_path_valid
         SetErrorLevel 2
         Abort
@@ -85,6 +87,8 @@ FunctionEnd
 Section "Uninstall"
     SetShellVarContext current
     SetRegView 64
+    WriteRegStr HKCU "Software\CartoonStudioDebug" "UninstallSectionEntered" "yes"
+    WriteRegStr HKCU "Software\CartoonStudioDebug" "UninstallSectionInstallDir" "$INSTDIR"
     ExecWait '"$SYSDIR\taskkill.exe" /F /IM CartoonStudio.exe'
 
     Delete "$SMPROGRAMS\Cartoon Studio\Cartoon Studio.lnk"
