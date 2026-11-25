@@ -881,7 +881,10 @@ def customize_character_asset_proportions(
         project_root = project_directory(DATA_DIR, project_id)
         source_path = resolve_project_relative(DATA_DIR, project_id, source_relative_path)
     except (ValueError, OSError) as error:
-        raise HTTPException(status_code=422, detail="The source character asset is invalid.") from error
+        raise HTTPException(
+            status_code=422,
+            detail="The source character asset is invalid.",
+        ) from error
     if (
         source_manifest.get("document_type") != "character_asset"
         or source_manifest.get("id") != safe_asset_id
@@ -891,7 +894,10 @@ def customize_character_asset_proportions(
         raise HTTPException(status_code=404, detail="The source character GLB was not found.")
     proportions = payload.model_dump(mode="json")
     if all(abs(value - 1.0) < 0.0001 for value in proportions.values()):
-        raise HTTPException(status_code=422, detail="Change at least one body proportion before applying.")
+        raise HTTPException(
+            status_code=422,
+            detail="Change at least one body proportion before applying.",
+        )
     new_asset_id = str(uuid.uuid4())
     relative_path = f"assets/characters/{new_asset_id}.glb"
     destination = resolve_project_relative(DATA_DIR, project_id, relative_path)
@@ -903,7 +909,10 @@ def customize_character_asset_proportions(
         if not inspection.get("proportions_verified"):
             raise HTTPException(
                 status_code=422,
-                detail="Godot did not verify the edited bone transforms after GLB export and re-import.",
+                detail=(
+                    "Godot did not verify the edited bone transforms after GLB export "
+                    "and re-import."
+                ),
             )
         container = _validate_glb_container(destination)
         now = datetime.now(UTC).isoformat()
@@ -949,7 +958,10 @@ def customize_character_asset_proportions(
         raise HTTPException(status_code=422, detail=str(error)) from error
     except EngineError as error:
         destination.unlink(missing_ok=True)
-        raise HTTPException(status_code=422, detail=f"Body-proportion editing failed: {error}") from error
+        raise HTTPException(
+            status_code=422,
+            detail=f"Body-proportion editing failed: {error}",
+        ) from error
     except ValueError as error:
         destination.unlink(missing_ok=True)
         raise HTTPException(status_code=422, detail=f"Invalid proportioned GLB: {error}") from error

@@ -14,7 +14,9 @@ function resetProportionControls(){
  updateProportionLabels();
 }
 function updateProportionButton(){
- $("apply-proportions").disabled=!activeProject||!importedAsset?.asset_id||proportionFields.every(name=>Math.abs(Number($(name.replaceAll("_","-")).value)-1)<0.0001);
+ const hasSingleRig=Number(importedAsset?.engine_inspection?.skeleton_count)===1;
+ const unchanged=proportionFields.every(name=>Math.abs(Number($(name.replaceAll("_","-")).value)-1)<0.0001);
+ $("apply-proportions").disabled=!activeProject||!importedAsset?.asset_id||!hasSingleRig||unchanged;
 }
 async function applyBodyProportions(){
  if(!activeProject||!importedAsset?.asset_id)return;
@@ -39,10 +41,16 @@ async function applyBodyProportions(){
 }
 function resetProfileEditor(){editingCharacter=null;$("character-form").reset();$("profile-heading").textContent="Save reusable profile";$("save-character").textContent="Save character profile";$("cancel-edit-profile").hidden=true;$("save-character").disabled=!importedAsset}
 function cancelProfileEdit(){resetProfileEditor();$("profile-status").textContent="Profile editing cancelled. The saved character was not changed."}
-function editCharacterProfile(document){
+async function editCharacterProfile(document){
  const data=document.data||{};editingCharacter=document;
  const savedAsset=data.asset||{},savedAssetId=(savedAsset.relative_path||"").split("/").pop().replace(/\.glb$/i,"");
  importedAsset=savedAssetId?{asset_id:savedAssetId,...savedAsset}:null;
+ if(savedAssetId&&activeProject){
+  const manifestResponse=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(savedAssetId)+"/manifest");
+  if(manifestResponse.ok){const manifest=await manifestResponse.json();importedAsset={asset_id:savedAssetId,...(manifest.data||savedAsset)}}
+  const modelResponse=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(savedAssetId));
+  if(modelResponse.ok)await showCharacterPreview(await modelResponse.arrayBuffer(),data.name||"Saved character");
+ }
  $("character-name").value=data.name||"";$("character-description").value=data.description||"";
  $("face-design").value=data.face_design||"";$("body-proportions").value=JSON.stringify(data.body_proportions||{},null,2);
  $("height-cm").value=data.height_cm??"";$("hair").value=data.hair||"";
@@ -57,7 +65,7 @@ function editCharacterProfile(document){
  $("profile-heading").textContent="Edit character profile";$("save-character").textContent="Save profile changes";
  $("save-character").disabled=false;$("cancel-edit-profile").hidden=false;
  $("profile-status").textContent="Editing "+(data.name||"character")+". The original GLB and saved appearance recipe will be preserved.";
- $("profile-panel").scrollIntoView({behavior:"smooth",block:"start"});
+ $("preview-panel").scrollIntoView({behavior:"smooth",block:"start"});
 }
 async function loadProjects(){
  const response=await fetch("/api/projects");
@@ -204,7 +212,7 @@ async function loadCharacters(){
   const previewButton=document.createElement("button");previewButton.className="secondary preview-saved";previewButton.type="button";previewButton.textContent="Preview";
   previewButton.addEventListener("click",async()=>{try{const assetId=(asset.relative_path||"").split("/").pop().replace(/\.glb$/i,"");const response=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(assetId));if(!response.ok)throw new Error("Could not load the saved GLB asset.");const buffer=await response.arrayBuffer();await showCharacterPreview(buffer,data.name,data.appearance_recipe||{});document.querySelector(".preview-panel").scrollIntoView({behavior:"smooth",block:"center"})}catch(error){$("project-status").textContent=error.message}});
   const editButton=document.createElement("button");editButton.className="secondary preview-saved";editButton.type="button";editButton.textContent="Edit profile";
-  editButton.addEventListener("click",()=>editCharacterProfile(document));
+  editButton.addEventListener("click",()=>editCharacterProfile(document).catch(error=>$("profile-status").textContent=error.message));
   const customizeButton=document.createElement("button");customizeButton.className="secondary preview-saved";customizeButton.type="button";customizeButton.textContent="Customize appearance";
   customizeButton.addEventListener("click",()=>openCharacterAppearance(document).catch(error=>$("project-status").textContent=error.message));
   if(asset.assembly){
