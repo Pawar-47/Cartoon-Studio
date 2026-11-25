@@ -531,7 +531,10 @@ async def upload_character_asset(project_id: str, request: Request) -> dict[str,
         except EngineTimeoutError as error:
             raise HTTPException(status_code=504, detail=str(error)) from error
         except EngineError as error:
-            raise HTTPException(status_code=422, detail=f"Godot could not import this GLB: {error}") from error
+            raise HTTPException(
+                status_code=422,
+                detail=f"Godot could not import this GLB: {error}",
+            ) from error
 
         now = datetime.now(UTC).isoformat()
         asset_data = {
@@ -616,9 +619,17 @@ def create_character(
         )
         manifest = read_json(manifest_path)
     except (ValueError, FileNotFoundError) as error:
-        raise HTTPException(status_code=422, detail="GLB asset has not passed import inspection.") from error
-    if manifest.get("document_type") != "character_asset" or manifest.get("data", {}).get("relative_path") != payload.asset_path:
-        raise HTTPException(status_code=422, detail="Character asset manifest does not match the imported file.")
+        raise HTTPException(
+            status_code=422, detail="GLB asset has not passed import inspection."
+        ) from error
+    if (
+        manifest.get("document_type") != "character_asset"
+        or manifest.get("data", {}).get("relative_path") != payload.asset_path
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail="Character asset manifest does not match the imported file.",
+        )
 
     now = datetime.now(UTC).isoformat()
     character_id = str(uuid.uuid4())
@@ -669,7 +680,10 @@ def update_character(
         raise HTTPException(status_code=404, detail="Project not found.")
     existing = _character_document(DATA_DIR, project_id, character_id)
     if payload.asset_path != existing.get("data", {}).get("asset", {}).get("relative_path"):
-        raise HTTPException(status_code=422, detail="Changing a character's source asset requires a new import.")
+        raise HTTPException(
+            status_code=422,
+            detail="Changing a character's source asset requires a new import.",
+        )
     now = datetime.now(UTC).isoformat()
     data = payload.model_dump(exclude={"asset_path"}, mode="json")
     data["name"] = payload.name.strip()
