@@ -662,12 +662,16 @@ def create_character_retarget(
 
     source_inspection = source_asset.get("engine_inspection", {})
     target_inspection = target_asset.get("engine_inspection", {})
+    target_container = target_asset.get("container", {})
     if int(source_inspection.get("animation_count", 0) or 0) < 1:
         raise HTTPException(
             status_code=422,
             detail="The source character has no imported animation.",
         )
-    if int(target_inspection.get("skin_count", 0) or 0) < 1:
+    target_skin_count = target_container.get(
+        "skin_count", target_inspection.get("skin_count", 0)
+    )
+    if int(target_skin_count or 0) < 1:
         raise HTTPException(
             status_code=422, detail="The target character has no skinned mesh."
         )

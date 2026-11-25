@@ -50,10 +50,11 @@ function updateRetargetCharacterOptions(characters){
   const option=document.createElement("option");option.value="";option.textContent=label;select.append(option);
  }
  for(const characterDoc of characters){
-  const data=characterDoc.data||{},asset=data.asset||{},inspection=asset.engine_inspection||{},rig=asset.rig_analysis||{},hierarchy=rig.hierarchy_validation||{};
+  const data=characterDoc.data||{},asset=data.asset||{},inspection=asset.engine_inspection||{},container=asset.container||{},rig=asset.rig_analysis||{},hierarchy=rig.hierarchy_validation||{};
   const compatible=rig.status==="humanoid_names_complete"&&hierarchy.status==="valid";
+  const skinCount=Number(container.skin_count??inspection.skin_count??0);
   if(compatible&&Number(inspection.animation_count||0)>0)source.append(documentElementOption(characterDoc));
-  if(compatible&&Number(inspection.skin_count||0)>0)target.append(documentElementOption(characterDoc));
+  if(compatible&&skinCount>0)target.append(documentElementOption(characterDoc));
  }
  if([...source.options].some(option=>option.value===previousSource))source.value=previousSource;
  if([...target.options].some(option=>option.value===previousTarget))target.value=previousTarget;

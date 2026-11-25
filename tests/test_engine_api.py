@@ -128,7 +128,8 @@ def _seed_retarget_character(tmp_path, project_id, name):
             },
             "godot_profile_mapping": mapping,
         },
-        "engine_inspection": {"animation_count": 1, "skin_count": 1},
+        "container": {"skin_count": 1},
+        "engine_inspection": {"animation_count": 1},
     }
     now = datetime.now(UTC).isoformat()
     document = main.make_envelope(
