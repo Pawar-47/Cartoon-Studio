@@ -344,7 +344,8 @@ def test_pinned_godot_worker_inspects_real_cc0_robot_expressive_facial_morphs(tm
     assert target.read_bytes() == payload
 
 
-def test_pinned_godot_worker_retargets_robot_expressive_selected_clip(tmp_path):
+@pytest.mark.parametrize("clip_name", ["Walking", "Running", "Dance"])
+def test_pinned_godot_worker_retargets_robot_expressive_selected_clip(tmp_path, clip_name):
     adapter = _real_godot_adapter(tmp_path)
     fixture_dir = Path(__file__).resolve().parent / "fixtures" / "third_party"
     source_fixture = fixture_dir / "robot_expressive_cc0.glb"
