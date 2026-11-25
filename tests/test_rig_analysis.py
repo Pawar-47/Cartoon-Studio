@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-from app.rig_analysis import analyze_rig  # noqa: I001
+
+
+def _analyze_rig(inspection):
+    from app.rig_analysis import analyze_rig
+
+    return analyze_rig(inspection)
 
 
 MIXAMO_HUMANOID = [
@@ -13,7 +18,7 @@ MIXAMO_HUMANOID = [
 
 
 def test_mixamo_style_bones_receive_complete_name_coverage_without_false_ready_claim():
-    result = analyze_rig({"skeleton_count": 1, "skeletons": [{
+    result = _analyze_rig({"skeleton_count": 1, "skeletons": [{
         "node_path": "Character/Armature/Skeleton3D",
         "bone_count": len(MIXAMO_HUMANOID),
         "bones": [{"name": name} for name in MIXAMO_HUMANOID],
