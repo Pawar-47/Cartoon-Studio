@@ -359,4 +359,5 @@ $("library-import").addEventListener("click",async()=>{
  finally{button.disabled=!selectedLibraryModel()||!activeProject}
 });
 
+loadCharacterLibrary();
 loadProjects().catch(error=>{$("project-status").textContent=error.message;$("character-list").textContent=error.message});
