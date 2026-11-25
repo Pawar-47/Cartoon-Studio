@@ -169,3 +169,31 @@ def test_worker_rechecks_path_boundary_independently(tmp_path):
             "inspect_glb",
             {"project_root": str(project.resolve()), "source_path": str(outside.resolve())},
         )
+
+
+def test_pinned_godot_worker_reports_imported_humanoid_rest_transforms(tmp_path):
+    adapter = _real_godot_adapter(tmp_path)
+    fixture = (
+        Path(__file__).resolve().parents[1]
+        / "tools"
+        / "godot_engine_proof"
+        / "fixtures"
+        / "proof_humanoid.glb"
+    )
+    assert fixture.is_file(), "The checked-in skinned humanoid fixture is unavailable."
+    asset_dir = tmp_path / "humanoid-assets"
+    asset_dir.mkdir()
+    target = asset_dir / "proof_humanoid.glb"
+    shutil.copyfile(fixture, target)
+
+    response = adapter.inspect_glb(target, allowed_root=tmp_path)
+    assert response["ok"] is True
+    assert response["skeleton_count"] == 1
+    assert response["animation_count"] >= 1
+    skeleton = response["skeletons"][0]
+    assert skeleton["bone_count"] == 15
+    assert all(
+        isinstance(bone.get("rest_transform", {}).get("origin"), list)
+        and len(bone["rest_transform"]["origin"]) == 3
+        for bone in skeleton["bones"]
+    )
