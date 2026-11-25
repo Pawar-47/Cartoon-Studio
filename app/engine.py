@@ -129,6 +129,7 @@ class GodotEngineAdapter:
         parts: list[dict[str, str]],
         output_path: Path,
         allowed_root: Path,
+        accessories: list[dict[str, str]] | None = None,
         timeout_seconds: float | None = None,
         cancel_event: threading.Event | None = None,
     ) -> dict[str, Any]:
@@ -174,6 +175,32 @@ class GodotEngineAdapter:
                 "source_path": str(source),
                 "mesh_path": mesh_path,
             })
+        validated_accessories: list[dict[str, str]] = []
+        if len(accessories or []) > 8:
+            raise EnginePathError("A character can include at most eight accessories.")
+        for accessory in accessories or []:
+            source = Path(accessory.get("source_path", "")).resolve(strict=True)
+            if source == root or root not in source.parents:
+                raise EnginePathError("An accessory path escapes the allowed project directory.")
+            if source.suffix.lower() != ".glb" or not source.is_file():
+                raise EnginePathError("Every accessory must come from an existing .glb file.")
+            if source.stat().st_size > MAX_GLB_BYTES:
+                raise EnginePathError("An accessory GLB exceeds the 512 MiB assembly limit.")
+            mesh_path = str(accessory.get("mesh_path", "")).strip()
+            attachment_bone = str(accessory.get("attachment_bone", "")).strip()
+            if not mesh_path or len(mesh_path) > 1024:
+                raise EnginePathError("Every accessory requires a valid mesh node path.")
+            if len(attachment_bone) > 128:
+                raise EnginePathError("An accessory attachment bone name is too long.")
+            mesh_key = (str(source), mesh_path)
+            if mesh_key in selected_meshes:
+                raise EnginePathError("A source mesh cannot be used as both a body part and an accessory.")
+            selected_meshes.add(mesh_key)
+            validated_accessories.append({
+                "source_path": str(source),
+                "mesh_path": mesh_path,
+                "attachment_bone": attachment_bone,
+            })
         output.parent.mkdir(parents=True, exist_ok=True)
         return self._run(
             "assemble_modular_character",
@@ -182,6 +209,7 @@ class GodotEngineAdapter:
                 "base_path": str(base),
                 "output_path": str(output),
                 "parts": validated_parts,
+                "accessories": validated_accessories,
             },
             timeout_seconds=timeout_seconds,
             cancel_event=cancel_event,

@@ -109,9 +109,16 @@ class ModularPartInput(BaseModel):
     mesh_path: str = Field(min_length=1, max_length=1024)
 
 
+class ModularAccessoryInput(BaseModel):
+    relative_path: str = Field(min_length=1, max_length=512)
+    mesh_path: str = Field(min_length=1, max_length=1024)
+    attachment_bone: str = Field(default="", max_length=128)
+
+
 class ModularAssemblyInput(BaseModel):
     base_relative_path: str = Field(min_length=1, max_length=512)
     parts: list[ModularPartInput] = Field(min_length=4, max_length=4)
+    accessories: list[ModularAccessoryInput] = Field(default_factory=list, max_length=8)
 
 
 class CharacterRetargetInput(BaseModel):
@@ -383,12 +390,24 @@ def create_modular_assembly(
             }
             for part in payload.parts
         ]
+        accessories = [
+            {
+                "source_path": str(
+                    resolve_project_relative(DATA_DIR, project_id, accessory.relative_path)
+                ),
+                "mesh_path": accessory.mesh_path,
+                "attachment_bone": accessory.attachment_bone,
+            }
+            for accessory in payload.accessories
+        ]
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
     if base_path.suffix.lower() != ".glb" or not base_path.is_file():
         raise HTTPException(status_code=404, detail="Base character GLB was not found.")
     if any(not Path(part["source_path"]).is_file() for part in parts):
         raise HTTPException(status_code=404, detail="One or more modular part GLBs were not found.")
+    if any(not Path(item["source_path"]).is_file() for item in accessories):
+        raise HTTPException(status_code=404, detail="One or more accessory GLBs were not found.")
     asset_id = str(uuid.uuid4())
     relative_path = f"assets/characters/{asset_id}.glb"
     destination = resolve_project_relative(DATA_DIR, project_id, relative_path)
@@ -399,6 +418,7 @@ def create_modular_assembly(
             parts,
             destination,
             allowed_root=project_root,
+            accessories=accessories,
         )
         container = _validate_glb_container(destination)
         inspection = assembly
@@ -427,9 +447,18 @@ def create_modular_assembly(
                     for part in payload.parts
                 ],
                 "added_parts": assembly.get("added_parts", []),
-                "base_skinned_meshes_removed": assembly.get(
-                    "base_skinned_meshes_removed", []
+                "base_meshes_removed": assembly.get(
+                    "base_meshes_removed", []
                 ),
+                "accessories": [
+                    {
+                        "relative_path": accessory.relative_path,
+                        "mesh_path": accessory.mesh_path,
+                        "attachment_bone": accessory.attachment_bone,
+                    }
+                    for accessory in payload.accessories
+                ],
+                "added_accessories": assembly.get("added_accessories", []),
                 "animation_preserved": True,
                 "verified": True,
             },

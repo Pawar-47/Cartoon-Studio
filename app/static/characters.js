@@ -1,6 +1,6 @@
 import { showCharacterPreview, showRetargetPreview, getCharacterMaterials, applyCharacterAppearance, getCharacterMorphTargets, applyCharacterMorphTargets } from "./character-preview.js";
 const $=id=>document.getElementById(id);
-let activeProject="", importedAsset=null, activeCharacter=null, editingCharacter=null, appearanceRecipe={materials:{},morph_targets:{}}, retargetCharacters=[], assemblyAssets=[];
+let activeProject="", importedAsset=null, activeCharacter=null, editingCharacter=null, appearanceRecipe={materials:{},morph_targets:{}}, retargetCharacters=[], assemblyAssets=[], assemblyAccessories=[];
 const params=new URLSearchParams(window.location.search);
 function lines(value){return value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean)}
 function resetProfileEditor(){editingCharacter=null;$("character-form").reset();$("profile-heading").textContent="Save reusable profile";$("save-character").textContent="Save character profile";$("cancel-edit-profile").hidden=true;$("save-character").disabled=!importedAsset}
@@ -32,7 +32,7 @@ async function loadProjects(){
  await selectProject(select.value);
 }
 async function selectProject(id){
- activeProject=id;assemblyAssets=[];refreshAssemblyControls();$("library-import").disabled=!id||!selectedLibraryModel();importedAsset=null;activeCharacter=null;resetProfileEditor();appearanceRecipe={materials:{},morph_targets:{}};$("material-editor").hidden=true;$("morph-editor").hidden=true;$("save-appearance").disabled=true;$("asset-report").hidden=true;$("profile-status").textContent="";$("save-character").disabled=true;$("refresh-characters").disabled=!id;
+ activeProject=id;assemblyAssets=[];assemblyAccessories=[];renderAssemblyAccessories();refreshAssemblyControls();$("library-import").disabled=!id||!selectedLibraryModel();importedAsset=null;activeCharacter=null;resetProfileEditor();appearanceRecipe={materials:{},morph_targets:{}};$("material-editor").hidden=true;$("morph-editor").hidden=true;$("save-appearance").disabled=true;$("asset-report").hidden=true;$("profile-status").textContent="";$("save-character").disabled=true;$("refresh-characters").disabled=!id;
  $("project-status").textContent=id?"Project selected. Import a GLB model to begin.":"Choose a project to begin.";
  $("character-list").replaceChildren();
  if(!id){$("character-list").innerHTML='<div class="empty">Select a project to see its characters.</div>';return}
@@ -138,7 +138,7 @@ async function loadAssemblyAssetManifest(relativePath){
  return asset;
 }
 async function loadAssemblySources(recipe){
- const paths=[recipe.base_relative_path,...(recipe.parts||[]).map(part=>part.relative_path)].filter(Boolean);
+ const paths=[recipe.base_relative_path,...(recipe.parts||[]).map(part=>part.relative_path),...(recipe.accessories||[]).map(item=>item.relative_path)].filter(Boolean);
  return Promise.all([...new Set(paths)].map(loadAssemblyAssetManifest));
 }
 async function loadCharacters(){
@@ -178,6 +178,11 @@ async function loadCharacters(){
       const select=$("assembly-"+part.slot),sourceId=assemblyAssetId(part.relative_path);
       select.value=sourceId+"|"+part.mesh_path;
      }
+     assemblyAccessories=(asset.assembly.accessories||[]).map(item=>({
+      relative_path:item.relative_path,mesh_path:item.mesh_path,attachment_bone:item.attachment_bone||"",
+      label=(assemblyAssets.find(source=>source.relative_path===item.relative_path)?.assembly_label||"Saved source")+" / "+item.mesh_path.split("/").pop()
+     }));
+     renderAssemblyAccessories();
      refreshAssemblyControls();
      document.querySelector(".assembly-panel").scrollIntoView({behavior:"smooth",block:"start"});
      $("assembly-status").textContent="Saved assembly recipe restored. Adjust any part and assemble again to create a new asset.";
@@ -351,6 +356,16 @@ function rememberAssemblyAsset(asset,label){
  refreshAssemblyControls();
 }
 function assemblyEligibleAssets(){return assemblyAssets.filter(asset=>Number(asset.engine_inspection?.skeleton_count)===1)}
+function renderAssemblyAccessories(){
+ const list=$("assembly-accessory-list");list.replaceChildren();
+ assemblyAccessories.forEach((item,index)=>{
+  const row=document.createElement("div");row.className="accessory-chip";
+  const label=document.createElement("span");label.textContent=item.label+(item.attachment_bone?" · "+item.attachment_bone:" · skinned");
+  const remove=document.createElement("button");remove.type="button";remove.className="secondary";remove.textContent="Remove";
+  remove.addEventListener("click",()=>{assemblyAccessories.splice(index,1);renderAssemblyAccessories()});
+  row.append(label,remove);list.append(row);
+ });
+}
 function refreshAssemblyControls(){
  const eligible=assemblyEligibleAssets(),base=$("assembly-base"),previousBase=base.value;
  base.replaceChildren();
@@ -372,10 +387,35 @@ function refreshAssemblyControls(){
   }
   if([...select.options].some(option=>option.value===previous))select.value=previous;
  }
+ const accessorySelect=$("assembly-accessory"),previousAccessory=accessorySelect.value;accessorySelect.replaceChildren();
+ const accessoryPlaceholder=document.createElement("option");accessoryPlaceholder.value="";accessoryPlaceholder.textContent="Choose optional accessory…";accessorySelect.append(accessoryPlaceholder);
+ for(const asset of eligible){
+  const meshes=Array.isArray(asset.engine_inspection?.mesh_inventory)?asset.engine_inspection.mesh_inventory:[];
+  for(const mesh of meshes){
+   if(mesh.slot_candidate||!mesh.node_path||(!mesh.skin_bound&&!mesh.attachment_bone))continue;
+   const option=document.createElement("option");option.value=asset.asset_id+"|"+mesh.node_path;
+   option.textContent=asset.assembly_label+" / "+(mesh.node_name||mesh.mesh_resource_name||"Accessory")+(mesh.attachment_bone?" · "+mesh.attachment_bone:" · shared skin");
+   accessorySelect.append(option);
+  }
+ }
+ if([...accessorySelect.options].some(option=>option.value===previousAccessory))accessorySelect.value=previousAccessory;
+ $("add-assembly-accessory").disabled=!accessorySelect.value;
  $("assemble-character").disabled=!activeProject||!eligible.length||assemblySlots.some(slot=>!$("assembly-"+slot).value)||!base.value;
  $("assembly-status").textContent=eligible.length+" compatible-rig candidate asset(s) loaded in this session. Godot validates every selected mesh before export.";
 }
 $("assembly-base").addEventListener("change",refreshAssemblyControls);
+$("assembly-accessory").addEventListener("change",refreshAssemblyControls);
+$("add-assembly-accessory").addEventListener("click",()=>{
+ const [assetId,meshPath]=$("assembly-accessory").value.split("|");
+ const asset=assemblyEligibleAssets().find(item=>item.asset_id===assetId);
+ const mesh=asset?.engine_inspection?.mesh_inventory?.find(item=>item.node_path===meshPath);
+ if(!asset||!mesh)return;
+ if(assemblyAccessories.some(item=>item.relative_path===asset.relative_path&&item.mesh_path===meshPath)){
+  $("assembly-status").textContent="That accessory is already in this assembly.";return;
+ }
+ assemblyAccessories.push({relative_path:asset.relative_path,mesh_path:meshPath,attachment_bone:mesh.attachment_bone||"",label:asset.assembly_label+" / "+(mesh.node_name||mesh.mesh_resource_name||"Accessory")});
+ renderAssemblyAccessories();refreshAssemblyControls();
+});
 for(const slot of assemblySlots)$("assembly-"+slot).addEventListener("change",refreshAssemblyControls);
 $("assemble-character").addEventListener("click",async()=>{
  const base=assemblyEligibleAssets().find(asset=>asset.asset_id===$("assembly-base").value);
@@ -389,7 +429,7 @@ $("assemble-character").addEventListener("click",async()=>{
  }
  const button=$("assemble-character");button.disabled=true;$("assembly-status").textContent="Godot is validating four skeleton bindings and assembling the GLB…";
  try{
-  const response=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/modular-assemblies",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({base_relative_path:base.relative_path,parts})});
+  const response=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/modular-assemblies",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({base_relative_path:base.relative_path,parts,accessories:assemblyAccessories.map(({relative_path,mesh_path,attachment_bone})=>({relative_path,mesh_path,attachment_bone}))})});
   const result=await response.json();if(!response.ok)throw new Error(result.detail||"Modular character assembly failed.");
   importedAsset=result;editingCharacter=null;rememberAssemblyAsset(result,"Assembled character");
   const assetResponse=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(result.asset_id));
