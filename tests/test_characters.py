@@ -159,6 +159,7 @@ def test_character_studio_page_is_served():
     assert 'meshName: node.name || "Mesh"' in preview.text
     assert "resolveAnimationClip(sourceGltf.animations, requestedAnimation)" in preview.text
     assert "no substitute clip was previewed" in preview.text
+    assert "retargetClip(targetMesh, sourceMesh, clip" in preview.text
     assert 'target.meshName?target.meshName+" · ":""' in script.text
     assert "morph weight" in script.text
     assert "appearanceRecipe.morph_targets[target.key]=target.value" in script.text
