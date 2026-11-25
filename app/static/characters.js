@@ -10,10 +10,10 @@ function editCharacterProfile(document){
  $("character-name").value=data.name||"";$("character-description").value=data.description||"";
  $("face-design").value=data.face_design||"";$("body-proportions").value=JSON.stringify(data.body_proportions||{},null,2);
  $("height-cm").value=data.height_cm??"";$("hair").value=data.hair||"";
- $("clothing").value=(data.clothing||[]).join("\\n");$("accessories").value=(data.accessories||[]).join("\\n");
+ $("clothing").value=(data.clothing||[]).join("\n");$("accessories").value=(data.accessories||[]).join("\n");
  $("eye-design").value=data.eye_design||"";$("mouth-design").value=data.mouth_design||"";
- $("expressions").value=(data.expressions||[]).join("\\n");$("personality").value=data.personality||"";
- $("relationships").value=(data.relationships||[]).join("\\n");$("voice-profile").value=data.voice_profile||"";
+ $("expressions").value=(data.expressions||[]).join("\n");$("personality").value=data.personality||"";
+ $("relationships").value=(data.relationships||[]).join("\n");$("voice-profile").value=data.voice_profile||"";
  $("dialogue-style").value=data.dialogue_style||"";
  $("profile-heading").textContent="Edit character profile";$("save-character").textContent="Save profile changes";
  $("save-character").disabled=false;$("cancel-edit-profile").hidden=false;

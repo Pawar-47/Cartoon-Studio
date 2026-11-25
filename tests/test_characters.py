@@ -110,6 +110,7 @@ def test_character_studio_page_is_served():
     assert script.status_code == 200
     assert "Edit profile" in script.text
     assert "cancel-edit-profile" in script.text
+    assert 'join("\\n")' in script.text
     assert "Cancel editing" in response.text
 
 
