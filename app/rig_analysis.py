@@ -153,7 +153,7 @@ def _validate_humanoid_hierarchy(
                 f"{ancestor_name} (index {ancestor_index})."
             )
 
-    status = "invalid" if issues else "valid" if checked else "incomplete"
+    status = "invalid" if issues else "valid" if checked == len(required_chains) else "incomplete"
     return {
         "status": status,
         "checked_relationships": checked,

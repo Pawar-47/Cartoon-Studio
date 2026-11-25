@@ -164,3 +164,17 @@ def test_hierarchy_validation_is_explicitly_unavailable_for_legacy_name_only_dat
         "bones": [{"name": name} for name in MIXAMO_HUMANOID],
     }]})
     assert result["hierarchy_validation"]["status"] == "not_available"
+
+
+
+def test_partial_humanoid_hierarchy_is_not_misreported_as_fully_valid():
+    bones = [
+        {"index": 0, "name": "Hips", "parent_index": -1},
+        {"index": 1, "name": "Spine", "parent_index": 0},
+        {"index": 2, "name": "Head", "parent_index": 1},
+    ]
+    result = _analyze_rig({"skeleton_count": 1, "skeletons": [{
+        "bone_count": 3, "bones": bones,
+    }]})
+    assert result["hierarchy_validation"]["status"] == "incomplete"
+    assert result["hierarchy_validation"]["checked_relationships"] == 2
