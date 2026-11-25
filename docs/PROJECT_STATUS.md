@@ -56,3 +56,9 @@ P0.3 — continue the comparative source-level research sweep. P0.4 hardware/Urd
 - Major risk discovered: target i3-5005U is 2C/4T, below Blender's published 4-core minimum; HD 5500 has a documented legacy driver crash issue. P0.4 must test exact driver and actual hardware.
 - Current leading candidate set: Blender 4.5.17 LTS for local production; Bene Procgen Maps / Blender Level Architect for procedural worlds; MPFB2/CharacterCreator for human base characters; browser-first Ara/Ekza editors as alternatives; Parrot/Allosaurus as Urdu lip-sync research only.
 - Urdu TTS: no local model approved. Qwen-Audio-TTS 3.1 Flash officially lists Urdu but is cloud-only and requires P0.4 review of Pakistan availability, pricing, terms, privacy and quality.
+
+## AI provider research checkpoint
+- FreeMilk is confirmed as a manual coding agent with GitHub integration and a daily allowance, but not a programmatic API. Its terms prohibit scripts/direct server calls; its privacy policy allows third-party model processing and possible AI-training/data-partner licensing of coding sessions unless the user opts out for future sessions.
+- Current official API candidates with free usage: GroqCloud, Cloudflare Workers AI, Gemini Developer API and OpenRouter. Each has quotas and privacy/region caveats.
+- GitHub Models is retired; Copilot Free is limited to 2,000 completions/month and is not a backend API. ChatGPT, Claude and Perplexity consumer free plans do not provide a general free API.
+- No provider is integrated or approved. No API keys have been connected.

@@ -54,3 +54,9 @@ A green CI run proves only the checks that actually ran. Source presence, docume
 - sqlite-workqueue upstream Actions #19 SUCCESS on `4f7cf094a77ea44f984de61b39a13594efd5f7c5`.
 - Ekza's inspected GitHub Actions runs #1–#3 were cancelled; Ara/3d-gen's inspected CI run failed and Cartoon Studio's Ara proof #6 remains cancelled. These candidates are not accepted.
 - No candidate was executed on the target PC. Upstream CI is evidence about the upstream repository only; it does not prove Cartoon Studio integration or target compatibility.
+
+## P0.3 provider research evidence (not app tests)
+- Official FreeMilk Terms and Privacy Policy inspected; no API key or project source was sent to FreeMilk.
+- Official Gemini, Groq, Cloudflare Workers AI, OpenRouter, GitHub Copilot, OpenAI billing, Claude, Perplexity, Mistral and Cerebras documentation inspected.
+- Provider quota and availability findings are documentation snapshots only; they must be rechecked in the user's own accounts and target region before integration.
+- No app integration, API call, quota test, Pakistan-region test or model-quality benchmark was run.

@@ -34,3 +34,10 @@ Sweep 1 is recorded; P0.3 remains open. Continue with source-level comparison of
 Then P0.4 must verify the actual HD 5500 driver and run a bounded target-PC compatibility benchmark; test Pakistani Urdu samples and evaluate the Qwen-Audio-TTS Flash cloud option against cost, Pakistan region access, terms and privacy. No paid/cloud option becomes mandatory.
 
 Do not begin production features before P0.7. Preserve the current Story Generator and keep it frozen until Phase 4.
+
+## P0.3 — next research work
+Source-level sweep 1 and provider sweep 2 are recorded. P0.3 remains open until the candidate matrix covers all critical subsystems and the engine/render/animation/audio/provider alternatives are compared against target hardware and license constraints. Next research: detailed engine/editor comparison, retargeting and audio pipeline, asset pack per-item inventory, and API/provider capability mapping. Do not copy code/assets or connect provider keys during research.
+
+Then P0.4 verifies the actual HD 5500 driver and target-PC compatibility, Pakistani Urdu TTS/lip-sync samples, exact Pakistan access and account quotas for Groq/Cloudflare/Gemini/OpenRouter, FreeMilk privacy/opt-out choice, and any cost/terms. No paid/cloud service becomes mandatory.
+
+Do not begin production features before P0.7. Preserve the current Story Generator and keep it frozen until Phase 4.

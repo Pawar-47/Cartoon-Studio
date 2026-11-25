@@ -71,3 +71,15 @@ Every research entry must include date, source URL, exact version/commit where r
 
 ### Research status
 This is the first broad source-level sweep, not P0.3 completion. No production engine, code dependency, TTS model, lip-sync system or asset pack has been selected or copied. Next: finish comparative engine/renderer and provider research, then P0.4 target hardware, Urdu and provider feasibility.
+
+## 2026-11-25 — P0.3 AI-provider research sweep
+
+- Read FreeMilk Terms and Privacy Policy. Confirmed daily model allowance with changing limits, no published exact quota, third-party model processing, advertising-partner sharing, possible AI-training/data-partner licensing of Coding Sessions, email opt-out for future licensing, and prohibition on direct scripts/bots/unofficial clients/server calls. FreeMilk is a manual supported app/GitHub agent, not a programmatic provider API.
+- Verified FreeMilk's current website model list (GLM 5.3 Flash, DeepSeek V4.1 Flash, GPT-6 Luna) and Pakistan App Store listing. Actual account allowance is not publicly specified.
+- Read official Gemini API pricing: free tier for selected models, limited rate limits, and free-tier content may be used to improve products.
+- Read Groq rate-limit/model docs: current free model-specific quotas; e.g. selected text models show 30 RPM, 1,000 RPD, 8K TPM and 200K TPD. Must check account's current limits.
+- Read Cloudflare Workers AI pricing: 10,000 Neurons/day on Workers Free, daily reset 00:00 UTC; some larger models require paid plan and usage above free allowance is billed.
+- Read OpenRouter pricing/rate limits: free model variants 20 RPM / 50 RPD; after $10 lifetime credit purchase cap increases to 1,000 RPD; catalog and provider capacity are dynamic.
+- Verified Copilot Free's 2,000 code completions/month and limited features; it is a coding UI/agent, not a general API.
+- Verified ChatGPT consumer subscriptions and API billing are separate. Claude API has trial credits for new users but usage is billed. Perplexity Free has limited Pro searches and separate API product. Mistral Free mode does not include API access. Cerebras starts with $5 free credit. GitHub Models retired July 30, 2026.
+- No API keys were connected and no user project source was sent to any external provider. Pakistan-specific API access, exact account quotas, provider privacy and output quality remain P0.4 checks.

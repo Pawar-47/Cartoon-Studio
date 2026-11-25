@@ -140,3 +140,26 @@ No production engine, character generator, world generator, toon renderer, Urdu 
 - **tiny-urdu** repository README says 1,000 training clips; its Hugging Face model card says 5,000. Treat as unresolved discrepancy. Roman Urdu only, one voice; underlying UrduTTS dataset is CC-BY-NC 4.0 and GitHub code repo has no explicit LICENSE.
 - **URDUTTS** — https://github.com/KAABSHAHID/URDUTTS: dataset research reports about 89 hours / 55,450 utterances and four male speakers; dataset CC-BY-NC 4.0 while code is MIT. Non-commercial research only unless rights clarified.
 - **Qwen-Audio-TTS 3.1 Flash** official Model Studio documentation explicitly lists Urdu and a male Urdu voice named Sahar. The docs do not imply Pakistani accent or offline rights. Qwen3-TTS system voices do not list Urdu. Qwen-Audio-TTS Flash is cloud-only; pricing, Pakistan access, region, terms, privacy and quality remain P0.4 tasks.
+
+## 2026-11-25 — AI provider/API research sweep
+
+Official source checks:
+- FreeMilk Terms and Privacy: https://www.freemilk.ai/terms and https://www.freemilk.ai/privacy-policy
+- Gemini API pricing/free tier: https://ai.google.dev/gemini-api/docs/pricing
+- Groq rate limits/models: https://console.groq.com/docs/rate-limits and https://console.groq.com/docs/models
+- Cloudflare Workers AI pricing: https://developers.cloudflare.com/workers-ai/platform/pricing/
+- OpenRouter free models/rate limits: https://openrouter.ai/collections/free-models/ and https://openrouter.ai/pricing
+- Copilot Free: https://docs.github.com/en/copilot/concepts/billing-and-usage/individuals/usage-limits
+- ChatGPT/API billing separation: https://help.openai.com/en/articles/9039756-managing-billing-for-chatgpt-and-the-api-platform
+- Claude API pricing: https://platform.claude.com/docs/en/about-claude/pricing
+- Perplexity plan comparison: https://www.perplexity.ai/help-center/en/articles/11187416-which-perplexity-subscription-plan-is-right-for-you
+- Mistral free/API limits: https://docs.mistral.ai/admin/billing-usage/usage-limits
+- Cerebras pricing: https://www.cerebras.ai/pricing
+- GitHub Models retirement: https://docs.github.com/en/github-models
+
+Initial conclusions:
+- FreeMilk's daily coding-agent allowance is useful for manual GitHub work, but exact quota is not public, the terms prohibit direct scripted access, and coding sessions may be licensed to data partners for AI training unless the user opts out for future sessions.
+- Groq, Cloudflare Workers AI, Gemini and OpenRouter are the main official API candidates with some free usage; each has different quotas, privacy and regional constraints.
+- Copilot Free, ChatGPT Free, Claude Free, Perplexity Standard and FreeMilk are manual agent/UI workflows, not interchangeable free API endpoints.
+- GitHub Models was retired on 2026-07-30; remove it from any provider plan.
+- No provider is selected. P0.4 must check Pakistan access, actual account limits, official terms, data handling, model suitability and current prices.
