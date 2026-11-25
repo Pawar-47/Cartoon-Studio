@@ -350,9 +350,44 @@ def _project_envelope(row: sqlite3.Row) -> dict[str, Any]:
     )
 
 
+def _restore_project_rows_from_documents(connection: sqlite3.Connection, data_dir: Path) -> None:
+    """Rebuild project rows from portable project.json files when the SQLite index is lost."""
+    projects_root = data_dir / "projects"
+    if not projects_root.exists():
+        return
+    for project_path in sorted(projects_root.glob("*/project.json")):
+        document = read_json(project_path)
+        project_id = document.get("id")
+        expected_root = project_directory(data_dir, str(project_id))
+        if expected_root.resolve() != project_path.parent.resolve():
+            raise ValueError(f"Project folder and document ID do not match: {project_path}")
+        if document.get("schema_version") != "1.0.0" or document.get("document_type") != "project":
+            raise ValueError(f"Unsupported project document: {project_path}")
+        data = document.get("data")
+        if not isinstance(data, dict):
+            raise ValueError(f"Invalid project document data: {project_path}")
+        name = data.get("name")
+        description = data.get("description", "")
+        metadata = data.get("metadata", {})
+        created_at = document.get("created_at")
+        updated_at = document.get("updated_at")
+        if not isinstance(name, str) or not name.strip() or not isinstance(description, str):
+            raise ValueError(f"Project document has invalid name/description: {project_path}")
+        if not isinstance(metadata, dict) or not isinstance(created_at, str) or not isinstance(updated_at, str):
+            raise ValueError(f"Project document has invalid metadata/timestamps: {project_path}")
+        connection.execute(
+            """
+            INSERT OR IGNORE INTO projects(id, name, description, created_at, updated_at, metadata_json)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (str(project_id), name, description, created_at, updated_at, json.dumps(metadata, ensure_ascii=False)),
+        )
+
+
 def reconcile_project_files(data_dir: Path, db_path: Path) -> None:
     """Rebuild missing portable documents/index rows without discarding legacy data."""
     with connect_db(data_dir, db_path) as connection:
+        _restore_project_rows_from_documents(connection, data_dir)
         projects = connection.execute("SELECT * FROM projects").fetchall()
         for project in projects:
             root = project_directory(data_dir, project["id"])
@@ -361,21 +396,27 @@ def reconcile_project_files(data_dir: Path, db_path: Path) -> None:
             if project_path.exists():
                 project_document = read_json(project_path)
                 if (
-                    project_document.get("document_type") != "project"
+                    project_document.get("schema_version") != "1.0.0"
+                    or project_document.get("document_type") != "project"
                     or project_document.get("id") != project["id"]
                     or not isinstance(project_document.get("data"), dict)
                 ):
-                    raise ValueError(f"Project document identity mismatch: {project_path}")
+                    raise ValueError(f"Project document identity/schema mismatch: {project_path}")
                 project_data = project_document["data"]
+                metadata = project_data.get("metadata", {})
+                if not isinstance(metadata, dict):
+                    raise ValueError(f"Project metadata must be an object: {project_path}")
                 connection.execute(
                     """
-                    UPDATE projects SET name = ?, description = ?, updated_at = ?
+                    UPDATE projects
+                    SET name = ?, description = ?, updated_at = ?, metadata_json = ?
                     WHERE id = ?
                     """,
                     (
-                        str(project_data.get("name", project["name"])),
-                        str(project_data.get("description", project["description"])),
+                        str(project_data.get("name", project["name"])) ,
+                        str(project_data.get("description", project["description"])) ,
                         project_document.get("updated_at", project["updated_at"]),
+                        json.dumps(metadata, ensure_ascii=False),
                         project["id"],
                     ),
                 )

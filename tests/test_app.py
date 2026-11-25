@@ -308,3 +308,41 @@ def test_legacy_database_migrates_and_preserves_project_and_story(tmp_path, monk
     assert len(episode_files) == 1
     backups = list((tmp_path / "backups").glob("pre-migration-*.sqlite3"))
     assert backups
+
+
+def test_database_index_rebuilds_from_portable_project_and_episode_files(tmp_path, monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    db_path = tmp_path / "cartoon_studio.sqlite3"
+    monkeypatch.setattr(main, "DB_PATH", db_path)
+
+    created = client.post("/api/projects", json={"name": "Recoverable Project"})
+    assert created.status_code == 201
+    project_id = created.json()["id"]
+    saved = client.put(f"/api/projects/{project_id}/story", json=valid_episode_plan())
+    assert saved.status_code == 200
+    episode_id = saved.json()["episode_id"]
+
+    assert (tmp_path / "projects" / project_id / "project.json").exists()
+    assert (tmp_path / "projects" / project_id / "episodes" / f"{episode_id}.json").exists()
+
+    # Portable files are the recovery source; remove only the rebuildable SQLite index.
+    for suffix in ("-wal", "-shm"):
+        (tmp_path / f"cartoon_studio.sqlite3{suffix}").unlink(missing_ok=True)
+    db_path.unlink()
+    main._INITIALIZED_DB_KEY = None
+    main.initialize_database()
+
+    opened = client.get(f"/api/projects/{project_id}")
+    recovered_story = client.get(f"/api/projects/{project_id}/story")
+    assert opened.status_code == 200
+    assert opened.json()["project"]["name"] == "Recoverable Project"
+    assert recovered_story.status_code == 200
+    assert recovered_story.json()["episode_id"] == episode_id
+    assert recovered_story.json()["plan"]["title"] == "Market Mix-up"
+
+    with main.connect_db() as connection:
+        assert connection.execute("SELECT COUNT(*) FROM projects").fetchone()[0] == 1
+        assert connection.execute("SELECT COUNT(*) FROM project_documents").fetchone()[0] == 2
+        assert connection.execute("SELECT COUNT(*) FROM story_plans").fetchone()[0] == 1
