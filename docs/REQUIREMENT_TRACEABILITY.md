@@ -2,7 +2,7 @@
 
 Every atomic registry ID is mapped below. The source column is the authoritative master-prompt part and/or specification section. Planned component names are architectural targets. Existing source paths are listed only where present and inspected. Evidence is deliberately not inferred from code presence.
 
-**Live checkpoint:** 171 registry IDs and 171 traceability IDs remain in one-to-one correspondence. P0.5 adds ARCHITECTURE_TRACEABILITY.md as the architecture ownership crosswalk. Latest verified implementation CI: run #299 SUCCESS on `570c6f9b2d0fe35b64ec74e84ab8d0e702d7665d`.
+**Live checkpoint:** 171 registry IDs and 171 traceability IDs remain in one-to-one correspondence. P0.5 adds ARCHITECTURE_TRACEABILITY.md as the architecture ownership crosswalk. Latest verified implementation CI: run #356 SUCCESS on `81972eae6e5cafb4756695d385425d1d1f1a63a8`.
 
 | Requirement ID | Source | Architecture component | Existing source/module or planned target | Implementation mapping | Test / acceptance method | Evidence | Status / limitation |
 |---|---|---|---|---|---|---|---|

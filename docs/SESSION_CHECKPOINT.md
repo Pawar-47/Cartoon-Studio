@@ -3,7 +3,7 @@
 Updated: 2026-11-25
 Repository: https://github.com/Pawar-47/Cartoon-Studio
 Branch: main
-Latest implementation checkpoint: `8b1771790e6fad373b732472cbc3814dc4e0e838` (CI #349 passed).
+Latest implementation checkpoint: `81972eae6e5cafb4756695d385425d1d1f1a63a8` (quick CI #356 passed).
 
 ## Mission and operating rules
 
@@ -30,7 +30,7 @@ Phase 2 — Character Studio is ACTIVE. Phase 0 and Phase 1 are complete. Do not
 - Common 3ds Max Biped, Character Creator, Unreal-style, Blender Rigify and Cesium Rigged Figure bone naming conventions are recognized. Duplicate and negative bone indices are rejected.
 - Character-to-character retarget UI with source/target selectors, imported animation dropdown, strict clip-name preflight, saved Godot scene, persistent JSON record and scene download.
 - Worker reopens the saved scene, verifies source animation playback and source-pose change, then compares the target pose against Godot's model-space rest-corrected retarget transform. This supports different rest-axis/bone-roll conventions; raw local source/target angles are diagnostics, not an equality requirement.
-- Saved retarget records expose a separate Three.js browser preview using persisted canonical mappings. The saved Godot scene remains authoritative.
+- Saved retarget records expose a separate Three.js browser preview using persisted canonical mappings. Saved animation names resolve exactly or by a unique Godot library suffix; missing or ambiguous names fail visibly rather than falling back to another clip. The saved Godot scene remains authoritative.
 - Original source and target GLBs remain byte-identical.
 
 ## Imported fixture coverage
@@ -51,29 +51,28 @@ Phase 2 — Character Studio is ACTIVE. Phase 0 and Phase 1 are complete. Do not
 
 ## Important acceptance boundary
 
-Two real third-party assets have passed native Godot acceptance for tested scenarios: Khronos Rigged Figure retargeting and RobotExpressive Walking-clip retargeting with its bilateral IK-foot hierarchy. This is not blanket support for arbitrary GLBs. More rigs, humanoid multi-clip retargeting and interactive browser facial-expression acceptance remain. Phase 2 remains ACTIVE and incomplete.
+Two real third-party assets have passed native Godot acceptance for tested scenarios: Khronos Rigged Figure retargeting and RobotExpressive Walking/Running/Dance retargeting with its bilateral IK-foot hierarchy. This is not blanket support for arbitrary GLBs. More rigs and interactive browser facial-expression acceptance remain. Phase 2 remains ACTIVE and incomplete.
 
 ## CI execution policy
 
-- Push/PR CI runs lint, Python compilation and the full automated test suite only; no PyInstaller or NSIS builds. Windows CI #334 passed the pinned RobotExpressive fixture acquisition and Godot facial-morph inspection.
+- Push/PR CI runs lint, Python compilation and the full automated test suite only; no PyInstaller or NSIS builds. Quick CI #356 also runs the Node.js unit suite for strict browser clip-name resolution.
 - Full Windows application and installer validation lives in `.github/workflows/release-windows.yml` and is manually dispatched after a phase/release milestone.
 - The dedicated Godot native-worker proof is now manual-only and reserved for phase milestones; routine pushes run one quick CI workflow. Full Windows application and installer validation remains manual in `.github/workflows/release-windows.yml`.
 - Workflow concurrency groups prevent overlapping runs. Avoid duplicate CI runs for minor edits.
 
-## Current retarget acceptance expansion — 2026-11-25
+## Current retarget and browser-preview acceptance — 2026-11-25
 
-- The target fixture generator now supports explicit local bone-roll quaternions and non-uniform per-bone scales, and recalculates inverse-bind matrices from full TRS transforms.
-- A new Godot integration test builds a rolled/scaled target at test time, verifies its imported rest rotations/scales differ from the source, then checks animation transfer after scene save/reopen.
-- Windows CI #341 PASSED on `57e252c922acae58831da5b966cab8edcd9b4408`; generated bone-roll/non-uniform-scale target transferred pose after native scene save/reopen.
-- RobotExpressive native retarget proof #346 PASSED on `9b1f9f3d8815ebc7f45c8b1aa90673c9a0827f85`; CI #349 validated the source-only IK-foot hierarchy variant through API/UI.
+- The target fixture generator supports local bone-roll quaternions and non-uniform per-bone scales, and recalculates inverse-bind matrices from full TRS transforms.
+- Windows CI #341 passed the generated rolled/scaled target through native Godot retarget, save/reopen and model-space pose verification.
+- RobotExpressive native retarget proof #346 passed; CI #349 accepted the bilateral IK-foot topology as a source-only variant. CI #351–#352 passed Walking, Running and Dance clip retargets.
+- CI #356 passed deterministic sampling at 37% of the selected animation and the strict browser clip resolver. Unknown or ambiguous saved clip names no longer silently select the first GLB animation.
 
 ## Next substantial implementation batch
 
-1. Expose imported Godot animation names in inspection metadata and provide a source-clip dropdown in the retarget UI; validate against RobotExpressive.
-2. Test browser facial sliders, reset and saved-recipe behavior against the real morph asset.
-3. Retarget RobotExpressive across its named clips and add humanoid fixtures with unusual rest axes, bone roll and scale variation.
-4. Compare browser retarget preview with the authoritative Godot scene across rig families.
-5. Continue deterministic export and animation round-trip after broader acceptance.
+1. Compare browser retarget preview motion against the authoritative Godot scene across the accepted humanoid, bone-roll and RobotExpressive fixtures.
+2. Add more third-party humanoid rig families with varied rest axes and hierarchy layouts.
+3. Perform interactive browser acceptance of RobotExpressive facial sliders, reset and save/reopen.
+4. Continue deterministic export and animation round-trip after broader acceptance.
 
 ## Later phases
 

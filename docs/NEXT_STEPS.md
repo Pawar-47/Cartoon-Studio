@@ -10,7 +10,8 @@ Saved retarget records now also have a browser preview action. The preview endpo
 
 - Windows CI #334 passed: fixture acquisition/checksum, Ruff, Python compilation and full pytest including Godot 4.7.2 facial morph import and multi-clip inspection. This quick CI intentionally did not build the complete Windows app or installer.
 - Windows CI #340 passed: clip catalog, selected/default clip persistence, legacy metadata compatibility and unknown-clip rejection.
-- Windows CI #341 and native-worker proof #22 passed: synthetic bone-roll/non-uniform-scale target compatibility. Native-worker proof #346 passed RobotExpressive Walking-clip retarget; Windows CI #349 passed its source-only IK-foot hierarchy API/UI support.
+- Windows CI #341 and native-worker proof #22 passed: synthetic bone-roll/non-uniform-scale target compatibility. Native-worker proof #346 passed RobotExpressive Walking retarget; CI #349 passed source-only IK-foot hierarchy API/UI support.
+- Windows CI #351–#352 passed RobotExpressive Walking, Running and Dance retargets. CI #354 passed facial morph UI/default-reset checks. CI #356 passed deterministic clip sampling and strict browser animation-name resolution with Node unit tests.
 - The full packaging/installer workflow is now isolated in `.github/workflows/release-windows.yml` and is manually dispatched at phase/release milestones.
 - Windows CI #326 passed the complete Windows build and installer lifecycle after the appearance-editor playback isolation change.
 - Windows CI #303 passed on commit `0bfce71625d6e3084b4ceda9b64a9825cca95101`: Ruff lint, Python compilation, full pytest including pinned Godot 4.7.2 tests, third-party GLB inspection/retarget, morph-target inspection, bootstrap smoke, both self-contained builds, NSIS installer and full install/upgrade/uninstall/reinstall lifecycle.
@@ -19,12 +20,12 @@ Saved retarget records now also have a browser preview action. The preview endpo
 - Earlier Windows CI #279 passed on commit 56c61487089097108b6baa862f9ac9125568b9a5: lint, Python compilation, full pytest suite including the pinned Godot 4.7.2 worker scenario, Windows bootstrap packaging/smoke test, both self-contained application builds, NSIS installer compilation, clean install, upgrade, uninstall, reinstall and artifact uploads.
 - CI #279 artifacts: Windows installer (103,861,406 bytes), bootstrap (819,154 bytes), dependency SBOM (32,632 bytes).
 - The worker test covers a Mixamo-named animated source and a distinct differently proportioned target; it checks source animation playback, pose transfer after scene save/reopen and byte-identical source asset preservation.
-- Browser retarget preview is implemented and its API contract is covered by FastAPI tests. Browser visual fidelity and diverse third-party GLBs still require acceptance testing.
+- Browser retarget preview now resolves saved clip names exactly or by a unique Godot library suffix; unknown/ambiguous names fail rather than silently previewing a different animation. Node tests cover this contract. Browser visual fidelity still requires interactive acceptance.
 
 ## Next substantial batch
 
 1. Compare browser retarget preview motion against the authoritative Godot scene across the accepted humanoid, bone-roll and RobotExpressive fixtures.
-2. Add more third-party humanoid rig families and a humanoid source with multiple playable clips.
+2. Add more third-party humanoid rig families with varied rest axes and hierarchy layouts.
 3. Perform interactive browser acceptance of RobotExpressive facial sliders, reset-to-imported-defaults and save/reopen.
 4. Continue deterministic export and animation round-trip after broader compatibility acceptance.
 
