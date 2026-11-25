@@ -57,3 +57,13 @@ Phase 2 P2.1 adds the pinned Godot 4.7.2 Windows runtime as a bundled native wor
 ## P2.1 Godot runtime packaging
 
 The self-contained installer now includes the pinned Godot 4.7.2-stable Windows x86_64 runtime under `engine/`, the worker project and upstream MIT/COPYRIGHT notices. CI verifies the official archive SHA-256 before extraction and records Godot as a CycloneDX component. The browser/FastAPI app remains the control plane; the native worker runs headlessly and is not a separate user prerequisite. The bootstrap ZIP remains Python-dependent and does not bundle the 86 MB compressed Godot runtime. The self-contained installer includes the executable, worker project and upstream notices under its `engine/` directory.
+
+
+## P2.1 bundled Godot worker — verified on 2026-11-25
+
+- Latest Windows CI: [run #204 — SUCCESS](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45590769693), exact main commit `1f68fe8e5e87dab3115c7ed95788a7eab4176aab`.
+- The official Godot 4.7.2-stable Windows x86_64 archive is downloaded in CI and checked against the SHA-256 in `engine/godot_runtime.json`.
+- The self-contained installer bundles the native executable, `engine/godot_worker`, and Godot MIT/COPYRIGHT/AUTHORS notices. The portable bootstrap remains a separate Python-dependent option.
+- The CI test environment points the adapter to the verified runtime; 39 pytest tests passed, including real worker handshake and GLB inspection.
+- The installer lifecycle test passed after the final uninstall fixes: install, launch, upgrade, preserve project data, uninstall, reinstall and preserve the same project.
+- The engine is launched headlessly as a supervised child process; users do not need to install Godot separately.

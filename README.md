@@ -13,7 +13,7 @@ An original, local-first Urdu 3D cartoon production studio. This repository is t
 - Save and reload validated episode plans inside a local project.
 - GitHub Actions Windows CI installs exact uv-locked dependencies, runs lint/compile/tests and packages a hash-locked bootstrap ZIP.
 
-Godot 4.7.2 Compatibility has passed a bounded hosted-runner proof and is selected as the native 3D runtime behind a supervised worker adapter. The production engine integration is still pending. This repository does not yet claim complete 3D cartoon generation, Urdu TTS, lip-sync or final episode rendering.
+Godot 4.7.2 Compatibility is now integrated as a pinned, bundled native worker behind a supervised Python adapter. P2.1 passed real Windows CI integration tests on 2026-11-25 (CI #204), including the worker handshake and GLB import/inspection. This is an engine-integration milestone, not a complete Character Studio: character authoring, rigging, modular appearance, animation, Urdu TTS, lip-sync and final episode rendering remain future work.
 
 ## Run on Windows
 

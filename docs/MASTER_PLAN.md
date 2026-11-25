@@ -229,3 +229,14 @@ P0.1–P0.6 are complete. P0.7 has reconciled the original 25-part brief, all 24
 P1.1–P1.4 are complete. Windows CI run #176 passed the locked dependency checks, 22 pytest tests, lint/compile, bootstrap extraction and actual launcher smoke test, self-contained PyInstaller builds for 0.1.0 and 0.1.1, NSIS installer compilation, clean install/launch, v1-to-v2 upgrade, project-data preservation, uninstall, reinstall and artifact upload. See `docs/P1_4_INSTALLER_REPORT.md`.
 
 **Phase 1 is closed. Phase 2 — Character Studio — is active.** P2.1 integrates the selected Godot 4.7.2 Compatibility runtime as a supervised native worker behind the existing FastAPI/browser control plane. The worker must be pinned, license-noticed, bundled with the application, and validated by Windows CI before the original character creation/rigging work in P2.2. The optional Godot Web viewport remains deferred. Physical target-PC performance testing remains Phase 8 and is not a gate for P2.1.
+
+
+## Live checkpoint amendment — 2026-11-25
+
+The older baseline and phase checkpoint text above records the state before the Godot worker integration. The authoritative current state is:
+
+- Main HEAD `1f68fe8e5e87dab3115c7ed95788a7eab4176aab`; Windows CI #204 passed on that exact commit.
+- P2.1 (pinned Godot 4.7.2 native worker, Python supervision adapter, handshake, GLB inspection, runtime packaging and Windows integration tests) is complete and tested.
+- Phase 2 remains active. Proceed to P2.2 Character Studio foundation; do not repeat P2.1 or restart earlier phases.
+- P2.2 must deliver real character import/creation, rig-readiness inspection, supported modular appearance and preview; P2.3 then expands persistent identity and character metadata.
+- Keep later phases in order and preserve all existing work. PC performance testing remains Phase 8 only.

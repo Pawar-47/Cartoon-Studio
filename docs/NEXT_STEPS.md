@@ -58,3 +58,19 @@ The user's physical PC is not a prerequisite for architecture, implementation or
 - Run tests and inspect evidence; distinguish implemented, tested and verified.
 - No mandatory paid APIs, subscriptions, cloud rendering or online activation.
 - Do not send user audio/content to an external provider without explicit approval.
+
+
+## Resume correction — 2026-11-25 (supersedes the P2.1 active checklist above)
+
+P2.1 is no longer pending. It was completed and accepted by Windows CI #204 on the latest main commit `1f68fe8e5e87dab3115c7ed95788a7eab4176aab`: [workflow run](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45590769693). All 39 pytest tests passed with the real pinned Godot runtime available; lint, compilation, Godot archive hash verification, SBOM augmentation, application packaging and the complete installer lifecycle also passed.
+
+### Next implementation batch: P2.2 — Character Studio foundation
+
+1. Re-scan all 171 requirements and the original character requirements CHAR-R001 through CHAR-R006 and their dependencies.
+2. Complete source/license/compatibility evaluation for the character creation and import path; preserve the engine-neutral project/character identity contracts.
+3. Deliver an actual character workflow, not a decorative UI: import/validate a rigged GLB or VRM, inspect humanoid skeleton and animation readiness, save a versioned character profile in the project, and preview the imported character through the bundled Godot worker.
+4. Add modular appearance only where the source asset supports independently selectable meshes, materials or blend shapes; never present unsupported controls.
+5. Add tests for import validation, unsafe path rejection, profile save/reopen, asset provenance and preview request/response. Run the real Godot path in Windows CI and inspect generated preview output.
+6. Update registry, traceability, architecture, source-reuse evaluation, test evidence, project status and next steps in the same coherent batch.
+
+P2.3 remains the next Character Studio batch after P2.2: persistent identity refinement, expressions, clothing variants, relationships and voice profiles. Do not start World Builder or later phases early.

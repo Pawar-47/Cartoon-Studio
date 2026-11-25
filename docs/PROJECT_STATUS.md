@@ -85,3 +85,16 @@
 - No mandatory paid API, cloud rendering or online activation.
 - Never send user audio/content to external providers without explicit approval.
 - Never claim code presence or a candidate proof as production functionality.
+
+
+## Live checkpoint correction — 2026-11-25 (supersedes the earlier P2.1-in-progress checkpoint above)
+
+- Latest main commit: `1f68fe8e5e87dab3115c7ed95788a7eab4176aab` — `fix: stop bundled Godot worker before uninstall cleanup`.
+- Latest Windows CI: [run #204 — SUCCESS](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45590769693), on the exact latest main commit.
+- CI #204 ran 39 pytest tests (all passed) with `CARTOON_STUDIO_GODOT_PATH` pointing to the fetched, SHA-256-verified Godot 4.7.2 runtime. Ruff and Python compilation passed.
+- The same run fetched and hash-verified the official Godot archive, added it to the CycloneDX SBOM, packaged the worker and license notices into both self-contained application builds, compiled both NSIS installers, and passed clean install, launch, upgrade, project-data preservation, uninstall and reinstall smoke tests.
+- **P2.1 — Godot native-worker integration: COMPLETE / TESTED.** Real worker handshake, pinned engine version, GLB fixture import/inspection, invalid GLB handling, independent worker path-boundary rejection, API integration and adapter timeout/cancellation cleanup tests are included in the successful Windows run. Latest installer cleanup fixes also passed.
+- P2.1 scope is deliberately limited to the supervised worker, handshake and GLB inspection. It does not provide character authoring, rigging, modular clothing, facial-expression editing or production rendering.
+- **Phase 2 remains ACTIVE. Next batch: P2.2 — Character Studio foundation:** original character creation/import, modular appearance workflow, rig readiness/rigging integration and real preview. P2.3 will add persistent identity, expressions, clothing variants, relationships and voice profiles.
+- Phase 0 and Phase 1 remain complete. World Builder (Phase 3), Story/Scene expansion (Phase 4), Animation (Phase 5), Urdu voice/lip-sync (Phase 6), episode generation (Phase 7) and target-PC optimization (Phase 8) remain in their planned order.
+- No physical-PC performance test is required before P2.2. Keep the Intel i3-5005U / HD 5500 / 8 GB / SSD profile as a design constraint; actual measurement stays in Phase 8.

@@ -105,3 +105,15 @@ See P0_6_PROOF_REPORT.md for exact run IDs, acceptance checks and limitations.
 - Added FastAPI engine status and project-relative GLB inspection endpoints.
 - CI is being extended to download and hash-verify the official binary, execute real worker integration tests, add the runtime to CycloneDX and bundle it with both installer builds.
 - Status: implementation committed; Windows CI result pending. No character creation, rigging, animation authoring or production rendering is claimed by this batch.
+
+
+## P2.1 Godot native-worker integration — Windows CI #204 — 2026-11-25
+
+- Commit: `1f68fe8e5e87dab3115c7ed95788a7eab4176aab`.
+- Workflow: [Cartoon Studio CI #204](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45590769693).
+- Result: SUCCESS. The pytest step displayed 39 passing tests (39 dots, no skips or failures) on Windows Server with Python 3.11 and the actual pinned Godot 4.7.2 executable supplied through `CARTOON_STUDIO_GODOT_PATH`.
+- Verified in the real worker path: protocol/version handshake and capabilities; import/inspection of the checked-in GLB fixture; malformed GLB failure; independent worker-side project-root boundary rejection; FastAPI status and project-relative GLB inspection endpoints.
+- Adapter-level tests additionally cover missing runtime, path traversal, symlink escape, non-GLB input, timeout termination, cancellation termination, wait/cleanup and structured failure logging.
+- Ruff and Python compilation passed. Godot archive SHA-256 verification passed. CycloneDX inventory includes the Godot runtime. Both self-contained application builds include the runtime, worker project and upstream license/copyright/author notices.
+- Installer smoke test passed clean install, first launch, project creation, v1-to-v2 upgrade, project preservation, uninstall cleanup and reinstall. The follow-up commits fixed worker-file removal and stop the app/worker before uninstaller cleanup; CI #204 confirms the final state.
+- Limitations: this validates the native worker integration and GLB inspection only. It is not proof of character creation, rigging, modular appearance, rendered character preview, animation authoring or final episode rendering. Hosted runner renderer is not the user's Intel GPU; target-PC benchmarking remains Phase 8.

@@ -261,3 +261,25 @@ Inspected main commit `8d8e43bf3698dd1df4b011c0f1a8dd1d468ae365`; BSD-2-Clause; 
 5. Smol Urdu TTS: Apache2 model card but linked code has no explicit license; BF16/PyTorch path and target CPU suitability unproven.
 
 **Decision:** no natural Pakistani Urdu TTS or automatic phone-level lip-sync is selected. Keep human recording, word/character alignment and manual viseme correction as supported fallbacks.
+
+
+## P2.2 Character Studio source evaluation — 2026-11-25
+
+### V-Sekai Godot VRM add-on
+- Repository: https://github.com/V-Sekai/godot-vrm
+- Current default branch: master; observed latest commit `e15199f980064028bfa4fbee5e70dddb82dd55c3` (2026-07-08), updating import files for Godot 4.7.
+- License: root MIT; the repository explicitly states that sample VRM models have separate licenses.
+- Relevant capabilities documented in README: VRM 0.0/1.0 import, VRM 1.0 export, MToon, humanoid skeleton profile compatibility, blend-shape expressions and animation-track output for expressions/visemes.
+- Limitations documented upstream: VRMC_node_constraint is described as buggy with retargeting; VRM animation extension support is not implemented; sample avatar licenses differ.
+- Decision: candidate adapter for VRM model import/export and expression metadata. Pin an exact commit and prove compatibility with the project's Godot 4.7.2 worker before adding it. Do not copy sample avatars.
+
+### Configura
+- Asset-store listing: https://store.godotengine.org/asset/configura-team/configura/
+- The listing describes modular assets, blend-shape/skeletal deformation, layered materials, color swatches and character save/load. The linked page does not expose a public source repository or code license.
+- Decision: no integration or redistribution until source and license are independently verified. The forum thread reports the web version deprecated and explains that artists prepare Blender models and accessory scenes.
+
+### Grumoth/godot-character-creator
+- Repository: https://github.com/Grumoth/godot-character-creator
+- License: MIT.
+- Latest observed commit: 2020-03-08; the project targets the Godot 3.2 era.
+- Decision: too old for direct Godot 4.7.2 integration; do not copy or port without a separate cost/benefit case.
