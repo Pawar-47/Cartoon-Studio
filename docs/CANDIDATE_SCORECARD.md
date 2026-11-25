@@ -24,7 +24,7 @@ Scores reflect public source/docs inspected on 2026-11-25. Unknown target perfor
 | Blender 4.5.17 LTS | 2 | 5 | 3 | 5 | 5 | 2 | **3.65** | Medium. Full 3D authoring/rendering; target is below published CPU minimum and has legacy Intel driver risk; GPL3 obligations. |
 | Browser WebGL / Ara / Ekza | 3 | 3 | 3 | 4 | 2 | 3 | **3.00** | Low. Fast UI/preview path but editor maturity, CI and MP4 export proof are incomplete/cancelled; browser memory needs testing. |
 
-**Current research leader:** Godot 4.7.2 Compatibility as the source-based target runtime candidate. This is not frozen; P0.6 architecture-critical proofs can change the ranking. Physical-PC measurements are deferred to Phase 8 and do not gate architecture or implementation.
+**Selected runtime:** Godot 4.7.2 Compatibility after the successful P0.6 hosted-runner proof (GLB import, animation, save/reopen and MovieWriter AVI). Physical-PC measurements are deferred to Phase 8 and do not gate architecture or implementation.
 
 ## World and environment
 
@@ -114,3 +114,7 @@ The hardware score is an evidence-based compatibility/resource estimate, not mea
 ## Hardware gate correction — 2026-11-25
 
 The physical target PC is not a gate for candidate ranking, P0.5 architecture, P0.6 functional proofs, P0.7 freeze or feature implementation. Scores continue to describe source/API/resource fit and uncertainty, not measured performance. Godot remains the leading candidate because its documented Compatibility renderer/API and integration boundary are promising; the P0.6 proof is a controlled functional test, not a benchmark on the user's PC. Actual target-PC frame time, RAM, render duration and quality-preset tuning are Phase 8 optimization evidence. A slow result does not invalidate the product or stop development.
+
+## P0.6 result — 2026-11-25
+
+Godot 4.7.2 Compatibility is selected as the native 3D runtime after run #3 passed GLB import, animation, save/reopen and MovieWriter AVI; FFmpeg assembled an MP4 and FFprobe confirmed 640x360, 24 FPS, 3 seconds, MPEG-4 Part 2/AAC. The SQLite-owned queue prototype also passed five queue-specific tests. These are hosted-runner functional proofs only. The final FFmpeg build/codec and optional browser viewport remain open by design; physical-PC performance is Phase 8. See P0_6_PROOF_REPORT.md.

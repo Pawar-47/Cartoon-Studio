@@ -28,7 +28,7 @@
 
 | Area | Leading candidate / decision | License / cost | Current status and proof boundary |
 |---|---|---|---|
-| 3D runtime | Godot 4.7.2, Compatibility renderer, native worker | MIT; include engine copyright/license and third-party notices | Leading candidate from source scorecard, not yet engine-approved. P0.6 validates import, scene lifecycle, animation, save/reopen and a short native render/export path. No physical-PC benchmark required. |
+| 3D runtime | Godot 4.7.2, Compatibility renderer, native worker | MIT; include engine copyright/license and third-party notices | Selected after P0.6 hosted-runner proof. GLB import, animation, PackedScene save/reopen and a 72-frame 640x360/24 FPS MovieWriter AVI passed; no physical-PC benchmark required. See P0_6_PROOF_REPORT.md. |
 | Browser viewport | Optional Godot Web export using WebAssembly/WebGL 2 and JavaScriptBridge | Godot MIT | Optional only. Must be isolated behind adapter and never be the sole production renderer. Browser threading needs cross-origin-isolation headers; threaded web export is not a baseline dependency. |
 | Primary UI shell | FastAPI + existing browser UI | Existing app | Retain. Do not replace with Godot native shell or duplicate project/API logic. |
 | Interchange | glTF 2.0 / GLB; VRM 1.0 as a character interchange candidate | Format/specification; each model/add-on separately licensed | Canonical project IDs remain independent of node paths, skeleton names and vendor metadata. VRM addon is not yet approved as a mandatory dependency. |
@@ -45,7 +45,7 @@ Godot's official license page describes the engine as MIT and requires copyright
 
 | Area | Decision | License / cost | Rationale / acceptance |
 |---|---|---|---|
-| Queue | Start with a small Cartoon Studio-owned SQLite queue rather than adding Huey/sqlite-workqueue immediately | Python/SQLite; no extra dependency | Existing app already uses SQLite. Required semantics: one local render at a time initially, persisted state/events, per-scene checkpoints, idempotent retries, cooperative cancel and restart reconciliation. |
+| Queue | Use the Cartoon Studio-owned SQLite queue; isolated P0.6 prototype passed lease/retry/cancel/checkpoint tests. Do not add Huey/sqlite-workqueue unless scope expands | Python/SQLite; no extra dependency | Existing app already uses SQLite. Required semantics: one local render at a time initially, persisted state/events, per-scene checkpoints, idempotent retries, cooperative cancel and restart reconciliation. |
 | Queue design | queued → preparing → rendering → assembling → completed; terminal failed / cancelled | Internal module | Claim work in a transaction with lease/heartbeat; persist every state transition; do not hold a DB transaction during rendering. |
 | Cache | Content-addressed scene inputs and immutable scene outputs | Internal module | Hash canonical scene revision + engine/asset/quality versions. Cache invalidates when any render-affecting input changes. Preserve successful chunks after later failure. |
 | Recovery | Startup reconciliation and stage-level retries | Internal module | A failed scene does not invalidate completed scenes. Cancellation leaves project data and completed output intact. Fault-injection tests required before reliability is marked. |
@@ -56,7 +56,7 @@ Godot's official license page describes the engine as MIT and requires copyright
 | Area | Decision / candidate | License / cost | Current status and boundary |
 |---|---|---|---|
 | Scene capture | Godot MovieWriter / native frame export candidate | Godot MIT | P0.6 proof must inspect frame timing, audio output, output file limits and deterministic repeatability. No claim of production export yet. |
-| Assembly | FFmpeg invoked through a narrow process adapter | FFmpeg LGPL-2.1+ by default; optional components can switch to GPL or make a build unredistributable | Adopt tool boundary, not a binary yet. If bundled, exact build must be audited; default build must avoid --enable-gpl, --enable-nonfree, libx264 and other GPL components, and LGPL source/notice obligations must be met. |
+| Assembly | FFmpeg invoked through a narrow process adapter | FFmpeg LGPL-2.1+ by default; optional components can switch to GPL or make a build unredistributable | P0.6 verified AVI-to-MP4 assembly using FFmpeg MPEG-4 Part 2/AAC on the hosted runner. Adopt the process adapter, not that CI binary/codec. If bundled, exact build must be audited; default build must avoid --enable-gpl, --enable-nonfree, libx264 and other GPL components, and LGPL source/notice obligations must be met. |
 | MP4 codec | Keep encoder selection separate from FFmpeg adapter | Codec/patent/licensing varies | Do not promise an H.264 encoder or select a redistributable codec build until the exact encoder, Windows availability and licensing are verified. |
 | Audio mixing | FFmpeg filters or a small Python audio adapter, selected after proof | Depends on exact libraries/build | Keep dialogue, music and SFX as separate timeline tracks until final mix; preserve source WAV/recordings. |
 | Music/SFX | Original recordings or exact verified CC0 packs | Per-asset terms | No bulk pack inclusion. Keep source, author, license, attribution and hash per asset. |
@@ -96,11 +96,11 @@ PyInstaller's official license documentation explains the bundling exception. NS
 
 ## 8. Release gates and decisions intentionally left open
 
-- P0.6: Godot native worker proof: import a GLB, load a scene manifest, run an animation, save/reopen the scene, render a short output, inspect the file and structured errors. Test in a controlled CI/dev environment; physical-PC benchmarking is not required.
+- P0.6: PASSED. Godot native worker proof imported a GLB, ran animation, saved/reopened the scene and rendered/inspected AVI; see P0_6_PROOF_REPORT.md.
 - P0.6: optional web viewport proof only if it provides clear product value; failure does not block native rendering.
 - P0.6: FFmpeg build/codec proof with exact configure flags and a redistributable path. No GPL/nonfree build by default.
-- P0.6: verify queue failure/cancel/restart semantics using synthetic jobs before production integration.
-- P0.7: freeze architecture and exact adapter contracts after the above bounded proofs.
+- P0.6: PASSED as a prototype. SQLite queue tests covered lease expiry, retry, completed-scene preservation, cancel and stale-worker rejection. Production queue implementation and migration tests remain Phase 1/7.
+- P0.7: ready for final compliance review and architecture freeze. The optional Web viewport is deferred; final production FFmpeg codec/build remains a release-level decision.
 - Phase 1: create a reproducible lock file, SBOM/third-party notices, Windows installer workflow and clean-VM smoke test.
 - Phase 8: measure target-PC render time, peak RAM, disk growth, preview responsiveness, and quality-preset trade-offs. These are optimization results, not permission to start development.
 - IP decision: the repository currently has no root LICENSE. Do not assume the Cartoon Studio license is MIT or proprietary. Before public redistribution of the complete app or any copyleft dependency, the project owner must choose/approve the project's own distribution license and the release must include correct notices. Architecture work continues with permissive dependencies and clear exclusions meanwhile.

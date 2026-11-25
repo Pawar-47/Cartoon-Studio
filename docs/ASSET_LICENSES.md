@@ -141,3 +141,10 @@ No alignment model weights were downloaded or bundled.
 | SQLite | Public domain: https://www.sqlite.org/copyright.html | Existing stdlib SQLite remains the local data/index layer. |
 
 **Project-level IP note:** no root LICENSE file is present in the repository tree at this checkpoint. This is not permission to assume any license for Cartoon Studio. Before redistribution, the project owner must decide the project license and approve any copyleft dependencies. Until then, avoid bundling GPL/AGPL code/models/assets and prefer permissive dependencies.
+
+## P0.6 proof evidence — 2026-11-25
+
+- Godot 4.7.2-stable is selected as the native worker runtime after the P0.6 CI proof passed GLB import, animation, PackedScene save/reopen and MovieWriter AVI.
+- FFmpeg converted the proof AVI to a 3-second 640x360/24 FPS MP4 with MPEG-4 Part 2 video and AAC audio. This is a functional assembly proof only; the production codec and redistributable build are not selected.
+- The SQLite queue prototype passed five queue-specific reliability tests in Windows CI.
+- See docs/P0_6_PROOF_REPORT.md for run IDs, logs and explicit limitations.
