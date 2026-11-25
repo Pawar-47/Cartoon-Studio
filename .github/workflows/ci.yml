@@ -51,12 +51,13 @@ jobs:
       - name: Build self-contained application v1
         shell: pwsh
         run: |
+          $staticPath = (Resolve-Path "app/static").Path
           Set-Content -Path app/version.py -Value @'
 """Single source for the installed application version."""
 
 APP_VERSION = "0.1.0"
 '@ -Encoding utf8
-          uv run --locked pyinstaller --noconfirm --clean --onedir --windowed --name CartoonStudio --specpath build/pyinstaller-v1 --workpath build/pyinstaller-v1/work --distpath dist/installer-v1 --add-data "app/static;app/static" --collect-submodules uvicorn app/desktop.py
+          uv run --locked pyinstaller --noconfirm --clean --onedir --windowed --name CartoonStudio --specpath build/pyinstaller-v1 --workpath build/pyinstaller-v1/work --distpath dist/installer-v1 --add-data "$staticPath;app/static" --collect-submodules uvicorn app/desktop.py
           $bundle = (Resolve-Path "dist/installer-v1/CartoonStudio").Path
           Copy-Item LICENSES -Destination $bundle -Recurse -Force
           Copy-Item docs/THIRD_PARTY_NOTICES.md, dependency-sbom.cdx.json -Destination $bundle -Force
@@ -68,7 +69,7 @@ APP_VERSION = "0.1.0"
 
 APP_VERSION = "0.1.1"
 '@ -Encoding utf8
-          uv run --locked pyinstaller --noconfirm --clean --onedir --windowed --name CartoonStudio --specpath build/pyinstaller-v2 --workpath build/pyinstaller-v2/work --distpath dist/installer-v2 --add-data "app/static;app/static" --collect-submodules uvicorn app/desktop.py
+          uv run --locked pyinstaller --noconfirm --clean --onedir --windowed --name CartoonStudio --specpath build/pyinstaller-v2 --workpath build/pyinstaller-v2/work --distpath dist/installer-v2 --add-data "$staticPath;app/static" --collect-submodules uvicorn app/desktop.py
           $bundle = (Resolve-Path "dist/installer-v2/CartoonStudio").Path
           Copy-Item LICENSES -Destination $bundle -Recurse -Force
           Copy-Item docs/THIRD_PARTY_NOTICES.md, dependency-sbom.cdx.json -Destination $bundle -Force
