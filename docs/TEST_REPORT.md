@@ -73,3 +73,14 @@ See P0_6_PROOF_REPORT.md for exact run IDs, acceptance checks and limitations.
 - CI #136: SUCCESS on commit d60def463e34575bab26b3a5da6c573b4f2bc4ee; 22 pytest tests passed; Ruff, compile, lock consistency, package creation, actual launcher smoke, artifact upload and SBOM upload all passed.
 - Artifacts: Cartoon-Studio-Windows-Bootstrap (250,410 bytes; artifact ID 15002480559) and Cartoon-Studio-Dependency-SBOM (29,041 bytes; artifact ID 15002700150).
 - Limitations: the bootstrap still requires Python 3.11 installed or available via the Windows Python launcher. It is not the P1.4 self-contained installer. No user-PC or rendering performance test was run.
+
+
+## P1.4 self-contained Windows installer — 2026-11-25
+
+- Built self-contained PyInstaller onedir application bundles for versions 0.1.0 and 0.1.1 and compiled per-user NSIS 3.13.0 installers.
+- Installer default location: `%LOCALAPPDATA%\\Programs\\Cartoon Studio`; user data remains separate under `%LOCALAPPDATA%\\CartoonStudio` or the explicit `CARTOON_STUDIO_DATA` override.
+- Upgrade replaces known program-owned files without invoking the prior uninstaller mid-install. The uninstaller restores its original install directory from the per-user registry before cleanup.
+- Windows CI #175 passed: clean v1 install, launch and project creation; v1-to-v2 upgrade; project visibility after upgrade; uninstall; program/shortcut/registry cleanup; user project preservation; reinstall; project visibility after reinstall; final uninstall.
+- Exact verified commit: `24f1617cff4d592e981908c7ceea641225c05ac0`.
+- Artifacts: installer 17,543,577 bytes (ID `15009070345`); bootstrap 259,634 bytes (ID `15008472421`); CycloneDX SBOM 31,634 bytes (ID `15008008481`).
+- Limitations: no code signing or automatic updater is claimed; no installation on the user's personal PC or target-PC performance benchmark was performed or required. Target-PC optimization remains Phase 8.

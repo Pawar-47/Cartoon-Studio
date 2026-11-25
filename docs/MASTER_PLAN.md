@@ -116,7 +116,7 @@ Preserve and complete the existing application shell; do not recreate it.
 - Verify clean installation, launch, browser access, shutdown, upgrade and project-data preservation on Windows.
 - Keep GitHub Actions for build/test/package, not GPU episode rendering.
 
-**Current state:** partial. The bootstrap ZIP and CI exist, but no self-contained installer or user-PC installation test is evidenced.
+**Current state: COMPLETE.** P1.1–P1.3 provide the project/data foundation, reproducible CI and clean-runner bootstrap. P1.4 adds the self-contained PyInstaller/NSIS installer and passes clean install, launch, v1-to-v2 upgrade with project preservation, uninstall and reinstall in Windows CI run #175. No user-PC installation or performance test is required to close this phase.
 
 **Exit gate:** repeatable Windows artifact, tested local app, persistent project data and a clean documented installation path, verified on a clean Windows CI/VM environment. Installation or performance testing on the user's personal PC is not a prerequisite for Phase 2.
 

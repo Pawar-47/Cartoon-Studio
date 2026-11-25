@@ -3,9 +3,9 @@
 ## Live checkpoint
 - Repository: Pawar-47/Cartoon-Studio
 - Branch: main
-- Phase 0 CLOSED; Phase 1 ACTIVE.
+- Phase 0 CLOSED; Phase 1 COMPLETE; Phase 2 READY.
 - P1.1–P1.3 are verified by Windows CI run #136 — [SUCCESS](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45571086576).
-- P1.4 installer work is active on main. The installer binaries compile; the v1-to-v2 upgrade smoke test is being corrected. Track the current result in [GitHub Actions](https://github.com/Pawar-47/Cartoon-Studio/actions).
+- P1.4 is complete: Windows CI [run #175 — SUCCESS](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45585234644) verified clean install, launch, v1-to-v2 upgrade, project preservation, uninstall and reinstall. See `docs/P1_4_INSTALLER_REPORT.md`.
 - Latest dependency resolver: [run #11 — SUCCESS](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45571086600).
 - P0.6 proofs: docs/P0_6_PROOF_REPORT.md.
 - P1.1 foundation: docs/P1_1_FOUNDATION_REPORT.md.
@@ -19,7 +19,7 @@ The user's physical PC is not a prerequisite for architecture, implementation or
 - P1.2: exact uv lock, hash-locked runtime requirements, lock consistency check, Ruff, compile, 22 tests, CycloneDX SBOM and reproducible Windows CI. The legacy TestClient warning is resolved.
 - P1.3: Windows bootstrap ZIP and actual launcher smoke test on a clean Windows runner. The test extracted the ZIP, ran start.bat, checked UI/static/API, created/opened a project, restarted the app and confirmed data persistence.
 
-## Active batch — P1.4 self-contained Windows installer
+## Next batch — P2.1 Character Studio foundation
 
 1. Evaluate a redistributable packaging route that bundles Python and the app without requiring a user-installed Python/Node runtime.
 2. Review installer technology and every bundled dependency's license; preserve project ownership and notices.
@@ -32,9 +32,9 @@ The user's physical PC is not a prerequisite for architecture, implementation or
 - P1.1: COMPLETE — project lifecycle, persistence, schema and migration foundation.
 - P1.2: COMPLETE — locked dependencies and reproducible CI.
 - P1.3: COMPLETE — portable Windows bootstrap, actual launcher and clean-runner persistence smoke test.
-- P1.4: ACTIVE — installer compilation passes; the upgrade smoke test currently fails to locate the app executable after the v1-to-v2 upgrade. Fixing upgrade sequencing and rerunning the full install lifecycle.
+- P1.4: COMPLETE — CI #175 passed the full Windows installer lifecycle.
 
-## Deferred in correct phase
+## Phase 2 readiness\n- Phase 0 architecture selected Godot 4.7.2 Compatibility as the native 3D runtime behind a supervised worker adapter. This is a bounded hosted-runner proof, not yet a production Character Studio.\n- P2.1 is READY now that Phase 0 and Phase 1 are closed. Begin with source/license review and the first real character pipeline; keep physical-PC performance tests in Phase 8.\n\n## Deferred in correct phase
 - Character Studio: Phase 2, after Phase 1 closes.
 - World Builder: Phase 3.
 - Story/Scene schema normalization and full story engine: Phase 4 (preserve current partial Story Generator; do not expand early).

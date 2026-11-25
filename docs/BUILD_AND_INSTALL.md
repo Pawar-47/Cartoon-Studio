@@ -8,13 +8,13 @@
 - Each project has a portable projects/<project-id>/project.json document; saved episode plans are stored under projects/<project-id>/episodes/<episode-id>.json. SQLite indexes these documents and retains the legacy story_plans compatibility table.
 - The project JSON is versioned and uses stable project/episode IDs. Keep the entire project folder when copying or backing up project files.
 
-## Current Windows bootstrap
+## Windows delivery artifacts
 Workflow: .github/workflows/ci.yml  
 Runner: windows-latest  
 Python: 3.11  
 Artifact: Cartoon-Studio-Windows-Bootstrap.zip
 
-The current artifact is a source/runtime bootstrap ZIP, not yet a self-contained installer. It includes start.bat, the local application source, docs and hash-locked runtime requirements. CI #136 extracted it into a clean Windows temporary directory and executed the actual launcher successfully.
+The bootstrap ZIP is a Python-dependent source/runtime route. CI #136 extracted it into a clean Windows temporary directory and executed the actual launcher successfully.\n\nThe self-contained installer is built with PyInstaller onedir and NSIS 3.13.0. CI #175 built version 0.1.1 and passed clean install, launch, upgrade from 0.1.0, project-data preservation, uninstall and reinstall. Installer default path: `%LOCALAPPDATA%\\Programs\\Cartoon Studio`. User data remains under `%LOCALAPPDATA%\\CartoonStudio` (or `CARTOON_STUDIO_DATA` override). The installer creates Start Menu and desktop shortcuts and registers a per-user uninstaller.
 
 ## Run on Windows
 1. Install Python 3.11 or newer.
