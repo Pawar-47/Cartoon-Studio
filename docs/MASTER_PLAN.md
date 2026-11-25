@@ -216,3 +216,10 @@ The product is complete only when the full acceptance list in `PROJECT_SPECIFICA
 ## 2026-11-25 checkpoint — P0.4 source-feasibility closeout and P0.5 start
 
 P0.3 source-level research and provisional candidate scoring are complete. P0.4 source-based hardware/API compatibility, Urdu model/voice feasibility and provider region/quota/privacy/cost research are documented. The physical target-PC probe remains available but optional and is deferred to Phase 8; it is not a gate for P0.5, P0.6, P0.7 or earlier implementation phases. No actual performance claim is made. Urdu voice selection remains provisional until native-speaker sample evaluation in Phase 6. Proceed with P0.5 engine-neutral architecture and dependency decisions, retaining explicit risks and reversible adapters.
+
+
+## 2026-11-25 — P0.7 Phase 0 exit and architecture freeze
+
+P0.1–P0.6 are complete. P0.7 has reconciled the original 25-part brief, all 24 numbered project-specification sections, the 171-row requirements registry, 171-row implementation traceability and the 171-row architecture crosswalk. P0.6 functional evidence is recorded in P0_6_PROOF_REPORT.md. Godot 4.7.2 Compatibility is selected as the native 3D runtime behind a supervised worker adapter; FastAPI/browser remains the control plane; SQLite remains the local index and app-owned sequential job queue; FFmpeg remains a process adapter. The optional Godot Web viewport is deferred. The final production codec/FFmpeg distribution build, project distribution license, native-speaker Urdu voice selection and exact-PC performance tuning remain explicit deferred decisions, not Phase 1 blockers. Physical-PC benchmarks belong to Phase 8.
+
+**Phase 0 is closed. Phase 1 — GitHub and CI/CD Foundation — is now the active phase.** No production Character Studio, World Builder, Story/Scene, Animation, Urdu voice or full episode feature has been claimed complete. Existing partial Story Generator code is preserved and remains frozen until Phase 4.

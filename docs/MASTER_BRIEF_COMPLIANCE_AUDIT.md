@@ -72,3 +72,40 @@ All 24 numbered sections are represented in source references across the registr
 - P0.3 closeout commit: `5bcbf8775014c4b25699a9bdcb5e633c5fa00811`.
 - Workflow run #84 completed SUCCESS: https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45557418338.
 - Latest verified main HEAD at the P0.3 closeout was `5bcbf8775014c4b25699a9bdcb5e633c5fa00811`; follow-up documentation correction commit `fe33993fb8423c412dde55f9a097e2a14298919a` also passed CI run #85.
+
+
+## P0.7 Phase 0 exit review — 2026-11-25
+
+### Exit criteria and evidence
+- Original user-approved 25-part master prompt remains preserved verbatim at docs/MASTER_EXECUTION_PROMPT.md; SHA-256 remains 541098eebd96b98e0153770f0bc37a1031a7242fd9cb97bc5a6b52c35c9ddfde.
+- P0.1 baseline/preservation audit complete.
+- P0.2 complete: 171 atomic requirements, 171 one-to-one traceability rows and 75 legacy IDs retained. Added ARCHITECTURE_TRACEABILITY.md with 171 matching ownership/module/phase rows.
+- P0.3 comparative source-level GitHub research complete with candidate scorecard and license/reuse records.
+- P0.4 source-based hardware, Urdu model/voice feasibility and provider region/quota/privacy/cost review complete. User-PC testing is explicitly deferred to Phase 8; native-speaker sample evaluation remains in Phase 6.
+- P0.5 architecture contracts, data model, service boundaries, persistence/recovery, dependency/licensing and downstream module ownership documented.
+- P0.6 Godot, FFmpeg and SQLite queue proofs passed; details and exact run IDs are in P0_6_PROOF_REPORT.md. Godot proof #3 and main CI #102 succeeded on ae9bad178c9999d5f5b7017a6409c7ee9c490786; queue proof and main CI #101 succeeded on b05024110e76b684a5f8cee35eb57fa0428b2c11.
+
+### Frozen architecture
+1. Local-first Python 3.11+ FastAPI/Uvicorn/Pydantic service with the existing browser UI as the primary control plane.
+2. Godot 4.7.2-stable Compatibility renderer as the selected 3D runtime, isolated behind a supervised native worker/engine adapter. Project data never stores engine node paths as canonical IDs.
+3. Engine-neutral, versioned JSON project/character/world/episode/scene/animation/audio/asset/job documents; GLB/glTF is the primary 3D interchange format, with VRM optional.
+4. SQLite local index, migration ledger and app-owned sequential job queue; per-scene checkpoints, leases, retries, cooperative cancel, event journal and restart reconciliation.
+5. FFmpeg process adapter for media assembly. P0.6 proves an AVI-to-MP4 path, but final production codec and distributable FFmpeg build remain open until license/patent review.
+6. AI provider integrations are optional. Manual AI handoff and offline operation remain available. No mandatory paid/cloud service.
+7. Human-recorded Pakistani Urdu is the baseline/fallback. No production TTS or lip-sync model is selected before Phase 6 native-speaker evaluation.
+8. PyInstaller one-folder + NSIS remain the Phase 1 Windows packaging candidates; exact versions and notices are pinned at adoption.
+9. Optional Godot Web viewport is deferred and cannot block native rendering or phase progression.
+10. Physical-PC performance testing, four quality-profile tuning and memory/render-time measurements are Phase 8 only.
+
+### Explicit risks and deferred decisions
+- The repository has no root LICENSE file. Do not assume the project is MIT or proprietary. The project owner must choose/approve the distribution license before public release or copyleft bundling; this does not block local development.
+- Urdu TTS accent/naturalness and lip-sync accuracy remain unproven; Phase 6 sample evaluation and manual recording/timing/viseme fallbacks are mandatory.
+- The FFmpeg test used MPEG-4 Part 2/AAC on a hosted CI machine. It is not the final codec, patent or redistribution decision.
+- Godot proof validates basic import/animation/save/reopen/short-render only; production rigs, retargeting, large worlds and full episode quality are still unimplemented.
+- No exact-PC performance result exists. This is intentional; all such measurements are Phase 8 optimization work.
+- Existing Story Generator contains Ara-derived validation catalogs; preserve it and replace those temporary IDs during Phase 4, not in this phase.
+
+### Phase 1 authorization
+Phase 0 is closed. Begin Phase 1 in the original order: harden app/project lifecycle and persistent data layout; lock dependencies and CI; produce a portable Windows package; then complete the self-contained installer and clean Windows CI/VM install/upgrade tests. The current bootstrap ZIP is not the final installer. User-PC testing is not required for Phase 1 exit.
+
+This review freezes architecture boundaries and selected runtime, not unimplemented feature claims. No production feature is marked complete merely because a candidate proof passed.
