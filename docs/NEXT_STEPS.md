@@ -50,3 +50,15 @@ The browser retarget path now samples source animation from the full GLTF scene 
 ## Policy
 
 Work in coherent feature batches, preserve all existing work, use GitHub main as the source of truth, and do not use physical-PC testing as an early gate. Do not call the entire project complete while Phases 2–7 remain open.
+
+## Master-brief priority — P2.2 original character creator
+
+The next P2.2 deliverable is a first-party modular character builder, not another retarget-only expansion. The current batch establishes the pinned Quaternius CC0 model catalog and download/cache API. After its quick CI passes:
+
+1. Verify Male Adventurer, Male Worker and Female Adventurer imports share the 62-bone rig and 24 animation clips.
+2. Add native Godot assembly of head/body/legs/feet from selected outfits, preserving one shared skeleton and all clips.
+3. Export and re-import the assembled GLB; verify four skinned parts, animation names and model integrity.
+4. Add browser controls for part selection, material colors and animation preview; save a versioned creation recipe with the character profile and support reopening it.
+5. Extend body proportions, accessories and expression options only after the core assembly/save/reopen path is proven.
+
+Keep later phases gated behind the P2.2 exit criteria. PC benchmarking and full Windows packaging remain end-stage tasks, not blockers for this implementation.

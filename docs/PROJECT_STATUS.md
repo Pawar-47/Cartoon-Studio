@@ -69,3 +69,9 @@ Godot may normalize raw skin-joint ordering during import. The application uses 
 - Local-first; no mandatory paid APIs, cloud rendering or online activation.
 - Physical-PC testing is deferred to Phase 8 and is not a development gate.
 - GitHub main remains the sole project source of truth.
+
+## Active P2.2 direction — original modular character creation (2026-11-25)
+
+- Latest verified browser-retarget checkpoint: Windows CI #362 PASSED on commit 3b4846bdd5b673311129dda6c08bcb232b5bf414.
+- The master brief's P2.2 requirement is original stylized character creation, not just importing and retargeting existing GLBs. The current batch adds a pinned Quaternius CC0 modular library catalog, lazy-download cache and model API routes, with exact byte-size/Git blob SHA-1 verification.
+- The first library contains 21 outfit GLBs (34.92 MiB), four swappable parts and 24 animations per model. Three representative models are being checked for the shared 62-bone rig. The creator is not complete until Godot assembly/export, browser customization and versioned recipe save/reopen are implemented and tested.

@@ -154,3 +154,11 @@ No alignment model weights were downloaded or bundled.
 | Component | Source/version | License and provenance | Use / verification |
 |---|---|---|---|
 | Godot Engine Windows x86_64 | https://github.com/godotengine/godot/releases/tag/4.7.2-stable; archive `Godot_v4.7.2-stable_win64.exe.zip` | MIT; exact upstream `LICENSE.txt` and `COPYRIGHT.txt` retained under `third_party/godot-4.7.2/` | SHA-256 `731980f9608d61333e5baf54a2ef17210acc7a538446c0cb9969f002aca1e953`; bundled as a headless native worker and included in the CycloneDX inventory |
+
+## Quaternius Ultimate Modular Women Pack — CC0 1.0
+
+| Asset pack | Included assets | License | Official source |
+|---|---:|---|---|
+| Ultimate Modular Women Pack | 10 outfit bases, four swappable parts each, 24 animations | CC0 1.0 | https://quaternius.com/packs/ultimatemodularwomen.html |
+
+The existing Ultimate Modular Men Pack entry covers the matching 11-model pack. Together, the two packs provide 21 GLB outfit bases (34.92 MiB total) for the first modular creator slice. The app downloads only model files from the pinned LuanDucate/Ducz.CharacterCreator commit fcd215b58eec5c9ed97d0ba5f696d0e7dc085e08; it does not reuse that repository's unlicensed application code. Each model's byte size and Git blob SHA-1 are pinned in app/character_builder.py.

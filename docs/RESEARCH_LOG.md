@@ -164,3 +164,13 @@ This is the first broad source-level sweep, not P0.3 completion. No production e
 - Inspected the newer kingabzpro/whisper-large-v3-turbo-urdu model card: Apache-2.0 metadata, 0.8B parameters, 3.24 GB FP32 checkpoint, self-reported Common Voice 17.0 Urdu WER 26.234% / CER 8.795%. It is a separate ASR model, not the WhisperX Urdu aligner. An 824 MB CTranslate2 int8 conversion exists, but CPU performance remains untested.
 - Inspected Proxima-AI-Co/smolurdu GitHub repository tree and source files. No LICENSE file exists in the current code tree. Inference uses BF16, Liger Kernel, PyTorch/torchaudio/Transformers and separate WavTokenizer checkpoint/config; setup.py omits some runtime dependencies. The target CPU's BF16 path is unverified.
 - Decision: do not approve Smol Urdu TTS for redistribution or target default. The Urdu wav2vec2 model stays conditional for forced alignment only; use a human-corrected transcript and native-speaker validation. No weights were downloaded and no audio was processed.
+
+## 2026-11-25 — P2.2 modular character creator research
+
+Research was redirected from retarget-only polish to the master brief's missing original-character creation workflow.
+
+- Official Quaternius pages confirm the Ultimate Modular Men Pack (11 characters) and Ultimate Modular Women Pack (10 characters) are CC0, each with 24 animations and four interchangeable character parts.
+- The pinned GLB conversions in LuanDucate/Ducz.CharacterCreator expose 21 outfit files totalling 34.92 MiB. Three representative models (Male Adventurer, Male Worker, Female Adventurer) are used for initial Godot acceptance; the model JSON reports a shared 62-joint rig and 24 animation clips.
+- The host repository has no declared code license. The project will use only the Quaternius CC0 model files and independently implement the modular assembly and authoring workflow.
+- The newer Universal Base Characters + Modular Character Outfits - Fantasy packs have a stronger standard-humanoid direction, but the standard outfit archive is 280 MiB and animation clips are a separate dependency; defer until the smaller first creator slice is proven.
+- Configura is MIT-licensed but is a Godot editor plugin with an unstable release status; it is not a good runtime dependency for the browser-first app/headless-worker architecture. It is not vendored.

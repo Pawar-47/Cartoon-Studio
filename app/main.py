@@ -23,6 +23,13 @@ from app.engine import (
     EngineUnavailableError,
     GodotEngineAdapter,
 )
+from app.character_builder import (
+    CharacterLibraryError,
+    UnknownCharacterModel,
+    ensure_model_asset,
+    get_character_catalog,
+    get_model_spec,
+)
 from app.rig_analysis import analyze_rig
 from app.storage import connect_db as open_database
 from app.storage import (
@@ -488,6 +495,32 @@ def get_story_plan(project_id: str) -> dict[str, Any]:
 @app.get("/characters", include_in_schema=False)
 def character_studio() -> FileResponse:
     return FileResponse(STATIC_DIR / "characters.html")
+
+
+@app.get("/api/character-builder/catalog")
+def character_builder_catalog() -> dict[str, Any]:
+    return get_character_catalog()
+
+
+@app.get("/api/character-builder/models/{pack}/{outfit}")
+def character_builder_model(pack: str, outfit: str) -> FileResponse:
+    try:
+        spec = get_model_spec(pack, outfit)
+    except UnknownCharacterModel as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    try:
+        model_path = ensure_model_asset(DATA_DIR / "character-library", pack, outfit)
+    except CharacterLibraryError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    return FileResponse(
+        model_path,
+        media_type="model/gltf-binary",
+        filename=model_path.name,
+        headers={
+            "ETag": f'"{spec.git_blob_sha1}"',
+            "Cache-Control": "public, max-age=31536000, immutable",
+        },
+    )
 
 
 @app.post("/api/projects/{project_id}/character-assets", status_code=201)

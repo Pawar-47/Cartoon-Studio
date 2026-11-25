@@ -266,3 +266,17 @@ A browser-side GLB presentation preview is implemented using locally vendored th
 Phase 2 remains active. Latest implementation HEAD is aadce3ed4c8444a3130652f14cc85cdfd4db697b. Character Studio now reports indexed humanoid profile mapping, parent-chain validity and per-bone imported rest transforms. A deterministic skinned 15-bone humanoid GLB fixture includes an imported arm animation. Dedicated Godot proof #8 and #9 passed: Godot imports the fixture, confirms skin binding and animation, and retargets the imported source animation to a target skeleton generated with different rest lengths. Proof #10 adds an imported retarget save/reopen assertion and is running. Windows CI #237/#238 passed; #240/#241 are running.
 
 This remains a bounded fixture proof, not a production retarget pipeline for arbitrary user-supplied source/target GLBs. Next deliver the user-facing non-destructive retarget workflow and verify additional real models. Phases 3–7 remain open; target-PC testing remains Phase 8.
+
+## 2026-11-25 — P2.2 modular character creator asset-library decision
+
+P2.2 remains active. Imported GLB inspection, appearance recipes, rig diagnostics and native retargeting are necessary foundations, but they do not yet satisfy the master brief's requirement to create original stylized characters.
+
+The next P2.2 sub-phase is the **Modular Character Builder**:
+
+- First implementation uses Quaternius Ultimate Modular Men and Ultimate Modular Women CC0 1.0 packs: 11 + 10 outfit bases, four swappable parts (head/body/legs/feet) and 24 animations per outfit.
+- The 21 pinned GLB conversions total 34.92 MiB. Three representative models (Male Adventurer, Male Worker, Female Adventurer) are verified by Godot for a shared 62-bone rig and matching bone-name sets before assembly work proceeds.
+- The newer Universal Base Characters + Modular Character Outfits - Fantasy packs remain a later expansion: their standard outfit archive is 280 MiB and animation clips come from a separate library. Their standard humanoid rig and larger 62-part wardrobe are attractive, but the smaller ready-to-use 21-GLB set is the lower-friction first slice.
+- Cartoon Studio owns the assembly, customization, recipe and export code. Only the CC0 model files are used from the asset-hosting repository; no third-party character-creator source code is reused.
+- Model downloads are lazy, cached in the per-user data directory and checked against the immutable source commit, exact byte size and Git blob SHA-1 before use.
+
+**Implementation order:** (1) verified CC0 asset library and catalog API, (2) native Godot assembly/export of four selected parts with one shared skeleton and all animation clips, (3) browser builder controls and preview, (4) versioned creation-recipe save/reopen. The phase remains PARTIAL until the assembled GLB, recipe round-trip and usable creator UI pass automated acceptance.

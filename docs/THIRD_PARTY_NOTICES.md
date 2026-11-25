@@ -27,3 +27,12 @@ Cartoon Studio's own distribution license has not yet been selected by the proje
 
 
 | three.js | 0.187.0 (tag r187, commit 7e89746a687bb88271253698fa108b1dd59825d0), vendored browser GLB preview runtime | MIT; upstream license retained at LICENSES/three.js/LICENSE. The pinned runtime manifest is third_party/threejs-runtime.json and the vendored source modules are under app/static/vendor/three/. Included in the CycloneDX SBOM. |
+
+## Quaternius Ultimate Modular Men and Women model library
+
+Cartoon Studio's first modular-character asset library downloads only the 21 Quaternius model GLBs (11 men and 10 women) converted and hosted in LuanDucate/Ducz.CharacterCreator at commit fcd215b58eec5c9ed97d0ba5f696d0e7dc085e08. Both underlying packs are CC0 1.0; official pack pages:
+
+- https://quaternius.com/packs/ultimatemodularcharacters.html
+- https://quaternius.com/packs/ultimatemodularwomen.html
+
+Only model assets are used. No source code from Ducz.CharacterCreator is copied, linked as a runtime dependency or executed. Downloads are checked against pinned Git blob SHA-1 and byte size before entering the local cache.

@@ -113,3 +113,9 @@ No candidate code or character assets were copied or bundled by this research-on
 - Upstream README claims VRM 0.0/1.0 import, VRM 1.0 export, MToon, humanoid `SkeletonProfileHumanoid` mapping, and expression blend-shape/material binds exposed as animation tracks. It also documents known issues: node constraints can be buggy with retargeting, spring bones need optimization, look-at requires application setup, and VRM animation-library import/export is not implemented. Standalone glTF export has a warning about destructive material corruption; do not use that path without an isolated-copy proof.
 - VRM sample avatars have separate licences; no sample model is approved for redistribution by the code licence.
 - Decision: keep VRM optional and do not bundle the addon yet. First inspect the imported GLB skeleton and establish our own explicit retarget preflight contract; a pinned Godot 4.7.2 integration proof must follow before adoption.
+
+## P2.2 modular character creator — first-slice selection
+
+The first implementation selects the Quaternius Ultimate Modular Men and Women CC0 packs: 21 ready GLBs, four interchangeable parts per model and 24 embedded animations; the complete model set is 34.92 MiB. The GLB conversions are hosted at a pinned commit in LuanDucate/Ducz.CharacterCreator, but that repository's code has no declared license and is not reused.
+
+The newer Universal Base Characters + Modular Character Outfits - Fantasy packs remain a planned expansion. They provide a standard humanoid rig and 62 modular outfit parts, but the standard outfit archive is 280 MiB and the animation library is separate. The lighter older pack is selected to prove the full four-part assembly and save/reopen workflow first; this is a deliberate first-slice choice, not a permanent restriction on future packs.

@@ -94,3 +94,10 @@ Never claim the complete application is finished while Phases 2–7 remain incom
 - Added a Node test using the vendored Three.js SkeletonUtils implementation, a full 15-bone rig pair, different source/target bone names, a rolled target upper arm and hip translation.
 - Added a pytest wrapper so the Node suite runs in normal quick CI.
 - Pending: inspect the complete diff, run quick CI once, and then perform interactive browser acceptance. No full app build or installer run is required.
+
+## 2026-11-25 — Modular character library batch started
+
+- Repository head at batch start: 3b4846bdd5b673311129dda6c08bcb232b5bf414; Windows CI #362 passed.
+- P2.2 is being re-anchored to the master brief's original-character creation requirement. The selected starter assets are Quaternius Ultimate Modular Men/Women CC0 1.0 (21 outfit GLBs, four swappable parts and 24 clips per model; 34.92 MiB total).
+- Current batch adds a pinned asset catalog, lazy-download cache with exact size/Git blob SHA-1 verification, catalog/model API endpoints, and Godot import acceptance for three representative models sharing the 62-bone rig.
+- The browser builder and native four-part assembly/export are not yet complete. Next batch: Godot assembly/export; then browser controls and versioned creation-recipe persistence.

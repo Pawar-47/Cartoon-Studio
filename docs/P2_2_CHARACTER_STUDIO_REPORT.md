@@ -121,3 +121,15 @@
 - Dedicated Godot proof #9 passed after making target-rest assignment explicit. Proof #10 additionally checks that the imported retarget modifier and target skeleton survive scene save/reopen.
 - Scope boundary: the proof retargets an animation from the imported fixture's skeleton to a target skeleton generated from that imported hierarchy with different proportions. It does not yet implement a general user-facing retarget pipeline for two arbitrary imported GLBs.
 - The imported source GLB is not rewritten. Production app integration, target-asset binding, rest-pose correction, visual acceptance on representative user models and deterministic export remain open.
+
+## 2026-11-25 — Original character creation work resumed
+
+The current P2.2 checkpoint is not complete: importing and retargeting existing GLBs does not meet the master brief's requirement to create original stylized characters.
+
+The first-party modular creator will start with the Quaternius Ultimate Modular Men and Ultimate Modular Women CC0 1.0 packs. The pinned GLB conversion set contains 11 men and 10 women outfit bases, four swappable slots per model (head/body/legs/feet), and 24 animations per outfit. The 21 GLBs total 34.92 MiB. Three representative assets are the initial Godot acceptance set; their 62-bone rigs must expose matching bone-name sets.
+
+The newer Universal Base Characters + Modular Character Outfits - Fantasy packs offer a more modern humanoid rig and 62 modular outfit parts, but the standard outfit archive is 280 MiB and the animation library is separate. They are deferred until the smaller first creator slice is proven.
+
+The app-side library foundation exposes a catalog and lazy-download model route. Every downloaded GLB is pinned to an immutable source commit and checked for exact size and Git blob SHA-1 before caching under the user's Cartoon Studio data directory. The third-party browser creator repository is used only as a host for the CC0 model conversions; its source code is not reused because it has no declared code license.
+
+**Not yet implemented:** cross-outfit mesh assembly, material/color customization, native GLB export, creation-recipe persistence, and the browser-facing modular builder. These are the next P2.2 batches, not reasons to move to World Builder or Story/Scene Engine.

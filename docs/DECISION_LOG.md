@@ -61,3 +61,13 @@ Date: 2026-11-25. The Godot Web export/embedded viewport is not needed to valida
 ## D-017 — Keep production MP4 codec and FFmpeg distribution build open
 
 Date: 2026-11-25. The hosted proof successfully converted AVI to MP4 using MPEG-4 Part 2/AAC. This proves a functional assembly path, not the final production codec, patent position or redistributable FFmpeg build. The production FFmpeg adapter remains a separate process boundary; exact binary, configure flags, codec, notices and source compliance must be approved before bundling.
+
+## DEC-CHAR-002 — Start P2.2 with the lighter Quaternius modular men/women packs (2026-11-25)
+
+**Decision:** use the Quaternius Ultimate Modular Men and Ultimate Modular Women CC0 1.0 model files for the first modular-character builder slice; implement assembly, customization, UI, recipes and export in Cartoon Studio.
+
+**Why:** the two packs provide 21 stylized outfit bases, four interchangeable parts per model, 24 embedded animations and 34.92 MiB total ready-to-use GLBs. Three representative models can verify the shared 62-bone rig before assembly. The newer Universal Base Characters + Modular Character Outfits - Fantasy packs have a standard humanoid rig and a larger wardrobe, but the standard outfit archive is 280 MiB and the animation library is separate; defer them until the first creator path is proven.
+
+**Boundaries:** pin the asset-hosting commit and every model's byte size/Git blob SHA-1; cache downloads locally; use only the CC0 model files. Do not reuse the unlicensed host repository's application code. Configura was evaluated but not adopted as a runtime dependency because it is an unstable editor-time Godot plugin and the app's control plane is browser-first.
+
+**Acceptance:** Godot verifies representative models; a later batch assembles four selected parts onto one skeleton, preserves all clips, exports/reopens GLB, and persists a versioned creation recipe. P2.2 remains PARTIAL until the creator UI and save/reopen flow pass.

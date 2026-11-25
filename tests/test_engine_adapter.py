@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 
 from app import engine
+from app.character_builder import ensure_model_asset
 from app.engine import (
     EngineCancelledError,
     EngineExecutionError,
@@ -722,3 +723,34 @@ def test_pinned_godot_worker_reports_imported_blend_shape_names_and_defaults(tmp
     assert all(entry["mesh_name"] == "Face" for entry in response["morph_targets"])
     assert all(entry["default_value"] == 0.0 for entry in response["morph_targets"])
 
+
+
+
+def test_pinned_quaternius_modular_models_share_rig_and_animation_library(tmp_path):
+    adapter = _real_godot_adapter(tmp_path)
+    cache_root = tmp_path / "character-library"
+    expected_bone_names = None
+    for pack, outfit in (
+        ("Male", "Adventurer"),
+        ("Male", "Worker"),
+        ("Female", "Adventurer"),
+    ):
+        model_path = ensure_model_asset(cache_root, pack, outfit)
+        inspection = adapter.inspect_glb(model_path, allowed_root=tmp_path)
+
+        assert inspection["skeleton_count"] == 1
+        assert inspection["animation_count"] == 24
+        assert {"Idle", "Walk", "Run"}.issubset(
+            set(inspection["animation_names"])
+        )
+        skeleton = inspection["skeletons"][0]
+        bone_names = {
+            bone["name"] for bone in skeleton["bones"] if bone.get("name")
+        }
+        assert skeleton["bone_count"] == 62
+        assert len(bone_names) == 62
+        if expected_bone_names is None:
+            expected_bone_names = bone_names
+        else:
+            assert bone_names == expected_bone_names
+        assert inspection["mesh_count"] >= 4
