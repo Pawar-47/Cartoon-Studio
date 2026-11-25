@@ -29,8 +29,6 @@
 .morph-control span{overflow-wrap:anywhere;font-size:11px}
 .morph-control output{font-size:10px;color:#8fe0c8;font-variant-numeric:tabular-nums}
 .morph-control input{grid-column:1/-1;width:100%;padding:0;accent-color:#8fe0c8}
-.morph-section{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
-.morph-section .editor-heading{margin-bottom:6px}
 @media(max-width:520px){.morph-controls{grid-template-columns:1fr}}
 
 .profile-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.profile-actions button{margin-top:8px}

@@ -593,9 +593,9 @@ func _customize_character_proportions(payload: Dictionary) -> Dictionary:
     if not bool(verification.get("ok", false)):
         DirAccess.remove_absolute(output_path)
         return {"error_code": "proportion_reimport_failed", "error": str(verification.get("error", "The proportioned GLB failed re-import verification."))}
-    if int(verification.get("skeleton_count", 0)) != 1 or int(verification.get("animation_count", 0)) == 0:
+    if int(verification.get("skeleton_count", 0)) != 1 or int(verification.get("animation_count", 0)) != source_animation_names.size():
         DirAccess.remove_absolute(output_path)
-        return {"error_code": "proportion_rig_verification_failed", "error": "The proportioned GLB did not retain its skinned humanoid rig and animations."}
+        return {"error_code": "proportion_rig_verification_failed", "error": "The proportioned GLB did not retain its skinned humanoid rig and original animation count."}
     var exported_animation_names: Array = verification.get("animation_names", [])
     for animation_name in source_animation_names:
         if not exported_animation_names.has(animation_name):

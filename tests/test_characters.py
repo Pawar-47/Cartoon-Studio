@@ -164,8 +164,6 @@ def test_browser_preview_modules_are_served_from_local_static_assets():
     assert "function frameCharacter" in preview.text
     assert 'data-camera-frame="head"' in page.text
     assert 'id="preview-speed"' in page.text
-    assert 'id="body-morph-controls"' in page.text
-    assert 'id="body-morph-status"' in page.text
     assert "morphTargetByKey.clear();" in preview.text
     clip_helper = client.get("/static/animation-clip.mjs")
     assert clip_helper.status_code == 200
