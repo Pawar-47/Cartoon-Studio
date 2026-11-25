@@ -331,8 +331,22 @@ def reconcile_project_files(data_dir: Path, db_path: Path) -> None:
                 if (
                     project_document.get("document_type") != "project"
                     or project_document.get("id") != project["id"]
+                    or not isinstance(project_document.get("data"), dict)
                 ):
                     raise ValueError(f"Project document identity mismatch: {project_path}")
+                project_data = project_document["data"]
+                connection.execute(
+                    """
+                    UPDATE projects SET name = ?, description = ?, updated_at = ?
+                    WHERE id = ?
+                    """,
+                    (
+                        str(project_data.get("name", project["name"])),
+                        str(project_data.get("description", project["description"])),
+                        project_document.get("updated_at", project["updated_at"]),
+                        project["id"],
+                    ),
+                )
                 digest = _file_digest(project_path)
             else:
                 project_document = _project_envelope(project)
