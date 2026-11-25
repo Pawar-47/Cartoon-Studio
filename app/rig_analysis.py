@@ -67,6 +67,104 @@ def _empty_result(status: str, skeleton_count: int, note: str) -> dict[str, Any]
     }
 
 
+
+def _validate_humanoid_hierarchy(
+    profile_mapping: Mapping[str, Mapping[str, Any]],
+    bones: list[Any],
+) -> dict[str, Any]:
+    """Validate required parent chains when Godot supplied indexed hierarchy data."""
+    if not bones or not all(
+        isinstance(bone, Mapping) and "parent_index" in bone and "index" in bone
+        for bone in bones
+    ):
+        return {
+            "status": "not_available",
+            "checked_relationships": 0,
+            "issues": [],
+            "note": "Indexed parent data was not supplied by the importer.",
+        }
+
+    parents: dict[int, int] = {}
+    for fallback_index, bone in enumerate(bones):
+        try:
+            index = int(bone.get("index", fallback_index))
+            parent = int(bone.get("parent_index", -1))
+        except (TypeError, ValueError):
+            return {
+                "status": "invalid",
+                "checked_relationships": 0,
+                "issues": ["A bone contains a non-integer index or parent index."],
+                "note": "The imported skeleton hierarchy is malformed.",
+            }
+        parents[index] = parent
+
+    issues: list[str] = []
+    for index, parent in parents.items():
+        if parent != -1 and parent not in parents:
+            issues.append(f"Bone index {index} references missing parent index {parent}.")
+        if parent == index:
+            issues.append(f"Bone index {index} is its own parent.")
+
+    def is_descendant(child_index: int, ancestor_index: int) -> bool:
+        visited: set[int] = set()
+        current = child_index
+        while current in parents and current not in visited:
+            visited.add(current)
+            parent = parents[current]
+            if parent == ancestor_index:
+                return True
+            if parent == -1 or parent not in parents:
+                return False
+            current = parent
+        if current in visited:
+            issues.append(f"Parent cycle detected while traversing bone index {child_index}.")
+        return False
+
+    required_chains = (
+        ("Spine", "Hips"),
+        ("Head", "Spine"),
+        ("LeftUpperLeg", "Hips"),
+        ("LeftLowerLeg", "LeftUpperLeg"),
+        ("LeftFoot", "LeftLowerLeg"),
+        ("RightUpperLeg", "Hips"),
+        ("RightLowerLeg", "RightUpperLeg"),
+        ("RightFoot", "RightLowerLeg"),
+        ("LeftUpperArm", "Spine"),
+        ("LeftLowerArm", "LeftUpperArm"),
+        ("LeftHand", "LeftLowerArm"),
+        ("RightUpperArm", "Spine"),
+        ("RightLowerArm", "RightUpperArm"),
+        ("RightHand", "RightLowerArm"),
+    )
+    checked = 0
+    for child_name, ancestor_name in required_chains:
+        child = profile_mapping.get(child_name)
+        ancestor = profile_mapping.get(ancestor_name)
+        if child is None or ancestor is None:
+            continue
+        child_index = int(child["bone_index"])
+        ancestor_index = int(ancestor["bone_index"])
+        checked += 1
+        if child_index not in parents or ancestor_index not in parents:
+            issues.append(f"{child_name} or {ancestor_name} has no indexed hierarchy entry.")
+        elif not is_descendant(child_index, ancestor_index):
+            issues.append(
+                f"{child_name} (index {child_index}) is not a descendant of "
+                f"{ancestor_name} (index {ancestor_index})."
+            )
+
+    status = "invalid" if issues else "valid" if checked else "incomplete"
+    return {
+        "status": status,
+        "checked_relationships": checked,
+        "issues": issues,
+        "note": (
+            "Required humanoid parent chains are structurally consistent."
+            if status == "valid"
+            else "Required humanoid parent chains need correction or review."
+        ),
+    }
+
 def analyze_rig(inspection: Mapping[str, Any]) -> dict[str, Any]:
     """Build a conservative indexed Godot humanoid mapping from one GLB skeleton."""
     try:
@@ -145,9 +243,11 @@ def analyze_rig(inspection: Mapping[str, Any]) -> dict[str, Any]:
             bone_count = max(0, int(bone_count_value or len(bones)))
         except (TypeError, ValueError):
             bone_count = len(bones)
+        hierarchy_validation = _validate_humanoid_hierarchy(profile_mapping, bones)
         candidates.append({
             "skeleton_path": str(skeleton.get("node_path", "")),
             "bone_count": bone_count,
+            "hierarchy_validation": hierarchy_validation,
             "bone_mapping": mapping,
             "godot_profile_mapping": profile_mapping,
             "missing_bones": missing,
@@ -195,6 +295,7 @@ def analyze_rig(inspection: Mapping[str, Any]) -> dict[str, Any]:
         "missing_bones": best["missing_bones"],
         "ambiguous_bones": best["ambiguous_bones"],
         "unmapped_bones": best["unmapped_bones"],
+        "hierarchy_validation": best["hierarchy_validation"],
         "retargeting_ready": False,
         "retargeting_note": (
             "This indexed mapping is a name-based preflight only. Validate hierarchy, "

@@ -113,3 +113,54 @@ def test_best_skeleton_prefers_unambiguous_mapping_over_duplicate_candidates():
     assert result["skeleton_path"] == ""
     assert result["ambiguous_bones"] == []
     assert result["matched_bone_count"] == 2
+
+
+
+def test_valid_indexed_humanoid_hierarchy_is_reported_separately_from_retarget_readiness():
+    names = [
+        ("Hips", -1), ("Spine", 0), ("Head", 1),
+        ("LeftUpperLeg", 0), ("LeftLowerLeg", 3), ("LeftFoot", 4),
+        ("RightUpperLeg", 0), ("RightLowerLeg", 6), ("RightFoot", 7),
+        ("LeftUpperArm", 1), ("LeftLowerArm", 9), ("LeftHand", 10),
+        ("RightUpperArm", 1), ("RightLowerArm", 12), ("RightHand", 13),
+    ]
+    bones = [
+        {"index": index, "name": name, "parent_index": parent}
+        for index, (name, parent) in enumerate(names)
+    ]
+    result = _analyze_rig({"skeleton_count": 1, "skeletons": [{
+        "bone_count": len(bones), "bones": bones,
+    }]})
+    assert result["hierarchy_validation"]["status"] == "valid"
+    assert result["hierarchy_validation"]["checked_relationships"] == 14
+    assert result["hierarchy_validation"]["issues"] == []
+    assert result["retargeting_ready"] is False
+
+
+def test_invalid_humanoid_parent_chain_is_reported_without_claiming_retarget_failure():
+    names = [
+        ("Hips", -1), ("Spine", 0), ("Head", 1),
+        ("LeftUpperLeg", 0), ("LeftLowerLeg", 3), ("LeftFoot", 4),
+        ("RightUpperLeg", 0), ("RightLowerLeg", 6), ("RightFoot", 7),
+        ("LeftUpperArm", 1), ("LeftLowerArm", 9), ("LeftHand", 10),
+        ("RightUpperArm", 1), ("RightLowerArm", 12), ("RightHand", 13),
+    ]
+    bones = [
+        {"index": index, "name": name, "parent_index": parent}
+        for index, (name, parent) in enumerate(names)
+    ]
+    bones[4]["parent_index"] = 0
+    result = _analyze_rig({"skeleton_count": 1, "skeletons": [{
+        "bone_count": len(bones), "bones": bones,
+    }]})
+    validation = result["hierarchy_validation"]
+    assert validation["status"] == "invalid"
+    assert any("LeftLowerLeg" in issue for issue in validation["issues"])
+    assert result["retargeting_ready"] is False
+
+
+def test_hierarchy_validation_is_explicitly_unavailable_for_legacy_name_only_data():
+    result = _analyze_rig({"skeleton_count": 1, "skeletons": [{
+        "bones": [{"name": name} for name in MIXAMO_HUMANOID],
+    }]})
+    assert result["hierarchy_validation"]["status"] == "not_available"
