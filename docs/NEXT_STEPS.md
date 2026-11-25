@@ -4,9 +4,8 @@
 - Repository: Pawar-47/Cartoon-Studio
 - Branch: main
 - Phase 0 CLOSED; Phase 1 ACTIVE.
-- Latest tested implementation commit: d60def463e34575bab26b3a5da6c573b4f2bc4ee.
-- Dependency-lock follow-up: 6b41eb59631f8e9757ff2fe26513be08d9623151.
-- Latest verified Windows CI: [run #136 — SUCCESS](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45571086576).
+- P1.1–P1.3 are verified by Windows CI run #136 — [SUCCESS](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45571086576).
+- P1.4 installer work is active on main. The installer binaries compile; the v1-to-v2 upgrade smoke test is being corrected. Track the current result in [GitHub Actions](https://github.com/Pawar-47/Cartoon-Studio/actions).
 - Latest dependency resolver: [run #11 — SUCCESS](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45571086600).
 - P0.6 proofs: docs/P0_6_PROOF_REPORT.md.
 - P1.1 foundation: docs/P1_1_FOUNDATION_REPORT.md.

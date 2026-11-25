@@ -6,16 +6,16 @@ SetCompressor /SOLID zlib
 !define APP_VERSION "0.1.0"
 !endif
 !ifndef APP_DIST_DIR
-!define APP_DIST_DIR "dist\\v2\\CartoonStudio"
+!define APP_DIST_DIR "dist\v2\CartoonStudio"
 !endif
 !ifndef OUTPUT_FILE
-!define OUTPUT_FILE "dist\\Cartoon-Studio-Setup.exe"
+!define OUTPUT_FILE "dist\Cartoon-Studio-Setup.exe"
 !endif
 
 Name "Cartoon Studio"
 OutFile "${OUTPUT_FILE}"
-InstallDir "$LOCALAPPDATA\\Programs\\Cartoon Studio"
-InstallDirRegKey HKCU "Software\\CartoonStudio" "InstallDir"
+InstallDir "$LOCALAPPDATA\Programs\Cartoon Studio"
+InstallDirRegKey HKCU "Software\CartoonStudio" "InstallDir"
 Page instfiles
 ShowInstDetails show
 ShowUnInstDetails show
@@ -30,14 +30,14 @@ VIAddVersionKey "FileDescription" "Cartoon Studio Installer"
 !macro RemoveInstalledFiles
     ; Remove only known application-owned paths. Never touch the user's data directory.
     SetOutPath "$TEMP"
-    SetFileAttributes "$INSTDIR\\CartoonStudio.exe" NORMAL
-    SetFileAttributes "$INSTDIR\\dependency-sbom.cdx.json" NORMAL
-    SetFileAttributes "$INSTDIR\\THIRD_PARTY_NOTICES.md" NORMAL
-    RMDir /r "$INSTDIR\\_internal"
-    RMDir /r "$INSTDIR\\LICENSES"
-    Delete "$INSTDIR\\CartoonStudio.exe"
-    Delete "$INSTDIR\\dependency-sbom.cdx.json"
-    Delete "$INSTDIR\\THIRD_PARTY_NOTICES.md"
+    SetFileAttributes "$INSTDIR\CartoonStudio.exe" NORMAL
+    SetFileAttributes "$INSTDIR\dependency-sbom.cdx.json" NORMAL
+    SetFileAttributes "$INSTDIR\THIRD_PARTY_NOTICES.md" NORMAL
+    RMDir /r "$INSTDIR\_internal"
+    RMDir /r "$INSTDIR\LICENSES"
+    Delete "$INSTDIR\CartoonStudio.exe"
+    Delete "$INSTDIR\dependency-sbom.cdx.json"
+    Delete "$INSTDIR\THIRD_PARTY_NOTICES.md"
 !macroend
 
 Section "Cartoon Studio" SEC_MAIN
@@ -48,42 +48,42 @@ Section "Cartoon Studio" SEC_MAIN
     ; Stop an existing app before replacing program files. Do not invoke the
     ; previous uninstaller during upgrades: it can remove install metadata and
     ; shortcuts while this installer is still running.
-    ExecWait '"$SYSDIR\\taskkill.exe" /F /IM CartoonStudio.exe'
+    ExecWait '"$SYSDIR\taskkill.exe" /F /IM CartoonStudio.exe'
 
     !insertmacro RemoveInstalledFiles
     CreateDirectory "$INSTDIR"
     SetOutPath "$INSTDIR"
-    File /r "${APP_DIST_DIR}\\*"
+    File /r "${APP_DIST_DIR}\*"
 
-    WriteUninstaller "$INSTDIR\\Uninstall.exe"
+    WriteUninstaller "$INSTDIR\Uninstall.exe"
 
-    CreateDirectory "$SMPROGRAMS\\Cartoon Studio"
-    CreateShortCut "$SMPROGRAMS\\Cartoon Studio\\Cartoon Studio.lnk" "$INSTDIR\\CartoonStudio.exe"
-    CreateShortCut "$DESKTOP\\Cartoon Studio.lnk" "$INSTDIR\\CartoonStudio.exe"
+    CreateDirectory "$SMPROGRAMS\Cartoon Studio"
+    CreateShortCut "$SMPROGRAMS\Cartoon Studio\Cartoon Studio.lnk" "$INSTDIR\CartoonStudio.exe"
+    CreateShortCut "$DESKTOP\Cartoon Studio.lnk" "$INSTDIR\CartoonStudio.exe"
 
-    WriteRegStr HKCU "Software\\CartoonStudio" "InstallDir" "$INSTDIR"
-    WriteRegStr HKCU "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\CartoonStudio" "DisplayName" "Cartoon Studio"
-    WriteRegStr HKCU "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\CartoonStudio" "DisplayVersion" "${APP_VERSION}"
-    WriteRegStr HKCU "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\CartoonStudio" "InstallLocation" "$INSTDIR"
-    WriteRegStr HKCU "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\CartoonStudio" "UninstallString" '"$INSTDIR\\Uninstall.exe"'
-    WriteRegDWORD HKCU "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\CartoonStudio" "NoModify" 1
-    WriteRegDWORD HKCU "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\CartoonStudio" "NoRepair" 1
+    WriteRegStr HKCU "Software\CartoonStudio" "InstallDir" "$INSTDIR"
+    WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CartoonStudio" "DisplayName" "Cartoon Studio"
+    WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CartoonStudio" "DisplayVersion" "${APP_VERSION}"
+    WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CartoonStudio" "InstallLocation" "$INSTDIR"
+    WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CartoonStudio" "UninstallString" '"$INSTDIR\Uninstall.exe"'
+    WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CartoonStudio" "NoModify" 1
+    WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CartoonStudio" "NoRepair" 1
 SectionEnd
 
 Section "Uninstall"
     SetShellVarContext current
     SetRegView 64
-    ExecWait '"$SYSDIR\\taskkill.exe" /F /IM CartoonStudio.exe'
+    ExecWait '"$SYSDIR\taskkill.exe" /F /IM CartoonStudio.exe'
 
-    Delete "$SMPROGRAMS\\Cartoon Studio\\Cartoon Studio.lnk"
-    RMDir "$SMPROGRAMS\\Cartoon Studio"
-    Delete "$DESKTOP\\Cartoon Studio.lnk"
-    DeleteRegKey HKCU "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\CartoonStudio"
-    DeleteRegKey HKCU "Software\\CartoonStudio"
+    Delete "$SMPROGRAMS\Cartoon Studio\Cartoon Studio.lnk"
+    RMDir "$SMPROGRAMS\Cartoon Studio"
+    Delete "$DESKTOP\Cartoon Studio.lnk"
+    DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CartoonStudio"
+    DeleteRegKey HKCU "Software\CartoonStudio"
 
     !insertmacro RemoveInstalledFiles
-    Delete "$INSTDIR\\Uninstall.exe"
+    Delete "$INSTDIR\Uninstall.exe"
     RMDir "$INSTDIR"
 
-    ; Deliberately preserve %LOCALAPPDATA%\\CartoonStudio and all project data.
+    ; Deliberately preserve %LOCALAPPDATA%\CartoonStudio and all project data.
 SectionEnd

@@ -232,7 +232,7 @@ def main() -> int:
                 else []
             )
             install_registry = subprocess.run(
-                ["reg", "query", r"HKCU\\Software\\CartoonStudio", "/s", "/reg:64"],
+                ["reg", "query", r"HKCU\Software\CartoonStudio", "/s", "/reg:64"],
                 check=False,
                 capture_output=True,
                 text=True,
@@ -241,7 +241,7 @@ def main() -> int:
                 [
                     "reg",
                     "query",
-                    r"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\CartoonStudio",
+                    r"HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\CartoonStudio",
                     "/s",
                     "/reg:64",
                 ],
