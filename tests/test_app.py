@@ -232,7 +232,8 @@ def test_story_plan_is_saved_as_portable_episode_document(tmp_path, monkeypatch)
     assert second_save.status_code == 200
     assert second_save.json()["episode_id"] == episode_id
     assert second_save.json()["revision"] == 2
-    project_document = json.loads((tmp_path / "projects" / project_id / "project.json").read_text(encoding="utf-8"))
+    project_document_path = tmp_path / "projects" / project_id / "project.json"
+    project_document = json.loads(project_document_path.read_text(encoding="utf-8"))
     assert project_document["revision"] == 3
 
     reopened = client.get(f"/api/projects/{project_id}/story")
