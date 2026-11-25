@@ -2,7 +2,7 @@
 
 ## Current checkpoint
 
-GitHub `main` is at `062400e58cbbf491ec92869dc140b60a9b354d7f`; the active work branch is `work/mainline-followup` at `be169c4`. Latest main CI [#471](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45791209337) failed because the Godot episode worker has a duplicate `action_cue_count` dictionary key. The pushed working-branch fix and regression test pass locally: pinned-Godot episode test 1 passed; full pytest 136 passed, 4 skipped. No post-fix CI run exists yet; this workflow runs for PRs targeting `main`, not feature-branch pushes.
+GitHub `main` is at `062400e58cbbf491ec92869dc140b60a9b354d7f`; the active work branch is `work/mainline-followup`, containing fix commit `be169c4`. Latest main CI [#471](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45791209337) failed because the Godot episode worker has a duplicate `action_cue_count` dictionary key. The pushed working-branch fix and regression test pass locally: pinned-Godot episode test 1 passed; full pytest 136 passed, 4 skipped. No post-fix CI run exists yet; this workflow runs for PRs targeting `main`, not feature-branch pushes.
 
 Phase 2 remains ACTIVE and P2.2 remains PARTIAL. Main also contains partial/out-of-order World Builder, story binding, episode scene generation and procedural action/camera timeline code; these do not constitute phase acceptance. Preserve this work, but do not claim the Phase 2 gate is closed or bypass phase gates.
 
