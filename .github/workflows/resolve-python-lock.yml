@@ -4,6 +4,8 @@ on:
     branches: [main]
     paths:
       - "pyproject.toml"
+      - "app/**"
+      - "tests/**"
       - ".github/workflows/resolve-python-lock.yml"
   pull_request:
     branches: [main]
@@ -37,7 +39,7 @@ jobs:
         run: |
           uv run --locked ruff check app tests
           uv run --locked python -m compileall -q app
-          uv run --locked pytest -q
+          uv run --locked python -m pytest -q
       - name: Export runtime lock for the Windows bootstrap
         run: uv export --locked --no-dev --format requirements.txt --output-file requirements.lock
       - name: Export dependency inventory

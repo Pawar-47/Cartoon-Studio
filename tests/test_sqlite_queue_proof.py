@@ -30,6 +30,7 @@ def test_expired_lease_retries_only_incomplete_scene_and_preserves_checkpoint(tm
     queue.enqueue("job-2", ["scene-1", "scene-2"], now=200)
 
     first = queue.claim_next("worker-a", now=201)
+    assert first["scene_id"] == "scene-1"
     queue.complete_scene("job-2", "scene-1", "worker-a", "scene-1.mp4", now=202)
     second = queue.claim_next("worker-a", now=203)
     assert second["scene_id"] == "scene-2"

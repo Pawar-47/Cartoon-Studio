@@ -224,7 +224,8 @@ def test_story_plan_is_saved_as_portable_episode_document(tmp_path, monkeypatch)
     assert document["document_type"] == "episode"
     assert document["revision"] == 1
     assert document["data"]["title"] == "Market Mix-up"
-    project_document = json.loads((tmp_path / "projects" / project_id / "project.json").read_text(encoding="utf-8"))
+    project_document_path = tmp_path / "projects" / project_id / "project.json"
+    project_document = json.loads(project_document_path.read_text(encoding="utf-8"))
     assert episode_id in project_document["data"]["references"]["episodes"]
 
     second_save = client.put(f"/api/projects/{project_id}/story", json=plan)
@@ -249,8 +250,8 @@ def test_story_plan_is_saved_as_portable_episode_document(tmp_path, monkeypatch)
 
 
 def test_legacy_database_migrates_and_preserves_project_and_story(tmp_path, monkeypatch):
-    import json
     import sqlite3
+
     from app import main
 
     db_path = tmp_path / "legacy.sqlite3"
