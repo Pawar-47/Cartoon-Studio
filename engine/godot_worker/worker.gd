@@ -398,12 +398,22 @@ func _export_character_appearance(payload: Dictionary) -> Dictionary:
         var gltf_node_index := export_state.get_node_index(morph_mesh)
         if gltf_node_index < 0:
             var matching_node_indices: Array[int] = []
-            for candidate_index in range(export_nodes.size()):
-                var candidate_node: Dictionary = export_nodes[candidate_index]
-                if str(candidate_node.get("name", "")) == str(morph_mesh.name) and candidate_node.has("mesh"):
+            var matching_mesh_indices: Array[int] = []
+            var gltf_nodes: Array = export_state.get_nodes()
+            var gltf_meshes: Array = export_state.get_meshes()
+            for candidate_index in range(gltf_nodes.size()):
+                var candidate_node: GLTFNode = gltf_nodes[candidate_index]
+                if candidate_node.mesh < 0 or candidate_node.mesh >= gltf_meshes.size():
+                    continue
+                var candidate_mesh = gltf_meshes[candidate_node.mesh]
+                if candidate_node.original_name == str(morph_mesh.name):
                     matching_node_indices.append(candidate_index)
+                if candidate_mesh.original_name == str(morph_mesh.mesh.resource_name) or candidate_mesh.original_name == str(morph_mesh.name):
+                    matching_mesh_indices.append(candidate_index)
             if matching_node_indices.size() == 1:
                 gltf_node_index = matching_node_indices[0]
+            elif matching_node_indices.is_empty() and matching_mesh_indices.size() == 1:
+                gltf_node_index = matching_mesh_indices[0]
         if gltf_node_index < 0 or gltf_node_index >= export_nodes.size():
             scene.queue_free()
             return {"error_code": "morph_node_export_mapping_failed", "error": "Godot could not map edited facial mesh " + str(morph_mesh.name) + " to its exported glTF node."}
