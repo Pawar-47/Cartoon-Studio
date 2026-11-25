@@ -10,6 +10,9 @@ const status = document.getElementById("preview-status");
 const empty = document.getElementById("preview-empty");
 const resetButton = document.getElementById("reset-view");
 const animationSelect = document.getElementById("animation-select");
+const playbackButton = document.getElementById("preview-playback");
+const playbackSpeed = document.getElementById("preview-speed");
+const frameButtons = document.querySelectorAll("[data-camera-frame]");
 const loader = new GLTFLoader();
 
 let renderer = null;
@@ -19,8 +22,11 @@ let controls = null;
 let currentObject = null;
 let mixer = null;
 let clips = [];
+let activeAction = null;
+let playbackPaused = false;
 let clock = null;
 let cameraDistance = 3;
+let characterBounds = null;
 let materialCatalog = [];
 let materialByKey = new Map();
 let morphTargetCatalog = [];
@@ -106,10 +112,53 @@ function disposeCurrentObject() {
   currentObject = null;
   mixer = null;
   clips = [];
+  activeAction = null;
+  playbackPaused = false;
+  updatePlaybackControls();
+  characterBounds = null;
   materialCatalog = [];
   materialByKey.clear();
   morphTargetCatalog = [];
   morphTargetByKey.clear();
+}
+
+function updatePlaybackControls() {
+  playbackButton.disabled = !activeAction;
+  playbackButton.textContent = playbackPaused ? "Play" : "Pause";
+  playbackButton.setAttribute("aria-pressed", String(!playbackPaused));
+  playbackSpeed.disabled = !activeAction;
+  frameButtons.forEach((button) => { button.disabled = !currentObject; });
+}
+
+function setPlaybackPaused(paused) {
+  if (!mixer || !activeAction) return;
+  if (!activeAction.isRunning()) activeAction.play();
+  playbackPaused = Boolean(paused);
+  activeAction.paused = playbackPaused;
+  updatePlaybackControls();
+}
+
+function frameCharacter(preset = "full") {
+  if (!camera || !controls || !characterBounds || characterBounds.isEmpty()) return;
+  const size = characterBounds.getSize(new THREE.Vector3());
+  const center = characterBounds.getCenter(new THREE.Vector3());
+  const direction = new THREE.Vector3(0.9, 0.65, 1.15).normalize();
+  let targetY = center.y;
+  let distance = cameraDistance;
+  if (preset === "head") {
+    targetY = characterBounds.min.y + size.y * 0.88;
+    distance = cameraDistance * 0.42;
+  } else if (preset === "upper") {
+    targetY = characterBounds.min.y + size.y * 0.66;
+    distance = cameraDistance * 0.72;
+  }
+  const target = new THREE.Vector3(center.x, targetY, center.z);
+  controls.target.copy(target);
+  camera.position.copy(target).addScaledVector(direction, distance);
+  camera.near = Math.max(distance / 10000, 0.001);
+  camera.far = Math.max(cameraDistance * 100, 100);
+  camera.updateProjectionMatrix();
+  controls.update();
 }
 
 function collectMaterials(root) {
@@ -220,14 +269,15 @@ export async function showCharacterPreview(buffer, label = "Character", appearan
     const center = bounds.getCenter(new THREE.Vector3());
     const size = bounds.getSize(new THREE.Vector3());
     currentObject.position.sub(center);
+    characterBounds = bounds.clone();
+    characterBounds.min.sub(center);
+    characterBounds.max.sub(center);
 
     cameraDistance = Math.max(size.x, size.y, size.z, 0.1) * 2.1;
-    camera.near = Math.max(cameraDistance / 10000, 0.001);
-    camera.far = Math.max(cameraDistance * 100, 100);
-    camera.position.set(cameraDistance * 0.9, cameraDistance * 0.65, cameraDistance * 1.15);
-    camera.updateProjectionMatrix();
-    controls.target.set(0, 0, 0);
-    controls.update();
+    characterBounds = bounds.clone();
+    characterBounds.min.sub(center);
+    characterBounds.max.sub(center);
+    frameCharacter("full");
 
     animationSelect.replaceChildren();
     clips = gltf.animations;
@@ -239,9 +289,15 @@ export async function showCharacterPreview(buffer, label = "Character", appearan
         option.textContent = clip.name || "Animation " + (index + 1);
         animationSelect.append(option);
       });
-      if (playAnimations) mixer.clipAction(clips[0]).play();
+      activeAction = mixer.clipAction(clips[0]);
+      activeAction.play();
+      playbackPaused = !playAnimations;
+      activeAction.paused = playbackPaused;
+      mixer.timeScale = Number(playbackSpeed.value) || 1;
       animationSelect.disabled = !playAnimations;
     } else {
+      activeAction = null;
+      playbackPaused = false;
       const option = document.createElement("option");
       option.value = "";
       option.textContent = "No embedded animations";
@@ -249,6 +305,7 @@ export async function showCharacterPreview(buffer, label = "Character", appearan
       animationSelect.disabled = true;
     }
 
+    updatePlaybackControls();
     empty.hidden = true;
     canvas.style.display = "block";
     resetButton.disabled = false;
@@ -268,11 +325,22 @@ export function resetCharacterPreview() {
 }
 
 resetButton.addEventListener("click", resetCharacterPreview);
+playbackButton.addEventListener("click", () => setPlaybackPaused(!playbackPaused));
+playbackSpeed.addEventListener("change", () => {
+  if (mixer) mixer.timeScale = Number(playbackSpeed.value) || 1;
+});
+frameButtons.forEach((button) => button.addEventListener("click", () => frameCharacter(button.dataset.cameraFrame)));
 animationSelect.addEventListener("change", () => {
   if (!mixer) return;
   mixer.stopAllAction();
   const index = Number(animationSelect.value);
-  if (Number.isInteger(index) && clips[index]) mixer.clipAction(clips[index]).play();
+  activeAction = Number.isInteger(index) && clips[index] ? mixer.clipAction(clips[index]) : null;
+  playbackPaused = false;
+  if (activeAction) {
+    activeAction.reset().play();
+    mixer.timeScale = Number(playbackSpeed.value) || 1;
+  }
+  updatePlaybackControls();
 });
 
 export async function showRetargetPreview(sourceBuffer, targetBuffer, sourceMapping, targetMapping, animationName, label = "Retargeted character") {
@@ -309,15 +377,17 @@ export async function showRetargetPreview(sourceBuffer, targetBuffer, sourceMapp
     const center = bounds.getCenter(new THREE.Vector3()), size = bounds.getSize(new THREE.Vector3());
     currentObject.position.sub(center);
     cameraDistance = Math.max(size.x, size.y, size.z, 0.1) * 2.1;
-    camera.near = Math.max(cameraDistance / 10000, 0.001);
-    camera.far = Math.max(cameraDistance * 100, 100);
-    camera.position.set(cameraDistance * 0.9, cameraDistance * 0.65, cameraDistance * 1.15);
-    camera.updateProjectionMatrix();
-    controls.target.set(0, 0, 0);
-    controls.update();
+    characterBounds = bounds.clone();
+    characterBounds.min.sub(center);
+    characterBounds.max.sub(center);
+    frameCharacter("full");
     clips = [retargetedClip];
     mixer = new THREE.AnimationMixer(targetMesh);
-    mixer.clipAction(retargetedClip).play();
+    activeAction = mixer.clipAction(retargetedClip);
+    activeAction.play();
+    playbackPaused = false;
+    mixer.timeScale = Number(playbackSpeed.value) || 1;
+    updatePlaybackControls();
     animationSelect.replaceChildren();
     const option = document.createElement("option");
     option.value = "0";
