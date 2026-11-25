@@ -229,14 +229,17 @@ $("import-model").addEventListener("click",async()=>{
   const hierarchy=rigAnalysis.hierarchy_validation||{};
   const hierarchyLabel=hierarchy.status==="valid"?"Valid":hierarchy.status==="invalid"?"Needs review":hierarchy.status==="incomplete"?"Incomplete":"Not available";
   const restPose=rigAnalysis.rest_pose_summary||{};
-  const items=[["Meshes",data.engine_inspection.mesh_count],["Skeletons",data.engine_inspection.skeleton_count],["Animations",data.engine_inspection.animation_count],["Nodes",data.engine_inspection.node_count],["File size",(data.container.size_bytes/1048576).toFixed(2)+" MiB"],["Humanoid bone-name coverage",coverage],["Missing core humanoid names",missing],["Humanoid hierarchy",hierarchyLabel],["Rest-pose bone transforms",restPose.measured_bone_count??0]];
+  const morphTargets=Array.isArray(data.engine_inspection.morph_targets)?data.engine_inspection.morph_targets:[];
+  const morphNames=morphTargets.map(target=>target.name).filter(Boolean);
+  const items=[["Meshes",data.engine_inspection.mesh_count],["Skeletons",data.engine_inspection.skeleton_count],["Animations",data.engine_inspection.animation_count],["Nodes",data.engine_inspection.node_count],["File size",(data.container.size_bytes/1048576).toFixed(2)+" MiB"],["Humanoid bone-name coverage",coverage],["Missing core humanoid names",missing],["Humanoid hierarchy",hierarchyLabel],["Rest-pose bone transforms",restPose.measured_bone_count??0],["Godot facial blend shapes",data.engine_inspection.morph_target_count??morphTargets.length]];
   for(const [label,value] of items){const span=document.createElement("span");const b=document.createElement("b");b.textContent=String(value);span.append(document.createTextNode(label+": "),b);metrics.append(span)}
   const rigNote=document.createElement("p");rigNote.className="inline-status";rigNote.textContent=rigAnalysis.retargeting_note||"Skeleton presence is not proof of retarget compatibility.";
   const hierarchyNote=document.createElement("p");hierarchyNote.className="inline-status";
   const hierarchyIssues=Array.isArray(hierarchy.issues)?hierarchy.issues:[];
   const restNote=restPose.measured_bone_count?(" Godot also reported local rest offsets for "+restPose.measured_bone_count+" mapped bones; these are not world-space limb lengths."):"";
   hierarchyNote.textContent=(hierarchy.status==="valid"?"Required humanoid parent chains are structurally consistent; rest pose, axes, scale, skin weights and real animation transfer remain unverified.":hierarchyIssues.length?hierarchyIssues.join(" "):(hierarchy.note||"Parent-chain validation is not available for this asset."))+restNote;
-  $("asset-report").append(heading,metrics,rigNote,hierarchyNote);$("import-status").textContent="Asset stored inside this project. Complete the profile to save it."; $("save-character").disabled=false;
+  const morphNote=document.createElement("p");morphNote.className="inline-status";morphNote.textContent=morphNames.length?"Godot imported facial blend shapes: "+morphNames.join(", ")+". Browser preview controls are checked separately.":"Godot did not detect facial blend shapes in this asset.";
+  $("asset-report").append(heading,metrics,rigNote,hierarchyNote,morphNote);$("import-status").textContent="Asset stored inside this project. Complete the profile to save it."; $("save-character").disabled=false;
  }catch(error){$("import-status").textContent=error.message}
  finally{$("import-model").disabled=!activeProject||!$("model-file").files.length}
 });

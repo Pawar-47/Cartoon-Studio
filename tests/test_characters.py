@@ -138,6 +138,8 @@ def test_character_studio_page_is_served():
     assert "cancel-edit-profile" in script.text
     assert 'join("\\n")' in script.text
     assert "Cancel editing" in response.text
+    assert "Godot facial blend shapes" in script.text
+    assert "morph_target_count" in script.text
 
 
 def test_character_glb_import_profile_round_trip_and_project_reference(tmp_path, monkeypatch):
