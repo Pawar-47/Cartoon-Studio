@@ -328,6 +328,7 @@ func _retarget_glb_pair(payload: Dictionary) -> Dictionary:
 
     var modifier := RetargetModifier3D.new()
     modifier.name = "RetargetModifier3D"
+    target_skeleton.name = "RetargetTargetSkeleton"
     modifier.profile = SkeletonProfileHumanoid.new()
     modifier.use_global_pose = false
     source_skeleton.add_child(modifier)
@@ -352,19 +353,31 @@ func _retarget_glb_pair(payload: Dictionary) -> Dictionary:
         return {"error_code": "scene_reopen_failed", "error": "Saved retarget scene could not be reopened."}
     var reopened_instance := reopened.instantiate()
     var reopened_modifier := reopened_instance.find_child("RetargetModifier3D", true, false)
-    var reopened_target := reopened_instance.find_child("Skeleton3D", true, false)
-    var scene_reopened := reopened_modifier != null and reopened_target != null
+    var reopened_target := reopened_instance.find_child("RetargetTargetSkeleton", true, false)
+    var reopened_skin_count := 0
+    if reopened_target != null:
+        for mesh_node in reopened_instance.find_children("*", "MeshInstance3D", true, false):
+            var reopened_mesh := mesh_node as MeshInstance3D
+            if not reopened_mesh.skeleton.is_empty() and reopened_mesh.get_node_or_null(reopened_mesh.skeleton) == reopened_target:
+                reopened_skin_count += 1
+    var scene_reopened := (
+        reopened_modifier != null
+        and reopened_target != null
+        and reopened_skin_count == bound_target_meshes.size()
+    )
+    var source_bone_count := source_skeleton.get_bone_count()
+    var target_bone_count := target_skeleton.get_bone_count()
     reopened_instance.free()
     combined_root.queue_free()
     if not scene_reopened:
-        return {"error_code": "scene_reopen_invalid", "error": "Reopened retarget scene is missing its modifier or target skeleton."}
+        return {"error_code": "scene_reopen_invalid", "error": "Reopened retarget scene is missing its modifier, target skeleton or skin binding."}
 
     return {
         "ok": true,
         "output_path": output_path,
         "animation_name": selected_animation,
-        "source_bone_count": source_skeleton.get_bone_count(),
-        "target_bone_count": target_skeleton.get_bone_count(),
+        "source_bone_count": source_bone_count,
+        "target_bone_count": target_bone_count,
         "mapped_bone_count": required_profile_bones.size(),
         "target_skinned_mesh_count": bound_target_meshes.size(),
         "scene_reopened": true

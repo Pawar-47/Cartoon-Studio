@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from app import engine
+from app.rig_analysis import analyze_rig
 from app.engine import (
     EngineCancelledError,
     EngineExecutionError,
@@ -197,3 +198,44 @@ def test_pinned_godot_worker_reports_imported_humanoid_rest_transforms(tmp_path)
         and len(bone["rest_transform"]["origin"]) == 3
         for bone in skeleton["bones"]
     )
+
+
+def test_pinned_godot_worker_creates_non_destructive_retarget_scene(tmp_path):
+    adapter = _real_godot_adapter(tmp_path)
+    fixture = (
+        Path(__file__).resolve().parents[1]
+        / "tools"
+        / "godot_engine_proof"
+        / "fixtures"
+        / "proof_humanoid.glb"
+    )
+    project_root = tmp_path / "retarget-project"
+    project_root.mkdir()
+    source = project_root / "source.glb"
+    target = project_root / "target.glb"
+    shutil.copyfile(fixture, source)
+    shutil.copyfile(fixture, target)
+
+    source_rig = analyze_rig(adapter.inspect_glb(source, allowed_root=project_root))
+    target_rig = analyze_rig(adapter.inspect_glb(target, allowed_root=project_root))
+    assert source_rig["status"] == "humanoid_names_complete"
+    assert target_rig["status"] == "humanoid_names_complete"
+    assert source_rig["hierarchy_validation"]["status"] == "valid"
+    assert target_rig["hierarchy_validation"]["status"] == "valid"
+
+    output = project_root / "retargets" / "source-to-target.tscn"
+    response = adapter.retarget_glb_pair(
+        source,
+        target,
+        output,
+        allowed_root=project_root,
+        source_profile_mapping=source_rig["godot_profile_mapping"],
+        target_profile_mapping=target_rig["godot_profile_mapping"],
+    )
+    assert response["ok"] is True
+    assert response["mapped_bone_count"] == 15
+    assert response["target_skinned_mesh_count"] >= 1
+    assert response["scene_reopened"] is True
+    assert output.is_file()
+    assert source.read_bytes() == fixture.read_bytes()
+    assert target.read_bytes() == fixture.read_bytes()
