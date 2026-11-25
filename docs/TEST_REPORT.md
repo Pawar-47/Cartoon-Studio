@@ -162,3 +162,11 @@ Added API coverage for material recipe validation, persistence, revision increme
 ## Imported facial morph-target batch — 2026-11-25
 
 Added API coverage for saving morph-target weights and rejecting values outside 0–1. The browser viewer discovers morph targets from GLB mesh dictionaries and applies slider weights to the live preview. Windows CI and visual validation with a real morph-enabled character are pending.
+
+
+## Character Studio appearance and morph-target checkpoint — 2026-11-25
+
+- Windows CI #214: [SUCCESS](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45599984676), commit `e58b40d75ae10431051980246b468b736544f464`.
+- All 49 pytest tests passed; Ruff lint and Python compilation passed.
+- Both self-contained Windows application builds, NSIS installer compilation and clean install/upgrade/uninstall/reinstall smoke tests passed.
+- This run validates the material/morph appearance API persistence and validation tests plus packaging. Browser visual review with a representative facial-morph GLB remains outstanding.

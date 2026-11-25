@@ -26,3 +26,5 @@
 .morph-control output{font-size:10px;color:#8fe0c8;font-variant-numeric:tabular-nums}
 .morph-control input{grid-column:1/-1;width:100%;padding:0;accent-color:#8fe0c8}
 @media(max-width:520px){.morph-controls{grid-template-columns:1fr}}
+
+.profile-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.profile-actions button{margin-top:8px}

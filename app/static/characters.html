@@ -47,7 +47,7 @@
   </div>
  </section>
  <section class="panel" id="profile-panel">
-  <span class="eyebrow">02 / CHARACTER IDENTITY</span><h2>Save reusable profile</h2>
+  <span class="eyebrow">02 / CHARACTER IDENTITY</span><h2 id="profile-heading">Save reusable profile</h2>
   <p class="helper">Define the identity and continuity notes. The imported GLB remains the source model; metadata does not pretend to edit its mesh.</p>
   <form id="character-form">
    <label>Character name<input id="character-name" maxlength="80" required placeholder="e.g. Ali"></label>
@@ -68,7 +68,7 @@
    <label>Voice profile<textarea id="voice-profile" rows="2" maxlength="500" placeholder="Voice characteristics; audio generation is a later phase"></textarea></label>
    <label>Dialogue style<textarea id="dialogue-style" rows="2" maxlength="500" placeholder="Vocabulary, pacing and speech style"></textarea></label>
    <p id="profile-status" class="inline-status" role="status"></p>
-   <button id="save-character" type="submit" disabled>Save character profile</button>
+   <div class="profile-actions"><button id="save-character" type="submit" disabled>Save character profile</button><button id="cancel-edit-profile" class="secondary" type="button" hidden>Cancel editing</button></div>
   </form>
  </section>
  <section class="panel saved-panel">
@@ -76,7 +76,7 @@
   <div id="character-list" class="character-list"><div class="empty">Select a project to see its characters.</div></div>
  </section>
 </div>
-<footer>GLB import and preview are available. Material colour, roughness and metalness can be saved as a reusable appearance recipe; mesh editing, rig creation, facial controls and animation authoring remain upcoming.</footer>
+<footer>GLB import and preview are available. Material PBR settings and existing facial morph targets can be saved as non-destructive recipes; mesh editing, rig creation, new blend-shape authoring and animation authoring remain upcoming.</footer>
 </main>
 <script type="importmap">
 {"imports":{"three":"/static/vendor/three/build/three.module.js"}}

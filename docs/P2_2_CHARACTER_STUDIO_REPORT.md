@@ -62,3 +62,11 @@
 - The editor reports clearly when a model contains no morph targets; it does not fabricate facial controls for models without blend shapes.
 - This operates existing GLB morph targets only. It does not create new facial geometry, generate new blend shapes, provide VRM expression presets, or edit/export the source GLB.
 - API tests cover persistence and range validation. Windows CI and visual review with a real blend-shape GLB are pending.
+
+
+## CI-accepted appearance and facial-control batches — 2026-11-25
+
+- Material appearance editor commit `843ef8d6250b1c442235119911215205fa1bfb6a` passed Windows CI #212 (49 tests plus lint, compilation, bootstrap, both application builds and installer lifecycle).
+- Imported facial morph-target controls commit `533d59415df85be799fd4b28161aef860677a501`, followed by lint correction `e58b40d75ae10431051980246b468b736544f464`, passed Windows CI #214. All 49 tests, lint, compilation, both self-contained builds, installer compilation and clean install/upgrade/uninstall/reinstall passed.
+- Remaining visual limitation: no real blend-shape cartoon GLB has yet been used for browser-level visual acceptance. API tests prove recipe persistence and range validation, not that a particular target deforms the intended face region.
+- Next workflow improvement: allow saved profile metadata to be edited from the browser without reimporting or replacing the original GLB; appearance recipes must remain intact.

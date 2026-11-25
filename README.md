@@ -11,10 +11,10 @@ An original, local-first Urdu 3D cartoon production studio. This repository is t
 - Copyable structured story prompt and JSON Schema.
 - Validation of 5–7 minute episode plans, 5–7 scenes, character references and timed production cues.
 - Save and reload validated episode plans inside a local project.
-- Character Studio: import and inspect GLB 2.0 models, preview saved models in an interactive local 3D viewer, customize and persist material colour/roughness/metalness recipes and existing facial morph targets, check mesh/skeleton/animation readiness, and save versioned reusable character profiles to a project.
+- Character Studio: import and inspect GLB 2.0 models, preview saved models in an interactive local 3D viewer, edit saved character profiles, customize and persist material colour/roughness/metalness recipes and existing facial morph targets, check mesh/skeleton/animation readiness, and save versioned reusable character profiles to a project.
 - GitHub Actions Windows CI installs exact uv-locked dependencies, runs lint/compile/tests and packages a hash-locked bootstrap ZIP.
 
-Godot 4.7.2 Compatibility is integrated as a pinned, bundled native worker behind a supervised Python adapter. P2.1 passed Windows CI #204. The first P2.2 Character Studio vertical slice also passed Windows CI #208 (45 pytest tests): project-scoped GLB 2.0 import/inspection, rig-readiness reporting, versioned character profiles, project references and recovery. The Character Studio phase is still active; mesh/rig authoring, texture painting, new blend-shape authoring, export and animation authoring remain future work.
+Godot 4.7.2 Compatibility is integrated as a pinned, bundled native worker behind a supervised Python adapter. P2.1 passed Windows CI #204. The first P2.2 Character Studio vertical slice also passed Windows CI #208 (45 pytest tests): project-scoped GLB 2.0 import/inspection, rig-readiness reporting, versioned character profiles, project references and recovery. The Character Studio phase is still active; rig authoring, texture painting, new blend-shape authoring, export and animation authoring remain future work.
 
 ## Run on Windows
 

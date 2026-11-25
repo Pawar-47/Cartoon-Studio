@@ -127,3 +127,13 @@ After CI acceptance, continue with character profile editing and real mesh/mater
 2. Test representative cartoon GLBs with actual facial blend shapes; verify sliders affect the intended face regions and stored weights survive reload.
 3. Research VRM expression presets and humanoid retargeting, then integrate only after Godot 4.7.2 compatibility and license proof.
 4. Add character metadata editing and deterministic GLB export without overwriting the original source asset.
+
+
+## Live resume checkpoint — 2026-11-25 (supersedes earlier active-batch summaries)
+
+- Main head: `e58b40d75ae10431051980246b468b736544f464`.
+- Windows CI #214: [SUCCESS](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45599984676). All tests, lint, compilation, both self-contained builds, installer compilation and the complete install/upgrade/uninstall/reinstall lifecycle passed.
+- Completed and CI-accepted Character Studio capabilities: project-scoped GLB import and Godot inspection; local browser GLB preview; persistent character profiles; PBR material appearance recipes; imported facial morph-target sliders and saved weights.
+- Next implementation batch: edit existing character identity metadata in-place without reimporting the GLB, preserve the source asset and appearance recipe, and verify the update round-trip. The profile API already supports this; the browser editor is the missing workflow.
+- After profile editing: validate with representative real GLB files, improve rig/animation readiness and investigate deterministic export. Do not claim rig authoring, VRM, new blend-shape authoring or export until implemented and tested.
+- PC performance testing remains Phase 8 and is not a gate.

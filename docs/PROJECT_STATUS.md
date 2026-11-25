@@ -142,3 +142,13 @@ Implemented a non-destructive PBR appearance recipe for imported GLB characters.
 ## 2026-11-25 — Imported facial morph-target controls
 
 Added GLB morph-target discovery and a slider-based facial control panel. Existing morph targets can be adjusted in the browser preview, reset to neutral, and persisted in the character's appearance recipe. The editor explicitly reports when the source model contains no morph targets. This is not blend-shape authoring or a VRM expression system. API validation and persistence tests are added; Windows CI and visual review with a real facial-morph GLB are pending.
+
+
+## Live resume checkpoint — 2026-11-25 (supersedes earlier phase summaries)
+
+- Main head: `e58b40d75ae10431051980246b468b736544f464`.
+- Phase 0 and Phase 1: COMPLETE. P2.1 Godot 4.7.2 worker integration: COMPLETE and accepted by Windows CI #204.
+- Phase 2 Character Studio: ACTIVE. The GLB import/profile workflow, local browser preview, material appearance recipes and imported facial morph-target controls are implemented. Windows CI #214 passed all 49 tests and the full Windows packaging/installer lifecycle.
+- Current next batch: browser-based editing of saved character metadata, preserving the imported GLB and material/morph appearance recipes. This is a focused continuation of P2.2, not phase completion.
+- Not yet implemented: new mesh authoring, rig creation/editing, VRM import/export, new blend-shape authoring, animation retargeting and deterministic GLB export.
+- Phase 3 onward remains in the master-plan order. Physical-PC benchmarks remain deferred to Phase 8.

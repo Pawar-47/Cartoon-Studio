@@ -1,8 +1,25 @@
 import { showCharacterPreview, getCharacterMaterials, applyCharacterAppearance, getCharacterMorphTargets, applyCharacterMorphTargets } from "./character-preview.js";
 const $=id=>document.getElementById(id);
-let activeProject="", importedAsset=null, activeCharacter=null, appearanceRecipe={materials:{},morph_targets:{}};
+let activeProject="", importedAsset=null, activeCharacter=null, editingCharacter=null, appearanceRecipe={materials:{},morph_targets:{}};
 const params=new URLSearchParams(window.location.search);
 function lines(value){return value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean)}
+function resetProfileEditor(){editingCharacter=null;$("character-form").reset();$("profile-heading").textContent="Save reusable profile";$("save-character").textContent="Save character profile";$("cancel-edit-profile").hidden=true;$("save-character").disabled=!importedAsset}
+function cancelProfileEdit(){resetProfileEditor();$("profile-status").textContent="Profile editing cancelled. The saved character was not changed."}
+function editCharacterProfile(document){
+ const data=document.data||{};editingCharacter=document;importedAsset=null;
+ $("character-name").value=data.name||"";$("character-description").value=data.description||"";
+ $("face-design").value=data.face_design||"";$("body-proportions").value=JSON.stringify(data.body_proportions||{},null,2);
+ $("height-cm").value=data.height_cm??"";$("hair").value=data.hair||"";
+ $("clothing").value=(data.clothing||[]).join("\\n");$("accessories").value=(data.accessories||[]).join("\\n");
+ $("eye-design").value=data.eye_design||"";$("mouth-design").value=data.mouth_design||"";
+ $("expressions").value=(data.expressions||[]).join("\\n");$("personality").value=data.personality||"";
+ $("relationships").value=(data.relationships||[]).join("\\n");$("voice-profile").value=data.voice_profile||"";
+ $("dialogue-style").value=data.dialogue_style||"";
+ $("profile-heading").textContent="Edit character profile";$("save-character").textContent="Save profile changes";
+ $("save-character").disabled=false;$("cancel-edit-profile").hidden=false;
+ $("profile-status").textContent="Editing "+(data.name||"character")+". The original GLB and saved appearance recipe will be preserved.";
+ $("profile-panel").scrollIntoView({behavior:"smooth",block:"start"});
+}
 async function loadProjects(){
  const response=await fetch("/api/projects");
  if(!response.ok)throw new Error("Could not load projects.");
@@ -15,7 +32,7 @@ async function loadProjects(){
  await selectProject(select.value);
 }
 async function selectProject(id){
- activeProject=id;importedAsset=null;activeCharacter=null;appearanceRecipe={materials:{},morph_targets:{}};$("material-editor").hidden=true;$("morph-editor").hidden=true;$("save-appearance").disabled=true;$("asset-report").hidden=true;$("profile-status").textContent="";$("save-character").disabled=true;$("refresh-characters").disabled=!id;
+ activeProject=id;importedAsset=null;activeCharacter=null;resetProfileEditor();appearanceRecipe={materials:{},morph_targets:{}};$("material-editor").hidden=true;$("morph-editor").hidden=true;$("save-appearance").disabled=true;$("asset-report").hidden=true;$("profile-status").textContent="";$("save-character").disabled=true;$("refresh-characters").disabled=!id;
  $("project-status").textContent=id?"Project selected. Import a GLB model to begin.":"Choose a project to begin.";
  $("character-list").replaceChildren();
  if(!id){$("character-list").innerHTML='<div class="empty">Select a project to see its characters.</div>';return}
@@ -36,9 +53,11 @@ async function loadCharacters(){
   const revision=document.createElement("p");revision.textContent="Revision "+document.revision+" · "+new Date(document.updated_at).toLocaleDateString();
   const previewButton=document.createElement("button");previewButton.className="secondary preview-saved";previewButton.type="button";previewButton.textContent="Preview";
   previewButton.addEventListener("click",async()=>{try{const assetId=(asset.relative_path||"").split("/").pop().replace(/\.glb$/i,"");const response=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(assetId));if(!response.ok)throw new Error("Could not load the saved GLB asset.");const buffer=await response.arrayBuffer();await showCharacterPreview(buffer,data.name,data.appearance_recipe||{});document.querySelector(".preview-panel").scrollIntoView({behavior:"smooth",block:"center"})}catch(error){$("project-status").textContent=error.message}});
+  const editButton=document.createElement("button");editButton.className="secondary preview-saved";editButton.type="button";editButton.textContent="Edit profile";
+  editButton.addEventListener("click",()=>editCharacterProfile(document));
   const customizeButton=document.createElement("button");customizeButton.className="secondary preview-saved";customizeButton.type="button";customizeButton.textContent="Customize appearance";
   customizeButton.addEventListener("click",()=>openCharacterAppearance(document).catch(error=>$("project-status").textContent=error.message));
-  card.append(title,description,model,rig,animations,revision,previewButton,customizeButton);list.append(card);
+  card.append(title,description,model,rig,animations,revision,previewButton,editButton,customizeButton);list.append(card);
  }
 }
 async function openCharacterAppearance(characterDoc){
@@ -122,7 +141,7 @@ $("save-appearance").addEventListener("click",async()=>{
  finally{$("save-appearance").disabled=!(getCharacterMaterials().length||getCharacterMorphTargets().length)}
 });
 $("project-select").addEventListener("change",event=>selectProject(event.target.value).catch(error=>$("project-status").textContent=error.message));
-$("model-file").addEventListener("change",()=>{$("import-model").disabled=!activeProject||!$("model-file").files.length;importedAsset=null;$("save-character").disabled=true;$("asset-report").hidden=true});
+$("model-file").addEventListener("change",()=>{if(editingCharacter)cancelProfileEdit();$("import-model").disabled=!activeProject||!$("model-file").files.length;importedAsset=null;$("save-character").disabled=true;$("asset-report").hidden=true});
 $("import-model").addEventListener("click",async()=>{
  const file=$("model-file").files[0];if(!file||!activeProject)return;
  $("import-model").disabled=true;$("import-status").textContent="Uploading and inspecting with Godot…";
@@ -139,18 +158,20 @@ $("import-model").addEventListener("click",async()=>{
  finally{$("import-model").disabled=!activeProject||!$("model-file").files.length}
 });
 $("character-form").addEventListener("submit",async event=>{
- event.preventDefault();if(!importedAsset||!activeProject)return;
+ event.preventDefault();if((!importedAsset&&!editingCharacter)||!activeProject)return;
  $("save-character").disabled=true;$("profile-status").textContent="Saving character profile…";
  try{
   let proportions={};const raw=$("body-proportions").value.trim();if(raw){proportions=JSON.parse(raw);if(!proportions||Array.isArray(proportions)||typeof proportions!=="object")throw new Error("Body proportions must be a JSON object.")}
   const height=$("height-cm").value;
-  const payload={name:$("character-name").value,description:$("character-description").value,face_design:$("face-design").value,body_proportions:proportions,height_cm:height?Number(height):null,hair:$("hair").value,clothing:lines($("clothing").value),accessories:lines($("accessories").value),eye_design:$("eye-design").value,mouth_design:$("mouth-design").value,expressions:lines($("expressions").value),personality:$("personality").value,relationships:lines($("relationships").value),voice_profile:$("voice-profile").value,dialogue_style:$("dialogue-style").value,asset_path:importedAsset.relative_path};
-  const response=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/characters",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+  const payload={name:$("character-name").value,description:$("character-description").value,face_design:$("face-design").value,body_proportions:proportions,height_cm:height?Number(height):null,hair:$("hair").value,clothing:lines($("clothing").value),accessories:lines($("accessories").value),eye_design:$("eye-design").value,mouth_design:$("mouth-design").value,expressions:lines($("expressions").value),personality:$("personality").value,relationships:lines($("relationships").value),voice_profile:$("voice-profile").value,dialogue_style:$("dialogue-style").value,asset_path:editingCharacter?editingCharacter.data.asset.relative_path:importedAsset.relative_path};
+  const editing=Boolean(editingCharacter),url="/api/projects/"+encodeURIComponent(activeProject)+"/characters"+(editing?"/"+encodeURIComponent(editingCharacter.id):"");
+  const response=await fetch(url,{method:editing?"PUT":"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
   const data=await response.json();if(!response.ok)throw new Error(data.detail||"Could not save character.");
-  $("profile-status").textContent="Character saved. Profile revision "+data.revision+".";
-  $("character-form").reset();importedAsset=null;$("model-file").value="";$("asset-report").hidden=true;$("import-status").textContent="Import another model to create another character.";$("save-character").disabled=true;
+  $("profile-status").textContent=(editing?"Character profile updated.":"Character saved.")+" Revision "+data.revision+".";
+  importedAsset=null;resetProfileEditor();$("model-file").value="";$("asset-report").hidden=true;$("import-status").textContent="Import another model to create another character.";$("save-character").disabled=true;
   await loadCharacters();
- }catch(error){$("profile-status").textContent=error.message;$("save-character").disabled=!importedAsset}
+ }catch(error){$("profile-status").textContent=error.message;$("save-character").disabled=!importedAsset&&!editingCharacter}
 });
+$("cancel-edit-profile").addEventListener("click",cancelProfileEdit);
 $("refresh-characters").addEventListener("click",()=>loadCharacters().catch(error=>$("project-status").textContent=error.message));
 loadProjects().catch(error=>{$("project-status").textContent=error.message;$("character-list").textContent=error.message});
