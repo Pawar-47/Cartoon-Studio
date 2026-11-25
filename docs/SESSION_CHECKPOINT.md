@@ -25,7 +25,7 @@ Phase 2 — Character Studio is ACTIVE. Phase 0 and Phase 1 are complete. Do not
 - Project-contained GLB 2.0 import, validation, SHA-256 provenance and Godot inspection.
 - Browser GLB preview, imported animation selection and camera controls.
 - Persistent editable character profiles.
-- Non-destructive PBR material recipes and facial morph-target controls. Godot reports imported blend-shape names/defaults; signed weights from -1 to 1 persist; reset restores each model's imported defaults.
+- Non-destructive PBR material recipes and facial morph-target controls. Godot reports imported blend-shape names/defaults; signed weights from -1 to 1 persist; reset restores each model's imported defaults. A pinned CC0 RobotExpressive fixture (three facial morph targets on Head_4) is fetched and SHA-256 verified in CI; its first Godot import acceptance run is pending.
 - Conservative indexed 15-bone humanoid mapping, parent-chain validation and imported rest-transform diagnostics.
 - Common 3ds Max Biped, Character Creator, Unreal-style, Blender Rigify and Cesium Rigged Figure bone naming conventions are recognized. Duplicate and negative bone indices are rejected.
 - Character-to-character retarget UI with source/target selectors, optional animation name, strict preflight, saved Godot scene, persistent JSON record and scene download.
@@ -61,9 +61,9 @@ One real third-party humanoid model has passed native Godot import and retarget 
 
 ## Next substantial implementation batch
 
-1. Add more third-party humanoid GLB fixtures from distinct exporters and rig families.
-2. Exercise unusual rest axes, bone roll, scale variation and multiple animation clips; document accepted and unsupported cases.
-3. Add a real facial blend-shape model and validate browser preview, save/reopen, signed weights and reset-to-imported-default behavior.
+1. Verify RobotExpressive facial morph import with the pinned Godot worker, then test browser slider/reset and saved-recipe behavior against it.
+2. Retarget RobotExpressive across its named animation clips and document accepted/unsupported clips.
+3. Add more humanoid fixtures from distinct exporters and exercise unusual rest axes, bone roll and scale variation.
 4. Compare browser retarget preview with the authoritative Godot scene across rig families.
 5. Continue deterministic export and animation round-trip after broader acceptance.
 

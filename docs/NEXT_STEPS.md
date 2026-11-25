@@ -20,7 +20,7 @@ Saved retarget records now also have a browser preview action. The preview endpo
 ## Next substantial batch
 
 1. Expand third-party acceptance beyond the single Khronos Rigged Figure model, prioritizing different rest axes, bone roll, proportions and multi-clip animations.
-2. Add a genuinely facial third-party blend-shape model fixture and verify browser preview, save/reopen, signed weights and reset-to-imported-default behavior. Current named Smile/Blink fixture is synthetic; the third-party CC0 morph fixture is animated but not facial.
+2. Add a genuinely facial third-party blend-shape model fixture and verify browser preview, save/reopen, signed weights and reset-to-imported-default behavior. A pinned CC0 RobotExpressive third-party GLB is now the facial-morph acceptance fixture: the upstream Three.js example identifies three expression morphs on Head_4. CI fetches the binary from an immutable source commit and verifies its SHA-256. Godot import acceptance is pending the next quick-CI run.
 3. Compare browser retarget preview motion against the authoritative Godot scene across multiple rig families.
 4. Continue deterministic export and animation round-trip after broader compatibility acceptance.
 

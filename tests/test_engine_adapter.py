@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shutil
@@ -302,6 +303,40 @@ def test_pinned_godot_worker_inspects_real_third_party_rigged_figure(tmp_path):
     assert mapping["LeftUpperLeg"]["source_name"] == "leg_joint_L_1"
     assert mapping["LeftUpperArm"]["source_name"] == "arm_joint_L_1"
     assert target.read_bytes() == fixture.read_bytes()
+
+
+def test_pinned_godot_worker_inspects_real_cc0_robot_expressive_facial_morphs(tmp_path):
+    adapter = _real_godot_adapter(tmp_path)
+    fixture = (
+        Path(__file__).resolve().parents[1]
+        / "tests"
+        / "fixtures"
+        / "third_party"
+        / "robot_expressive_cc0.glb"
+    )
+    assert fixture.is_file(), "The pinned CC0 RobotExpressive fixture was not fetched."
+    payload = fixture.read_bytes()
+    assert hashlib.sha256(payload).hexdigest() == (
+        "047f5e5fb3bb6d378bd1df16ca6137f2a596c99b3a1b5690b4020c05aaf6f319"
+    )
+
+    asset_dir = tmp_path / "robot-expressive-assets"
+    asset_dir.mkdir()
+    target = asset_dir / "robot-expressive.glb"
+    shutil.copyfile(fixture, target)
+    inspection = adapter.inspect_glb(target, allowed_root=tmp_path)
+
+    assert inspection["ok"] is True
+    assert inspection["animation_count"] >= 10
+    face_targets = [
+        item
+        for item in inspection["morph_targets"]
+        if item["mesh_name"] == "Head_4"
+    ]
+    assert len(face_targets) >= 3
+    assert len({item["name"] for item in face_targets}) == len(face_targets)
+    assert all(isinstance(item["default_value"], (int, float)) for item in face_targets)
+    assert target.read_bytes() == payload
 
 
 def test_pinned_godot_worker_retargets_real_third_party_rigged_figure(tmp_path):

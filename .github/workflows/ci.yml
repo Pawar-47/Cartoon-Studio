@@ -34,8 +34,10 @@ jobs:
         run: uv sync --locked --group dev
       - name: Fetch pinned Godot 4.7.2 runtime
         run: uv run --locked python scripts/fetch_godot_runtime.py --output-dir build/godot-runtime
+      - name: Fetch pinned CC0 facial morph fixture
+        run: uv run --locked python scripts/fetch_robot_expressive_fixture.py --output-dir tests/fixtures/third_party
       - name: Lint
-        run: uv run --locked ruff check app tests scripts/fetch_godot_runtime.py scripts/augment_sbom.py
+        run: uv run --locked ruff check app tests scripts/fetch_godot_runtime.py scripts/fetch_robot_expressive_fixture.py scripts/augment_sbom.py
       - name: Compile Python
         run: uv run --locked python -m compileall -q app scripts
       - name: Test

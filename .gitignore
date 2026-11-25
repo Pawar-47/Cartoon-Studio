@@ -15,3 +15,4 @@ build/
 node_modules/
 ara-upstream/
 *.log
+tests/fixtures/third_party/robot_expressive_cc0.glb
