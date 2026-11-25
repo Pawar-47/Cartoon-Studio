@@ -461,9 +461,11 @@ def test_pinned_godot_worker_reports_real_animated_morph_cube(tmp_path):
     assert inspection["mesh_count"] >= 1
     assert inspection["animation_count"] >= 1
     assert inspection["morph_target_count"] == 2
+    # The upstream GLB does not encode targetNames; Godot correctly assigns
+    # deterministic fallback names instead of guessing from the README order.
     assert {entry["name"] for entry in inspection["morph_targets"]} == {
-        "thin",
-        "angle",
+        "morph_0",
+        "morph_1",
     }
     assert all(entry["default_value"] == 0.0 for entry in inspection["morph_targets"])
     assert target.read_bytes() == fixture.read_bytes()

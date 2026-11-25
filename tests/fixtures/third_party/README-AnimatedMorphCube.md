@@ -11,3 +11,5 @@
 - Local filename: `animated_morph_cube_cc0.glb`
 
 The original binary is included unchanged as a third-party animated morph-target acceptance fixture. It contains the `thin` and `angle` morph targets and an animation that transitions between them. This is a morph-import test asset, not a facial character.
+
+The upstream GLB does not encode glTF `targetNames` metadata. Godot therefore imports the two targets as `morph_0` and `morph_1`; the app intentionally preserves those truthful fallback names instead of inferring `thin` and `angle` from documentation order.
