@@ -71,31 +71,41 @@ def main() -> int:
         data_dir = root / "persistent-data"
         environment = os.environ.copy()
         environment["CARTOON_STUDIO_DATA"] = str(data_dir)
-        environment["PYTHONPATH"] = str(extracted)
+        environment["CARTOON_STUDIO_PORT"] = str(port)
+        environment["CARTOON_STUDIO_NO_BROWSER"] = "1"
+        log_path = root / "launcher.log"
 
         def launch():
+            log_handle = log_path.open("ab")
             return subprocess.Popen(
-                [
-                    sys.executable,
-                    "-m",
-                    "uvicorn",
-                    "app.main:app",
-                    "--host",
-                    "127.0.0.1",
-                    "--port",
-                    str(port),
-                ],
+                ["cmd.exe", "/c", "start.bat"],
                 cwd=extracted,
                 env=environment,
+                stdout=log_handle,
+                stderr=subprocess.STDOUT,
+            )
+
+        def stop(process):
+            subprocess.run(
+                ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+                check=False,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
+            try:
+                process.wait(timeout=8)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=5)
 
         process = launch()
         try:
             for attempt in range(40):
                 if process.poll() is not None:
-                    raise AssertionError(f"Packaged application exited early: {process.returncode}")
+                    raise AssertionError(
+                    "Packaged start.bat exited early. Launcher log: "
+                    + log_path.read_text(encoding="utf-8", errors="replace")
+                )
                 try:
                     status, health = request(base, "/api/health")
                     if status == 200 and health.get("status") == "ok":
@@ -123,18 +133,16 @@ def main() -> int:
             status, opened = request(base, f"/api/projects/{project_id}")
             assert status == 200 and opened["project"]["id"] == project_id
         finally:
-            process.terminate()
-            try:
-                process.wait(timeout=8)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                process.wait(timeout=5)
+            stop(process)
 
         process = launch()
         try:
             for _ in range(40):
                 if process.poll() is not None:
-                    raise AssertionError(f"Packaged app failed on restart: {process.returncode}")
+                    raise AssertionError(
+                    "Packaged start.bat failed on restart. Launcher log: "
+                    + log_path.read_text(encoding="utf-8", errors="replace")
+                )
                 try:
                     status, health = request(base, "/api/health")
                     if status == 200 and health.get("status") == "ok":
