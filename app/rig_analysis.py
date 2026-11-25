@@ -9,7 +9,7 @@ from typing import Any
 # conservative core mapping: optional spine/neck/shoulder/finger bones are not
 # guessed and are not counted as required for the first retarget preflight.
 REQUIRED_HUMANOID_BONES: dict[str, frozenset[str]] = {
-    "Hips": frozenset({"hips", "hip", "pelvis", "torsojoint1", "body"}),
+    "Hips": frozenset({"hips", "hip", "pelvis", "torsojoint1"}),
     "Spine": frozenset({"spine", "spine1", "spine01", "spine001", "torsojoint2", "abdomen"}),
     "Head": frozenset({"head", "head2", "neckjoint2"}),
     "LeftUpperLeg": frozenset(
@@ -251,7 +251,7 @@ def _validate_humanoid_hierarchy(
         ancestor_index = int(ancestor["bone_index"])
         checked += 1
         if child_index not in parents or ancestor_index not in parents:
-            issues.append(f"{child_name} or {ancestor_name} has no indexed hierarchy entry.")
+            structural_issues.append(f"{child_name} or {ancestor_name} has no indexed hierarchy entry.")
         elif not is_descendant(child_index, ancestor_index):
             failed_chains.append((child_name, ancestor_name))
 
