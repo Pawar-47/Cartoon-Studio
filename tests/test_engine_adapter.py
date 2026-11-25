@@ -298,6 +298,53 @@ def test_pinned_godot_worker_inspects_real_third_party_rigged_figure(tmp_path):
     assert target.read_bytes() == fixture.read_bytes()
 
 
+def test_pinned_godot_worker_retargets_real_third_party_rigged_figure(tmp_path):
+    adapter = _real_godot_adapter(tmp_path)
+    fixture_dir = Path(__file__).resolve().parent / "fixtures" / "third_party"
+    source_fixture = fixture_dir / "rigged_figure_ccby.glb"
+    target_fixture = (
+        Path(__file__).resolve().parents[1]
+        / "tools"
+        / "godot_engine_proof"
+        / "fixtures"
+        / "proof_humanoid_retarget_target.glb"
+    )
+    assert source_fixture.is_file(), "The licensed third-party source fixture is unavailable."
+    assert target_fixture.is_file(), "The native retarget target fixture is unavailable."
+
+    project_root = tmp_path / "third-party-retarget-project"
+    project_root.mkdir()
+    source = project_root / "source-rigged-figure.glb"
+    target = project_root / "target-humanoid.glb"
+    shutil.copyfile(source_fixture, source)
+    shutil.copyfile(target_fixture, target)
+
+    source_inspection = adapter.inspect_glb(source, allowed_root=project_root)
+    target_inspection = adapter.inspect_glb(target, allowed_root=project_root)
+    source_rig = analyze_rig(source_inspection)
+    target_rig = analyze_rig(target_inspection)
+    assert source_rig["status"] == target_rig["status"] == "humanoid_names_complete"
+    assert source_rig["hierarchy_validation"]["status"] == "valid"
+    assert target_rig["hierarchy_validation"]["status"] == "valid"
+
+    output = project_root / "retargets" / "cesium-rigged-figure.tscn"
+    response = adapter.retarget_glb_pair(
+        source,
+        target,
+        output,
+        allowed_root=project_root,
+        source_profile_mapping=source_rig["godot_profile_mapping"],
+        target_profile_mapping=target_rig["godot_profile_mapping"],
+    )
+    assert response["ok"] is True
+    assert response["mapped_bone_count"] == 15
+    assert response["scene_reopened"] is True
+    assert response["pose_transferred"] is True
+    assert output.is_file()
+    assert source.read_bytes() == source_fixture.read_bytes()
+    assert target.read_bytes() == target_fixture.read_bytes()
+
+
 def test_pinned_godot_worker_creates_non_destructive_retarget_scene(tmp_path):
     adapter = _real_godot_adapter(tmp_path)
     fixture_dir = (
