@@ -38,3 +38,13 @@ Use sequential scene generation/rendering, strict object/vertex budgets, low-den
 3. Browser WebGL2 editor/preview (Ara/Ekza/Three.js) — alternative preview/editor candidate; must measure browser memory and GPU stability.
 
 The actual installed Intel driver and Windows build must be recorded before selecting the engine.
+
+## P0.4 target-PC measurement procedure
+
+The user-provided baseline remains: Windows 10, Intel Core i3-5005U, Intel HD Graphics 5500, 8 GB RAM and 256 GB SSD. Exact Windows build, GPU driver date/version, active display mode, free disk space and OpenGL API version have not yet been measured.
+
+A no-admin/no-network diagnostic is now available:
+- `scripts/run_target_pc_probe.ps1`
+- `tools/godot_target_probe/`
+
+It records only OS/CPU/RAM/GPU/driver/display/disk data (no usernames, serials, MAC/IPs or product keys), runs a 12-second 1280×720 Compatibility-renderer scene, and optionally produces a 10-second 720p/24 FPS AVI using MovieWriter. Results must come from the actual target PC; no performance claims are made until the reports are reviewed.

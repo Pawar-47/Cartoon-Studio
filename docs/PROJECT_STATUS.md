@@ -97,3 +97,11 @@ P0.3 — continue the comparative source-level research sweep. P0.4 hardware/Urd
 - P0.3 closeout commit: `5bcbf8775014c4b25699a9bdcb5e633c5fa00811`; GitHub Actions run #84 SUCCESS. Latest verified main HEAD is `fe33993fb8423c412dde55f9a097e2a14298919a`; GitHub Actions run #85 SUCCESS.
 - **P0.5 architecture freeze:** blocked by P0.4. **P0.6 bounded proofs:** blocked by P0.5. **P0.7 plan freeze:** blocked by P0.2–P0.6.
 - Existing FastAPI/SQLite/browser shell and Story Generator remain preserved; no production feature expansion before P0.7.
+
+## P0.4 started — target-PC, Urdu and provider feasibility
+
+Diagnostic harness committed:
+- `scripts/run_target_pc_probe.ps1`
+- `tools/godot_target_probe/`
+
+It collects hardware/driver details without admin/network access, runs a 12-second interactive Godot Compatibility-renderer test and optionally writes a short 720p/24 FPS AVI. The user must run it on the actual Windows 10 / i3-5005U / HD 5500 / 8 GB PC. No target measurements exist yet. Pakistani Urdu alignment/TTS and provider-region/quota/privacy checks remain open.

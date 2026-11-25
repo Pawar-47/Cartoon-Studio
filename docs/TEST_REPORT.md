@@ -99,3 +99,8 @@ A green CI run proves only the checks that actually ran. Source presence, docume
 ## Follow-up documentation correction
 - Corrected the P0.3 row in `EXECUTION_BATCH_PLAN.md` to the five-column table structure; no application source changed.
 - Documentation correction commit `fe33993fb8423c412dde55f9a097e2a14298919a`; GitHub Actions run #85 SUCCESS.
+
+## P0.4 diagnostic harness — source review only
+- Added a PowerShell hardware collector and a Godot 4.7.2 Compatibility-renderer probe project. The script is designed for Windows PowerShell 5.1 and does not require admin rights, network access, Python packages or API keys.
+- Static source review completed. The Godot project has not yet been launched in a real renderer; no PowerShell run, GPU benchmark, MovieWriter export or target-PC result exists.
+- The harness intentionally collects no username, computer name, serial number, MAC/IP address or product key.
