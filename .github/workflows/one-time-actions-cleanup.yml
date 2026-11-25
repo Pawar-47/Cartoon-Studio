@@ -7,49 +7,16 @@ on:
   workflow_dispatch:
 
 permissions:
-  actions: write
+  actions: read
   contents: read
 
 concurrency:
   group: one-time-actions-cleanup
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   cleanup:
     runs-on: ubuntu-latest
     steps:
-      - name: Cancel active runs and remove artifacts
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          CURRENT_RUN_ID: ${{ github.run_id }}
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          echo "Cancelling queued and running workflow runs..."
-          gh api --paginate "repos/$GH_REPO/actions/runs?per_page=100" \
-            --jq '.workflow_runs[] | select(.status == "queued" or .status == "in_progress") | .id' |
-          while read -r run_id; do
-            [ "$run_id" = "$CURRENT_RUN_ID" ] && continue
-            gh api --method POST "repos/$GH_REPO/actions/runs/$run_id/cancel" || true
-          done
-
-          echo "Deleting artifacts from all workflow runs..."
-          gh api --paginate "repos/$GH_REPO/actions/artifacts?per_page=100" \
-            --jq '.artifacts[].id' |
-          while read -r artifact_id; do
-            gh api --method DELETE "repos/$GH_REPO/actions/artifacts/$artifact_id" || true
-          done
-
-          echo "Waiting briefly for cancellations to settle..."
-          sleep 20
-
-          echo "Deleting completed workflow run records (this cleanup run is retained)..."
-          gh api --paginate "repos/$GH_REPO/actions/runs?per_page=100" \
-            --jq --arg current "$CURRENT_RUN_ID" '.workflow_runs[] | select((.id | tostring) != $current and .status == "completed") | .id' |
-          while read -r run_id; do
-            gh api --method DELETE "repos/$GH_REPO/actions/runs/$run_id" || true
-          done
-
-          echo "Actions cleanup finished. The currently executing cleanup run is intentionally retained."
+      - name: Disable destructive cleanup
+        run: echo "Destructive Actions cleanup has been disabled. Existing run history and artifacts must be preserved."
