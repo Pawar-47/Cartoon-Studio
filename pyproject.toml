@@ -19,6 +19,11 @@ dev = [
 [tool.uv]
 package = false
 
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"
+
 [tool.ruff]
 line-length = 100
 target-version = "py311"
