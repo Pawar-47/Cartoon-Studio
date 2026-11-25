@@ -202,22 +202,27 @@ def test_pinned_godot_worker_reports_imported_humanoid_rest_transforms(tmp_path)
 
 def test_pinned_godot_worker_creates_non_destructive_retarget_scene(tmp_path):
     adapter = _real_godot_adapter(tmp_path)
-    fixture = (
+    fixture_dir = (
         Path(__file__).resolve().parents[1]
         / "tools"
         / "godot_engine_proof"
         / "fixtures"
-        / "proof_humanoid.glb"
     )
+    source_fixture = fixture_dir / "proof_humanoid.glb"
+    target_fixture = fixture_dir / "proof_humanoid_retarget_target.glb"
+    assert source_fixture.is_file(), "The source humanoid fixture is unavailable."
+    assert target_fixture.is_file(), "The retarget target fixture is unavailable."
     project_root = tmp_path / "retarget-project"
     project_root.mkdir()
     source = project_root / "source.glb"
     target = project_root / "target.glb"
-    shutil.copyfile(fixture, source)
-    shutil.copyfile(fixture, target)
+    shutil.copyfile(source_fixture, source)
+    shutil.copyfile(target_fixture, target)
 
-    source_rig = analyze_rig(adapter.inspect_glb(source, allowed_root=project_root))
-    target_rig = analyze_rig(adapter.inspect_glb(target, allowed_root=project_root))
+    source_inspection = adapter.inspect_glb(source, allowed_root=project_root)
+    target_inspection = adapter.inspect_glb(target, allowed_root=project_root)
+    source_rig = analyze_rig(source_inspection)
+    target_rig = analyze_rig(target_inspection)
     assert source_rig["status"] == "humanoid_names_complete"
     assert target_rig["status"] == "humanoid_names_complete"
     source_hierarchy = source_rig["hierarchy_validation"]
@@ -225,14 +230,29 @@ def test_pinned_godot_worker_creates_non_destructive_retarget_scene(tmp_path):
     assert source_hierarchy["status"] == "valid", source_hierarchy
     assert target_hierarchy["status"] == "valid", target_hierarchy
 
+    source_mapping = source_rig["godot_profile_mapping"]
+    target_mapping = target_rig["godot_profile_mapping"]
+    assert source_mapping["LeftUpperArm"]["bone_index"] != (
+        target_mapping["LeftUpperArm"]["bone_index"]
+    )
+    source_bones = {
+        bone["name"]: bone for bone in source_inspection["skeletons"][0]["bones"]
+    }
+    target_bones = {
+        bone["name"]: bone for bone in target_inspection["skeletons"][0]["bones"]
+    }
+    assert source_bones["LeftLowerArm"]["rest_transform"]["origin"] != (
+        target_bones["LeftLowerArm"]["rest_transform"]["origin"]
+    )
+
     output = project_root / "retargets" / "source-to-target.tscn"
     response = adapter.retarget_glb_pair(
         source,
         target,
         output,
         allowed_root=project_root,
-        source_profile_mapping=source_rig["godot_profile_mapping"],
-        target_profile_mapping=target_rig["godot_profile_mapping"],
+        source_profile_mapping=source_mapping,
+        target_profile_mapping=target_mapping,
     )
     assert response["ok"] is True
     assert response["mapped_bone_count"] == 15
@@ -240,8 +260,8 @@ def test_pinned_godot_worker_creates_non_destructive_retarget_scene(tmp_path):
     assert response["scene_reopened"] is True
     assert response["pose_transferred"] is True
     assert output.is_file()
-    assert source.read_bytes() == fixture.read_bytes()
-    assert target.read_bytes() == fixture.read_bytes()
+    assert source.read_bytes() == source_fixture.read_bytes()
+    assert target.read_bytes() == target_fixture.read_bytes()
 
 
 def test_retarget_adapter_accepts_complete_humanoid_mapping_and_builds_request(
