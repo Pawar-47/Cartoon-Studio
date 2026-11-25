@@ -18,7 +18,7 @@
 - Local project-contained GLB 2.0 import, validation, provenance and Godot inspection.
 - Browser GLB preview and imported animation selection.
 - Persistent versioned character profiles.
-- Non-destructive material appearance recipes and facial morph-target sliders; Godot inspection reports imported blend-shape names/defaults, controls accept signed weights from -1 to 1, and reset restores each imported default. A CC0 animated third-party morph GLB and a named Smile/Blink fixture now exercise import metadata; the API also has a persistence/range-validation test.
+- Non-destructive material appearance recipes and facial morph-target sliders; Godot inspection reports imported blend-shape names/defaults, controls accept signed weights from -1 to 1, and reset restores each imported default. Appearance editing pauses embedded animation playback so an animation track cannot overwrite live expression-slider changes; ordinary character previews continue to play imported animations. A CC0 animated third-party morph GLB and a named Smile/Blink fixture exercise import metadata; persistence and range validation are covered by API tests.
 - Indexed 15-bone humanoid mapping, parent-chain diagnostics and per-bone rest-transform measurements; common 3ds Max Biped, Character Creator, Unreal-style, Blender Rigify and Cesium Rigged Figure bone names are recognized. Duplicate/negative hierarchy indices are rejected.
 - Imported-GLB retarget workflow with source/target selection, strict preflight, Godot scene creation, persistent history and scene download.
 - Worker verifies that the reopened source AnimationPlayer starts, the source pose changes, and the target upper-arm pose matches Godot's model-space rest-corrected retarget transform after 72 frames. This validates different rest axes without incorrectly requiring raw local rotation angles to match. Failed pose verification removes the generated scene.
@@ -48,10 +48,10 @@ Godot may normalize raw skin-joint ordering during import. The application uses 
 
 ## Next implementation batch
 
-1. Run CI for the newly committed DCC naming tests and resolve any regressions.
-2. Add representative third-party GLB fixtures that exercise rest-pose axes, bone roll, scale and multi-clip behavior.
-3. Validate facial morph controls on real blend-shape GLBs, including preview and persistence.
-4. Compare browser preview fidelity against the authoritative Godot scene before deterministic export expansion.
+1. Validate appearance-editor animation isolation and saved expression recipes in the full Windows CI pipeline.
+2. Add a genuinely facial third-party GLB fixture and verify expression controls against its real geometry.
+3. Add representative third-party GLB fixtures for rest-pose axes, bone roll, scale and multi-clip behavior.
+4. Compare browser retarget preview fidelity against the authoritative Godot scene before deterministic export expansion.
 
 ## Frozen architecture and constraints
 

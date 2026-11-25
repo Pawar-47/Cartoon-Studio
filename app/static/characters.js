@@ -127,7 +127,7 @@ async function openCharacterAppearance(characterDoc){
  activeCharacter=characterDoc;
  appearanceRecipe=JSON.parse(JSON.stringify(data.appearance_recipe||{materials:{},morph_targets:{}}));
  appearanceRecipe.materials=appearanceRecipe.materials||{};appearanceRecipe.morph_targets=appearanceRecipe.morph_targets||{};
- const loaded=await showCharacterPreview(buffer,data.name,appearanceRecipe);
+ const loaded=await showCharacterPreview(buffer,data.name,appearanceRecipe,{playAnimations:false});
  if(!loaded)throw new Error("The browser could not preview this GLB. Check WebGL 2 and model compression.");
  const materials=getCharacterMaterials(),select=$("material-select");
  select.replaceChildren();

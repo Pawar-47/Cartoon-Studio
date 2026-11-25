@@ -115,6 +115,11 @@ def test_browser_preview_modules_are_served_from_local_static_assets():
     assert 'type="importmap"' in page.text
     assert "/static/vendor/three/build/three.module.js" in page.text
 
+    preview = client.get("/static/character-preview.js")
+    assert preview.status_code == 200
+    assert "options.playAnimations !== false" in preview.text
+    assert "if (playAnimations) mixer.clipAction(clips[0]).play();" in preview.text
+
     for path in (
         "/static/character-preview.js",
         "/static/vendor/three/build/three.module.js",
@@ -140,6 +145,7 @@ def test_character_studio_page_is_served():
     assert "Cancel editing" in response.text
     assert "Godot facial blend shapes" in script.text
     assert "morph_target_count" in script.text
+    assert "appearanceRecipe,{playAnimations:false}" in script.text
 
 
 def test_character_glb_import_profile_round_trip_and_project_reference(tmp_path, monkeypatch):

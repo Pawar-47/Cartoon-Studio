@@ -191,7 +191,8 @@ export function applyCharacterMorphTargets(recipe = {}) {
   }
 }
 
-export async function showCharacterPreview(buffer, label = "Character", appearance = {}) {
+export async function showCharacterPreview(buffer, label = "Character", appearance = {}, options = {}) {
+  const playAnimations = options.playAnimations !== false;
   canvas.style.display = "block";
   if (!ensureRenderer()) return false;
   status.textContent = "Loading 3D model…";
@@ -231,8 +232,8 @@ export async function showCharacterPreview(buffer, label = "Character", appearan
         option.textContent = clip.name || "Animation " + (index + 1);
         animationSelect.append(option);
       });
-      mixer.clipAction(clips[0]).play();
-      animationSelect.disabled = false;
+      if (playAnimations) mixer.clipAction(clips[0]).play();
+      animationSelect.disabled = !playAnimations;
     } else {
       const option = document.createElement("option");
       option.value = "";
@@ -244,7 +245,7 @@ export async function showCharacterPreview(buffer, label = "Character", appearan
     empty.hidden = true;
     canvas.style.display = "block";
     resetButton.disabled = false;
-    status.textContent = label + " · " + clips.length + " animation(s) · Drag to orbit, scroll to zoom";
+    status.textContent = label + " · " + clips.length + " animation(s)" + (playAnimations ? "" : " · playback paused for appearance editing") + " · Drag to orbit, scroll to zoom";
     return true;
   } catch (error) {
     status.textContent = "Preview unavailable: " + error.message;
