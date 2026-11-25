@@ -234,7 +234,7 @@ def test_character_retarget_api_saves_scene_and_persistent_record(tmp_path, monk
     assert preview.status_code == 200
     preview_data = preview.json()
     assert preview_data["preview_kind"] == "threejs_browser_retarget"
-    assert preview_data["animation_name"] == "Walk"
+    assert preview_data["animation_name"] == record["data"]["animation_name"]
     assert "/character-assets/" in preview_data["source_asset_url"]
     assert preview_data["source_mapping"]["Hips"] == "Hips"
     assert preview_data["target_mapping"]["LeftUpperArm"] == "LeftUpperArm"
@@ -263,6 +263,22 @@ def test_character_retarget_api_rejects_unknown_animation_before_engine_call(
     )
     assert response.status_code == 422
     assert "not present" in response.json()["detail"]
+
+
+def test_character_retarget_api_uses_first_clip_when_selection_is_blank(
+    tmp_path, monkeypatch
+):
+    project_id = _new_project(tmp_path, monkeypatch)
+    source_id = _seed_retarget_character(tmp_path, project_id, "Source")
+    target_id = _seed_retarget_character(tmp_path, project_id, "Target")
+    monkeypatch.setattr(main, "get_engine_adapter", _FakeRetargetAdapter)
+
+    response = client.post(
+        f"/api/projects/{project_id}/retargets",
+        json={"source_character_id": source_id, "target_character_id": target_id},
+    )
+    assert response.status_code == 201
+    assert response.json()["data"]["animation_name"] == "Walk"
 
 
 def test_character_retarget_api_rejects_empty_playable_clip_catalog(
