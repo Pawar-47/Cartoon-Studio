@@ -109,7 +109,8 @@ def test_character_studio_page_is_served():
     script = TestClient(main.app).get("/static/characters.js")
     assert script.status_code == 200
     assert "Edit profile" in script.text
-    assert "Cancel editing" in script.text
+    assert "cancel-edit-profile" in script.text
+    assert "Cancel editing" in response.text
 
 
 def test_character_glb_import_profile_round_trip_and_project_reference(tmp_path, monkeypatch):
