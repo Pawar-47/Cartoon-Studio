@@ -127,6 +127,7 @@ func _inspect_glb(payload: Dictionary) -> Dictionary:
             "error": "Godot imported the GLB but did not generate a scene."
         }
 
+    var glb_document := _read_glb_json(source_path)
     var animation_count := 0
     var animation_players := scene.find_children("*", "AnimationPlayer", true, false)
     for player in animation_players:
@@ -144,7 +145,18 @@ func _inspect_glb(payload: Dictionary) -> Dictionary:
                 "mesh_name": str(mesh_instance.name),
                 "index": shape_index,
                 "name": str(array_mesh.get_blend_shape_name(shape_index)),
-                "default_value": mesh_instance.get_blend_shape_value(shape_index)
+                "default_value": _glb_morph_default(
+                    glb_document,
+                    mesh_instance,
+                    shape_index,
+                    mesh_instance.get_blend_shape_value(shape_index)
+                ).get("value", mesh_instance.get_blend_shape_value(shape_index)),
+                "default_value_source": _glb_morph_default(
+                    glb_document,
+                    mesh_instance,
+                    shape_index,
+                    mesh_instance.get_blend_shape_value(shape_index)
+                ).get("source", "godot_runtime")
             })
     var skeleton_nodes := scene.find_children("*", "Skeleton3D", true, false)
     var skeleton_reports: Array[Dictionary] = []
@@ -186,6 +198,64 @@ func _inspect_glb(payload: Dictionary) -> Dictionary:
     }
     scene.free()
     return result
+
+
+func _read_glb_json(path: String) -> Dictionary:
+    var file := FileAccess.open(path, FileAccess.READ)
+    if file == null or file.get_length() < 20:
+        return {}
+    file.seek(12)
+    var json_length := file.get_32()
+    var chunk_type := file.get_32()
+    if chunk_type != 0x4E4F534A or json_length <= 0 or json_length > file.get_length() - 20:
+        file.close()
+        return {}
+    var parsed: Variant = JSON.parse_string(file.get_buffer(json_length).get_string_from_utf8())
+    file.close()
+    if typeof(parsed) == TYPE_DICTIONARY:
+        return parsed
+    return {}
+
+
+func _glb_morph_default(
+    glb_document: Dictionary,
+    mesh_instance: MeshInstance3D,
+    shape_index: int,
+    runtime_value: float
+) -> Dictionary:
+    var nodes: Array = glb_document.get("nodes", [])
+    var meshes: Array = glb_document.get("meshes", [])
+    var matching_nodes: Array[Dictionary] = []
+    for node_value in nodes:
+        if typeof(node_value) != TYPE_DICTIONARY:
+            continue
+        var node: Dictionary = node_value
+        if str(node.get("name", "")) == str(mesh_instance.name) and node.has("mesh"):
+            matching_nodes.append(node)
+    if matching_nodes.size() == 1:
+        var node: Dictionary = matching_nodes[0]
+        var mesh_index := int(node.get("mesh", -1))
+        if mesh_index >= 0 and mesh_index < meshes.size():
+            var mesh: Dictionary = meshes[mesh_index]
+            var weights: Array = node.get("weights", mesh.get("weights", []))
+            if shape_index < weights.size():
+                return {
+                    "value": float(weights[shape_index]),
+                    "source": "gltf_node" if node.has("weights") else "gltf_mesh"
+                }
+    var mesh_name := str((mesh_instance.mesh as Resource).resource_name)
+    var matching_meshes: Array[Dictionary] = []
+    for mesh_value in meshes:
+        if typeof(mesh_value) != TYPE_DICTIONARY:
+            continue
+        var mesh: Dictionary = mesh_value
+        if str(mesh.get("name", "")) == mesh_name:
+            matching_meshes.append(mesh)
+    if matching_meshes.size() == 1:
+        var weights: Array = matching_meshes[0].get("weights", [])
+        if shape_index < weights.size():
+            return {"value": float(weights[shape_index]), "source": "gltf_mesh"}
+    return {"value": runtime_value, "source": "godot_runtime"}
 
 
 func _normalise_path(value: String) -> String:
