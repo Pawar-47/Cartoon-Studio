@@ -507,6 +507,9 @@ func _retarget_glb_pair(payload: Dictionary) -> Dictionary:
     var source_angle := 0.0
     var target_angle := 0.0
     var source_animation_playing := false
+    var source_pose_changed := false
+    var target_pose_matches := false
+    var sampled_animation_time := 0.0
     if scene_reopened:
         root.add_child(reopened_instance)
         var source_players_after_reopen := reopened_instance.find_children(
@@ -516,7 +519,11 @@ func _retarget_glb_pair(payload: Dictionary) -> Dictionary:
             var reopened_player := source_players_after_reopen[0] as AnimationPlayer
             await process_frame
             source_animation_playing = reopened_player.is_playing()
-            for frame_index in range(71):
+            var reopened_animation := reopened_player.get_animation(selected_animation)
+            if reopened_animation != null:
+                sampled_animation_time = reopened_animation.length * 0.37
+                reopened_player.seek(sampled_animation_time, true)
+            for frame_index in range(3):
                 await process_frame
         var reopened_source := reopened_modifier.get_parent() as Skeleton3D
         var source_arm_index := reopened_source.find_bone("LeftUpperArm")
@@ -565,11 +572,11 @@ func _retarget_glb_pair(payload: Dictionary) -> Dictionary:
                 )
                 + target_rest.origin
             )
-            var source_pose_changed := (
+            source_pose_changed = (
                 not source_pose.basis.is_equal_approx(source_rest.basis)
                 or not source_pose.origin.is_equal_approx(source_rest.origin)
             )
-            var target_pose_matches := (
+            target_pose_matches = (
                 target_pose.basis.is_equal_approx(expected_target_basis)
                 and target_pose.origin.is_equal_approx(expected_target_origin)
             )
@@ -598,6 +605,12 @@ func _retarget_glb_pair(payload: Dictionary) -> Dictionary:
                 + str(rad_to_deg(target_angle))
                 + ", animation_playing="
                 + str(source_animation_playing)
+                + ", source_pose_changed="
+                + str(source_pose_changed)
+                + ", target_pose_matches="
+                + str(target_pose_matches)
+                + ", sample_time="
+                + str(sampled_animation_time)
             ),
             "scene_reopened": true
         }
@@ -612,6 +625,9 @@ func _retarget_glb_pair(payload: Dictionary) -> Dictionary:
         "target_skinned_mesh_count": bound_target_meshes.size(),
         "scene_reopened": true,
         "source_animation_playing": source_animation_playing,
+        "sampled_animation_time": sampled_animation_time,
+        "source_pose_changed": source_pose_changed,
+        "target_pose_matches": target_pose_matches,
         "source_pose_angle_degrees": rad_to_deg(source_angle),
         "target_pose_angle_degrees": rad_to_deg(target_angle),
         "pose_transferred": true
