@@ -1,0 +1,52 @@
+name: Godot native-worker proof
+on:
+  push:
+    branches: [main]
+    paths:
+      - "tools/godot_engine_proof/**"
+      - ".github/workflows/godot-engine-proof.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "tools/godot_engine_proof/**"
+      - ".github/workflows/godot-engine-proof.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  godot-native-proof:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install display, OpenGL and media tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb libgl1-mesa-dri libegl1 ffmpeg unzip
+      - name: Download pinned Godot 4.7.2 stable
+        run: |
+          curl -fsSL -o godot.zip "https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip"
+          unzip -q godot.zip -d godot-bin
+          chmod +x godot-bin/Godot_v4.7.2-stable_linux.x86_64
+          godot-bin/Godot_v4.7.2-stable_linux.x86_64 --version
+      - name: Import GLB fixture
+        run: |
+          godot-bin/Godot_v4.7.2-stable_linux.x86_64 --headless --path tools/godot_engine_proof --editor --import --quit
+      - name: Run scene, animation, save/reopen and MovieWriter proof
+        run: |
+          mkdir -p artifacts
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 godot-bin/Godot_v4.7.2-stable_linux.x86_64 --path tools/godot_engine_proof --write-movie artifacts/godot-engine-proof.avi --fixed-fps 24 -- --report=artifacts/godot-engine-proof.json
+          test -s artifacts/godot-engine-proof.avi
+          ffprobe -v error -show_entries format=duration:stream=codec_name,width,height,r_frame_rate -of json artifacts/godot-engine-proof.avi > artifacts/ffprobe.json
+          cat artifacts/godot-engine-proof.json
+          cat artifacts/ffprobe.json
+      - name: Upload proof artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Godot-Native-Worker-Proof
+          path: |
+            artifacts/godot-engine-proof.json
+            artifacts/godot-engine-proof.avi
+            artifacts/ffprobe.json
+          if-no-files-found: error
+          retention-days: 14
