@@ -190,7 +190,15 @@ async function loadCharacters(){
    });
    card.append(reopenAssemblyButton);
   }
-  card.append(title,description,model,rig,animations,revision,previewButton,editButton,customizeButton);list.append(card);
+  card.append(title,description,model,rig,animations,revision,previewButton,editButton,customizeButton);
+  const savedAssetId=assemblyAssetId(asset.relative_path);
+  if(savedAssetId){
+   const downloadButton=document.createElement("a");downloadButton.className="secondary preview-saved";
+   downloadButton.href="/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(savedAssetId);
+   downloadButton.download=(data.name||"character")+".glb";downloadButton.textContent="Download GLB";
+   card.append(downloadButton);
+  }
+  list.append(card);
  }
 }
 async function openCharacterAppearance(characterDoc){
@@ -401,6 +409,7 @@ function refreshAssemblyControls(){
  if([...accessorySelect.options].some(option=>option.value===previousAccessory))accessorySelect.value=previousAccessory;
  $("add-assembly-accessory").disabled=!accessorySelect.value;
  $("assemble-character").disabled=!activeProject||!eligible.length||assemblySlots.some(slot=>!$("assembly-"+slot).value)||!base.value;
+ $("randomize-assembly").disabled=!activeProject||!eligible.length||assemblySlots.some(slot=>![...$("assembly-"+slot).options].some(option=>option.value));
  $("assembly-status").textContent=eligible.length+" compatible-rig candidate asset(s) loaded in this session. Godot validates every selected mesh before export.";
 }
 $("assembly-base").addEventListener("change",refreshAssemblyControls);
@@ -417,6 +426,38 @@ $("add-assembly-accessory").addEventListener("click",()=>{
  renderAssemblyAccessories();refreshAssemblyControls();
 });
 for(const slot of assemblySlots)$("assembly-"+slot).addEventListener("change",refreshAssemblyControls);
+$("randomize-assembly").addEventListener("click",()=>{
+ const eligible=assemblyEligibleAssets();
+ if(!eligible.length)return;
+ $("assembly-base").value=eligible[Math.floor(Math.random()*eligible.length)].asset_id;
+ refreshAssemblyControls();
+ const usedAssetIds=new Set();
+ const selectedMeshKeys=new Set();
+ for(const slot of assemblySlots){
+  const select=$("assembly-"+slot),options=[...select.options].filter(option=>option.value);
+  const unused=options.filter(option=>!selectedMeshKeys.has(option.value));
+  const distinct=unused.filter(option=>!usedAssetIds.has(option.value.split("|")[0]));
+  const pool=distinct.length?distinct:unused;
+  if(!pool.length){$("assembly-status").textContent="Not enough unique source meshes are loaded for all four slots.";return}
+  const choice=pool[Math.floor(Math.random()*pool.length)],[assetId,meshPath]=choice.value.split("|");
+  select.value=choice.value;usedAssetIds.add(assetId);selectedMeshKeys.add(choice.value);
+ }
+ const accessoryOptions=[...$("assembly-accessory").options].filter(option=>option.value&&!selectedMeshKeys.has(option.value));
+ const accessoryCount=Math.min(accessoryOptions.length,Math.floor(Math.random()*3));
+ assemblyAccessories=[];
+ for(let index=0;index<accessoryCount;index++){
+  const choiceIndex=Math.floor(Math.random()*accessoryOptions.length);
+  const [assetId,meshPath]=accessoryOptions.splice(choiceIndex,1)[0].value.split("|");
+  const asset=eligible.find(item=>item.asset_id===assetId);
+  const mesh=asset?.engine_inspection?.mesh_inventory?.find(item=>item.node_path===meshPath);
+  if(asset&&mesh)assemblyAccessories.push({
+   relative_path:asset.relative_path,mesh_path:meshPath,attachment_bone:mesh.attachment_bone||"",
+   label:asset.assembly_label+" / "+(mesh.node_name||mesh.mesh_resource_name||"Accessory")
+  });
+ }
+ renderAssemblyAccessories();refreshAssemblyControls();
+ $("assembly-status").textContent="Shuffled a four-part outfit using "+eligible.length+" imported rigged assets and "+assemblyAccessories.length+" optional accessory item(s).";
+});
 $("assemble-character").addEventListener("click",async()=>{
  const base=assemblyEligibleAssets().find(asset=>asset.asset_id===$("assembly-base").value);
  if(!base||!activeProject)return;
@@ -437,8 +478,9 @@ $("assemble-character").addEventListener("click",async()=>{
   const loaded=await showCharacterPreview(await assetResponse.arrayBuffer(),"Assembled character");
   $("asset-report").replaceChildren();$("asset-report").hidden=false;
   const heading=document.createElement("strong");heading.textContent="Modular assembly verified · "+result.engine_inspection.mesh_count+" meshes";
-  const note=document.createElement("p");note.className="inline-status";note.textContent="Four skinned parts were rebound to the base skeleton. Base animation clips survived GLB export and re-import.";
-  $("asset-report").append(heading,note);$("save-character").disabled=false;
+  const note=document.createElement("p");note.className="inline-status";note.textContent="Four skinned parts and "+(result.assembly?.added_accessories?.length||0)+" accessory item(s) were attached. Base animation clips survived GLB export and re-import.";
+  const downloadLink=document.createElement("a");downloadLink.className="secondary";downloadLink.href="/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(result.asset_id);downloadLink.download="assembled-character.glb";downloadLink.textContent="Download assembled GLB";
+  $("asset-report").append(heading,note,downloadLink);$("save-character").disabled=false;
   $("assembly-status").textContent="Assembly exported and re-import verified. "+(loaded?"Preview loaded. ":"")+"Save a character profile to add it to the project library.";
   $("profile-panel").scrollIntoView({behavior:"smooth",block:"start"});
  }catch(error){$("assembly-status").textContent=error.message}

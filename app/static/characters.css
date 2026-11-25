@@ -59,3 +59,8 @@
 .accessory-chip{display:flex;align-items:center;gap:8px;padding:7px 9px;border:1px solid var(--line);border-radius:9px;font-size:12px}
 .accessory-chip button{padding:5px 8px;margin:0}
 @media(max-width:520px){.accessory-builder{grid-template-columns:1fr}}
+
+.assembly-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:10px;margin-top:12px}
+.assembly-panel a.secondary{display:inline-flex;align-items:center;justify-content:center;margin-top:8px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;text-decoration:none}
+.character-card a.secondary{display:inline-flex;align-items:center;justify-content:center;margin:4px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;text-decoration:none}
+@media(max-width:520px){.assembly-actions{grid-template-columns:1fr}}
