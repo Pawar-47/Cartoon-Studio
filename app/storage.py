@@ -373,14 +373,26 @@ def _restore_project_rows_from_documents(connection: sqlite3.Connection, data_di
         updated_at = document.get("updated_at")
         if not isinstance(name, str) or not name.strip() or not isinstance(description, str):
             raise ValueError(f"Project document has invalid name/description: {project_path}")
-        if not isinstance(metadata, dict) or not isinstance(created_at, str) or not isinstance(updated_at, str):
+        if (
+            not isinstance(metadata, dict)
+            or not isinstance(created_at, str)
+            or not isinstance(updated_at, str)
+        ):
             raise ValueError(f"Project document has invalid metadata/timestamps: {project_path}")
         connection.execute(
             """
-            INSERT OR IGNORE INTO projects(id, name, description, created_at, updated_at, metadata_json)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT OR IGNORE INTO projects(
+                id, name, description, created_at, updated_at, metadata_json
+            ) VALUES (?, ?, ?, ?, ?, ?)
             """,
-            (str(project_id), name, description, created_at, updated_at, json.dumps(metadata, ensure_ascii=False)),
+            (
+                str(project_id),
+                name,
+                description,
+                created_at,
+                updated_at,
+                json.dumps(metadata, ensure_ascii=False),
+            ),
         )
 
 
