@@ -18,7 +18,6 @@ from pydantic import BaseModel, Field
 from app.storage import connect_db as open_database
 from app.storage import (
     default_data_dir,
-    initialize_database as migrate_database,
     make_envelope,
     project_directory,
     read_json,
@@ -27,6 +26,7 @@ from app.storage import (
     upsert_document_index,
     write_json_atomic,
 )
+from app.storage import initialize_database as migrate_database
 from app.story import EpisodePlan, StoryPromptRequest, build_story_prompt
 
 ROOT = Path(__file__).resolve().parent.parent
