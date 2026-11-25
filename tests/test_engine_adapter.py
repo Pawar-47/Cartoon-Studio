@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import os
+import struct
 import shutil
 import threading
 from pathlib import Path
@@ -113,6 +115,68 @@ def test_worker_cancellation_terminates_process(tmp_path, monkeypatch):
         adapter.ping(cancel_event=cancellation)
     assert process.terminated
     assert process.waited
+
+
+def _make_morph_glb() -> bytes:
+    positions = (
+        -0.5, 0.0, 0.0,
+        0.5, 0.0, 0.0,
+        0.0, 1.0, 0.0,
+    )
+    smile_deltas = (
+        0.0, 0.0, 0.0,
+        0.0, 0.0, 0.0,
+        0.0, 0.15, 0.0,
+    )
+    blink_deltas = (
+        0.0, 0.0, 0.0,
+        0.0, 0.0, 0.0,
+        0.0, -0.1, 0.0,
+    )
+    binary = struct.pack("<27f", *(positions + smile_deltas + blink_deltas))
+    document = {
+        "asset": {"version": "2.0", "generator": "Cartoon Studio morph fixture"},
+        "scene": 0,
+        "scenes": [{"nodes": [0]}],
+        "nodes": [{"name": "Face", "mesh": 0, "weights": [0.0, 0.0]}],
+        "meshes": [{
+            "name": "FaceMesh",
+            "weights": [0.0, 0.0],
+            "extras": {"targetNames": ["Smile", "Blink"]},
+            "primitives": [{
+                "attributes": {"POSITION": 0},
+                "targets": [{"POSITION": 1}, {"POSITION": 2}],
+            }],
+        }],
+        "buffers": [{"byteLength": len(binary)}],
+        "bufferViews": [
+            {"buffer": 0, "byteOffset": offset, "byteLength": 36, "target": 34962}
+            for offset in (0, 36, 72)
+        ],
+        "accessors": [
+            {
+                "bufferView": 0,
+                "componentType": 5126,
+                "count": 3,
+                "type": "VEC3",
+                "min": [-0.5, 0.0, 0.0],
+                "max": [0.5, 1.0, 0.0],
+            },
+            {"bufferView": 1, "componentType": 5126, "count": 3, "type": "VEC3"},
+            {"bufferView": 2, "componentType": 5126, "count": 3, "type": "VEC3"},
+        ],
+    }
+    json_chunk = json.dumps(document, separators=(",", ":")).encode("utf-8")
+    json_chunk += b" " * ((-len(json_chunk)) % 4)
+    binary_chunk = binary + b"\\x00" * ((-len(binary)) % 4)
+    total_length = 12 + 8 + len(json_chunk) + 8 + len(binary_chunk)
+    return (
+        struct.pack("<4sII", b"glTF", 2, total_length)
+        + struct.pack("<II", len(json_chunk), 0x4E4F534A)
+        + json_chunk
+        + struct.pack("<II", len(binary_chunk), 0x004E4942)
+        + binary_chunk
+    )
 
 
 def _real_godot_adapter(tmp_path=None) -> GodotEngineAdapter:
@@ -295,3 +359,23 @@ def test_retarget_adapter_accepts_complete_humanoid_mapping_and_builds_request(
         REQUIRED_HUMANOID_BONES
     )
     assert output.parent.is_dir()
+
+def test_pinned_godot_worker_reports_imported_blend_shape_names_and_defaults(tmp_path):
+    adapter = _real_godot_adapter(tmp_path)
+    asset_dir = tmp_path / "morph-assets"
+    asset_dir.mkdir()
+    target = asset_dir / "face-with-morphs.glb"
+    target.write_bytes(_make_morph_glb())
+
+    response = adapter.inspect_glb(target, allowed_root=tmp_path)
+
+    assert response["ok"] is True
+    assert response["mesh_count"] == 1
+    assert response["morph_target_count"] == 2
+    assert [entry["name"] for entry in response["morph_targets"]] == [
+        "Smile",
+        "Blink",
+    ]
+    assert all(entry["mesh_name"] == "Face" for entry in response["morph_targets"])
+    assert all(entry["default_value"] == 0.0 for entry in response["morph_targets"])
+
