@@ -129,3 +129,27 @@ This is the first broad source-level sweep, not P0.3 completion. No production e
 - Full WhisperX dependencies include PyTorch, torchvision, pyannote-audio, faster-whisper, CTranslate2, Transformers, NLTK and related libraries. Minimal alignment-only packaging and 8 GB CPU performance remain untested.
 - Checked Sadda's multilingual phoneme model language list; Urdu is not listed, so it is not a reliable Urdu candidate. Allosaurus remains an unverified universal phone alternative.
 - Concluded P0.3 source-level research coverage across engines, character/facial systems, world, animation, rendering, Urdu voice/lip-sync, audio, queues, packaging, AI providers, hardware and licensing. Added a separate provisional scorecard; no candidate is selected and no target-PC test was run.
+
+## 2026-11-25 — P0.4 Urdu voice and provider feasibility refresh
+
+### Urdu G2P and forced alignment
+- Inspected eSpeak NG's actual Urdu rule file: https://github.com/espeak-ng/espeak-ng/blob/master/dictsource/ur_rules contains Urdu-script letter groups, vowel/consonant rules and Urdu-specific mappings. This is not evidence of Pakistani-accent voice quality; G2P output must be compared against human-reviewed pronunciation.
+- Inspected eSpeak NG CLI source/manual: -v ur, -x, --ipa and --phonout expose phoneme output without requiring speech playback. eSpeak NG is GPL-3.0; bundling it in the Windows app needs a license/notice review.
+- Inspected WhisperX README and upstream alignment.py. Current upstream code explicitly maps language code ur to kingabzpro/wav2vec2-large-xls-r-300m-Urdu. WhisperX README documents CPU inference with --compute_type int8 --device cpu, but the Urdu aligner is 300M parameters and the target has only 8 GB RAM. No CPU speed, memory, word timing or Pakistani-accent quality test has been run.
+- WhisperX is BSD-2-Clause. Its language-specific alignment model is a separate Hugging Face artifact with its own model-card license and dataset provenance; those must be checked before redistribution.
+- Decision: keep eSpeak NG as an offline G2P/diagnostic candidate, not a natural Urdu TTS voice. Keep WhisperX+Urdu wav2vec2 as a conditional alignment candidate, not an approved default. Require manual viseme/timing correction.
+
+### Urdu TTS and cloud-region facts
+- QwenCloud's official voice list identifies qwen-audio-3.1-tts-flash-sahar_ur (Sahar / سحر) as a male Urdu voice with timestamps and SSML. Its TTS HTTP API lists Singapore and China North 2 (Beijing) as supported regions. Official standard Singapore pricing is $0.23/M input tokens and $1.87/M output tokens; therefore this is not a free or local default.
+- Pakistan access to a Singapore Qwen endpoint, payment/account eligibility, privacy terms, Pakistani accent quality and output timestamp usefulness remain unverified. Do not describe it as Pakistan-hosted or guaranteed accessible.
+- Gemini API official supported-region list includes Pakistan. Free-tier input/output is available for selected models, but Google's pricing page explicitly says free-tier content may be used to improve products; paid-tier content is not. Current per-model quota and project eligibility still require a live account check.
+- Groq's official limits page currently lists model-specific free limits including GPT-OSS 120B/20B and Qwen3.8-27B at 30 RPM, 1,000 RPD, 8K TPM and 200K TPD; organization/account limits can differ. Groq Trust Center says data centres are in US, Australia, Canada, Finland and Saudi Arabia; regional endpoints are an Enterprise arrangement.
+- Cloudflare Workers AI official pricing: 10,000 Neurons/day free, $0.011 per 1,000 Neurons above free on Workers Paid, reset 00:00 UTC; some models require paid billing.
+- OpenRouter official free variants: 20 RPM and 50 RPD; 1,000 RPD after at least $10 lifetime credits. Model/provider caps and third-party data handling vary.
+- No API key was connected, no provider account was accessed, and no request/audio was sent to a cloud service.
+
+### Next evidence needed
+- Actual target-PC probe output and exact Intel driver.
+- A short, consented native Pakistani Urdu recording plus its verbatim human-corrected transcript, ideally 30–60 seconds covering aspirated/retroflex consonants, nasalization, long/short vowels, common names and code-switching.
+- Human-reviewed eSpeak Urdu IPA/phoneme output and WhisperX forced alignment timings for that sample.
+- Optional Qwen Sahar sample only after the user explicitly authorizes use of an external paid service and reviews the privacy/price terms.
