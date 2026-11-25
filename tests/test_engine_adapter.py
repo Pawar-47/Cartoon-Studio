@@ -117,7 +117,10 @@ def test_worker_cancellation_terminates_process(tmp_path, monkeypatch):
     assert process.waited
 
 
-def _make_morph_glb(default_weights: tuple[float, float] = (0.0, 0.0)) -> bytes:
+def _make_morph_glb(
+    default_weights: tuple[float, float] = (0.0, 0.0),
+    node_weights: tuple[float, float] | None = None,
+) -> bytes:
     positions = (
         -0.5, 0.0, 0.0,
         0.5, 0.0, 0.0,
@@ -134,11 +137,14 @@ def _make_morph_glb(default_weights: tuple[float, float] = (0.0, 0.0)) -> bytes:
         0.0, -0.1, 0.0,
     )
     binary = struct.pack("<27f", *(positions + smile_deltas + blink_deltas))
+    face_node = {"name": "Face", "mesh": 0}
+    if node_weights is not None:
+        face_node["weights"] = list(node_weights)
     document = {
         "asset": {"version": "2.0", "generator": "Cartoon Studio morph fixture"},
         "scene": 0,
         "scenes": [{"nodes": [0]}],
-        "nodes": [{"name": "Face", "mesh": 0, "weights": list(default_weights)}],
+        "nodes": [face_node],
         "meshes": [{
             "name": "FaceMesh",
             "weights": list(default_weights),
@@ -440,6 +446,26 @@ def test_retarget_adapter_accepts_complete_humanoid_mapping_and_builds_request(
         REQUIRED_HUMANOID_BONES
     )
     assert output.parent.is_dir()
+
+def test_node_morph_weights_override_mesh_defaults(tmp_path):
+    adapter = _real_godot_adapter(tmp_path)
+    asset_dir = tmp_path / "morph-node-override"
+    asset_dir.mkdir()
+    target = asset_dir / "face-node-override.glb"
+    target.write_bytes(_make_morph_glb((0.1, 0.2), (0.35, 0.8)))
+
+    response = adapter.inspect_glb(target, allowed_root=tmp_path)
+
+    assert response["ok"] is True
+    assert {
+        entry["name"]: entry["default_value"]
+        for entry in response["morph_targets"]
+    } == {"Smile": 0.35, "Blink": 0.8}
+    assert all(
+        entry["default_value_source"] == "node"
+        for entry in response["morph_targets"]
+    )
+
 
 def test_pinned_godot_worker_reports_real_animated_morph_cube(tmp_path):
     adapter = _real_godot_adapter(tmp_path)

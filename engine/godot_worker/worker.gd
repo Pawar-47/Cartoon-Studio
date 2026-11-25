@@ -149,6 +149,7 @@ func _inspect_glb(payload: Dictionary) -> Dictionary:
             morph_targets.append({
                 "mesh_path": str(scene.get_path_to(mesh_instance)),
                 "mesh_name": str(mesh_instance.name),
+                "mesh_resource_name": str(array_mesh.resource_name),
                 "index": shape_index,
                 "name": str(array_mesh.get_blend_shape_name(shape_index)),
                 "default_value": default_info.get(
