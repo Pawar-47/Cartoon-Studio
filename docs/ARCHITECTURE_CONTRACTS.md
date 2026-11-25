@@ -199,7 +199,11 @@ P0.5 decisions recorded:
 - [x] Record per-subsystem dependency candidates, version-pinning policy, licenses, optional/no-bundle boundaries and unresolved proof gates.
 - [x] Map all 171 registry IDs to an architecture home, planned module boundary and delivery phase.
 - [x] Reconcile hardware policy: exact-PC performance testing is Phase 8, not an architecture or implementation gate.
-- [ ] Complete P0.6 bounded engine/renderer/queue/codec proofs.
+- [x] Complete P0.6 bounded engine/renderer/queue/codec proofs; see P0_6_PROOF_REPORT.md.
 - [ ] P0.7 final review and freeze after P0.6 evidence.
 
 This checklist marks architecture documentation only; it does not mark candidate software integrated, runtime behavior tested, or product requirements implemented.
+
+## 16. P0.6 proof-backed engine decision
+
+Godot 4.7.2-stable Compatibility is selected as the production 3D runtime candidate based on the successful hosted-runner proof in P0_6_PROOF_REPORT.md. The production adapter is a supervised native process controlled by FastAPI. The optional Web export/embedded viewport is deferred and is not a phase gate. The proof establishes basic GLB import, animation, PackedScene save/reopen, MovieWriter AVI and FFmpeg MP4 assembly; it does not establish full episode quality, target-PC performance, complex rigs or Urdu voice/lip-sync.

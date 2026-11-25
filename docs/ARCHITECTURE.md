@@ -149,3 +149,9 @@ Architecture direction is now concrete:
 - Use an FFmpeg process adapter, but do not bundle a binary or freeze an MP4 encoder until exact build flags, codec availability and licensing are checked.
 - Keep AI/TTS optional, manual Pakistani Urdu recording supported, and model/asset adoption individually licensed.
 - Actual PC performance measurements are Phase 8 only and do not gate any earlier phase.
+
+## P0.6 result — Godot native worker selected
+
+Godot 4.7.2-stable with the Compatibility renderer is selected as the production 3D runtime, behind the native worker adapter controlled by FastAPI. The bounded proof imported a self-generated GLB, created/played an AnimationPlayer track, saved/reopened the PackedScene, and recorded a 3-second 640×360/24 FPS MJPEG AVI. FFmpeg then assembled a 640×360/24 FPS MP4 with MPEG-4 Part 2 video and AAC audio. Exact CI evidence and limitations are in P0_6_PROOF_REPORT.md.
+
+The optional Godot Web viewport is deferred; it is not a prerequisite for the browser control plane or production rendering. The browser remains the primary UI. A separate native preview window or a future browser viewport can be implemented behind the same engine-neutral adapter without changing project documents. Target-PC performance remains Phase 8.

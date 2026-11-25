@@ -45,3 +45,19 @@ Date: 2026-11-25. Retain Python 3.11+, FastAPI/Uvicorn, Pydantic, stdlib SQLite 
 ## D-013 — Complete registry-to-architecture crosswalk
 
 Date: 2026-11-25. Added ARCHITECTURE_TRACEABILITY.md with one row for every one of the 171 atomic registry IDs, including architecture home, planned module boundary and delivery phase. This is an ownership/architecture map, not evidence that the planned code exists.
+
+## D-014 — Select Godot 4.7.2 Compatibility as the production 3D runtime
+
+Date: 2026-11-25. Godot 4.7.2-stable passed the bounded P0.6 hosted-runner proof: GLB import, MeshInstance3D discovery, AnimationPlayer creation/playback, PackedScene save/reopen and 72-frame MovieWriter AVI. The follow-up FFmpeg conversion produced a 3-second MP4 inspected by FFprobe. Select Godot Compatibility as the native production worker runtime behind a versioned engine adapter controlled by FastAPI. This is functional candidate proof, not a target-PC performance claim or complete product acceptance. See P0_6_PROOF_REPORT.md.
+
+## D-015 — Use a Cartoon Studio-owned SQLite job queue
+
+Date: 2026-11-25. The isolated SQLite prototype passed five queue-specific tests in Windows CI: serial scene leases, lease-expiry retry, checkpoint preservation, safe cancellation and stale-worker rejection. Use the app-owned SQLite queue as the Phase 1/7 implementation baseline; do not add Huey/sqlite-workqueue unless requirements expand beyond this bounded local model. The proof prototype remains under tools/ and is not production code.
+
+## D-016 — Defer optional Godot Web viewport
+
+Date: 2026-11-25. The Godot Web export/embedded viewport is not needed to validate native rendering and is not required for Phase 1. Keep the browser as the main UI and keep viewport integration behind an adapter. Revisit only if Character Studio/World Builder interaction proves a browser-embedded 3D viewport materially improves the workflow. Its absence must not block the native renderer or phase progression.
+
+## D-017 — Keep production MP4 codec and FFmpeg distribution build open
+
+Date: 2026-11-25. The hosted proof successfully converted AVI to MP4 using MPEG-4 Part 2/AAC. This proves a functional assembly path, not the final production codec, patent position or redistributable FFmpeg build. The production FFmpeg adapter remains a separate process boundary; exact binary, configure flags, codec, notices and source compliance must be approved before bundling.
