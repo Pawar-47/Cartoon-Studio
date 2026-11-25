@@ -1,67 +1,61 @@
 # Session-independent development checkpoint
 
 Updated: 2026-11-25
-Repository: [Pawar-47/Cartoon-Studio](https://github.com/Pawar-47/Cartoon-Studio)
-Branch: `main`
-Checkpoint commit: `dac18611028019938c5bf9a1a170836b1fb3ff4e`
+Repository: https://github.com/Pawar-47/Cartoon-Studio
+Branch: main
+Checkpoint HEAD: aadce3ed4c8444a3130652f14cc85cdfd4db697b
 
 ## Mission and source of truth
 
-Build the full local-first, installable cartoon production studio defined in `docs/MASTER_EXECUTION_PROMPT.md` and `docs/MASTER_PLAN.md`. GitHub main is the only source of truth. This file exists so work can resume if a ChatGPT conversation is interrupted, disappears or becomes too long. Always re-read this file, `docs/MASTER_PLAN.md`, `docs/PROJECT_STATUS.md`, and the relevant requirement registry entries before continuing.
+Build the full local-first cartoon production studio defined in MASTER_EXECUTION_PROMPT.md, MASTER_PLAN.md and PROJECT_SPECIFICATION.md. GitHub main is the only source of truth. Preserve all accepted work. Continue in coherent feature batches and do not restart audits or completed phases.
 
 ## Current phase
 
-Phase 2 — Character Studio is active. Phase 0 and Phase 1 are complete. Do not jump ahead into World Builder or expand the frozen Story Generator out of sequence. Physical-PC testing is not a gate; it belongs to Phase 8.
+Phase 2 — Character Studio remains ACTIVE. Phase 0 and Phase 1 are complete. Do not jump into World Builder or unfreeze the partial Story Generator out of sequence. Physical-PC testing remains Phase 8 and is not a development gate.
 
-## Accepted implementation in the current development sequence
+## Accepted capabilities in this sequence
 
-- Material appearance recipes for actual imported GLB material slots, with live browser preview and profile persistence: commit `843ef8d6250b1c442235119911215205fa1bfb6a`.
-- Facial morph-target controls for blend shapes already present in imported GLBs, with live sliders, reset and saved weights: commit `533d59415df85be799fd4b28161aef860677a501`.
-- Existing saved character profile editing without reimporting the GLB: commit `b02e2bc2c5f0baf12779785b4176d3ebeb0ae927`; correction for multi-line metadata: `0ef023a66d9837cd8411a603d3f1c3e1210d11af`.
-- Skeleton hierarchy inspection and conservative 15-bone humanoid name coverage: commit `3a6f68e55808f5ac7300154493ce51bce2099fce`.
-- Native Godot 4.7.2 generated source/target humanoid retarget proof: commit `dac18611028019938c5bf9a1a170836b1fb3ff4e`.
+- Project-contained GLB import, validation, SHA-256 provenance and Godot inspection.
+- Browser GLB preview with orbit/zoom, animation selection and camera reset.
+- Persistent versioned character profiles, metadata editing, project recovery and canonical project references.
+- Non-destructive PBR material recipes and imported morph-target sliders with profile persistence.
+- Skeleton hierarchy inspection and conservative 15-bone Godot humanoid profile mapping.
+- Parent-chain validation with valid/incomplete/invalid/unavailable status.
+- Per-bone imported rest transforms (local origin, rotation, scale) and local-offset summaries.
+- Deterministic skinned 15-bone humanoid GLB fixture with imported arm animation.
+- Native Godot proof that imports the fixture, confirms skin binding and animation, then transfers the imported source animation to a differently proportioned target skeleton.
 
-There are also lint/test correction commits between feature batches. They are not separate product features and should not be reported as such.
+## Current verification
 
-## Verification
+- Windows CI #229 passed on hierarchy analyzer commit 1cac9e93adff60bd051c4029df829ebc5fc662f0.
+- Windows CI #230 and #231 passed on UI and hierarchy-status correction commits.
+- Windows CI #236 passed after the rest-transform association fix.
+- Windows CI #237 passed on fixture commit c8f7bb3ac83ac46975e385648f773f4e20b951c8; its real pinned Godot worker test imported the skinned humanoid GLB and checked the skeleton/rest-transform payload.
+- Windows CI #238 passed on proof commit ae63724b12a0f2cf670469ac74613acaee07e15c.
+- Dedicated Godot proof #8 passed all imported source-to-different-proportion target retarget checks: https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45611145465
+- Dedicated Godot proof #9 passed after explicit target-rest assignment: https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45611193996
+- Latest HEAD aadce3ed has Windows CI #241 and dedicated Godot proof #10 running. Proof #10 adds an explicit save/reopen check for the imported retarget modifier and target skeleton.
+- Earlier intermediate runs #232–#235 failed on lint formatting or a rest-transform association bug; both defects were fixed. Do not report those failures as unresolved.
 
-- Windows CI #223 passed on parent commit `26763196c84eb8d863750ef79d235a0711b26d8d`: tests, lint, compilation, Godot worker, bootstrap, both self-contained builds, installer compile and full lifecycle.
-- Dedicated Godot native-worker proof #5 passed on current HEAD `dac18611028019938c5bf9a1a170836b1fb3ff4e`. Its structured report had `passed=true`, no proof assertion errors and all retarget checks true.
-- Windows CI #224 is running on current HEAD. At the last check lint, compilation, tests, SBOM, bootstrap smoke, both self-contained builds and installer compilation had passed; the final clean install/upgrade/uninstall/reinstall step was still running. Recheck before claiming current HEAD has full Windows CI acceptance.
+## Important technical boundary
+
+The imported animation is currently retargeted in a Godot proof from the imported fixture's Skeleton3D to a target Skeleton3D generated from the same imported hierarchy with altered limb rest lengths. This is real imported-source animation retargeting, but it is not yet a general user-facing pipeline for two arbitrary imported GLBs. The app must still support safe target-rig binding, rest-pose diagnostics/correction, save/reopen and export without modifying the source GLB.
 
 ## Immediate next work
 
-1. Confirm Windows CI #224 conclusion.
-2. Implement canonical humanoid mapping for a real imported GLB skeleton, preserving the original asset and reporting ambiguous/missing mappings.
-3. Test source-to-target animation retargeting on a real imported skinned GLB pair. Inspect output poses/frames and save/reopen.
-4. Validate facial morph controls on real blend-shape GLBs; confirm intended face regions change and profile weights reload correctly.
-5. Only then design deterministic export/bake and verify source GLB is never overwritten.
-6. Keep the phase exit criteria honest: Phase 2 is not complete until users can create/import, rig, preview, save/reopen and reuse original stylized cartoon characters with stable identity.
+1. Inspect Windows CI #240/#241 and Godot proof #10; resolve any actual failures.
+2. Implement the non-destructive user-facing imported-rig retarget workflow in Character Studio, using the verified Godot node arrangement and preserving the original source asset.
+3. Test against additional imported humanoid rigs with different naming conventions, proportions and animation tracks.
+4. Validate real facial morph controls on blend-shape GLBs, including intended facial-region deformation and persistence.
+5. Add deterministic export/round-trip only after retarget and appearance preservation are proven.
+6. Keep Phase 2 active until character authoring, import, retarget, preview, persistence and export acceptance are real.
 
-## Working discipline
+## Operating discipline
 
-- Do complete feature batches, not one-line commit loops.
-- Prefer a single coherent feature commit plus one CI run. Fix genuine CI failures, but avoid repeated polling/status-only activity.
-- Keep code, tests, docs and requirement traceability synchronized in the same batch.
-- Separate what is implemented, unit-tested, exercised by real Godot, visually inspected and accepted on imported production assets.
-- Do not call a generated-skeleton proof imported-character acceptance.
-- No mandatory paid APIs, subscriptions, cloud rendering or online activation.
-- Always report actual commit links and test/workflow links. Keep responses in English.
-
-
-## Indexed humanoid mapping batch (pending CI)
-
-- Windows CI #225 passed on pre-batch commit 8649ae66d364d0b434a69a6f6e17a0683370ad1c, including full installer lifecycle.
-- app/rig_analysis.py now maps the conservative core bone set to Godot SkeletonProfileHumanoid profile names, preserving source bone indices and parent metadata.
-- Duplicate aliases are excluded and reported as ambiguous; missing and unmapped bones are distinct diagnostics. Separate skeleton nodes are never combined and the GLB remains untouched.
-- tests/test_rig_analysis.py adds coverage for indexed mapping, parent metadata, ambiguity, unmapped bones and candidate selection.
-- Source/test commits: 80d68935994ce014b3a3a3f8ca9d97dff32391ab and ec17ed2ae5139f4033c86058f61a3464c596aa43. Documentation update and batch CI pending.
-- Next: bind imported skeletons to Godot retarget hierarchies, then prove retargeting on a real imported source/target GLB pair. Generated-skeleton proof #5 is not imported-asset acceptance.
-
-
-## 2026-11-25 — latest continuation checkpoint
-
-- Latest code batch: `1cac9e93adff60bd051c4029df829ebc5fc662f0` — indexed humanoid hierarchy validation and Character Studio diagnostics.
-- The analyzer checks required humanoid parent chains when Godot supplies indexed parent data; the UI exposes valid/invalid/unavailable status and issues. This remains preflight, not production retargeting.
-- Previous checkpoint `dd3b3a91a4f03373496f185ff85160b3f57b055b` passed Windows CI #228. The corrected indexed-name tests passed in CI #227.
-- CI #229 is running for the hierarchy-validation batch. Next: use a real skinned humanoid GLB fixture to exercise imported Skeleton3D, skin binding, rest pose and animation paths; then integrate a production-safe retarget workflow. Keep Character Studio active and do not call Phase 2 complete.
+- Work in substantial coherent batches, not trivial one-line commits.
+- GitHub main is the only source of truth.
+- Report implementation, automated tests, Godot execution, visual inspection and imported-asset acceptance separately.
+- Never call a generated or fixture proof acceptance of arbitrary user models.
+- Do not claim full project completion while Phases 3–7 remain unimplemented.
+- No mandatory paid APIs, cloud rendering or online activation.
+- Always respond in English for this project.

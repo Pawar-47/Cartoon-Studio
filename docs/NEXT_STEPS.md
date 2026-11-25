@@ -2,25 +2,29 @@
 
 ## Active batch — Phase 2 Character Studio
 
-1. Confirm Windows CI #224 on current HEAD.
-2. Map a real imported GLB skeleton to Godot's canonical `SkeletonProfileHumanoid` profile, with unmatched/ambiguous bone diagnostics and no source-asset mutation.
-3. Retarget an actual imported animation to a differently proportioned target skeleton; inspect rendered poses and save/reopen.
-4. Validate facial morph-target controls on representative blend-shape GLBs and verify persistence after profile reload.
-5. Implement deterministic export/bake only after round-trip integrity and source preservation are proven.
+1. Confirm Windows CI #240/#241 and dedicated Godot proof #10.
+2. Implement the user-facing non-destructive retarget operation for imported GLB source and target rigs, using the validated Godot modifier/profile arrangement.
+3. Add target skeleton binding and clear diagnostics for missing/ambiguous bones, invalid hierarchy, rest transforms and incompatible animation tracks.
+4. Validate with more than one real-world humanoid GLB, including different bone naming conventions and body proportions.
+5. Confirm imported target pose playback, scene save/reopen and source-asset integrity.
+6. Test existing facial morph-target controls on real blend-shape models; then complete deterministic export/round-trip.
 
-## Current evidence
+## Latest implementation and evidence
 
-- Material appearance editor: commit `843ef8d6250b1c442235119911215205fa1bfb6a`.
-- Imported facial morph-target editor: commit `533d59415df85be799fd4b28161aef860677a501`.
-- Saved profile editing: commit `b02e2bc2c5f0baf12779785b4176d3ebeb0ae927`; multiline metadata correction: `0ef023a66d9837cd8411a603d3f1c3e1210d11af`.
-- Skeleton hierarchy and humanoid coverage: commit `3a6f68e55808f5ac7300154493ce51bce2099fce`.
-- Native generated-skeleton retarget proof: commit `dac18611028019938c5bf9a1a170836b1fb3ff4e`; dedicated Godot run #5 passed.
-- Current Windows CI #224 is pending final lifecycle result; see `docs/SESSION_CHECKPOINT.md`.
+- Indexed humanoid profile mapping: 1cac9e93adff60bd051c4029df829ebc5fc662f0.
+- Hierarchy diagnostics surfaced in Character Studio: 2b4a88248492833ddd04cd33e9557ebc3a13052b.
+- Hierarchy completeness correction: 49d695a57e66858832ce1f3e033467c8151e83cf.
+- Imported rest-transform reporting: fbfb0724bb1eec480afe55d3e17095dbd1f115df; association correction: 441f22db6cef1acf8b6dc17f7f1187d0dfdefd53.
+- Skinned humanoid fixture and real worker test: c8f7bb3ac83ac46975e385648f773f4e20b951c8.
+- Imported humanoid fixture in native proof: ae63724b12a0f2cf670469ac74613acaee07e15c.
+- Imported-source to differently proportioned target retarget proof: 59a8ab1510078de7167aaf06147aaeb73509d5ad; explicit rest assignment: edd562d816ab9c9045aeba14753a42a7eb38e565.
+- Imported retarget save/reopen assertion: aadce3ed4c8444a3130652f14cc85cdfd4db697b.
+- Windows CI #237 and #238 passed. Godot proof #8 and #9 passed. Latest #241 and proof #10 are pending.
 
 ## Deferred to their specified phases
 
 - World Builder: Phase 3.
-- Full Story/Scene Engine: Phase 4; preserve the existing partial Story Generator and keep its expansion frozen.
+- Full Story/Scene Engine: Phase 4; preserve the existing partial Story Generator and keep its expansion frozen until then.
 - Production animation library and timeline: Phase 5.
 - Pakistani Urdu voice/TTS/lip-sync: Phase 6.
 - Full episode rendering, audio mix and MP4: Phase 7.
@@ -28,22 +32,4 @@
 
 ## Policy
 
-Work in coherent feature batches, preserve all existing work, use GitHub main as the source of truth, and do not use physical-PC testing as an early gate.
-
-
-## Indexed humanoid mapping batch (pending CI)
-
-- Windows CI #225 passed on pre-batch commit 8649ae66d364d0b434a69a6f6e17a0683370ad1c, including full installer lifecycle.
-- app/rig_analysis.py now maps the conservative core bone set to Godot SkeletonProfileHumanoid profile names, preserving source bone indices and parent metadata.
-- Duplicate aliases are excluded and reported as ambiguous; missing and unmapped bones are distinct diagnostics. Separate skeleton nodes are never combined and the GLB remains untouched.
-- tests/test_rig_analysis.py adds coverage for indexed mapping, parent metadata, ambiguity, unmapped bones and candidate selection.
-- Source/test commits: 80d68935994ce014b3a3a3f8ca9d97dff32391ab and ec17ed2ae5139f4033c86058f61a3464c596aa43. Documentation update and batch CI pending.
-- Next: bind imported skeletons to Godot retarget hierarchies, then prove retargeting on a real imported source/target GLB pair. Generated-skeleton proof #5 is not imported-asset acceptance.
-
-
-## Immediate continuation — 2026-11-25
-
-1. Complete and inspect CI #229 for indexed humanoid hierarchy validation.
-2. Add a deterministic, genuinely skinned humanoid GLB fixture (not the existing triangle-only fixture) and exercise Godot import, skin-to-skeleton binding, rest transforms and imported animation tracks.
-3. Implement a non-destructive imported-rig retarget path only after the fixture proves the correct Godot node hierarchy and profile mapping.
-4. Continue Character Studio authoring/export capabilities; do not treat PC testing as an early gate.
+Work in coherent feature batches, preserve all existing work, use GitHub main as the source of truth, and do not use physical-PC testing as an early gate. Do not call the entire project complete while Phases 3–7 remain open.

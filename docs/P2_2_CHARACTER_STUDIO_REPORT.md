@@ -108,3 +108,16 @@
 - The Character Studio import report now shows hierarchy status and the concrete issues (or states when indexed hierarchy data is unavailable).
 - This is structural validation only. A valid hierarchy does not establish compatible rest pose, axes, skin weights, scale or real animation transfer; `retargeting_ready` remains false.
 - Regression coverage includes valid chains, a broken leg chain and legacy name-only importer data. Windows CI #229 is running for commit `1cac9e93adff60bd051c4029df829ebc5fc662f0`.
+
+
+## Imported humanoid rig diagnostics and retarget proof — 2026-11-25
+
+- Indexed profile mapping now retains each source bone's rest transform (local position, quaternion rotation and scale) from Godot's imported Skeleton3D.
+- The report summarizes available local rest-offset lengths and labels them as local scene-unit values, not world-space limb measurements.
+- Required humanoid hierarchy validation distinguishes valid, incomplete, invalid and unavailable data. A partial chain is never reported as fully valid.
+- Added a deterministic 15-bone skinned humanoid GLB fixture with JOINTS_0/WEIGHTS_0 skinning, inverse bind matrices and an imported arm animation.
+- Windows CI #237 passed with the real Godot 4.7.2 worker importing this fixture and checking the skeleton, animation and rest-transform payload. Windows CI #238 also passed after the native proof was expanded.
+- Dedicated Godot proof #8 passed with all imported-rig checks true: 15 bones, skin binding, imported animation, finite rest transforms, different source/target arm rest lengths and transferred pose.
+- Dedicated Godot proof #9 passed after making target-rest assignment explicit. Proof #10 additionally checks that the imported retarget modifier and target skeleton survive scene save/reopen.
+- Scope boundary: the proof retargets an animation from the imported fixture's skeleton to a target skeleton generated from that imported hierarchy with different proportions. It does not yet implement a general user-facing retarget pipeline for two arbitrary imported GLBs.
+- The imported source GLB is not rewritten. Production app integration, target-asset binding, rest-pose correction, visual acceptance on representative user models and deterministic export remain open.

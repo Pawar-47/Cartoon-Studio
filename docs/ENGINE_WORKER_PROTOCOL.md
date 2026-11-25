@@ -45,3 +45,13 @@ Every response includes `protocol_version`, the matching `request_id`, `ok`, `en
 ## Skeleton hierarchy inspection — protocol extension
 
 The existing `inspect_glb` operation now includes a `skeletons` array. Each entry reports the imported Skeleton3D node path, bone count, and each bone's index, name, parent index and parent name. The top-level `skeleton_count` is derived from the same collected nodes. This is metadata inspection only: it does not create a rig, validate skin weights/rest pose, or claim animation retarget compatibility.
+
+
+## Imported skeleton rest-transform payload
+
+The inspect_glb skeleton report now includes a rest_transform object per bone when available:
+- origin: local rest offset [x, y, z]
+- rotation: local rest quaternion [x, y, z, w]
+- scale: local rest scale [x, y, z]
+
+The Python rig analyzer preserves the transform alongside the canonical profile-bone mapping and reports local offset lengths with an explicit scene-unit/local-space note. These values are diagnostics for later retarget preparation; they are not world-space limb lengths and do not establish retarget readiness.

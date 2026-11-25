@@ -259,3 +259,10 @@ The accepted slice delivers GLB 2.0 import and inspection, persistent character 
 ## P2.2 interactive browser preview batch — 2026-11-25
 
 A browser-side GLB presentation preview is implemented using locally vendored three.js 0.187.0 (MIT, pinned r187 commit `7e89746a687bb88271253698fa108b1dd59825d0`). It supports orbit/zoom, camera reset and embedded animation selection. The existing Godot worker remains the native import/inspection authority. The CI run for this preview batch is pending. This does not close Phase 2; mesh/rig/material editing and export remain required.
+
+
+## 2026-11-25 — Imported humanoid rig checkpoint
+
+Phase 2 remains active. Latest implementation HEAD is aadce3ed4c8444a3130652f14cc85cdfd4db697b. Character Studio now reports indexed humanoid profile mapping, parent-chain validity and per-bone imported rest transforms. A deterministic skinned 15-bone humanoid GLB fixture includes an imported arm animation. Dedicated Godot proof #8 and #9 passed: Godot imports the fixture, confirms skin binding and animation, and retargets the imported source animation to a target skeleton generated with different rest lengths. Proof #10 adds an imported retarget save/reopen assertion and is running. Windows CI #237/#238 passed; #240/#241 are running.
+
+This remains a bounded fixture proof, not a production retarget pipeline for arbitrary user-supplied source/target GLBs. Next deliver the user-facing non-destructive retarget workflow and verify additional real models. Phases 3–7 remain open; target-PC testing remains Phase 8.

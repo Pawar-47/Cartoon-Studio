@@ -4,13 +4,13 @@
 
 - Repository: Pawar-47/Cartoon-Studio
 - Branch: main
-- Latest accepted pre-batch HEAD: `8649ae66d364d0b434a69a6f6e17a0683370ad1c`
+- Latest implementation HEAD: aadce3ed4c8444a3130652f14cc85cdfd4db697b
 - Phase 0: COMPLETE.
 - Phase 1: COMPLETE.
 - Phase 2 — Character Studio: ACTIVE. P2.1 worker/runtime integration is accepted; P2.2 import, preview and profile workflow is implemented and expanding. Phase 2 is not complete.
-- Latest fully successful Windows CI before current HEAD: [run #223](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45606576553), commit `26763196c84eb8d863750ef79d235a0711b26d8d).
+- Latest fully successful Windows CI: [run #238](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45610832509), commit ae63724b12a0f2cf670469ac74613acaee07e15c; latest HEAD CI #241 is running.
 - Windows CI #225 passed on pre-batch HEAD `8649ae66d364d0b434a69a6f6e17a0683370ad1c`, including full install/upgrade/uninstall/reinstall lifecycle.
-- Current native Godot proof: [run #5](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45607400591) PASSED on Godot 4.7.2-stable. It verifies GLB import, animation playback, native RetargetModifier3D, different source/target limb lengths, transferred target pose and save/reopen.
+- Current native Godot proof: [run #9](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45611193996) PASSED on Godot 4.7.2-stable. It verifies an imported skinned humanoid GLB, its 15-bone skeleton, skin binding, imported animation, rest transforms, and animation retargeted to a differently proportioned target skeleton. Run #10 adds an explicit imported-retarget save/reopen assertion and is running.
 - A durable chat-independent resume record is maintained in `docs/SESSION_CHECKPOINT.md`.
 
 ## Current implemented Character Studio capabilities
@@ -20,7 +20,9 @@
 - Persistent, editable character profiles.
 - PBR material appearance recipes saved to character profiles.
 - Facial morph-target sliders for blend shapes already present in imported GLBs; saved weights and neutral reset.
-- Skeleton3D hierarchy inspection and conservative humanoid bone-name coverage.
+- Skeleton3D hierarchy inspection, conservative humanoid profile mapping, parent-chain validation and imported rest-transform diagnostics.
+- A deterministic 15-bone skinned humanoid GLB fixture and real Godot worker inspection test.
+- Godot proof of imported-source animation retargeting onto a differently proportioned target skeleton; this is a bounded fixture proof, not arbitrary-user-asset acceptance.
 - Native Godot 4.7.2 generated-skeleton retargeting proof. This is an engine capability proof, not yet acceptance of arbitrary imported character rigs.
 
 ## Phase status
@@ -70,3 +72,15 @@
 - tests/test_rig_analysis.py adds coverage for indexed mapping, parent metadata, ambiguity, unmapped bones and candidate selection.
 - Source/test commits: 80d68935994ce014b3a3a3f8ca9d97dff32391ab and ec17ed2ae5139f4033c86058f61a3464c596aa43. Documentation update and batch CI pending.
 - Next: bind imported skeletons to Godot retarget hierarchies, then prove retargeting on a real imported source/target GLB pair. Generated-skeleton proof #5 is not imported-asset acceptance.
+
+
+## Imported humanoid rig proof — 2026-11-25
+
+- Indexed humanoid mapping and parent-chain validation are implemented; broken or incomplete chains are surfaced rather than guessed.
+- Godot 4.7.2 reports each bone's rest transform (local origin, rotation and scale). Python preserves per-bone transforms and summarizes local offset lengths; no world-space or retarget-readiness claim is inferred.
+- Added a deterministic skinned 15-bone humanoid GLB fixture with an imported arm animation.
+- Windows CI #237 passed on the fixture commit; real Godot worker import tests passed. Windows CI #238 passed on the proof integration commit.
+- Dedicated Godot proof #8 passed: imported skeleton, skin binding, rest transforms, imported animation and pose transfer to a differently proportioned target skeleton all returned true.
+- Dedicated proof #9 also passed after the target rest-offset assignment correction. Proof #10 adds a save/reopen assertion for the imported retarget pair and is running.
+- This is not yet a production retarget feature for arbitrary user-supplied source/target GLBs. The imported source animation is transferred to a target skeleton generated from the fixture's source hierarchy with altered rest lengths.
+- Intermediate CI failures #232–#235 exposed lint formatting and a rest-transform association bug; both were corrected. CI #236, #237 and #238 subsequently passed.

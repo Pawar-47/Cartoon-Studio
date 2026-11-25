@@ -35,9 +35,9 @@ P0.2 checkpoint: atomic registry and traceability were expanded on 2026-11-25. T
 
 | Batch | Scope | Deliverables | Exit evidence | State |
 |---|---|---|---|---|
-| P2.1 | Integrate Godot 4.7.2 as the supervised native worker behind FastAPI for Character Studio | SHA-256-pinned Windows runtime, upstream MIT/COPYRIGHT notices, Python engine adapter, JSON worker protocol, CycloneDX component, package integration and Windows CI tests | Bundled worker launches; version/capability handshake passes; GLB fixture imports; unsafe paths are rejected; timeout, failure, cancellation and process cleanup tests pass | IN PROGRESS — implementation committed; Windows CI validation pending |
-| P2.2 | Original toon character creation/import, rigging and skinning | Recipe-based character creator, modular appearance, face/rig adapter and preview workflow | Create/import original toon character, inspect preview, save/reopen and animate | NOT STARTED |
-| P2.3 | Character identity, expressions, clothing, relationships and persistence | Versioned character profiles and persistent library | Edit/save/reopen and reuse the same character across scenes and episodes without identity drift | NOT STARTED |
+| P2.1 | Integrate Godot 4.7.2 as the supervised native worker behind FastAPI for Character Studio | SHA-256-pinned Windows runtime, upstream MIT/COPYRIGHT notices, Python engine adapter, JSON worker protocol, CycloneDX component, package integration and Windows CI tests | Bundled worker launches; version/capability handshake passes; GLB fixture imports; unsafe paths are rejected; timeout, failure, cancellation and process cleanup tests pass | COMPLETE — pinned Godot worker, supervised adapter, GLB inspection, runtime packaging and Windows CI validated |
+| P2.2 | Original toon character creation/import, rigging and skinning | Recipe-based character creator, modular appearance, face/rig adapter and preview workflow | Create/import original toon character, inspect preview, save/reopen and animate | ACTIVE — import/preview/profile/appearance and imported-rig preflight implemented; arbitrary source/target retarget workflow and deterministic export remain |
+| P2.3 | Character identity, expressions, clothing, relationships and persistence | Versioned character profiles and persistent library | Edit/save/reopen and reuse the same character across scenes and episodes without identity drift | PARTIAL — versioned character profiles, metadata editing and reusable appearance recipes exist; cross-scene identity acceptance remains |
 
 ## Phase 3 — World Builder
 
