@@ -226,6 +226,21 @@ def test_browser_preview_modules_are_served_from_local_static_assets():
         assert len(response.content) > 1000, path
 
 
+def test_turnaround_setup_is_inside_preview_state_restoration_scope():
+    source = (
+        Path(__file__).parents[1] / "app" / "static" / "character-preview.js"
+    ).read_text(encoding="utf-8")
+    start = source.index("export async function exportCharacterTurnaround")
+    end = source.index("export async function exportCharacterPreview", start)
+    function_body = source[start:end]
+    try_start = function_body.index("  try {")
+    finally_start = function_body.index("  } finally {", try_start)
+    protected_setup = function_body[try_start:finally_start]
+
+    assert 'frameCharacter("full");' in protected_setup
+    assert 'const context = sheet.getContext("2d");' in protected_setup
+
+
 def test_character_studio_page_is_served():
     response = TestClient(main.app).get("/characters")
     assert response.status_code == 200
