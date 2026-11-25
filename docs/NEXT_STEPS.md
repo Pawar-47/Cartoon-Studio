@@ -48,3 +48,10 @@ Godot 4.7.2 has emerged as the leading on-paper runtime candidate. Continue with
 P0.4 must then test Godot 4.7.2 Compatibility on the actual HD 5500 machine, measure scene generation/render time and peak RAM, test Pakistani Urdu voice samples, and verify exact Pakistan access/account quotas for Groq/Cloudflare/Gemini/OpenRouter. No paid/cloud service becomes mandatory.
 
 Do not begin production features before P0.7. Preserve the current Story Generator and keep it frozen until Phase 4.
+
+## P0.3 — next research work
+Godot 4.7.2 remains the leading on-paper runtime candidate. The next research task is to compare a complete minimal Godot scene stack: Terrain3D + Road Generator + Building Generator + CC0 Downtown City/streets/buildings + Roommate interiors + CC0 character/animation packs. Verify renderer support, exact versions, asset import sizes, object counts, draw calls and licensing. Review animation retargeting and the Godot Motion Matching addon, but start with AnimationTree and the CC0 UAL/UAL2 libraries.
+
+Finish the audio/MP4 pipeline research (MovieWriter output formats, FFmpeg build/codec licensing) and Urdu lip-sync/TTS candidate matrix. Then P0.4 tests Godot 4.7.2 Compatibility on the actual HD 5500 PC, measures RAM/render time and verifies Pakistani Urdu/provider availability. No paid/cloud service becomes mandatory.
+
+Do not begin production features before P0.7. Preserve the current Story Generator and keep it frozen until Phase 4.

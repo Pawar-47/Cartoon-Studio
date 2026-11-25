@@ -98,3 +98,10 @@ This is the first broad source-level sweep, not P0.3 completion. No production e
 - Inspected Godot Toon Shader CC0 sample; Compatibility renderer works but shadow-casting lights produce overly bright toon bands in the sample.
 - Inspected Ducz CharacterCreator; no code license found, so code cannot be copied. Its Quaternius assets are separately credited CC0.
 - Revised leading on-paper runtime candidate from Blender to Godot 4.7.2 Compatibility. This remains unselected until target-PC tests and integration design.
+
+## 2026-11-25 — Animation and CC0 pack source verification
+
+- Inspected ItsAshn/godot-motion-matching README, MIT license, source tree and test files. Godot 4.7, pure GDScript, pose/trajectory search, inertialization, foot/hand IK and headless tests; no GitHub Actions workflow and no bundled animation assets. README's ~0.1 ms/search is an unverified author claim.
+- Verified official Quaternius pack pages explicitly listing CC0: Universal Base Characters (6 bases, 20 hairstyles), Modular Character Outfits - Fantasy (12 outfits/62 parts), Ultimate Modular Men (11 modular characters/24 animations), Universal Animation Library (120+ clips), UAL2 (130+ clips), Downtown City MegaKit (300+ modular pieces), Modular Streets (25 pieces), Ultimate Buildings (76), Ultimate House Interior (123), Ultimate Furniture (20), Cars (8), Public Transport (12).
+- Read Quaternius FAQ and QAL v1.0. Every pack is either CC0 or QAL; QAL permits finished products but prohibits standalone asset redistribution. Only the exact CC0 pack pages above are eligible for the initial in-app redistributable asset library.
+- No packs were downloaded, no code/assets were copied, and no target-PC test was run. Build an independent recipe-based character editor; do not copy Ducz.CharacterCreator because its repository code has no license.

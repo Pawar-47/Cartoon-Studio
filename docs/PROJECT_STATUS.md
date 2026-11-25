@@ -51,7 +51,7 @@ P0.3 — continue the comparative source-level research sweep. P0.4 hardware/Urd
 ## P0.3 research checkpoint
 
 - P0.2 is complete: 171 atomic requirements, 171 traceability rows and 75 legacy aliases. Final CI run #71 passed on the P0.2 commit.
-- P0.3 source-level sweep 1 inspected Blender 4.5 compatibility, two procedural world generators, character-generation candidates, NPR/outline approaches, Urdu lip-sync candidates, SQLite queues, Windows packaging, FFmpeg licensing and CC0 asset libraries.
+- P0.3 source-level sweeps inspected Blender/Godot compatibility, Godot-native world plugins, procedural Blender world generators, character-generation candidates, NPR/outline approaches, Urdu lip-sync candidates, SQLite queues, Windows packaging, FFmpeg licensing and individually verified CC0 asset packs.
 - No engine or code dependency is selected. No candidate code or assets were copied.
 - Major risk discovered: target i3-5005U is 2C/4T, below Blender's published 4-core minimum; HD 5500 has a documented legacy driver crash issue. P0.4 must test exact driver and actual hardware.
 - Current candidate set: Godot 4.7.2 Compatibility as leading on-paper runtime; Terrain3D/Road Generator/Building Generator/Roommate as Godot-native environment candidates; Blender 4.5 and its world/character add-ons as optional authoring research; Ara/Ekza as browser-editor candidates; Parrot/Allosaurus as Urdu lip-sync research only.
@@ -68,3 +68,9 @@ P0.3 — continue the comparative source-level research sweep. P0.4 hardware/Urd
 - Native Godot candidates: Terrain3D (MIT; Compatibility renderer supported), Road Generator (MIT; incomplete), Building Generator (MIT; 26 low-poly variants), Roommate (MPL-2.0), OpenCity (MIT prototype), and Godot AI Animation Toolkit (MIT, optional authoring tool).
 - Blender 4.5 remains optional asset-authoring research, not the target runtime leader.
 - No target-PC test or integration has been performed; no engine/plugin is selected.
+
+## Animation and asset research checkpoint
+- Godot's built-in BoneMap/SkeletonProfileHumanoid retargeting plus Quaternius Universal Animation Library and UAL2 provide a potential CC0 starting point of 250+ humanoid clips.
+- Quaternius Universal Base Characters and Modular Character Outfits provide CC0 modular bodies/clothing; Downtown City, Modular Streets, buildings, interiors, furniture, cars and public transport packs provide CC0 environment assets.
+- These packs are not yet downloaded or imported. Exact pack license files must be preserved; QAL packs are excluded from the in-app asset library.
+- Godot Motion Matching is an optional MIT future candidate with no upstream CI; use simple AnimationTree + UAL first.

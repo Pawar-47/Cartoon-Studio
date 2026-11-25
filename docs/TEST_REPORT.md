@@ -68,3 +68,9 @@ A green CI run proves only the checks that actually ran. Source presence, docume
 - Roommate: Actions #12 success is a documentation workflow, not a runtime test.
 - Building Generator has manual test scripts but no Actions workflow found. OpenCity has headless behavior test modes but no Actions workflow found.
 - None of these repositories has been run on the user's target PC or integrated into Cartoon Studio.
+
+## CC0 asset and animation evidence (not app tests)
+- Official Quaternius pages inspected individually for Universal Base Characters, Modular Character Outfits - Fantasy, Ultimate Modular Men, UAL, UAL2, Downtown City MegaKit, Modular Streets, Ultimate Buildings, Ultimate House Interior, Ultimate Furniture, Cars and Public Transport; each exact page showed CC0.
+- Quaternius FAQ/license confirms packs may be CC0 or QAL; QAL v1.0 prohibits standalone asset redistribution. The selected CC0 pack list is not a blanket approval for other packs.
+- Godot Motion Matching repository has headless test scripts but no Actions workflow; no tests were executed in this research.
+- No CC0 pack was downloaded or imported; no Cartoon Studio scene/render test was performed.
