@@ -118,10 +118,21 @@ class SQLiteJobQueue:
                     """,
                     (row["job_id"], row["scene_id"]),
                 )
-                db.execute(
-                    "UPDATE jobs SET state = 'queued', updated_at = ? WHERE job_id = ? AND cancel_requested = 0",
-                    (timestamp, row["job_id"]),
-                )
+                job = db.execute(
+                    "SELECT cancel_requested FROM jobs WHERE job_id = ?",
+                    (row["job_id"],),
+                ).fetchone()
+                if job and job["cancel_requested"]:
+                    db.execute(
+                        "UPDATE jobs SET state = 'cancelled', updated_at = ? WHERE job_id = ?",
+                        (timestamp, row["job_id"]),
+                    )
+                    self._event(db, row["job_id"], "job_cancelled_after_lease_expiry", timestamp)
+                else:
+                    db.execute(
+                        "UPDATE jobs SET state = 'queued', updated_at = ? WHERE job_id = ?",
+                        (timestamp, row["job_id"]),
+                    )
                 self._event(
                     db,
                     row["job_id"],
@@ -225,11 +236,25 @@ class SQLiteJobQueue:
                 scene_id,
                 {"output_path": output_path},
             )
+            job = db.execute(
+                "SELECT cancel_requested FROM jobs WHERE job_id = ?",
+                (job_id,),
+            ).fetchone()
+            running = db.execute(
+                "SELECT COUNT(*) FROM scene_tasks WHERE job_id = ? AND state = 'running'",
+                (job_id,),
+            ).fetchone()[0]
             remaining = db.execute(
                 "SELECT COUNT(*) FROM scene_tasks WHERE job_id = ? AND state != 'completed'",
                 (job_id,),
             ).fetchone()[0]
-            if remaining == 0:
+            if job["cancel_requested"] and running == 0:
+                db.execute(
+                    "UPDATE jobs SET state = 'cancelled', updated_at = ? WHERE job_id = ?",
+                    (timestamp, job_id),
+                )
+                self._event(db, job_id, "job_cancelled_after_scene", timestamp, scene_id)
+            elif remaining == 0:
                 db.execute(
                     "UPDATE jobs SET state = 'assembling', updated_at = ? WHERE job_id = ?",
                     (timestamp, job_id),

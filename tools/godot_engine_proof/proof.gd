@@ -114,6 +114,7 @@ func _build_animated_character_proxy() -> void:
 
 
 func _save_and_reopen_scene() -> void:
+    _set_saved_scene_ownership(self)
     var packed := PackedScene.new()
     var pack_error := packed.pack(self)
     if pack_error != OK:
@@ -172,3 +173,9 @@ func _finish() -> void:
     file.close()
     print("CARTOON_STUDIO_ENGINE_PROOF_RESULT=", JSON.stringify(report))
     get_tree().quit(0 if passed else 1)
+
+
+func _set_saved_scene_ownership(parent: Node) -> void:
+    for child in parent.get_children():
+        child.owner = self
+        _set_saved_scene_ownership(child)

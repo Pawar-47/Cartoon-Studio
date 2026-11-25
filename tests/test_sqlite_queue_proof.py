@@ -71,3 +71,19 @@ def test_stale_worker_cannot_complete_after_lease_reassignment(tmp_path):
 
     queue.complete_scene("job-4", "scene-1", "worker-b", "valid.mp4", now=407)
     assert queue.snapshot("job-4")["scenes"][0]["output_path"] == "valid.mp4"
+
+
+def test_cancel_during_running_scene_finishes_safely_and_keeps_output(tmp_path):
+    queue = SQLiteJobQueue(tmp_path / "jobs.sqlite3")
+    queue.enqueue("job-5", ["scene-1", "scene-2"], now=500)
+    claim = queue.claim_next("worker-a", now=501)
+    queue.request_cancel("job-5", now=502)
+    assert queue.snapshot("job-5")["job"]["state"] == "rendering"
+
+    queue.complete_scene("job-5", claim["scene_id"], "worker-a", "scene-1.mp4", now=503)
+    snapshot = queue.snapshot("job-5")
+    assert snapshot["job"]["state"] == "cancelled"
+    assert snapshot["scenes"][0]["state"] == "completed"
+    assert snapshot["scenes"][0]["output_path"] == "scene-1.mp4"
+    assert snapshot["scenes"][1]["state"] == "pending"
+    assert queue.claim_next("worker-b", now=504) is None
