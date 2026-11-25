@@ -217,3 +217,43 @@ Initial conclusions:
 
 ### Godot candidate architecture (not frozen)
 Godot 4.7.2 Compatibility renderer is now the leading target-hardware runtime candidate. A possible modular stack is Terrain3D (terrain), Road Generator (roads/lanes), Building Generator (buildings), Roommate (interiors), imported CC0 GLB characters/animation and a Cartoon Studio-owned toon shader. OpenCity is a reference for traffic/pedestrian behavior; Godot AI Animation Toolkit is optional authoring support. This stack still needs target-PC proof, license review, memory/scene-size measurements and a decision on how the existing FastAPI/browser UI communicates with the Godot runtime.
+
+## 2026-11-25 — Godot animation and CC0 asset catalog sweep
+
+### Animation libraries and retargeting
+- Godot 4.7 has built-in humanoid retargeting through `BoneMap` and `SkeletonProfileHumanoid`, plus AnimationPlayer/AnimationTree. This can reuse clips across compatible humanoid rigs without a custom retargeting engine.
+- **Quaternius Universal Animation Library**: official pack page https://quaternius.com/packs/universalanimationlibrary.html explicitly lists CC0 and 120+ retarget-ready humanoid clips (8-direction locomotion, jog/sprint, push, crawl, swim, sit, death, combat/emotes). Exported Godot project is described as tested.
+- **Quaternius Universal Animation Library 2**: https://quaternius.com/packs/universalanimationlibrary2.html explicitly lists CC0 and 130+ complementary clips (melee/armed combos, parkour, farming/fishing, zombie locomotion).
+- **Godot Motion Matching** — https://github.com/ItsAshn/godot-motion-matching: MIT, Godot 4.7, pure GDScript; pose/trajectory matching, inertialization, foot/hand IK, jump/landing, root motion, tags and one-click setup. Latest inspected update 2026-11-10; zero stars, no GitHub Actions workflow found. README claims ~0.1 ms/search; not independently measured. Demo requires the user to supply a humanoid GLB and animation library. Optional future proof only; basic AnimationTree + CC0 clips should come first.
+- **Godot AI Animation Toolkit 2.0.0** remains a separate optional authoring path (MIT, 103 operations, requires Godot AI/MCP). Do not make an AI agent mandatory for runtime animation.
+
+### CC0 character/environment/vehicle packs (verified individually)
+These exact Quaternius pack pages explicitly display CC0; they are safe candidates for commercial use and bundling, subject to retaining each pack's own license file and provenance:
+- Universal Base Characters: https://quaternius.com/packs/universalbasecharacters.html — 6 humanoid base models, male/female proportions, 20 hairstyles, customizable skin/eye colors, ~13k triangles average, retargetable.
+- Modular Character Outfits - Fantasy: https://quaternius.com/packs/modularcharacteroutfitsfantasy.html — 12 outfits / 62 modular parts, compatible with Universal Base Characters.
+- Ultimate Modular Men: https://quaternius.com/packs/ultimatemodularcharacters.html — 11 modular characters, 24 animations.
+- Downtown City MegaKit: https://quaternius.com/packs/downtowncitymegakit.html — 315 listed models / 300+ modular city pieces; Godot project and shader/collision examples.
+- Modular Streets Pack: https://quaternius.com/packs/modularstreets.html — 25 modular street/road pieces.
+- Ultimate Buildings Pack: https://quaternius.com/packs/ultimatetexturedbuildings.html — 76 modular buildings.
+- Ultimate House Interior Pack: https://quaternius.com/packs/ultimatehomeinterior.html — 123 interior models including doors, windows, kitchen and bathroom furniture.
+- Ultimate Furniture Pack: https://quaternius.com/packs/ultimatefurniture.html — 20 furniture essentials.
+- Cars Pack: https://quaternius.com/packs/cars.html — 8 car models.
+- Public Transport Pack: https://quaternius.com/packs/publictransport.html — 12 transport vehicles including ambulance, school bus and train.
+- Stylized Tree Pack: https://quaternius.com/packs/stylizedtrees.html — verify exact page and license at download time before adding; no asset downloaded yet.
+- Universal Animation Library and UAL2: 120+ and 130+ retarget-ready clips, both CC0 as above.
+
+Important licensing distinction: Quaternius FAQ says every pack is either CC0 or QAL. QAL v1.0 permits incorporation into a finished Product but prohibits redistribution of the assets themselves as a standalone asset pack. For Cartoon Studio's built-in reusable asset library, prefer only packs whose exact page explicitly says CC0. Never infer CC0 from the creator/site brand alone.
+
+### Character Studio design reference
+Ducz.CharacterCreator has a useful modular recipe model: JSON character definition, shared humanoid skeleton, swappable body/outfit/accessory parts, material recoloring, preview animation and GLB export. Its repository code has no license file, so do not copy its implementation. Implement an independent version using verified CC0 packs and Cartoon Studio-owned schemas. The packs above provide base bodies/outfits/animations, but face blendshapes/visemes, Pakistani clothing variants and consistent facial expressions still need original work.
+
+### Updated candidate stack
+A Godot-native stack can now cover more of the master brief without requiring Blender at runtime:
+- Godot 4.7.2 Compatibility for scene/runtime/animation/preview.
+- Terrain3D for terrain and foliage (MIT; Compatibility supported).
+- Road Generator for lanes/intersections/traffic (MIT; incomplete).
+- Building Generator for procedural low-poly buildings (MIT; no CI).
+- Roommate for indoor layouts (MPL-2.0; docs-only CI).
+- Quaternius CC0 GLB packs for modular characters, outfits, streets, buildings, interiors, vehicles and animations.
+- Original Cartoon Studio code for persistent character/world recipes, face expressions/visemes, scene assembly, Urdu dialogue, camera/lighting, render jobs and episode production.
+This is only a research candidate; the full stack has not been imported, tested together or benchmarked on the target PC.

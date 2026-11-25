@@ -50,3 +50,9 @@ Godot 4.7.2 Compatibility renderer is now the leading on-paper runtime candidate
 The existing FastAPI/SQLite project/story backend and browser UI must be preserved. P0.5 must compare three integration paths: (1) Godot as the native app/editor shell with FastAPI as local service, (2) Godot as a local renderer sidecar controlled by the browser UI, or (3) Godot Web export embedded as a browser viewport. Each has IPC, memory, windowing and performance trade-offs.
 
 Blender 4.5.17 remains an optional asset-authoring candidate, not the current target-runtime leader. Godot plugins are candidates only; their individual licenses, versions, renderer support, scene sizes and target-PC performance must be verified. No engine is selected at this checkpoint.
+
+## Character and asset strategy candidate — not frozen
+
+A low-hardware Godot Character Studio can be evaluated using a recipe-based model: one stable humanoid skeleton, swappable CC0 head/body/outfit/accessory GLBs, material recoloring, a JSON character definition and GLB export. Quaternius Universal Base Characters, Modular Character Outfits and UAL/UAL2 provide a starting point for bodies, clothing and 250+ animations. Cartoon Studio must create its own persistent IDs, face-expression/viseme controls, Pakistani clothing variants and character consistency layer; no unlicensed character-builder code is copied.
+
+A Godot-native world proof can combine Terrain3D, Road Generator, Building Generator and Roommate with exact CC0 Quaternius city/street/building/interior/vehicle packs. Use LODs and asset instancing; test draw calls, object count, texture memory and scene load time on the HD 5500. No asset is imported into the production repository before engine freeze and per-pack license manifest.

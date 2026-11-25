@@ -61,3 +61,26 @@ No code or asset from these candidates has been copied into Cartoon Studio in th
 | Ducz CharacterCreator | https://github.com/LuanDucate/Ducz.CharacterCreator | No code license found; Quaternius assets credited CC0 | Do not copy code; only separately verified CC0 assets may be used |
 
 No Godot plugin or asset was copied into Cartoon Studio in this research batch.
+
+## Quaternius packs individually verified as CC0 — 2026-11-25
+
+The creator's site now offers both CC0 and QAL packs; only the exact pages below explicitly show CC0. Keep the downloaded `License.txt` with each pack and record the pack version/date/hash in the asset manifest.
+
+| Pack | Exact source | CC0 pack evidence / contents |
+|---|---|---|
+| Universal Base Characters | https://quaternius.com/packs/universalbasecharacters.html | 6 humanoid bases, 20 hairstyles, rigged, retargetable |
+| Modular Character Outfits - Fantasy | https://quaternius.com/packs/modularcharacteroutfitsfantasy.html | 12 outfits / 62 modular parts |
+| Ultimate Modular Men | https://quaternius.com/packs/ultimatemodularcharacters.html | 11 modular characters / 24 animations |
+| Universal Animation Library | https://quaternius.com/packs/universalanimationlibrary.html | 120+ retarget-ready humanoid clips |
+| Universal Animation Library 2 | https://quaternius.com/packs/universalanimationlibrary2.html | 130+ retarget-ready humanoid clips |
+| Downtown City MegaKit | https://quaternius.com/packs/downtowncitymegakit.html | 300+ modular city pieces / 315 listed models |
+| Modular Streets Pack | https://quaternius.com/packs/modularstreets.html | 25 road/street pieces |
+| Ultimate Buildings Pack | https://quaternius.com/packs/ultimatetexturedbuildings.html | 76 buildings |
+| Ultimate House Interior Pack | https://quaternius.com/packs/ultimatehomeinterior.html | 123 interior models |
+| Ultimate Furniture Pack | https://quaternius.com/packs/ultimatefurniture.html | 20 furniture pieces |
+| Cars Pack | https://quaternius.com/packs/cars.html | 8 cars |
+| Public Transport Pack | https://quaternius.com/packs/publictransport.html | 12 public transport vehicles |
+
+QAL v1.0 (https://quaternius.com/license.html, updated 2026-08-28) allows incorporation into a finished product but prohibits redistributing the assets themselves as a standalone pack. For Cartoon Studio's downloadable in-app asset library, prefer CC0 packs to avoid ambiguity. Never label all Quaternius assets CC0 globally.
+
+Ducz.CharacterCreator code remains unlicensed and must not be copied. The Quaternius packs it credits may be used only under their own CC0 pack licenses. No pack has been downloaded or bundled yet.

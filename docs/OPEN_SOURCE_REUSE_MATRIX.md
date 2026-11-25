@@ -46,3 +46,17 @@ Adoption gate: no dependency until exact version, source, compatibility, softwar
 | https://github.com/michaltomczykowski/godot-ai-animation-toolkit | Animation authoring/retarget | MIT; release 2.0.0; Actions #386 success; requires Godot AI/MCP | 103 operations across motion, rigs, IK, retarget, graphs and clip editing | Optional authoring candidate |
 | https://godotlearning.com/shaders/toon-shader | Toon shader sample | CC0 | Godot 4.7, Compatibility support; shadow-casting lights make lit bands too bright in sample | Visual reference; build own shader |
 | https://github.com/LuanDucate/Ducz.CharacterCreator | Modular low-poly character builder | Code license not found; Quaternius assets credited CC0 | Modular characters, 24 animations, GLB export | Do not copy code; independent design reference |
+
+| https://github.com/ItsAshn/godot-motion-matching | Advanced locomotion | MIT; Godot 4.7; no CI found | Pose/trajectory search, inertialization, foot/hand IK, jump/landing; no assets | Optional later proof; basic AnimationTree first |
+| https://quaternius.com/packs/universalbasecharacters.html | Modular character base | CC0 per exact pack page | 6 humanoid bases, 20 hairstyles, ~13k triangles, retargetable | High-priority asset proof |
+| https://quaternius.com/packs/modularcharacteroutfitsfantasy.html | Modular clothing | CC0 per exact pack page | 12 outfits / 62 modular parts | High-priority asset proof; customize local clothing |
+| https://quaternius.com/packs/ultimatemodularcharacters.html | Modular characters | CC0 per exact pack page | 11 characters / 24 animations | High-priority asset proof |
+| https://quaternius.com/packs/universalanimationlibrary.html | Humanoid animation library | CC0 per exact pack page | 120+ retarget-ready clips | High-priority animation proof |
+| https://quaternius.com/packs/universalanimationlibrary2.html | Humanoid animation library | CC0 per exact pack page | 130+ complementary clips | High-priority animation proof |
+| https://quaternius.com/packs/downtowncitymegakit.html | Modular city assets | CC0 per exact pack page | 315 listed / 300+ modular city pieces, Godot project | High-priority environment proof |
+| https://quaternius.com/packs/modularstreets.html | Street/road pieces | CC0 per exact pack page | 25 modular street assets | Asset proof |
+| https://quaternius.com/packs/ultimatetexturedbuildings.html | Buildings | CC0 per exact pack page | 76 modular buildings | Asset proof |
+| https://quaternius.com/packs/ultimatehomeinterior.html | Interior props | CC0 per exact pack page | 123 interior models | Asset proof |
+| https://quaternius.com/packs/ultimatefurniture.html | Furniture | CC0 per exact pack page | 20 furniture pieces | Asset proof |
+| https://quaternius.com/packs/cars.html | Cars | CC0 per exact pack page | 8 car models | Asset proof; rig wheels/doors separately |
+| https://quaternius.com/packs/publictransport.html | Public transport | CC0 per exact pack page | 12 vehicles incl. bus/ambulance/train | Asset proof; rig animation separately |

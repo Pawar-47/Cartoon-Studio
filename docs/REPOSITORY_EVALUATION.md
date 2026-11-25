@@ -162,3 +162,34 @@ MIT, release commit `e8f57c27c0374a6c76fce0e4b5d35d443ba3510b`, upstream CI #386
 ## Updated architecture comparison
 
 Godot 4.7.2 now has the best on-paper target-hardware fit. Blender 4.5 remains useful as an optional asset-authoring path but is below the target CPU minimum and carries Intel driver risk. A Godot-native world stack (Terrain3D + Road Generator + Building Generator + Roommate) is more compatible with the target than Blender-only procedural addons, but must be tested together for renderer compatibility, memory, object counts, license compatibility and visual quality. The existing FastAPI/browser shell must be preserved; P0.5 must decide native Godot UI vs sidecar/local IPC vs browser-hosted preview.
+
+## Candidate S — Godot Motion Matching
+Source: https://github.com/ItsAshn/godot-motion-matching  
+MIT, Godot 4.7, pure GDScript, updated 2026-11-10. Includes pose/trajectory search, inertialization, root motion, foot/hand IK, jump/landing, tags and headless tests. No GitHub Actions workflow found; no animation assets included; author claims about 0.1 ms/search are unverified.
+
+**Decision:** optional advanced animation candidate only after a simple AnimationTree + CC0 animation library works. Do not start with motion matching; it increases data and CPU complexity.
+
+## Candidate T — Quaternius CC0 character and animation packs
+Official pack pages individually verified as CC0:
+- Universal Base Characters: 6 humanoid models, 20 hairstyles, ~13k triangles, rigged and retargetable.
+- Modular Character Outfits - Fantasy: 12 outfits / 62 modular parts.
+- Ultimate Modular Men: 11 modular characters / 24 animations.
+- Universal Animation Library and UAL2: 120+ and 130+ retarget-ready clips.
+- These packs are a strong base for a persistent modular Character Studio, but do not supply all required face expressions, Urdu visemes, Pakistani clothing or full character personalization.
+
+**Decision:** HIGH-PRIORITY asset acquisition and retarget proof after P0.5; retain each exact CC0 pack's license file and provenance. Do not use any Quaternius pack whose current page lists QAL rather than CC0 in the in-app redistributable asset library.
+
+## Candidate U — Quaternius CC0 environment, interior and vehicle packs
+Official pack pages individually verified as CC0:
+- Downtown City MegaKit: 315 listed models / 300+ modular city pieces, Godot project/shader examples.
+- Modular Streets: 25 street pieces.
+- Ultimate Buildings: 76 modular buildings.
+- Ultimate House Interior: 123 interior models.
+- Ultimate Furniture: 20 furniture pieces.
+- Cars Pack: 8 car models.
+- Public Transport Pack: 12 vehicles including ambulance, school bus and train.
+
+**Decision:** HIGH-PRIORITY asset pack proof. Use these as modular starting assets, not as final Pakistani environment art without local adaptation. Check exact downloaded pack license and file provenance.
+
+## Revised Godot implementation hypothesis
+A low-hardware-friendly path may use Godot 4.7.2 Compatibility plus the verified MIT plugins and exact CC0 Quaternius packs. A custom recipe-based character editor can assemble modular GLB parts on a shared skeleton, store JSON project data and retarget the CC0 animation libraries. Godot-native world plugins can generate terrain/roads/buildings/interiors, while the asset packs provide detailed modular pieces. This preserves the current FastAPI/story backend and avoids requiring Blender on the user's target PC. The approach remains unselected pending target-PC proof and license review.
