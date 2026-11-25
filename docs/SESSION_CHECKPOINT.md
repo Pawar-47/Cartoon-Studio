@@ -3,7 +3,7 @@
 Updated: 2026-11-25
 Repository: https://github.com/Pawar-47/Cartoon-Studio
 Branch: main
-Latest implementation checkpoint: `81972eae6e5cafb4756695d385425d1d1f1a63a8` (quick CI #356 passed).
+Latest implementation checkpoint: `b4dd8237e6369bbb74c58ef844e0fac5c9667c77` (modular Character Studio batch merged; main CI run 45653650908 passed).
 
 ## Mission and operating rules
 
@@ -69,10 +69,10 @@ Two real third-party assets have passed native Godot acceptance for tested scena
 
 ## Next substantial implementation batch
 
-1. Compare browser retarget preview motion against the authoritative Godot scene across the accepted humanoid, bone-roll and RobotExpressive fixtures.
-2. Add more third-party humanoid rig families with varied rest axes and hierarchy layouts.
-3. Perform interactive browser acceptance of RobotExpressive facial sliders, reset and save/reopen.
-4. Continue deterministic export and animation round-trip after broader acceptance.
+1. Perform interactive browser acceptance of the modular builder: select each slot, assemble, preview, save the character profile, reopen it and restore its source recipe.
+2. Verify animation playback and visible skin deformation on the exported assembled GLB, not only clip-name preservation.
+3. Extend genuine geometric customization (proportions, face, hair/accessory attachment) using compatible mesh/morph/rig operations; do not treat text-only profile fields as implemented geometry editing.
+4. Continue browser-versus-Godot retarget-preview comparison and broaden rig families without weakening strict compatibility checks.
 
 ## Later phases
 

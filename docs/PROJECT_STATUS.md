@@ -4,7 +4,7 @@
 
 - Repository: Pawar-47/Cartoon-Studio
 - Branch: main
-- Latest implementation checkpoint: `81972eae6e5cafb4756695d385425d1d1f1a63a8` (quick CI #356 passed).
+- Latest implementation checkpoint: `b4dd8237e6369bbb74c58ef844e0fac5c9667c77` (PR #3 merged; modular assembly integration and main CI passed).
 - Phase 0: COMPLETE.
 - Phase 1: COMPLETE.
 - Phase 2 — Character Studio: ACTIVE; import, preview, profiles, appearance recipes, rig diagnostics and the first user-facing imported-rig retarget workflow are implemented. Phase 2 is not complete.
@@ -70,8 +70,10 @@ Godot may normalize raw skin-joint ordering during import. The application uses 
 - Physical-PC testing is deferred to Phase 8 and is not a development gate.
 - GitHub main remains the sole project source of truth.
 
-## Active P2.2 direction — original modular character creation (2026-11-25)
+## Active P2.2 direction — modular character creator (2026-11-25)
 
-- Latest verified browser-retarget checkpoint: Windows CI #362 PASSED on commit 3b4846bdd5b673311129dda6c08bcb232b5bf414.
-- The master brief's P2.2 requirement is original stylized character creation, not just importing and retargeting existing GLBs. The current batch adds a pinned Quaternius CC0 modular library catalog, lazy-download cache and model API routes, with exact byte-size/Git blob SHA-1 verification.
-- The first library contains 21 outfit GLBs (34.92 MiB), four swappable parts and 24 animations per model. Three representative models are being checked for the shared 62-bone rig. The creator is not complete until Godot assembly/export, browser customization and versioned recipe save/reopen are implemented and tested.
+- Main HEAD: `b4dd8237e6369bbb74c58ef844e0fac5c9667c77`; PR #3 merged. Feature CI `45653413604` and merge CI `45653650908` both passed.
+- The pinned Quaternius Ultimate Modular Men/Women CC0 library contains 21 outfit GLBs (34.92 MiB) with four candidate slots and 24 animation clips per model. Downloads are lazy, cached and verified against the pinned source commit, byte size and Git blob SHA-1.
+- Character Studio now offers head/body/legs/feet selectors, filtered by skinned mesh slot candidates. Godot performs exact shared-skeleton, hierarchy, rest-pose, rig-transform and skin-bind checks; it removes base skinned outfit meshes, attaches the selected meshes to the base skeleton, exports and re-imports the GLB, then verifies the four selected meshes and base animation names.
+- A real CI integration test combines Beach head, Casual_2 body, Farmer legs and King feet on the Male Adventurer base and verifies all 24 base animation clips survive. Assembly manifests persist the base/part recipe and allow source restoration.
+- Phase 2 remains ACTIVE; P2.2 remains PARTIAL. Interactive browser visual acceptance, visible animation/skin deformation acceptance and true geometry/face/proportion/accessory authoring remain open. Strict shared-rig matching is supported; automatic conversion of arbitrary incompatible rigs is not claimed.

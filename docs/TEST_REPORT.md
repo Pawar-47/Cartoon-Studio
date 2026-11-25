@@ -210,3 +210,16 @@ Added API coverage for saving morph-target weights and rejecting values outside 
 - Artifacts: Windows installer 103,861,406 bytes; bootstrap 819,154 bytes; dependency SBOM 32,632 bytes.
 - The Mixamo-named animated-source fixture and distinct target pose-transfer test passed.
 - The browser retarget-preview API and UI are in the current implementation batch; this new code has not yet been tested by CI.
+
+
+## Phase 2 — modular character assembly and mixed-outfit round-trip — 2026-11-25
+
+- Feature integration commit: `67f31aed09a6b54e5a71869dd4ec5c8fe1d65386`.
+- Feature CI: [SUCCESS](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45653413604).
+- Merge commit: `b4dd8237e6369bbb74c58ef844e0fac5c9667c77`; main CI: [SUCCESS](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45653650908).
+- Added a native Godot integration test using the pinned Quaternius CC0 outfits: Male Adventurer base, Beach head, Casual_2 body, Farmer legs and King feet. The worker imports all four sources, checks their shared skeleton, bone hierarchy/rest pose, rig transform and skin-bind references, then assembles the selected meshes on the base skeleton.
+- Base skinned outfit meshes are removed before selected parts are attached, preventing the original outfit from remaining underneath the assembled outfit.
+- The worker exports the assembled GLB, re-imports it, checks that all four named modular meshes remain, and verifies the complete base animation-name set. The integration test confirms the base's 24 animation clips are preserved.
+- The API stores the base/part recipe in the versioned asset manifest; the Character Studio builder exposes slot-filtered selectors and restores saved assembly sources through manifest endpoints.
+- A separate fix validates mesh skeleton paths relative to the cloned MeshInstance3D and rejects using the same source mesh for multiple slots.
+- Limitations: CI proves the native mixed-outfit assembly and clip preservation, not interactive browser visual quality, arbitrary-rig conversion, animation deformation playback, mesh sculpting, new rig authoring, texture painting or final Character Studio acceptance. Phase 2 remains active.

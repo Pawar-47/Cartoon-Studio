@@ -280,3 +280,14 @@ The next P2.2 sub-phase is the **Modular Character Builder**:
 - Model downloads are lazy, cached in the per-user data directory and checked against the immutable source commit, exact byte size and Git blob SHA-1 before use.
 
 **Implementation order:** (1) verified CC0 asset library and catalog API, (2) native Godot assembly/export of four selected parts with one shared skeleton and all animation clips, (3) browser builder controls and preview, (4) versioned creation-recipe save/reopen. The phase remains PARTIAL until the assembled GLB, recipe round-trip and usable creator UI pass automated acceptance.
+
+
+## 2026-11-25 — P2.2 modular assembly milestone accepted
+
+- Merged PR #3 as `b4dd8237e6369bbb74c58ef844e0fac5c9667c77`; main-branch CI run `45653650908` passed.
+- The pinned Quaternius CC0 library now feeds a first-party Character Studio builder with head/body/legs/feet selectors. Slot candidate labels constrain the corresponding selector; only skinned meshes with resolvable skeletons are offered.
+- The Godot worker assembles selected parts onto the base rig only when bone count/order/names, parent hierarchy, rest transforms and rig transforms match. Skin bind references are checked; incompatible rigs are rejected rather than silently remapped. Existing skinned outfit meshes on the base are removed so the selected outfit is what remains.
+- The exported GLB is re-imported and checked for all four named modular meshes and the complete base animation-name set. The real integration test combines Beach head, Casual_2 body, Farmer legs and King feet on the Male Adventurer base and verifies preservation of its 24 animation clips.
+- The assembled asset manifest stores the base/part recipe and supports restoring its source GLBs into the builder. The profile remains versioned and project-scoped.
+- Evidence: [feature integration CI](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45653413604) and [main merge CI](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45653650908), both SUCCESS.
+- Phase 2 remains ACTIVE and P2.2 remains PARTIAL. This is not arbitrary-rig retargeting, mesh sculpting, new rig authoring, texture painting or final visual acceptance. The next batch must validate the browser builder and improve real geometric customization before P2.2 can exit.
