@@ -82,6 +82,25 @@ def profile_payload(asset_path):
     }
 
 
+def test_browser_preview_modules_are_served_from_local_static_assets():
+    client = TestClient(main.app)
+    page = client.get("/characters")
+    assert page.status_code == 200
+    assert 'type="importmap"' in page.text
+    assert "/static/vendor/three/build/three.module.js" in page.text
+
+    for path in (
+        "/static/character-preview.js",
+        "/static/vendor/three/build/three.module.js",
+        "/static/vendor/three/build/three.core.js",
+        "/static/vendor/three/examples/jsm/loaders/GLTFLoader.js",
+        "/static/vendor/three/examples/jsm/controls/OrbitControls.js",
+    ):
+        response = client.get(path)
+        assert response.status_code == 200, path
+        assert len(response.content) > 1000, path
+
+
 def test_character_studio_page_is_served():
     response = TestClient(main.app).get("/characters")
     assert response.status_code == 200
