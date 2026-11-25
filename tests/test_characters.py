@@ -151,6 +151,8 @@ def test_character_studio_page_is_served():
     assert 'valid_with_ik_foot_hierarchy' in script.text
     assert "morph_target_count" in script.text
     assert "appearanceRecipe,{playAnimations:false}" in script.text
+    preview = TestClient(main.app).get("/static/character-preview.js")
+    assert preview.status_code == 200
     assert 'meshName: node.name || "Mesh"' in preview.text
     assert 'target.meshName?target.meshName+" · ":""' in script.text
     assert "morph weight" in script.text
