@@ -122,6 +122,72 @@ class GodotEngineAdapter:
         )
 
 
+
+    def assemble_modular_character(
+        self,
+        base_path: Path,
+        parts: list[dict[str, str]],
+        output_path: Path,
+        allowed_root: Path,
+        timeout_seconds: float | None = None,
+        cancel_event: threading.Event | None = None,
+    ) -> dict[str, Any]:
+        root = Path(allowed_root).resolve(strict=False)
+        base = Path(base_path).resolve(strict=True)
+        if base == root or root not in base.parents:
+            raise EnginePathError("Base GLB path escapes the allowed project directory.")
+        if base.suffix.lower() != ".glb" or not base.is_file():
+            raise EnginePathError("The base character must be an existing .glb file.")
+        if base.stat().st_size > MAX_GLB_BYTES:
+            raise EnginePathError("The base GLB exceeds the 512 MiB assembly limit.")
+        output = Path(output_path).resolve(strict=False)
+        if output == root or root not in output.parents:
+            raise EnginePathError("Assembly output escapes the allowed project directory.")
+        if output.suffix.lower() != ".glb":
+            raise EnginePathError("Assembly output must use the .glb extension.")
+        if output.exists():
+            raise EnginePathError("Refusing to overwrite an existing assembly.")
+        required_slots = {"head", "body", "legs", "feet"}
+        if len(parts) != 4 or {part.get("slot") for part in parts} != required_slots:
+            raise EnginePathError(
+                "Choose exactly one mesh for each slot: head, body, legs and feet."
+            )
+        validated_parts: list[dict[str, str]] = []
+        selected_meshes: set[tuple[str, str]] = set()
+        for part in parts:
+            source = Path(part.get("source_path", "")).resolve(strict=True)
+            if source == root or root not in source.parents:
+                raise EnginePathError("A modular part path escapes the allowed project directory.")
+            if source.suffix.lower() != ".glb" or not source.is_file():
+                raise EnginePathError("Every modular part must come from an existing .glb file.")
+            if source.stat().st_size > MAX_GLB_BYTES:
+                raise EnginePathError("A modular part GLB exceeds the 512 MiB assembly limit.")
+            mesh_path = str(part.get("mesh_path", "")).strip()
+            if not mesh_path or len(mesh_path) > 1024:
+                raise EnginePathError("Every modular part requires a valid mesh node path.")
+            mesh_key = (str(source), mesh_path)
+            if mesh_key in selected_meshes:
+                raise EnginePathError("The same source mesh cannot fill multiple modular slots.")
+            selected_meshes.add(mesh_key)
+            validated_parts.append({
+                "slot": str(part["slot"]),
+                "source_path": str(source),
+                "mesh_path": mesh_path,
+            })
+        output.parent.mkdir(parents=True, exist_ok=True)
+        return self._run(
+            "assemble_modular_character",
+            {
+                "project_root": str(root),
+                "base_path": str(base),
+                "output_path": str(output),
+                "parts": validated_parts,
+            },
+            timeout_seconds=timeout_seconds,
+            cancel_event=cancel_event,
+        )
+
+
     def retarget_glb_pair(
         self,
         source_path: Path,

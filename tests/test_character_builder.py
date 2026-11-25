@@ -4,8 +4,8 @@ import hashlib
 import io
 from pathlib import Path
 
-from fastapi.testclient import TestClient
 import pytest
+from fastapi.testclient import TestClient
 
 from app import main
 from app.character_builder import (

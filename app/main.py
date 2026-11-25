@@ -103,6 +103,17 @@ class GlbInspectRequest(BaseModel):
     relative_path: str = Field(min_length=1, max_length=512)
 
 
+class ModularPartInput(BaseModel):
+    slot: str = Field(min_length=1, max_length=12)
+    relative_path: str = Field(min_length=1, max_length=512)
+    mesh_path: str = Field(min_length=1, max_length=1024)
+
+
+class ModularAssemblyInput(BaseModel):
+    base_relative_path: str = Field(min_length=1, max_length=512)
+    parts: list[ModularPartInput] = Field(min_length=4, max_length=4)
+
+
 class CharacterRetargetInput(BaseModel):
     source_character_id: str = Field(min_length=1, max_length=64)
     target_character_id: str = Field(min_length=1, max_length=64)
@@ -337,6 +348,124 @@ def inspect_project_glb(
     except EngineError as error:
         raise HTTPException(status_code=502, detail=str(error)) from error
 
+
+
+@app.post("/api/projects/{project_id}/modular-assemblies", status_code=201)
+def create_modular_assembly(
+    project_id: str,
+    payload: ModularAssemblyInput,
+) -> dict[str, Any]:
+    initialize_database()
+    with connect_db() as connection:
+        project = connection.execute(
+            "SELECT id FROM projects WHERE id = ?", (project_id,)
+        ).fetchone()
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    slots = [part.slot for part in payload.parts]
+    if set(slots) != {"head", "body", "legs", "feet"} or len(set(slots)) != 4:
+        raise HTTPException(
+            status_code=422,
+            detail="Choose exactly one mesh for each slot: head, body, legs and feet.",
+        )
+    try:
+        project_root = project_directory(DATA_DIR, project_id)
+        base_path = resolve_project_relative(
+            DATA_DIR, project_id, payload.base_relative_path
+        )
+        parts = [
+            {
+                "slot": part.slot,
+                "source_path": str(
+                    resolve_project_relative(DATA_DIR, project_id, part.relative_path)
+                ),
+                "mesh_path": part.mesh_path,
+            }
+            for part in payload.parts
+        ]
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    if base_path.suffix.lower() != ".glb" or not base_path.is_file():
+        raise HTTPException(status_code=404, detail="Base character GLB was not found.")
+    if any(not Path(part["source_path"]).is_file() for part in parts):
+        raise HTTPException(status_code=404, detail="One or more modular part GLBs were not found.")
+    asset_id = str(uuid.uuid4())
+    relative_path = f"assets/characters/{asset_id}.glb"
+    destination = resolve_project_relative(DATA_DIR, project_id, relative_path)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        assembly = get_engine_adapter().assemble_modular_character(
+            base_path,
+            parts,
+            destination,
+            allowed_root=project_root,
+        )
+        container = _validate_glb_container(destination)
+        inspection = assembly
+        if not assembly.get("assembly_verified") or not assembly.get("animation_preserved"):
+            raise HTTPException(
+                status_code=422,
+                detail="Godot did not verify the assembled character and animation preservation.",
+            )
+        now = datetime.now(UTC).isoformat()
+        asset_data = {
+            "original_filename": "modular-character.glb",
+            "relative_path": relative_path,
+            "container": container,
+            "engine_inspection": inspection,
+            "rig_analysis": analyze_rig(inspection),
+            "rig_ready": int(inspection.get("skeleton_count", 0)) > 0,
+            "animation_ready": int(inspection.get("animation_count", 0)) > 0,
+            "assembly": {
+                "base_relative_path": payload.base_relative_path,
+                "parts": [
+                    {
+                        "slot": part.slot,
+                        "relative_path": part.relative_path,
+                        "mesh_path": part.mesh_path,
+                    }
+                    for part in payload.parts
+                ],
+                "added_parts": assembly.get("added_parts", []),
+                "base_skinned_meshes_removed": assembly.get(
+                    "base_skinned_meshes_removed", []
+                ),
+                "animation_preserved": True,
+                "verified": True,
+            },
+        }
+        manifest = make_envelope("character_asset", asset_id, asset_data, now, now, 1)
+        manifest_path = resolve_project_relative(
+            DATA_DIR, project_id, f"assets/characters/{asset_id}.json"
+        )
+        digest = write_json_atomic(manifest_path, manifest)
+        with connect_db() as connection:
+            upsert_document_index(
+                connection,
+                project_id,
+                manifest,
+                f"assets/characters/{asset_id}.json",
+                digest,
+            )
+        return {"asset_id": asset_id, **asset_data}
+    except EngineUnavailableError as error:
+        destination.unlink(missing_ok=True)
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    except EngineTimeoutError as error:
+        destination.unlink(missing_ok=True)
+        raise HTTPException(status_code=504, detail=str(error)) from error
+    except EnginePathError as error:
+        destination.unlink(missing_ok=True)
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    except EngineError as error:
+        destination.unlink(missing_ok=True)
+        raise HTTPException(status_code=422, detail=f"Modular assembly failed: {error}") from error
+    except ValueError as error:
+        destination.unlink(missing_ok=True)
+        raise HTTPException(status_code=422, detail=f"Invalid assembled GLB: {error}") from error
+    except BaseException:
+        destination.unlink(missing_ok=True)
+        raise
 
 
 
@@ -652,6 +781,35 @@ def get_character_asset(project_id: str, asset_id: str) -> FileResponse:
         media_type="model/gltf-binary",
         filename=manifest["data"].get("original_filename", "character.glb"),
     )
+
+
+@app.get("/api/projects/{project_id}/character-assets/{asset_id}/manifest")
+def get_character_asset_manifest(project_id: str, asset_id: str) -> dict[str, Any]:
+    initialize_database()
+    with connect_db() as connection:
+        project = connection.execute(
+            "SELECT id FROM projects WHERE id = ?", (project_id,)
+        ).fetchone()
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    try:
+        safe_asset_id = str(uuid.UUID(asset_id))
+        manifest_path = resolve_project_relative(
+            DATA_DIR, project_id, f"assets/characters/{safe_asset_id}.json"
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail="Invalid character asset ID.") from error
+    if not manifest_path.is_file():
+        raise HTTPException(status_code=404, detail="Character asset manifest not found.")
+    manifest = read_json(manifest_path)
+    if (
+        manifest.get("document_type") != "character_asset"
+        or manifest.get("id") != safe_asset_id
+        or not isinstance(manifest.get("data"), dict)
+    ):
+        raise HTTPException(status_code=409, detail="Character asset manifest is invalid.")
+    return {"asset_id": safe_asset_id, **manifest["data"]}
+
 
 @app.post("/api/projects/{project_id}/retargets", status_code=201)
 def create_character_retarget(

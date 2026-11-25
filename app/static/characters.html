@@ -15,7 +15,31 @@
  <label>Active project<select id="project-select"><option value="">Loading projects…</option></select></label>
  <span id="project-status" class="inline-status">Choose a project to begin.</span>
 </section>
-<div class="character-grid">
+<section class="panel library-panel">
+  <span class="eyebrow">00 / START FROM THE CC0 LIBRARY</span><h2>Character model library</h2>
+  <p class="helper">Browse 21 pinned, integrity-verified modular character outfits. Preview a complete source model, then import it into this project to create a character. These are complete outfit models; independent part swapping is being built as the next assembly layer.</p>
+  <div class="library-controls">
+   <label>Character pack<select id="library-pack"><option value="Male">Ultimate Modular Men</option><option value="Female">Ultimate Modular Women</option></select></label>
+   <label>Outfit<select id="library-outfit"><option value="">Loading library…</option></select></label>
+   <div class="library-actions"><button id="library-preview" class="secondary" type="button" disabled>Preview outfit</button><button id="library-import" type="button" disabled>Import selected outfit</button></div>
+  </div>
+  <p id="library-status" class="inline-status" role="status">Loading verified CC0 model catalog…</p>
+  <p class="library-license">Source: Quaternius Ultimate Modular Characters · CC0 1.0 · pinned upstream revision.</p>
+ </section>
+ <section class="panel assembly-panel">
+  <span class="eyebrow">00A / MODULAR CHARACTER ASSEMBLY</span><h2>Build a character from four interchangeable parts</h2>
+  <p class="helper">Import source outfits into this project, then choose a base rig and one skinned mesh for each slot. Godot only combines parts whose bone order, hierarchy, rest pose and rig transform match exactly. The base character's animation clips are retained and checked after GLB export.</p>
+  <div class="form-grid">
+   <label>Base character rig<select id="assembly-base"><option value="">Import a rigged character first…</option></select></label>
+   <label>Head mesh<select id="assembly-head"><option value="">Import a skinned mesh first…</option></select></label>
+   <label>Body mesh<select id="assembly-body"><option value="">Import a skinned mesh first…</option></select></label>
+   <label>Legs mesh<select id="assembly-legs"><option value="">Import a skinned mesh first…</option></select></label>
+   <label>Feet mesh<select id="assembly-feet"><option value="">Import a skinned mesh first…</option></select></label>
+  </div>
+  <button id="assemble-character" type="button" disabled>Assemble and verify character</button>
+  <p id="assembly-status" class="inline-status" role="status">Import source GLBs into the active project to populate the part selectors.</p>
+ </section>
+ <div class="character-grid">
  <section class="panel">
   <span class="eyebrow">01 / MODEL IMPORT</span><h2>Import a 3D character</h2>
   <p class="helper">Supported in this batch: binary glTF (.glb). The file is stored inside this project's local assets folder and inspected by the bundled Godot worker.</p>

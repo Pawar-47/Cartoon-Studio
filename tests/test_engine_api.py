@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import struct
 import uuid
 from datetime import UTC, datetime
 
@@ -32,6 +33,33 @@ class _FakeEngineAdapter:
             "animation_player_count": 0,
             "node_count": 2,
             "source_path": str(source_path),
+        }
+
+
+class _FakeAssemblyAdapter(_FakeEngineAdapter):
+    def assemble_modular_character(self, base_path, parts, output_path, allowed_root):
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        json_chunk = json.dumps({"asset": {"version": "2.0"}}).encode("utf-8")
+        json_chunk += b" " * ((-len(json_chunk)) % 4)
+        total_length = 12 + 8 + len(json_chunk)
+        output_path.write_bytes(
+            b"glTF"
+            + struct.pack("<II", 2, total_length)
+            + struct.pack("<II", len(json_chunk), 0x4E4F534A)
+            + json_chunk
+        )
+        return {
+            "ok": True,
+            "assembly_verified": True,
+            "animation_preserved": True,
+            "added_parts": [{"slot": part["slot"]} for part in parts],
+            "mesh_count": 4,
+            "mesh_inventory": [],
+            "skeleton_count": 1,
+            "animation_count": 2,
+            "animation_names": ["Idle", "Walk"],
+            "node_count": 8,
+            "morph_targets": [],
         }
 
 
@@ -71,6 +99,64 @@ def test_engine_inspect_endpoint_rejects_project_path_traversal(tmp_path, monkey
     response = client.post(
         f"/api/projects/{project_id}/engine/inspect-glb",
         json={"relative_path": "../../outside.glb"},
+    )
+    assert response.status_code == 422
+
+
+def test_modular_assembly_api_validates_slots_and_persists_verified_asset(
+    tmp_path, monkeypatch
+):
+    project_id = _new_project(tmp_path, monkeypatch)
+    monkeypatch.setattr(main, "get_engine_adapter", _FakeAssemblyAdapter)
+    source = tmp_path / "projects" / project_id / "assets" / "source.glb"
+    source.parent.mkdir(parents=True)
+    source.write_bytes(b"source")
+    parts = [
+        {
+            "slot": slot,
+            "relative_path": "assets/source.glb",
+            "mesh_path": f"Character/{slot}",
+        }
+        for slot in ("head", "body", "legs", "feet")
+    ]
+    response = client.post(
+        f"/api/projects/{project_id}/modular-assemblies",
+        json={"base_relative_path": "assets/source.glb", "parts": parts},
+    )
+    assert response.status_code == 201
+    result = response.json()
+    assert result["assembly"]["verified"] is True
+    assert result["assembly"]["animation_preserved"] is True
+    assert {part["slot"] for part in result["assembly"]["added_parts"]} == {
+        "head", "body", "legs", "feet"
+    }
+    assert result["engine_inspection"]["animation_names"] == ["Idle", "Walk"]
+    download = client.get(
+        f"/api/projects/{project_id}/character-assets/{result['asset_id']}"
+    )
+    assert download.status_code == 200
+    assert download.content.startswith(b"glTF")
+    manifest = client.get(
+        f"/api/projects/{project_id}/character-assets/{result['asset_id']}/manifest"
+    )
+    assert manifest.status_code == 200
+    assert manifest.json()["assembly"]["verified"] is True
+    assert manifest.json()["assembly"]["parts"][0]["slot"] in {
+        "head", "body", "legs", "feet"
+    }
+
+
+def test_modular_assembly_api_rejects_duplicate_or_missing_slots(tmp_path, monkeypatch):
+    project_id = _new_project(tmp_path, monkeypatch)
+    response = client.post(
+        f"/api/projects/{project_id}/modular-assemblies",
+        json={
+            "base_relative_path": "assets/source.glb",
+            "parts": [
+                {"slot": slot, "relative_path": "assets/source.glb", "mesh_path": "Root/Mesh"}
+                for slot in ("head", "body", "legs", "legs")
+            ],
+        },
     )
     assert response.status_code == 422
 
