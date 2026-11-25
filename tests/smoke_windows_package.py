@@ -23,7 +23,8 @@ def request(base: str, path: str, method: str = "GET", payload: dict | None = No
     )
     with urllib.request.urlopen(req, timeout=5) as response:
         raw = response.read()
-        return response.status, json.loads(raw) if raw.startswith(b"{") or raw.startswith(b"[") else raw
+        is_json = raw.startswith((b"{", b"["))
+        return response.status, json.loads(raw) if is_json else raw
 
 
 def main() -> int:
@@ -39,7 +40,11 @@ def main() -> int:
         extracted.mkdir()
         with zipfile.ZipFile(archive) as bundle:
             bad_member = next(
-                (name for name in bundle.namelist() if Path(name).is_absolute() or ".." in Path(name).parts),
+                (
+                    name
+                    for name in bundle.namelist()
+                    if Path(name).is_absolute() or ".." in Path(name).parts
+                ),
                 None,
             )
             if bad_member:
@@ -98,7 +103,9 @@ def main() -> int:
                 except (OSError, urllib.error.URLError):
                     time.sleep(0.25)
             else:
-                raise AssertionError("Packaged application did not become healthy within 10 seconds")
+                raise AssertionError(
+                    "Packaged application did not become healthy within 10 seconds"
+                )
 
             status, dashboard = request(base, "/")
             assert status == 200 and b"Cartoon Studio" in dashboard
@@ -150,7 +157,10 @@ def main() -> int:
                 process.kill()
                 process.wait(timeout=5)
 
-    print("Windows bootstrap smoke test passed: archive integrity, extracted launch, HTTP UI/API, project save/open and restart persistence.")
+    print(
+        "Windows bootstrap smoke test passed: archive integrity, extracted launch, "
+        "HTTP UI/API, project save/open and restart persistence."
+    )
     return 0
 
 
