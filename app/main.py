@@ -779,6 +779,35 @@ def get_character_asset(project_id: str, asset_id: str) -> FileResponse:
         filename=manifest["data"].get("original_filename", "character.glb"),
     )
 
+
+@app.get("/api/projects/{project_id}/character-assets/{asset_id}/manifest")
+def get_character_asset_manifest(project_id: str, asset_id: str) -> dict[str, Any]:
+    initialize_database()
+    with connect_db() as connection:
+        project = connection.execute(
+            "SELECT id FROM projects WHERE id = ?", (project_id,)
+        ).fetchone()
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    try:
+        safe_asset_id = str(uuid.UUID(asset_id))
+        manifest_path = resolve_project_relative(
+            DATA_DIR, project_id, f"assets/characters/{safe_asset_id}.json"
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail="Invalid character asset ID.") from error
+    if not manifest_path.is_file():
+        raise HTTPException(status_code=404, detail="Character asset manifest not found.")
+    manifest = read_json(manifest_path)
+    if (
+        manifest.get("document_type") != "character_asset"
+        or manifest.get("id") != safe_asset_id
+        or not isinstance(manifest.get("data"), dict)
+    ):
+        raise HTTPException(status_code=409, detail="Character asset manifest is invalid.")
+    return {"asset_id": safe_asset_id, **manifest["data"]}
+
+
 @app.post("/api/projects/{project_id}/retargets", status_code=201)
 def create_character_retarget(
     project_id: str, payload: CharacterRetargetInput
