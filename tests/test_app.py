@@ -224,11 +224,21 @@ def test_story_plan_is_saved_as_portable_episode_document(tmp_path, monkeypatch)
     assert document["document_type"] == "episode"
     assert document["revision"] == 1
     assert document["data"]["title"] == "Market Mix-up"
+    project_document = json.loads((tmp_path / "projects" / project_id / "project.json").read_text(encoding="utf-8"))
+    assert episode_id in project_document["data"]["references"]["episodes"]
 
     reopened = client.get(f"/api/projects/{project_id}/story")
     assert reopened.status_code == 200
     assert reopened.json()["episode_id"] == episode_id
     assert reopened.json()["plan"]["title"] == "Market Mix-up"
+
+    with main.connect_db() as connection:
+        connection.execute("DELETE FROM story_plans WHERE project_id = ?", (project_id,))
+    main._INITIALIZED_DB_KEY = None
+    main.initialize_database()
+    recovered = client.get(f"/api/projects/{project_id}/story")
+    assert recovered.status_code == 200
+    assert recovered.json()["plan"]["title"] == "Market Mix-up"
 
 
 def test_legacy_database_migrates_and_preserves_project_and_story(tmp_path, monkeypatch):

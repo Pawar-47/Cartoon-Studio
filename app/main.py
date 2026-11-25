@@ -25,6 +25,7 @@ from app.storage import (
     resolve_project_relative,
     upsert_document_index,
     write_json_atomic,
+    sync_episode_reference,
 )
 from app.storage import initialize_database as migrate_database
 from app.story import EpisodePlan, StoryPromptRequest, build_story_prompt
@@ -228,6 +229,7 @@ def save_story_plan(project_id: str, plan: EpisodePlan) -> dict[str, Any]:
         upsert_document_index(
             connection, project_id, episode_document, relative_path, digest
         )
+        sync_episode_reference(connection, DATA_DIR, project_id, episode_document)
     return {
         "project_id": project_id,
         "episode_id": episode_id,

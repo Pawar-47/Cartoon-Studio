@@ -283,6 +283,35 @@ def upsert_document_index(
     )
 
 
+def sync_episode_reference(
+    connection: sqlite3.Connection,
+    data_dir: Path,
+    project_id: str,
+    episode_document: dict[str, Any],
+) -> None:
+    project_path = project_directory(data_dir, project_id) / "project.json"
+    if not project_path.exists():
+        return
+    project_document = read_json(project_path)
+    references = project_document.setdefault("data", {}).setdefault("references", {})
+    episode_ids = references.setdefault("episodes", [])
+    if episode_document["id"] in episode_ids:
+        return
+    episode_ids.append(episode_document["id"])
+    project_document["revision"] = int(project_document.get("revision", 1)) + 1
+    episode_updated = episode_document["updated_at"]
+    if episode_updated > project_document.get("updated_at", ""):
+        project_document["updated_at"] = episode_updated
+    digest = write_json_atomic(project_path, project_document)
+    upsert_document_index(
+        connection, project_id, project_document, "project.json", digest
+    )
+    connection.execute(
+        "UPDATE projects SET updated_at = ? WHERE id = ?",
+        (project_document["updated_at"], project_id),
+    )
+
+
 def _file_digest(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -390,6 +419,7 @@ def reconcile_project_files(data_dir: Path, db_path: Path) -> None:
                         indexed_episode["relative_path"],
                         digest,
                     )
+                    sync_episode_reference(connection, data_dir, project["id"], episode_document)
                 elif episode_path.exists():
                     episode_document = read_json(episode_path)
                     if (
@@ -417,6 +447,7 @@ def reconcile_project_files(data_dir: Path, db_path: Path) -> None:
                             indexed_episode["relative_path"],
                             _file_digest(episode_path),
                         )
+                        sync_episode_reference(connection, data_dir, project["id"], episode_document)
                 continue
 
             episode_files = sorted(episode_dir.glob("*.json"))
@@ -449,6 +480,7 @@ def reconcile_project_files(data_dir: Path, db_path: Path) -> None:
                             episode_document["updated_at"],
                         ),
                     )
+                    sync_episode_reference(connection, data_dir, project["id"], episode_document)
                     recovered = True
                     break
 
@@ -470,3 +502,4 @@ def reconcile_project_files(data_dir: Path, db_path: Path) -> None:
             upsert_document_index(
                 connection, project["id"], episode_document, relative_path, digest
             )
+            sync_episode_reference(connection, data_dir, project["id"], episode_document)
