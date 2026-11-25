@@ -38,6 +38,12 @@ jobs:
         run: uv run --locked python scripts/fetch_robot_expressive_fixture.py --output-dir tests/fixtures/third_party
       - name: Lint
         run: uv run --locked ruff check app tests scripts/fetch_godot_runtime.py scripts/fetch_robot_expressive_fixture.py scripts/augment_sbom.py
+      - uses: actions/setup-node@v4
+        name: Set up Node
+        with:
+          node-version: "22"
+      - name: Check browser JavaScript syntax
+        run: node --experimental-default-type=module --check app/static/characters.js
       - name: Compile Python
         run: uv run --locked python -m compileall -q app scripts
       - name: Test
