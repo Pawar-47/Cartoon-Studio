@@ -262,7 +262,7 @@ def test_common_dcc_humanoid_naming_conventions_map_without_guessing():
             "upperarm_r", "lowerarm_r", "hand_r",
         ],
         "blender_rigify_deform": [
-            "DEF-spine", "DEF-spine.001", "DEF-spine.006",
+            "DEF-hips", "DEF-spine", "DEF-head",
             "DEF-thigh.L", "DEF-shin.L", "DEF-foot.L",
             "DEF-thigh.R", "DEF-shin.R", "DEF-foot.R",
             "DEF-upper_arm.L", "DEF-forearm.L", "DEF-hand.L",
