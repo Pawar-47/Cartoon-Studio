@@ -11,8 +11,8 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from app.storage import default_data_dir
 from app.rig_analysis import REQUIRED_HUMANOID_BONES
+from app.storage import default_data_dir
 
 ENGINE_VERSION = "4.7.2-stable"
 ENGINE_BINARY_NAME = "Godot_v4.7.2-stable_win64.exe"

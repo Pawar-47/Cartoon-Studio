@@ -3,7 +3,7 @@
 Updated: 2026-11-25
 Repository: https://github.com/Pawar-47/Cartoon-Studio
 Branch: main
-Checkpoint HEAD: aadce3ed4c8444a3130652f14cc85cdfd4db697b
+Checkpoint HEAD: 09911e3b7210bfb1eb98ef218110f8ef4ecdded0
 
 ## Mission and source of truth
 

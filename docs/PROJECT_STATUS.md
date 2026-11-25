@@ -4,13 +4,13 @@
 
 - Repository: Pawar-47/Cartoon-Studio
 - Branch: main
-- Latest implementation HEAD: aadce3ed4c8444a3130652f14cc85cdfd4db697b
+- Latest implementation HEAD: 09911e3b7210bfb1eb98ef218110f8ef4ecdded0
 - Phase 0: COMPLETE.
 - Phase 1: COMPLETE.
 - Phase 2 — Character Studio: ACTIVE. P2.1 worker/runtime integration is accepted; P2.2 import, preview and profile workflow is implemented and expanding. Phase 2 is not complete.
-- Latest fully successful Windows CI: [run #238](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45610832509), commit ae63724b12a0f2cf670469ac74613acaee07e15c; latest HEAD CI #241 is running.
+- Latest full successful Windows CI before the current lint correction: [run #242](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45611596380), including installer lifecycle.
 - Windows CI #225 passed on pre-batch HEAD `8649ae66d364d0b434a69a6f6e17a0683370ad1c`, including full install/upgrade/uninstall/reinstall lifecycle.
-- Current native Godot proof: [run #9](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45611193996) PASSED on Godot 4.7.2-stable. It verifies an imported skinned humanoid GLB, its 15-bone skeleton, skin binding, imported animation, rest transforms, and animation retargeted to a differently proportioned target skeleton. Run #10 adds an explicit imported-retarget save/reopen assertion and is running.
+- Current native Godot proof: [run #10](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45611397302) PASSED. The later imported-pair worker operation is being integrated and has a real Godot worker test; CI #244 stopped at Ruff import ordering before tests ran.
 - A durable chat-independent resume record is maintained in `docs/SESSION_CHECKPOINT.md`.
 
 ## Current implemented Character Studio capabilities

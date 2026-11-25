@@ -8,7 +8,6 @@ from pathlib import Path
 import pytest
 
 from app import engine
-from app.rig_analysis import analyze_rig
 from app.engine import (
     EngineCancelledError,
     EngineExecutionError,
@@ -16,6 +15,7 @@ from app.engine import (
     EngineTimeoutError,
     GodotEngineAdapter,
 )
+from app.rig_analysis import analyze_rig
 
 
 class _FakeProcess:
