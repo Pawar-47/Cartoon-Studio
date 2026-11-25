@@ -18,6 +18,16 @@ function updateProportionButton(){
  const unchanged=proportionFields.every(name=>Math.abs(Number($(name.replaceAll("_","-")).value)-1)<0.0001);
  $("apply-proportions").disabled=!activeProject||!importedAsset?.asset_id||!hasSingleRig||importedAsset?.rig_analysis?.status!=="humanoid_names_complete"||unchanged;
 }
+async function restoreOriginalProportionAsset(){
+ const sourcePath=importedAsset?.geometry_edit?.source_relative_path;
+ if(!sourcePath||!activeProject)return;
+ const sourceId=sourcePath.split("/").pop().replace(/\.glb$/i,"");
+ const response=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(sourceId)+"/manifest");
+ if(!response.ok)throw new Error("The original character asset could not be restored.");
+ const manifest=await response.json();
+ importedAsset={asset_id:sourceId,...(manifest.data||manifest)};
+ rememberAssemblyAsset(importedAsset,"Original proportions");
+}
 async function applyBodyProportions(){
  if(!activeProject||!importedAsset?.asset_id)return;
  const proportions=readProportionControls();
@@ -50,7 +60,7 @@ async function editCharacterProfile(document){
  importedAsset=savedAssetId?{asset_id:savedAssetId,...savedAsset}:null;
  if(savedAssetId&&activeProject){
   const manifestResponse=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(savedAssetId)+"/manifest");
-  if(manifestResponse.ok){const manifest=await manifestResponse.json();importedAsset={asset_id:savedAssetId,...(manifest.data||savedAsset)}}
+  if(manifestResponse.ok){const manifest=await manifestResponse.json();importedAsset={asset_id:savedAssetId,...(manifest.data||manifest)}}
   const previewPath=importedAsset?.geometry_edit?.source_relative_path||savedAsset.relative_path||"";
   const previewAssetId=previewPath.split("/").pop().replace(/\.glb$/i,"");
   const modelResponse=previewAssetId?await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(previewAssetId)):null;
@@ -64,9 +74,11 @@ async function editCharacterProfile(document){
  $("expressions").value=(data.expressions||[]).join("\n");$("personality").value=data.personality||"";
  $("relationships").value=(data.relationships||[]).join("\n");$("voice-profile").value=data.voice_profile||"";
  $("dialogue-style").value=data.dialogue_style||"";
- const savedProportions=data.body_proportions||{};
+ const savedProportions={...(importedAsset?.geometry_edit?.proportions||{}),...(data.body_proportions||{})};
  for(const name of proportionFields){const value=Number(savedProportions[name]??1);$(name.replaceAll("_","-")).value=Number.isFinite(value)&&value>=0.75&&value<=1.25?String(value):"1"}
- updateProportionLabels();updateProportionButton();
+ updateProportionLabels();
+ if(proportionFields.every(name=>Math.abs(Number($(name.replaceAll("_","-")).value)-1)<0.0001))await restoreOriginalProportionAsset();
+ updateProportionButton();
  previewCharacterBodyProportions(readProportionControls(),importedAsset?.rig_analysis?.bone_mapping||{});
  $("profile-heading").textContent="Edit character profile";$("save-character").textContent="Save profile changes";
  $("save-character").disabled=false;$("cancel-edit-profile").hidden=false;
@@ -459,7 +471,6 @@ $("character-form").addEventListener("submit",async event=>{
  }catch(error){$("profile-status").textContent=error.message;$("save-character").disabled=!importedAsset&&!editingCharacter}
 });
 $("cancel-edit-profile").addEventListener("click",cancelProfileEdit);
-for(const name of proportionFields)$(name.replaceAll("_","-")).addEventListener("input",()=>{updateProportionLabels();updateProportionButton()});
 for(const name of proportionFields){
  const input=$(name.replaceAll("_","-"));
  input.addEventListener("input",()=>{
@@ -468,9 +479,15 @@ for(const name of proportionFields){
  });
 }
 $("apply-proportions").addEventListener("click",applyBodyProportions);
-$("reset-proportions").addEventListener("click",()=>{
- resetProportionControls();updateProportionButton();
- previewCharacterBodyProportions(readProportionControls(),importedAsset?.rig_analysis?.bone_mapping||{});
+$("reset-proportions").addEventListener("click",async()=>{
+ resetProportionControls();
+ try{await restoreOriginalProportionAsset()}catch(error){$("proportion-status").textContent=error.message}
+ const values=readProportionControls();
+ const stored=JSON.parse($("body-proportions").value||"{}");
+ $("body-proportions").value=JSON.stringify({...stored,...values},null,2);
+ previewCharacterBodyProportions(values,importedAsset?.rig_analysis?.bone_mapping||{});
+ updateProportionButton();
+ $("proportion-status").textContent="Original proportions restored. Adjust the preview again or save the original shape.";
 });
 $("refresh-characters").addEventListener("click",()=>loadCharacters().catch(error=>$("project-status").textContent=error.message));
 
