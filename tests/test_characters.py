@@ -194,6 +194,9 @@ def test_browser_preview_modules_are_served_from_local_static_assets():
     assert "function frameCharacter" in preview.text
     assert 'data-camera-frame="head"' in page.text
     assert 'id="preview-speed"' in page.text
+    assert 'id="export-preview-png"' in page.text
+    assert 'id="preview-transparent"' in page.text
+    assert "exportCharacterPreview" in client.get("/static/character-preview.js").text
     assert 'id="body-morph-controls"' in page.text
     assert 'id="body-morph-status"' in page.text
     assert 'id="torso-length"' in page.text
