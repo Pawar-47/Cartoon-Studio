@@ -171,6 +171,27 @@ def _validate_humanoid_hierarchy(
                 "issues": ["A bone contains a non-integer index or parent index."],
                 "note": "The imported skeleton hierarchy is malformed.",
             }
+        if index < 0:
+            return {
+                "status": "invalid",
+                "checked_relationships": 0,
+                "issues": [f"Bone index {index} is negative."],
+                "note": "The imported skeleton hierarchy is malformed.",
+            }
+        if index in parents:
+            return {
+                "status": "invalid",
+                "checked_relationships": 0,
+                "issues": [f"Duplicate bone index {index} was supplied."],
+                "note": "The imported skeleton hierarchy is malformed.",
+            }
+        if parent < -1:
+            return {
+                "status": "invalid",
+                "checked_relationships": 0,
+                "issues": [f"Bone index {index} has invalid parent index {parent}."],
+                "note": "The imported skeleton hierarchy is malformed.",
+            }
         parents[index] = parent
 
     issues: list[str] = []
