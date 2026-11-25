@@ -161,7 +161,10 @@ def test_character_studio_page_is_served():
     assert "prepareRetargetedClip" in preview.text
     assert "new THREE.AnimationMixer(targetMesh)" in preview.text
     assert "no substitute clip was previewed" in preview.text
-    assert "retargetClip(targetMesh, sourceMesh, clip" in preview.text
+    retarget_helper = TestClient(main.app).get("/static/retarget-preview.mjs")
+    assert retarget_helper.status_code == 200
+    assert "prepareRetargetedClip" in retarget_helper.text
+    assert "sourceRoot.skeleton = sourceMesh.skeleton" in retarget_helper.text
     assert 'target.meshName?target.meshName+" · ":""' in script.text
     assert "morph weight" in script.text
     assert "appearanceRecipe.morph_targets[target.key]=target.value" in script.text
