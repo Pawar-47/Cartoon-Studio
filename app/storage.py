@@ -295,13 +295,17 @@ def sync_episode_reference(
     project_document = read_json(project_path)
     references = project_document.setdefault("data", {}).setdefault("references", {})
     episode_ids = references.setdefault("episodes", [])
-    if episode_document["id"] in episode_ids:
-        return
-    episode_ids.append(episode_document["id"])
-    project_document["revision"] = int(project_document.get("revision", 1)) + 1
+    changed = False
+    if episode_document["id"] not in episode_ids:
+        episode_ids.append(episode_document["id"])
+        changed = True
     episode_updated = episode_document["updated_at"]
     if episode_updated > project_document.get("updated_at", ""):
         project_document["updated_at"] = episode_updated
+        changed = True
+    if not changed:
+        return
+    project_document["revision"] = int(project_document.get("revision", 1)) + 1
     digest = write_json_atomic(project_path, project_document)
     upsert_document_index(
         connection, project_id, project_document, "project.json", digest

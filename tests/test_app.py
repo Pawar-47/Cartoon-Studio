@@ -227,6 +227,13 @@ def test_story_plan_is_saved_as_portable_episode_document(tmp_path, monkeypatch)
     project_document = json.loads((tmp_path / "projects" / project_id / "project.json").read_text(encoding="utf-8"))
     assert episode_id in project_document["data"]["references"]["episodes"]
 
+    second_save = client.put(f"/api/projects/{project_id}/story", json=plan)
+    assert second_save.status_code == 200
+    assert second_save.json()["episode_id"] == episode_id
+    assert second_save.json()["revision"] == 2
+    project_document = json.loads((tmp_path / "projects" / project_id / "project.json").read_text(encoding="utf-8"))
+    assert project_document["revision"] == 3
+
     reopened = client.get(f"/api/projects/{project_id}/story")
     assert reopened.status_code == 200
     assert reopened.json()["episode_id"] == episode_id
