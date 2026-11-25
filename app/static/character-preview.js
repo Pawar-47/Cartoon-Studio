@@ -158,6 +158,7 @@ export function applyCharacterAppearance(recipe = {}) {
 }
 
 function collectMorphTargets(root) {
+  morphTargetByKey.clear();
   const entries = [];
   const visit = (node, path) => {
     if (node.morphTargetDictionary && node.morphTargetInfluences) {

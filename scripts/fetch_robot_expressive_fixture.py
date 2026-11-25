@@ -1,9 +1,7 @@
-from __future__ import annotations
-
 import argparse
 import hashlib
-from pathlib import Path
-from urllib.request import Request, urlopen
+import pathlib
+import urllib.request
 
 
 SOURCE_COMMIT = "eba30de865cfbf31ac736f792defd9a60ff28d57"
@@ -19,15 +17,18 @@ def sha256(payload: bytes) -> str:
     return hashlib.sha256(payload).hexdigest()
 
 
-def fetch_fixture(output_dir: Path) -> Path:
+def fetch_fixture(output_dir: pathlib.Path) -> pathlib.Path:
     output_dir.mkdir(parents=True, exist_ok=True)
     target = output_dir / "robot_expressive_cc0.glb"
     if target.is_file() and sha256(target.read_bytes()) == EXPECTED_SHA256:
         print(f"Verified cached fixture: {target}")
         return target
 
-    request = Request(SOURCE_URL, headers={"User-Agent": "Cartoon-Studio-fixture-fetcher"})
-    with urlopen(request, timeout=45) as response:
+    request = urllib.request.Request(
+        SOURCE_URL,
+        headers={"User-Agent": "Cartoon-Studio-fixture-fetcher"},
+    )
+    with urllib.request.urlopen(request, timeout=45) as response:
         payload = response.read(MAX_ASSET_BYTES + 1)
     if len(payload) > MAX_ASSET_BYTES:
         raise RuntimeError("RobotExpressive fixture exceeds the 2 MiB safety limit.")
@@ -46,11 +47,13 @@ def fetch_fixture(output_dir: Path) -> Path:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Fetch a pinned CC0 facial morph GLB test fixture.")
+    parser = argparse.ArgumentParser(
+        description="Fetch a pinned CC0 facial morph GLB test fixture."
+    )
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("tests/fixtures/third_party"),
+        default=pathlib.Path("tests/fixtures/third_party"),
     )
     args = parser.parse_args()
     fetch_fixture(args.output_dir)
