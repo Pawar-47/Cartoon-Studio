@@ -3,7 +3,7 @@
 Updated: 2026-11-25
 Repository: https://github.com/Pawar-47/Cartoon-Studio
 Branch: main
-Latest implementation checkpoint: 6a1c288a59841fd03ada7a572fa9e04c59d54802
+Latest implementation checkpoint: 7092b9386f6b3645468ffee5eea2cf399824077f
 
 ## Mission and operating rules
 
@@ -35,8 +35,9 @@ Phase 2 — Character Studio is ACTIVE. Phase 0 and Phase 1 are complete. Do not
 
 ## Imported fixture coverage
 
-- Source fixture: canonical 15-bone skinned humanoid with an imported arm animation.
+- Source fixture: separate animated imported GLB with Mixamo-style names on all 15 humanoid bones; the source animation remains in the GLB.
 - Target fixture: separate imported GLB with Mixamo-style bone names, different arm/leg rest proportions, reordered skin joints, remapped JOINTS_0 data, recalculated inverse-bind matrices and no target animation.
+- The Godot worker now remaps animation track NodePaths from each imported source bone name to its canonical humanoid profile name before renaming the source Skeleton3D bones.
 - `tools/godot_engine_proof/generate_retarget_target_fixture.py` reproduces the target fixture from the source.
 - Godot may normalize the raw GLB joint order when creating Skeleton3D. The application therefore uses actual bone indices and names returned by Godot inspection; it never assumes raw skin-joint order equals imported Skeleton3D order.
 - The worker test checks mapping, valid hierarchy, different rest offsets, target skin binding, saved-scene reopen, source animation playback, pose transfer and byte-identical source/target files.
@@ -49,19 +50,20 @@ Phase 2 — Character Studio is ACTIVE. Phase 0 and Phase 1 are complete. Do not
 - Windows CI #257 PASSED: worker pose-transfer verification over 72 frames and full installer lifecycle.
 - Windows CI #260 PASSED: distinct imported source/target, playback metrics and full Windows packaging.
 - Windows CI #265 PASSED: reordered raw GLB joint/hierarchy fixture and full installer lifecycle.
-- Windows CI #267 PASSED on `6a1c288a59841fd03ada7a572fa9e04c59d54802`: Mixamo-style target alias mapping, pose transfer and full Windows packaging/install lifecycle.
-- Dedicated Godot native-worker proof #18 PASSED.
+- Windows CI #278 on `7092b9386f6b3645468ffee5eea2cf399824077f`: lint, Python compilation and the full test suite PASSED, including the actual pinned Godot worker importing a Mixamo-named animated source, remapping its bone animation tracks and transferring the pose to the distinct target. Windows installer compilation and lifecycle checks were still running at the last check.
+- Dedicated Godot native-worker proof #21 PASSED on the previous fixture checkpoint.
+
 - Earlier test failures were traced to strict lint formatting, fixture hierarchy, set/dict mapping comparison, insufficient pose-sampling time, incorrect assumptions about imported bone index ordering, and a test hard-coding the raw colon-containing bone name. These were corrected; do not carry them forward as unresolved runtime defects.
 
 ## Important acceptance boundary
 
 The current fixture proof covers a canonical animated source and a separate Mixamo-named target with different rest proportions and raw joint ordering. It proves actual target pose transfer after scene save/reopen and preserves both source files.
 
-It does not yet prove that a Mixamo-named *animated source* retains its imported animation-track bindings after canonical bone-name normalization. Nor does it establish compatibility with arbitrary third-party GLBs, multiple-skeleton files, unusual animation conventions or all humanoid proportions. No general-purpose compatibility or visual acceptance claim is allowed yet.
+The Mixamo-named animated-source case now passes the pinned Godot worker test: after canonical bone-name normalization, the imported animation still drives the source skeleton and the pose transfers to the separate target in the reopened scene. Godot normalizes the imported Skeleton3D ordering, so a different raw glTF skin-joint order is not evidence of different runtime bone indices. This remains bounded fixture acceptance; arbitrary third-party GLBs, multiple-skeleton files, unusual animation conventions, all humanoid proportions and visual acceptance are not yet covered.
 
 ## Next substantial implementation batch
 
-1. Run the Mixamo-named animated source fixture through full Windows CI and verify its imported animation tracks still drive the source skeleton after bone-name normalization.
+1. Complete the Windows installer lifecycle for CI #278.
 2. Add an in-app preview/open action for saved retarget scenes rather than only scene download.
 3. Exercise representative third-party GLBs, including unusual skeleton hierarchies and multiple animation clips, and document supported/unsupported cases.
 4. Validate facial morph controls on real blend-shape GLBs.

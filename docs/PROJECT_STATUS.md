@@ -4,11 +4,11 @@
 
 - Repository: Pawar-47/Cartoon-Studio
 - Branch: main
-- Latest implementation checkpoint: `6a1c288a59841fd03ada7a572fa9e04c59d54802`
+- Latest implementation checkpoint: `7092b9386f6b3645468ffee5eea2cf399824077f`
 - Phase 0: COMPLETE.
 - Phase 1: COMPLETE.
 - Phase 2 — Character Studio: ACTIVE; import, preview, profiles, appearance recipes, rig diagnostics and the first user-facing imported-rig retarget workflow are implemented. Phase 2 is not complete.
-- Windows CI #267 PASSED, including the real Godot worker test, application builds, installer compilation and install/upgrade/uninstall/reinstall lifecycle.
+- Windows CI #278: lint, Python compilation and full tests PASSED, including the real Godot worker test for a Mixamo-named animated source and animation-track path remapping. Windows installer compilation/lifecycle were still running at the last check.
 - Dedicated Godot native-worker proof #18 PASSED.
 - Chat-independent continuation record: `docs/SESSION_CHECKPOINT.md`.
 
@@ -26,11 +26,9 @@
 
 ## Distinct imported fixture coverage
 
-The source fixture is a canonical animated humanoid. The target is a separate Mixamo-named imported GLB with different arm/leg rest proportions, reordered skin joints and recalculated inverse-bind matrices. The fixture generator is committed and tested.
+The source fixture is a separate animated GLB with Mixamo-style names; the target is a separate Mixamo-named imported GLB with different arm/leg rest proportions, reordered raw skin joints and recalculated inverse-bind matrices. The worker now remaps source animation track paths before normalizing source bone names. Windows CI #278's full test step passed this actual Godot worker scenario, including source animation playback, pose transfer after scene save/reopen and byte-identical preservation of both source files.
 
-Godot may normalize raw skin-joint ordering during import. The application uses the actual bone names and indices returned by the Godot inspection worker, not raw GLB array positions. The worker test verifies hierarchy, mappings, rest-length differences, source animation playback, actual target pose transfer, save/reopen and source-file preservation.
-
-This is bounded fixture acceptance, not arbitrary third-party GLB acceptance. Animation-track compatibility for a Mixamo-named animated source, broader animation conventions and visual acceptance in the app remain future work.
+Godot may normalize raw skin-joint ordering during import. The application uses the actual bone names and indices returned by the Godot inspection worker, not raw GLB array positions. This is bounded fixture acceptance, not arbitrary third-party GLB acceptance; broader animation conventions and visual acceptance remain future work.
 
 ## Phase status
 
@@ -48,7 +46,7 @@ This is bounded fixture acceptance, not arbitrary third-party GLB acceptance. An
 
 ## Next implementation batch
 
-1. Validate the Mixamo-named animated source fixture in full Windows CI, including imported track playback after bone-name normalization.
+1. Complete the Windows installer lifecycle for CI #278.
 2. Add an in-app preview/open action for saved retarget scenes.
 3. Exercise representative third-party GLBs and document compatibility limits.
 4. Validate real facial morph controls.
