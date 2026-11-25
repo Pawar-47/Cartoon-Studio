@@ -351,7 +351,7 @@ func _export_character_appearance(payload: Dictionary) -> Dictionary:
         if edit.has("metalness"):
             edited_material.metallic = float(edit["metalness"])
         mesh_instance.set_surface_override_material(surface_index, edited_material)
-        applied_materials.append({"mesh_name": mesh_name, "material_name": str(edit.get("material_name", "")), "surface_index": surface_index, "color": color_value, "roughness": edited_material.roughness, "metalness": edited_material.metallic})
+        applied_materials.append({"mesh_name": mesh_name, "mesh_resource_name": str(mesh_instance.mesh.resource_name), "material_name": str(edit.get("material_name", "")), "surface_index": surface_index, "color": color_value, "roughness": edited_material.roughness, "metalness": edited_material.metallic})
     var applied_morphs: Array[Dictionary] = []
     var morph_export_meshes: Array[MeshInstance3D] = []
     for morph_value in morphs_value:
@@ -428,7 +428,9 @@ func _export_character_appearance(payload: Dictionary) -> Dictionary:
         var material_verified := false
         var index := int(edit["surface_index"])
         for mesh_record in verification.get("mesh_inventory", []):
-            if str(mesh_record.get("node_name", "")) != str(edit["mesh_name"]):
+            var node_name_matches := str(mesh_record.get("node_name", "")) == str(edit["mesh_name"])
+            var resource_name_matches := str(mesh_record.get("mesh_resource_name", "")) == str(edit["mesh_resource_name"])
+            if not node_name_matches and not resource_name_matches:
                 continue
             var properties: Array = mesh_record.get("material_properties", [])
             if index >= properties.size() or properties[index].is_empty():
