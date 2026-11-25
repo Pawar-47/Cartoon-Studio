@@ -223,3 +223,14 @@ Added API coverage for saving morph-target weights and rejecting values outside 
 - The API stores the base/part recipe in the versioned asset manifest; the Character Studio builder exposes slot-filtered selectors and restores saved assembly sources through manifest endpoints.
 - A separate fix validates mesh skeleton paths relative to the cloned MeshInstance3D and rejects using the same source mesh for multiple slots.
 - Limitations: CI proves the native mixed-outfit assembly and clip preservation, not interactive browser visual quality, arbitrary-rig conversion, animation deformation playback, mesh sculpting, new rig authoring, texture painting or final Character Studio acceptance. Phase 2 remains active.
+
+
+## Phase 2 — modular accessories and bone attachment — 2026-11-25
+
+- PR #4 feature commit tested by [CI run 45654673022](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45654673022): SUCCESS (Ruff, Python compilation, full pytest and Godot 4.7.2 integration).
+- Merge commit: `f00bb3dbba55af7b6f3a02ca5b602bf773872a35`. Main-branch validation was queued as run 45654934870 at this checkpoint.
+- Added accessory discovery to Godot mesh inventory, including source `BoneAttachment3D` bone metadata. The builder accepts up to eight accessories, records each source mesh and attachment bone, and supports removing selected accessory chips.
+- Skinned accessories must match the base skeleton and rig transform and pass skin-bind checks before rebinding. Static accessories must originate from a matching `BoneAttachment3D` and are recreated under the same named bone on the target skeleton.
+- The mixed-outfit integration test now adds the Quaternius Adventurer Backpack, exports/re-imports the result, verifies the accessory mesh is present, and confirms the base animation clips remain.
+- The versioned assembly manifest stores accessory paths/bone names; reopening a saved assembly restores its accessory selections.
+- Limitations remain: no arbitrary-rig conversion, general hair/face geometry authoring, or interactive visual acceptance is claimed.

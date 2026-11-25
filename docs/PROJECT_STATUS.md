@@ -4,7 +4,7 @@
 
 - Repository: Pawar-47/Cartoon-Studio
 - Branch: main
-- Latest implementation checkpoint: `b4dd8237e6369bbb74c58ef844e0fac5c9667c77` (PR #3 merged; modular assembly integration and main CI passed).
+- Latest implementation checkpoint: `f00bb3dbba55af7b6f3a02ca5b602bf773872a35` (PR #4 merged; accessory integration CI passed; main CI pending).
 - Phase 0: COMPLETE.
 - Phase 1: COMPLETE.
 - Phase 2 — Character Studio: ACTIVE; import, preview, profiles, appearance recipes, rig diagnostics and the first user-facing imported-rig retarget workflow are implemented. Phase 2 is not complete.
@@ -76,4 +76,5 @@ Godot may normalize raw skin-joint ordering during import. The application uses 
 - The pinned Quaternius Ultimate Modular Men/Women CC0 library contains 21 outfit GLBs (34.92 MiB) with four candidate slots and 24 animation clips per model. Downloads are lazy, cached and verified against the pinned source commit, byte size and Git blob SHA-1.
 - Character Studio now offers head/body/legs/feet selectors, filtered by skinned mesh slot candidates. Godot performs exact shared-skeleton, hierarchy, rest-pose, rig-transform and skin-bind checks; it removes base skinned outfit meshes, attaches the selected meshes to the base skeleton, exports and re-imports the GLB, then verifies the four selected meshes and base animation names.
 - A real CI integration test combines Beach head, Casual_2 body, Farmer legs and King feet on the Male Adventurer base and verifies all 24 base animation clips survive. Assembly manifests persist the base/part recipe and allow source restoration.
-- Phase 2 remains ACTIVE; P2.2 remains PARTIAL. Interactive browser visual acceptance, visible animation/skin deformation acceptance and true geometry/face/proportion/accessory authoring remain open. Strict shared-rig matching is supported; automatic conversion of arbitrary incompatible rigs is not claimed.
+- PR #4 adds optional skinned or BoneAttachment3D accessories, including the Adventurer Backpack integration test. Assembly recipes persist accessory paths and bone references and restore the selected accessory list when reopening an assembled character.
+- Phase 2 remains ACTIVE; P2.2 remains PARTIAL. Interactive browser visual acceptance, visible animation/skin deformation acceptance and true geometry/face/proportion/hair authoring remain open. Strict shared-rig matching is supported; automatic conversion of arbitrary incompatible rigs is not claimed.

@@ -291,3 +291,12 @@ The next P2.2 sub-phase is the **Modular Character Builder**:
 - The assembled asset manifest stores the base/part recipe and supports restoring its source GLBs into the builder. The profile remains versioned and project-scoped.
 - Evidence: [feature integration CI](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45653413604) and [main merge CI](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45653650908), both SUCCESS.
 - Phase 2 remains ACTIVE and P2.2 remains PARTIAL. This is not arbitrary-rig retargeting, mesh sculpting, new rig authoring, texture painting or final visual acceptance. The next batch must validate the browser builder and improve real geometric customization before P2.2 can exit.
+
+
+## 2026-11-25 — P2.2 accessory assembly milestone accepted
+
+- Merged PR #4 as `f00bb3dbba55af7b6f3a02ca5b602bf773872a35`; accessory feature CI run `45654673022` passed the mixed-outfit plus accessory integration test. Main-branch CI was queued at this checkpoint.
+- The modular builder now supports up to eight optional accessories in addition to head/body/legs/feet. Skinned accessories are rebound to the exact shared rig; static accessories must originate beneath a valid `BoneAttachment3D` and are attached to the matching named bone on the base skeleton.
+- The Godot worker validates accessory source paths, duplicate mesh selections, skeleton/rest-pose/transform compatibility, skin bind references and attachment-bone identity. It verifies accessory meshes survive GLB export/re-import.
+- The real integration test adds the Adventurer Backpack to the Beach/Casual_2/Farmer/King mixed outfit and verifies the base animation set remains intact. Assembly manifests store and restore accessory selections and attachment bones.
+- This adds accessory attachment, not general-purpose hair/face sculpting, arbitrary-rig conversion or interactive visual acceptance. Phase 2 and P2.2 remain PARTIAL.

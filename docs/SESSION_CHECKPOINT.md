@@ -3,7 +3,7 @@
 Updated: 2026-11-25
 Repository: https://github.com/Pawar-47/Cartoon-Studio
 Branch: main
-Latest implementation checkpoint: `b4dd8237e6369bbb74c58ef844e0fac5c9667c77` (modular Character Studio batch merged; main CI run 45653650908 passed).
+Latest implementation checkpoint: `f00bb3dbba55af7b6f3a02ca5b602bf773872a35` (modular outfit and bone-attached accessory batch merged; feature CI 45654673022 passed; main CI pending at checkpoint).
 
 ## Mission and operating rules
 
@@ -69,9 +69,9 @@ Two real third-party assets have passed native Godot acceptance for tested scena
 
 ## Next substantial implementation batch
 
-1. Perform interactive browser acceptance of the modular builder: select each slot, assemble, preview, save the character profile, reopen it and restore its source recipe.
+1. Perform interactive browser acceptance of the modular builder, including saved accessory chips and recipe reopen, then inspect the assembled preview.
 2. Verify animation playback and visible skin deformation on the exported assembled GLB, not only clip-name preservation.
-3. Extend genuine geometric customization (proportions, face, hair/accessory attachment) using compatible mesh/morph/rig operations; do not treat text-only profile fields as implemented geometry editing.
+3. Extend genuine geometric customization (proportions, face and hair) using compatible mesh/morph/rig operations; do not treat text-only profile fields as implemented geometry editing.
 4. Continue browser-versus-Godot retarget-preview comparison and broaden rig families without weakening strict compatibility checks.
 
 ## Later phases
