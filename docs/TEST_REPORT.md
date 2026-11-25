@@ -1,10 +1,10 @@
 # Test Report — 2026-11-25
 
 ## Current repository checkpoint
-- Main HEAD before this documentation batch: bbca69d5ff9933dd04233a1fd757d86c7e60e83d.
-- GitHub Actions run #93: SUCCESS on the last verified implementation/documentation baseline facb0dd738e227d643d4e85d80bd5d3f620fc6e1.
-- Prior app CI run #67 passed Ruff, Python compileall, 12 pytest tests, Windows bootstrap ZIP packaging and artifact upload.
-- Bootstrap artifact is not a self-contained installer and does not prove a clean target-PC installation.
+- Latest tested implementation commit: d60def463e34575bab26b3a5da6c573b4f2bc4ee.
+- GitHub Actions run #136: SUCCESS on Windows 2022 / Python 3.11; workflow: https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45571086576.
+- Dependency resolver run #11: SUCCESS; workflow: https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45571086600.
+- Current bootstrap remains a Python-dependent portable ZIP, not a self-contained installer. The clean-runner test proves the packaged launcher and local persistence, not target-PC performance.
 
 ## P0.5 architecture and dependency documentation
 - Registry and traceability were parsed from live GitHub: 171 unique requirement IDs in each; exact ID-set equality; no missing or extra IDs.
@@ -55,3 +55,21 @@ See P0_6_PROOF_REPORT.md for exact run IDs, acceptance checks and limitations.
 - SQLite queue proof: Windows CI run #101 SUCCESS on b05024110e76b684a5f8cee35eb57fa0428b2c11; 17 tests passed, including five isolated queue-prototype tests for serial claims, lease-expiry retry, completed-scene preservation, cancellation and stale-worker rejection.
 - First Godot attempt #1 failed: dynamically created nodes lacked PackedScene ownership and the MovieWriter output directory was not created inside the Godot project. Both were corrected; runs #2 and #3 passed. The failed attempt is retained as diagnostic history, not hidden.
 - These are bounded hosted-runner proofs, not production app integration, full episode rendering, or user-PC benchmarks. Actual target-PC measurements remain Phase 8.
+
+## P1.2 reproducible dependency lock and CI — 2026-11-25
+
+- Added a committed universal uv.lock for the declared Python range (>=3.11,<3.14).
+- Added requirements.lock, a fully pinned runtime export with package hashes; the Windows launcher uses pip's --require-hashes.
+- Windows CI verifies uv lock --check, installs with uv sync --locked, runs Ruff, Python compileall and pytest, exports the runtime lock and fails if it differs from the committed file.
+- Generated CycloneDX 1.5 dependency inventory for the complete locked environment.
+- Replaced the deprecated TestClient dependency path with httpx2; the warning is not suppressed.
+- CI #125 passed the initial locked environment; CI #136 passed the subsequent complete batch with 22 tests.
+
+## P1.3 clean Windows bootstrap and launcher smoke test — 2026-11-25
+
+- Added tests/smoke_windows_package.py; it validates ZIP members and required application files, extracts the artifact into a clean temporary directory and executes the real start.bat.
+- The launcher creates a Python 3.11 virtual environment, installs hash-locked runtime dependencies, starts Uvicorn on loopback and optionally opens the browser. Test-only environment variables provide an ephemeral port, isolated data directory and browser suppression.
+- Smoke test verified dashboard HTML, static CSS, health endpoint, project creation/opening, application restart and persistence of the saved project.
+- CI #136: SUCCESS on commit d60def463e34575bab26b3a5da6c573b4f2bc4ee; 22 pytest tests passed; Ruff, compile, lock consistency, package creation, actual launcher smoke, artifact upload and SBOM upload all passed.
+- Artifacts: Cartoon-Studio-Windows-Bootstrap (250,410 bytes; artifact ID 15002480559) and Cartoon-Studio-Dependency-SBOM (29,041 bytes; artifact ID 15002700150).
+- Limitations: the bootstrap still requires Python 3.11 installed or available via the Windows Python launcher. It is not the P1.4 self-contained installer. No user-PC or rendering performance test was run.

@@ -3,9 +3,9 @@
 ## Live checkpoint
 - Repository: Pawar-47/Cartoon-Studio
 - Branch: main
-- HEAD before this status batch: 5031917f7715b3997f91b2b2840dd934216e494a
-- Latest verified Windows CI: run #115 SUCCESS on 565d211ce3009c081e60d48778d3ba89acd4a4f7.
-- Result: Ruff passed, Python compile passed, 21 pytest tests passed, Windows bootstrap ZIP packaged and uploaded. One non-blocking Starlette TestClient/httpx deprecation warning remains for P1.2 review.
+- Implementation checkpoint: d60def463e34575bab26b3a5da6c573b4f2bc4ee; dependency-lock-only follow-up: 6b41eb59631f8e9757ff2fe26513be08d9623151.
+- Latest verified Windows CI: run #136 SUCCESS on d60def463e34575bab26b3a5da6c573b4f2bc4ee.
+- Result: exact uv lock verified; locked environment installed; Ruff, compile and 22 pytest tests passed; runtime requirements and CycloneDX SBOM exported; Windows bootstrap ZIP built; actual start.bat launched from a clean extraction; HTTP dashboard/static/API, project create/open and restart persistence passed; both artifacts uploaded. The old TestClient/httpx warning is resolved through the locked httpx2 test dependency.
 - Godot native-worker proof #3 and FFmpeg MP4 assembly proof: SUCCESS; see docs/P0_6_PROOF_REPORT.md.
 - SQLite queue prototype: Windows CI run #101 SUCCESS; 17 tests passed.
 - Original 25-part prompt preserved verbatim at docs/MASTER_EXECUTION_PROMPT.md.
@@ -16,7 +16,7 @@
 | Phase | Status | Evidence / limitation |
 |---|---|---|
 | Phase 0 — Specification/research/architecture | COMPLETE | P0.1–P0.7 closed; see P0_7_PHASE0_EXIT_REVIEW.md |
-| Phase 1 — GitHub and CI/CD foundation | ACTIVE | P1.1 complete; P1.2 dependency lock/reproducible CI is next; P1.3 bootstrap package partial; P1.4 installer not started |
+| Phase 1 — GitHub and CI/CD foundation | ACTIVE — P1.1–P1.3 COMPLETE; P1.4 REMAINING | Reproducible locked CI and clean Windows bootstrap/launcher smoke test passed; self-contained installer and upgrade/uninstall preservation remain |
 | Phase 2 — Character Studio | NOT STARTED | No production character creation/import/rig/face studio |
 | Phase 3 — World Builder | NOT STARTED | No persistent production world/location builder |
 | Phase 4 — Story and Scene Engine | PARTIAL / FROZEN | Early Story Generator and saved story plan preserved; Ara-derived IDs are validation-only and must be normalized in Phase 4 |
