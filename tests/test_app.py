@@ -163,3 +163,129 @@ def test_story_plan_rejects_unknown_expression():
     plan["scenes"][0]["actions"][0]["expression"] = "excited"
     response = client.post("/api/story-plans/validate", json=plan)
     assert response.status_code == 422
+
+
+def test_project_document_is_portable_and_versioned(tmp_path, monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "portable.sqlite3")
+    created = client.post("/api/projects", json={"name": "Portable Project"})
+    project_id = created.json()["id"]
+
+    opened = client.get(f"/api/projects/{project_id}")
+    assert opened.status_code == 200
+    document = opened.json()["document"]
+    assert document["schema_version"] == "1.0.0"
+    assert document["document_type"] == "project"
+    assert document["id"] == project_id
+    assert document["revision"] == 1
+    assert document["data"]["settings"]["frame_rate"] == {"numerator": 24, "denominator": 1}
+    assert (tmp_path / "projects" / project_id / "project.json").exists()
+
+
+def test_project_update_increments_document_revision(tmp_path, monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "update.sqlite3")
+    created = client.post("/api/projects", json={"name": "Before"})
+    project_id = created.json()["id"]
+
+    updated = client.put(
+        f"/api/projects/{project_id}",
+        json={"name": "After", "description": "Updated description"},
+    )
+    assert updated.status_code == 200
+    assert updated.json()["name"] == "After"
+    opened = client.get(f"/api/projects/{project_id}")
+    assert opened.json()["document"]["revision"] == 2
+    assert opened.json()["document"]["data"]["description"] == "Updated description"
+
+
+def test_story_plan_is_saved_as_portable_episode_document(tmp_path, monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "episode.sqlite3")
+    project = client.post("/api/projects", json={"name": "Episode Project"})
+    project_id = project.json()["id"]
+    plan = valid_episode_plan()
+
+    saved = client.put(f"/api/projects/{project_id}/story", json=plan)
+    assert saved.status_code == 200
+    episode_id = saved.json()["episode_id"]
+    episode_path = tmp_path / "projects" / project_id / "episodes" / f"{episode_id}.json"
+    assert episode_path.exists()
+
+    document = json.loads(episode_path.read_text(encoding="utf-8"))
+    assert document["document_type"] == "episode"
+    assert document["revision"] == 1
+    assert document["data"]["title"] == "Market Mix-up"
+
+    reopened = client.get(f"/api/projects/{project_id}/story")
+    assert reopened.status_code == 200
+    assert reopened.json()["episode_id"] == episode_id
+    assert reopened.json()["plan"]["title"] == "Market Mix-up"
+
+
+def test_legacy_database_migrates_and_preserves_project_and_story(tmp_path, monkeypatch):
+    import json
+    import sqlite3
+    from app import main
+
+    db_path = tmp_path / "legacy.sqlite3"
+    now = "2026-01-01T00:00:00+00:00"
+    project_id = "00000000-0000-4000-8000-000000000001"
+    plan = valid_episode_plan()
+    with sqlite3.connect(db_path) as connection:
+        connection.execute(
+            """
+            CREATE TABLE projects (
+                id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+                metadata_json TEXT NOT NULL DEFAULT '{}'
+            )
+            """
+        )
+        connection.execute(
+            """
+            CREATE TABLE story_plans (
+                project_id TEXT PRIMARY KEY, plan_json TEXT NOT NULL, updated_at TEXT NOT NULL,
+                FOREIGN KEY(project_id) REFERENCES projects(id)
+            )
+            """
+        )
+        connection.execute(
+            "INSERT INTO projects VALUES (?, ?, ?, ?, ?, ?)",
+            (project_id, "Legacy Project", "", now, now, "{}"),
+        )
+        connection.execute(
+            "INSERT INTO story_plans VALUES (?, ?, ?)",
+            (project_id, json.dumps(plan, ensure_ascii=False), now),
+        )
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", db_path)
+    main._INITIALIZED_DB_KEY = None
+    main.initialize_database()
+
+    with main.connect_db() as connection:
+        versions = connection.execute(
+            "SELECT MAX(version) FROM schema_migrations"
+        ).fetchone()[0]
+        preserved = connection.execute(
+            "SELECT name FROM projects WHERE id = ?", (project_id,)
+        ).fetchone()[0]
+        migrated_story = connection.execute(
+            "SELECT plan_json FROM story_plans WHERE project_id = ?", (project_id,)
+        ).fetchone()[0]
+    assert versions == 2
+    assert preserved == "Legacy Project"
+    assert json.loads(migrated_story)["title"] == "Market Mix-up"
+    project_file = tmp_path / "projects" / project_id / "project.json"
+    assert project_file.exists()
+    episode_files = list((tmp_path / "projects" / project_id / "episodes").glob("*.json"))
+    assert len(episode_files) == 1
+    backups = list((tmp_path / "backups").glob("pre-migration-*.sqlite3"))
+    assert backups
