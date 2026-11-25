@@ -1,5 +1,5 @@
 import { buildExpressionPreset } from "./character-expression-presets.js";
-import { showCharacterPreview, showRetargetPreview, getCharacterMaterials, applyCharacterAppearance, getCharacterMorphTargets, applyCharacterMorphTargets } from "./character-preview.js";
+import { showCharacterPreview, showRetargetPreview, getCharacterMaterials, applyCharacterAppearance, getCharacterMorphTargets, applyCharacterMorphTargets, applyCharacterBodyProportions as previewCharacterBodyProportions } from "./character-preview.js";
 const $=id=>document.getElementById(id);
 let activeProject="", importedAsset=null, activeCharacter=null, editingCharacter=null, appearanceRecipe={materials:{},morph_targets:{},morph_bindings:{}}, retargetCharacters=[], assemblyAssets=[], assemblyAccessories=[];
 const params=new URLSearchParams(window.location.search);
@@ -13,10 +13,49 @@ function resetProportionControls(){
  for(const name of proportionFields)$(name.replaceAll("_","-")).value="1";
  updateProportionLabels();
 }
+function getBodyProportionState(asset){
+ const edit=asset?.geometry_edit||{};
+ const history=[...(asset?.geometry_edit_history||[])];
+ for(const prior of [asset?.previous_geometry_edit,edit]){
+  if(prior&&Object.keys(prior).length&&(!history.length||JSON.stringify(history[history.length-1])!==JSON.stringify(prior)))history.push(prior);
+ }
+ if(edit.type==="humanoid_body_proportions"){
+  return {previewPath:edit.source_relative_path||asset.relative_path,baseProportions:edit.source_proportions||{},appliedProportions:edit.proportions||{}};
+ }
+ const lastBody=[...history].reverse().find(item=>item?.type==="humanoid_body_proportions");
+ if(lastBody)return {previewPath:asset.relative_path,baseProportions:lastBody.proportions||{},appliedProportions:lastBody.proportions||{}};
+ return {previewPath:asset?.relative_path||"",baseProportions:{},appliedProportions:{}};
+}
+function proportionDelta(desired,baseline){
+ return Object.fromEntries(proportionFields.map(name=>[
+  name,Number(desired[name]??1)/Number(baseline[name]??1)
+ ]));
+}
+async function loadProportionPreview(asset,label,desired){
+ const state=getBodyProportionState(asset);
+ const previewId=state.previewPath.split("/").pop().replace(/\.glb$/i,"");
+ const response=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(previewId));
+ if(!response.ok)throw new Error("The source character preview could not be loaded.");
+ const loaded=await showCharacterPreview(await response.arrayBuffer(),label);
+ if(!loaded)throw new Error("The source character could not be previewed.");
+ previewCharacterBodyProportions(proportionDelta(desired,state.baseProportions),asset.rig_analysis?.bone_mapping||{});
+ return state;
+}
+async function restoreProportionBaseAsset(state){
+ if(!state?.previewPath||state.previewPath===importedAsset?.relative_path)return;
+ const sourceId=state.previewPath.split("/").pop().replace(/\.glb$/i,"");
+ const response=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(sourceId)+"/manifest");
+ if(!response.ok)throw new Error("The source character asset could not be restored.");
+ const manifest=await response.json();
+ importedAsset={asset_id:sourceId,...(manifest.data||manifest)};
+ rememberAssemblyAsset(importedAsset,"Original proportions");
+}
 function updateProportionButton(){
  const hasSingleRig=Number(importedAsset?.engine_inspection?.skeleton_count)===1;
- const unchanged=proportionFields.every(name=>Math.abs(Number($(name.replaceAll("_","-")).value)-1)<0.0001);
- $("apply-proportions").disabled=!activeProject||!importedAsset?.asset_id||!hasSingleRig||unchanged;
+ const hasHumanoidMap=importedAsset?.rig_analysis?.status==="humanoid_names_complete";
+ const state=getBodyProportionState(importedAsset);
+ const unchanged=proportionFields.every(name=>Math.abs(Number($(name.replaceAll("_","-")).value)-Number(state.baseProportions[name]??1))<0.0001);
+ $("apply-proportions").disabled=!activeProject||!importedAsset?.asset_id||!hasSingleRig||!hasHumanoidMap||unchanged;
 }
 function updateHairButton(){
  const hasSingleRig=Number(importedAsset?.engine_inspection?.skeleton_count)===1;
@@ -34,6 +73,13 @@ async function applyHairStyle(){
   const loaded=await showCharacterPreview(await assetResponse.arrayBuffer(),"Character with "+style+" hair");
   if(!loaded)throw new Error("The hairstyle GLB was exported, but the browser preview could not be created.");
   importedAsset=result;rememberAssemblyAsset(result,style+" hairstyle");
+  const proportionState=getBodyProportionState(result);
+  for(const name of proportionFields){
+   const value=Number(proportionState.appliedProportions[name]??1);
+   $(name.replaceAll("_","-")).value=String(value);
+  }
+  updateProportionLabels();
+  $("body-proportions").value=JSON.stringify(proportionState.appliedProportions,null,2);
   $("hair").value=style+" hairstyle ("+color+")";
   $("hair-status").textContent=style+" hair added as "+result.geometry_edit.mesh_count+" mesh pieces, attached to "+result.geometry_edit.attachment_bone+". Animation clips retained; original GLB preserved.";
   $("save-character").disabled=false;
@@ -43,17 +89,15 @@ async function applyHairStyle(){
 async function applyBodyProportions(){
  if(!activeProject||!importedAsset?.asset_id)return;
  const proportions=readProportionControls();
- if(proportionFields.every(name=>Math.abs(proportions[name]-1)<0.0001))return;
+ const state=getBodyProportionState(importedAsset);
+ if(proportionFields.every(name=>Math.abs(proportions[name]-Number(state.baseProportions[name]??1))<0.0001))return;
  const button=$("apply-proportions");button.disabled=true;
  $("proportion-status").textContent="Godot is reshaping the humanoid skeleton and exporting a new GLB…";
  try{
   const response=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(importedAsset.asset_id)+"/proportions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(proportions)});
   const result=await response.json();if(!response.ok)throw new Error(result.detail||"Body-proportion editing failed.");
-  const assetResponse=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(result.asset_id));
-  if(!assetResponse.ok)throw new Error("The new character was created, but its preview could not be loaded.");
-  const loaded=await showCharacterPreview(await assetResponse.arrayBuffer(),"Proportioned character");
-  if(!loaded)throw new Error("The new GLB was exported, but the browser preview could not be created.");
   importedAsset=result;rememberAssemblyAsset(result,"Proportioned character");
+  await loadProportionPreview(result,"Proportioned character preview",proportions);
   $("body-proportions").value=JSON.stringify(proportions,null,2);
   $("save-character").disabled=false;
   $("proportion-status").textContent="Body geometry updated on "+result.geometry_edit.changed_bones.length+" rig bones. Animation clips and skin binding survived export. Original GLB preserved.";
@@ -75,19 +119,33 @@ async function editCharacterProfile(document){
    if(hairEdit.type!=="procedural_hair")hairEdit=importedAsset.previous_geometry_edit||{};
    if(hairEdit.type==="procedural_hair"){$("hair-style").value=hairEdit.style||"short";$("hair-color").value=hairEdit.color||"#2b1b13"}
   }
-  const modelResponse=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(savedAssetId));
-  if(modelResponse.ok)await showCharacterPreview(await modelResponse.arrayBuffer(),data.name||"Saved character");
+  const savedProportions=data.body_proportions||{};
+  const proportionState=getBodyProportionState(importedAsset);
+  const effectiveProportions=Object.keys(savedProportions).length
+   ? {...proportionState.appliedProportions,...savedProportions}
+   : proportionState.appliedProportions;
+  const previewId=proportionState.previewPath.split("/").pop().replace(/\.glb$/i,"");
+  const modelResponse=previewId?await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(previewId)):null;
+  if(modelResponse?.ok){
+   const loaded=await showCharacterPreview(await modelResponse.arrayBuffer(),data.name||"Saved character");
+   if(loaded)previewCharacterBodyProportions(
+    proportionDelta(effectiveProportions,proportionState.baseProportions),
+    importedAsset?.rig_analysis?.bone_mapping||{},
+   );
+  }
  }
  $("character-name").value=data.name||"";$("character-description").value=data.description||"";
- $("face-design").value=data.face_design||"";$("body-proportions").value=JSON.stringify(data.body_proportions||{},null,2);
+ $("face-design").value=data.face_design||"";$("body-proportions").value=JSON.stringify(effectiveProportions,null,2);
  $("height-cm").value=data.height_cm??"";$("hair").value=data.hair||"";
  $("clothing").value=(data.clothing||[]).join("\n");$("accessories").value=(data.accessories||[]).join("\n");
  $("eye-design").value=data.eye_design||"";$("mouth-design").value=data.mouth_design||"";
  $("expressions").value=(data.expressions||[]).join("\n");$("personality").value=data.personality||"";
  $("relationships").value=(data.relationships||[]).join("\n");$("voice-profile").value=data.voice_profile||"";
  $("dialogue-style").value=data.dialogue_style||"";
- const savedProportions=data.body_proportions||{};
- for(const name of proportionFields){const value=Number(savedProportions[name]??1);$(name.replaceAll("_","-")).value=Number.isFinite(value)&&value>=0.75&&value<=1.25?String(value):"1"}
+ for(const name of proportionFields){
+  const value=Number(effectiveProportions[name]??1);
+  $(name.replaceAll("_","-")).value=Number.isFinite(value)&&value>=0.75&&value<=1.25?String(value):"1";
+ }
  updateProportionLabels();updateProportionButton();updateHairButton();
  $("profile-heading").textContent="Edit character profile";$("save-character").textContent="Save profile changes";
  $("save-character").disabled=false;$("cancel-edit-profile").hidden=false;
@@ -481,9 +539,32 @@ $("character-form").addEventListener("submit",async event=>{
 });
 $("cancel-edit-profile").addEventListener("click",cancelProfileEdit);
 for(const name of proportionFields)$(name.replaceAll("_","-")).addEventListener("input",()=>{updateProportionLabels();updateProportionButton()});
+for(const name of proportionFields){
+ const input=$(name.replaceAll("_","-"));
+ input.addEventListener("input",()=>{
+  updateProportionLabels();updateProportionButton();
+  const state=getBodyProportionState(importedAsset);
+  previewCharacterBodyProportions(
+   proportionDelta(readProportionControls(),state.baseProportions),
+   importedAsset?.rig_analysis?.bone_mapping||{},
+  );
+ });
+}
 $("apply-proportions").addEventListener("click",applyBodyProportions);
 $("apply-hair").addEventListener("click",applyHairStyle);
-$("reset-proportions").addEventListener("click",()=>{resetProportionControls();updateProportionButton()});
+$("reset-proportions").addEventListener("click",async()=>{
+ const state=getBodyProportionState(importedAsset);
+ for(const name of proportionFields){
+  const value=Number(state.baseProportions[name]??1);
+  $(name.replaceAll("_","-")).value=String(value);
+ }
+ try{await restoreProportionBaseAsset(state)}catch(error){$("proportion-status").textContent=error.message}
+ const values=readProportionControls();
+ $("body-proportions").value=JSON.stringify(values,null,2);
+ previewCharacterBodyProportions(proportionDelta(values,state.baseProportions),importedAsset?.rig_analysis?.bone_mapping||{});
+ updateProportionLabels();updateProportionButton();
+ $("proportion-status").textContent="The previous saved body proportions have been restored.";
+});
 $("refresh-characters").addEventListener("click",()=>loadCharacters().catch(error=>$("project-status").textContent=error.message));
 
 const assemblySlots=["head","body","legs","feet"];
