@@ -12,6 +12,7 @@ from app import main
 from app.engine import EngineTimeoutError, EngineUnavailableError, GodotEngineAdapter
 from app.storage import project_directory
 
+
 class _TimedOutProcess:
     def __init__(self) -> None:
         self.returncode = None
