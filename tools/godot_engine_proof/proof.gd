@@ -17,6 +17,7 @@ var _checks := {
     "imported_retarget_animation_playing": false,
     "imported_retarget_different_rest_lengths": false,
     "imported_retarget_pose_transferred": false,
+    "imported_retarget_scene_reopened": false,
     "animation_created": false,
     "animation_playing": false,
     "scene_saved": false,
@@ -341,9 +342,14 @@ func _save_and_reopen_scene() -> void:
         _errors.append("Reopened scene is missing AnimationPlayer.")
     elif instance.get_node_or_null("SourceSkeleton/RetargetModifier3D/TargetSkeleton") == null:
         _errors.append("Reopened scene is missing the humanoid retarget pair.")
+    elif instance.find_child("ImportedRetargetModifier", true, false) == null:
+        _errors.append("Reopened scene is missing the imported retarget modifier.")
+    elif instance.find_child("ImportedRetargetTarget", true, false) == null:
+        _errors.append("Reopened scene is missing the imported target skeleton.")
     else:
         _checks["scene_reopened"] = true
         _checks["retarget_scene_reopened"] = true
+        _checks["imported_retarget_scene_reopened"] = true
     instance.free()
 
 
