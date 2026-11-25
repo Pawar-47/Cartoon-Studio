@@ -238,6 +238,7 @@ def test_pinned_godot_worker_creates_non_destructive_retarget_scene(tmp_path):
     assert response["mapped_bone_count"] == 15
     assert response["target_skinned_mesh_count"] >= 1
     assert response["scene_reopened"] is True
+    assert response["pose_transferred"] is True
     assert output.is_file()
     assert source.read_bytes() == fixture.read_bytes()
     assert target.read_bytes() == fixture.read_bytes()

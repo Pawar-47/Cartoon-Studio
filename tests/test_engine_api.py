@@ -104,6 +104,7 @@ class _FakeRetargetAdapter(_FakeEngineAdapter):
             "mapped_bone_count": 15,
             "target_skinned_mesh_count": 1,
             "scene_reopened": True,
+            "pose_transferred": True,
         }
 
 
@@ -172,6 +173,7 @@ def test_character_retarget_api_saves_scene_and_persistent_record(tmp_path, monk
     assert record["data"]["animation_name"] == "Walk"
     assert record["data"]["mapped_bone_count"] == 15
     assert record["data"]["scene_reopened"] is True
+    assert record["data"]["pose_transferred"] is True
     assert record["data"]["source_glb_preserved"] is True
     assert record["data"]["target_glb_preserved"] is True
 

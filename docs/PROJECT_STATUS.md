@@ -93,9 +93,12 @@
 - Intermediate CI failures #232–#235 exposed lint formatting and a rest-transform association bug; both were corrected. CI #236, #237 and #238 subsequently passed.
 
 
-## Imported retarget integration correction — pending CI
 
-- The fixture hierarchy now places both upper arms under Spine and preserves their global rest offsets.
-- Fixed the adapter's complete mapping check to compare key sets with the required profile-name set.
-- Added a focused regression test for the complete 15-bone mapping request.
-- Waiting for full Windows CI and dedicated Godot proof before acceptance.
+
+## Imported-pair pose-transfer verification — pending CI
+
+- Windows CI #250 passed the full pipeline including installer and clean install lifecycle checks.
+- The Godot worker now reopens the generated two-GLB scene, advances animation frames, and verifies that the source animated LeftUpperArm pose reaches the target skeleton.
+- A retarget scene is removed and rejected if pose transfer is not verified.
+- Retarget history records and displays the pose-transfer verification state.
+- CI for this change is pending. The two-GLB worker test currently uses separate copies of the same imported humanoid fixture; differing proportions and naming conventions remain to be validated.

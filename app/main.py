@@ -748,6 +748,7 @@ def create_character_retarget(
         "mapped_bone_count": result.get("mapped_bone_count", 0),
         "target_skinned_mesh_count": result.get("target_skinned_mesh_count", 0),
         "scene_reopened": bool(result.get("scene_reopened", False)),
+        "pose_transferred": bool(result.get("pose_transferred", False)),
         "source_glb_preserved": True,
         "target_glb_preserved": True,
     }

@@ -14,7 +14,7 @@ func _initialize() -> void:
 
     var request_text := FileAccess.get_file_as_string(request_path)
     var request_value: Variant = JSON.parse_string(request_text)
-    var response := _handle_request(request_value)
+    var response: Dictionary = await _handle_request(request_value)
     var response_file := FileAccess.open(response_path, FileAccess.WRITE)
     if response_file == null:
         push_error("Could not write worker response: " + response_path)
@@ -74,7 +74,7 @@ func _handle_request(request_value: Variant) -> Dictionary:
         return response
 
     if operation == "retarget_glb_pair":
-        var retarget_result := _retarget_glb_pair(payload)
+        var retarget_result: Dictionary = await _retarget_glb_pair(payload)
         for key in retarget_result:
             response[key] = retarget_result[key]
         return response
@@ -368,12 +368,38 @@ func _retarget_glb_pair(payload: Dictionary) -> Dictionary:
         and reopened_target != null
         and reopened_skin_count == bound_target_meshes.size()
     )
+    var pose_transferred := false
+    if scene_reopened:
+        root.add_child(reopened_instance)
+        for frame_index in range(4):
+            await process_frame
+        var reopened_source := reopened_modifier.get_parent() as Skeleton3D
+        var source_arm_index := reopened_source.find_bone("LeftUpperArm")
+        var target_arm_index := (reopened_target as Skeleton3D).find_bone("LeftUpperArm")
+        if source_arm_index >= 0 and target_arm_index >= 0:
+            var source_rotation := reopened_source.get_bone_pose_rotation(source_arm_index)
+            var target_rotation := (reopened_target as Skeleton3D).get_bone_pose_rotation(target_arm_index)
+            var source_angle := source_rotation.angle_to(Quaternion.IDENTITY)
+            var target_angle := target_rotation.angle_to(Quaternion.IDENTITY)
+            pose_transferred = (
+                source_angle > deg_to_rad(10.0)
+                and absf(source_angle - target_angle) < deg_to_rad(3.0)
+            )
     var source_bone_count := source_skeleton.get_bone_count()
     var target_bone_count := target_skeleton.get_bone_count()
-    reopened_instance.free()
+    reopened_instance.queue_free()
     combined_root.queue_free()
+    await process_frame
     if not scene_reopened:
+        DirAccess.remove_absolute(output_path)
         return {"error_code": "scene_reopen_invalid", "error": "Reopened retarget scene is missing its modifier, target skeleton or skin binding."}
+    if not pose_transferred:
+        DirAccess.remove_absolute(output_path)
+        return {
+            "error_code": "pose_transfer_failed",
+            "error": "The reopened retarget scene did not transfer the animated source upper-arm pose to the target skeleton.",
+            "scene_reopened": true
+        }
 
     return {
         "ok": true,
@@ -383,7 +409,8 @@ func _retarget_glb_pair(payload: Dictionary) -> Dictionary:
         "target_bone_count": target_bone_count,
         "mapped_bone_count": required_profile_bones.size(),
         "target_skinned_mesh_count": bound_target_meshes.size(),
-        "scene_reopened": true
+        "scene_reopened": true,
+        "pose_transferred": true
     }
 
 

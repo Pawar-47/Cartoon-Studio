@@ -50,9 +50,9 @@ The imported animation is currently retargeted in a Godot proof from the importe
 
 ## Immediate next work
 
-1. Inspect Windows CI #240/#241 and Godot proof #10; resolve any actual failures.
-2. Implement the non-destructive user-facing imported-rig retarget workflow in Character Studio, using the verified Godot node arrangement and preserving the original source asset.
-3. Test against additional imported humanoid rigs with different naming conventions, proportions and animation tracks.
+1. Complete the actual two-imported-GLB pose-transfer check in the worker, including scene reopen and source animation playback.
+2. Test with distinct imported target proportions and additional naming conventions; the current integration fixture pair is duplicated from the same humanoid GLB.
+3. Add a usable retarget preview/open action in Character Studio; currently the UI saves the Godot scene and lists its record.
 4. Validate real facial morph controls on blend-shape GLBs, including intended facial-region deformation and persistence.
 5. Add deterministic export/round-trip only after retarget and appearance preservation are proven.
 6. Keep Phase 2 active until character authoring, import, retarget, preview, persistence and export acceptance are real.
@@ -68,9 +68,12 @@ The imported animation is currently retargeted in a Godot proof from the importe
 - Always respond in English for this project.
 
 
-## Imported retarget integration correction — 2026-11-25
 
-- Imported humanoid fixture hierarchy corrected: both upper arms are children of Spine, with local offsets adjusted to preserve their previous global rest positions.
-- The real Godot worker test now reaches the adapter's complete mapping validation. It exposed a Python set-versus-dict comparison bug; the adapter now compares mapping keys with the set of required profile names.
-- A focused adapter regression test verifies that a complete 15-bone mapping is accepted and forwarded to the worker.
-- The full Windows and dedicated Godot workflows must pass before this retarget batch is accepted.
+
+## Imported-pair pose-transfer verification — 2026-11-25
+
+- Windows CI #250 passed the complete pipeline, including tests, Godot worker checks, application builds, installer compilation and install/upgrade/uninstall/reinstall smoke tests.
+- Added an additional runtime acceptance check to the retarget worker: reopen the saved two-GLB scene, advance the SceneTree, and compare the animated source LeftUpperArm pose with the retargeted target pose.
+- The worker now refuses the retarget scene and removes the generated scene file if pose transfer is not verified.
+- The API records `pose_transferred`; the Character Studio retarget history exposes the verification state.
+- CI for this new pose-transfer check is pending. The current integration test uses two separate copies of the same imported GLB; differing-proportion imported target acceptance remains future work.
