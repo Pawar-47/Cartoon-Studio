@@ -302,7 +302,6 @@ $("character-form").addEventListener("submit",async event=>{
 $("cancel-edit-profile").addEventListener("click",cancelProfileEdit);
 $("refresh-characters").addEventListener("click",()=>loadCharacters().catch(error=>$("project-status").textContent=error.message));
 
-let assemblyAssets=[];
 const assemblySlots=["head","body","legs","feet"];
 function rememberAssemblyAsset(asset,label){
  if(!asset||!asset.asset_id||!asset.relative_path)return;
