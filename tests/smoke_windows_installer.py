@@ -90,7 +90,7 @@ def uninstall(install_dir: Path) -> None:
     subprocess.run([str(uninstaller), "/S"], check=True, timeout=180)
     if (install_dir / "CartoonStudio.exe").exists():
         registry = subprocess.run(
-            ["reg", "query", r"HKCU\\Software\\CartoonStudio", "/v", "InstallDir"],
+            ["reg", "query", r"HKCU\Software\CartoonStudio", "/v", "InstallDir"],
             check=False,
             capture_output=True,
             text=True,
@@ -101,9 +101,9 @@ def uninstall(install_dir: Path) -> None:
             else "No uninstaller debug file."
         )
         raise AssertionError(
-            "Uninstaller left the main executable in place.\\n"
+            "Uninstaller left the main executable in place.\n"
             + debug_text
-            + "\\nRegistry:\\n"
+            + "\nRegistry:\n"
             + registry.stdout
             + registry.stderr
         )
