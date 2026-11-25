@@ -133,7 +133,11 @@ def _seed_retarget_character(tmp_path, project_id, name):
             "godot_profile_mapping": mapping,
         },
         "container": {"skin_count": 1},
-        "engine_inspection": {"animation_count": 1, "skeleton_count": 1},
+        "engine_inspection": {
+            "animation_count": 3,
+            "animation_names": ["Walk", "Run"],
+            "skeleton_count": 1,
+        },
     }
     now = datetime.now(UTC).isoformat()
     document = main.make_envelope(
@@ -198,12 +202,16 @@ def test_character_retarget_api_saves_scene_and_persistent_record(tmp_path, monk
 
     response = client.post(
         f"/api/projects/{project_id}/retargets",
-        json={"source_character_id": source_id, "target_character_id": target_id},
+        json={
+            "source_character_id": source_id,
+            "target_character_id": target_id,
+            "animation_name": "Run",
+        },
     )
     assert response.status_code == 201
     record = response.json()
     assert record["document_type"] == "character_retarget"
-    assert record["data"]["animation_name"] == "Walk"
+    assert record["data"]["animation_name"] == "Run"
     assert record["data"]["mapped_bone_count"] == 15
     assert record["data"]["scene_reopened"] is True
     assert record["data"]["pose_transferred"] is True
@@ -231,6 +239,30 @@ def test_character_retarget_api_saves_scene_and_persistent_record(tmp_path, monk
     assert preview_data["source_mapping"]["Hips"] == "Hips"
     assert preview_data["target_mapping"]["LeftUpperArm"] == "LeftUpperArm"
     assert preview_data["authoritative_scene"].endswith("/scene")
+
+
+def test_character_retarget_api_rejects_unknown_animation_before_engine_call(
+    tmp_path, monkeypatch
+):
+    project_id = _new_project(tmp_path, monkeypatch)
+    source_id = _seed_retarget_character(tmp_path, project_id, "Source")
+    target_id = _seed_retarget_character(tmp_path, project_id, "Target")
+
+    class MustNotRun:
+        def retarget_glb_pair(self, *args, **kwargs):
+            raise AssertionError("Godot must not run for an unknown animation.")
+
+    monkeypatch.setattr(main, "get_engine_adapter", MustNotRun)
+    response = client.post(
+        f"/api/projects/{project_id}/retargets",
+        json={
+            "source_character_id": source_id,
+            "target_character_id": target_id,
+            "animation_name": "Dance",
+        },
+    )
+    assert response.status_code == 422
+    assert "not present" in response.json()["detail"]
 
 
 def test_character_retarget_api_rejects_invalid_hierarchy_before_engine_call(

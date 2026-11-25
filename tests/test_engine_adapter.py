@@ -368,6 +368,8 @@ def test_pinned_godot_worker_retargets_real_third_party_rigged_figure(tmp_path):
     assert source_rig["status"] == target_rig["status"] == "humanoid_names_complete"
     assert source_rig["hierarchy_validation"]["status"] == "valid"
     assert target_rig["hierarchy_validation"]["status"] == "valid"
+    assert source_inspection["animation_names"]
+    selected_animation = source_inspection["animation_names"][0]
 
     output = project_root / "retargets" / "cesium-rigged-figure.tscn"
     response = adapter.retarget_glb_pair(
@@ -377,8 +379,10 @@ def test_pinned_godot_worker_retargets_real_third_party_rigged_figure(tmp_path):
         allowed_root=project_root,
         source_profile_mapping=source_rig["godot_profile_mapping"],
         target_profile_mapping=target_rig["godot_profile_mapping"],
+        animation_name=selected_animation,
     )
     assert response["ok"] is True
+    assert response["animation_name"] == selected_animation
     assert response["mapped_bone_count"] == 15
     assert response["scene_reopened"] is True
     assert response["pose_transferred"] is True

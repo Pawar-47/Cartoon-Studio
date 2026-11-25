@@ -669,10 +669,23 @@ def create_character_retarget(
     source_inspection = source_asset.get("engine_inspection", {})
     target_inspection = target_asset.get("engine_inspection", {})
     target_container = target_asset.get("container", {})
-    if int(source_inspection.get("animation_count", 0) or 0) < 1:
+    available_animations = source_inspection.get("animation_names")
+    if int(source_inspection.get("animation_count", 0) or 0) < 1 or (
+        isinstance(available_animations, list) and not available_animations
+    ):
         raise HTTPException(
             status_code=422,
-            detail="The source character has no imported animation.",
+            detail="The source character has no playable imported animation clips.",
+        )
+    requested_animation = payload.animation_name.strip()
+    if (
+        requested_animation
+        and isinstance(available_animations, list)
+        and requested_animation not in available_animations
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail="The selected animation is not present in the source character's imported clips.",
         )
     target_skin_count = target_container.get(
         "skin_count", target_inspection.get("skin_count", 0)

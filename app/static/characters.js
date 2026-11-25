@@ -72,8 +72,10 @@ function updateRetargetCharacterOptions(characters){
  for(const characterDoc of characters){
   const data=characterDoc.data||{},asset=data.asset||{},inspection=asset.engine_inspection||{},container=asset.container||{},rig=asset.rig_analysis||{},hierarchy=rig.hierarchy_validation||{};
   const compatible=rig.status==="humanoid_names_complete"&&hierarchy.status==="valid"&&Number(inspection.skeleton_count||0)===1;
+  const clipNames=inspection.animation_names;
+  const hasPlayableClips=Array.isArray(clipNames)?clipNames.length>0:Number(inspection.animation_count||0)>0;
   const skinCount=Number(container.skin_count??inspection.skin_count??0);
-  if(compatible&&Number(inspection.animation_count||0)>0)source.append(documentElementOption(characterDoc));
+  if(compatible&&hasPlayableClips)source.append(documentElementOption(characterDoc));
   if(compatible&&skinCount>0)target.append(documentElementOption(characterDoc));
  }
  if([...source.options].some(option=>option.value===previousSource))source.value=previousSource;
