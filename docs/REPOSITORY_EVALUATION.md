@@ -193,3 +193,27 @@ Official pack pages individually verified as CC0:
 
 ## Revised Godot implementation hypothesis
 A low-hardware-friendly path may use Godot 4.7.2 Compatibility plus the verified MIT plugins and exact CC0 Quaternius packs. A custom recipe-based character editor can assemble modular GLB parts on a shared skeleton, store JSON project data and retarget the CC0 animation libraries. Godot-native world plugins can generate terrain/roads/buildings/interiors, while the asset packs provide detailed modular pieces. This preserves the current FastAPI/story backend and avoids requiring Blender on the user's target PC. The approach remains unselected pending target-PC proof and license review.
+
+## Candidate V — Godot audio timeline and non-real-time episode rendering
+
+Source: Godot 4.7 docs: https://docs.godotengine.org/en/4.7/tutorials/animation/creating_movies.html
+
+**Advantages:** Audio Playback Tracks display waveforms and schedule audio with animation; Audio Buses separate dialogue/music/ambience/SFX and provide effects/meters. Exported projects can use `--write-movie`, `--fixed-fps`, `--resolution` and `--quit-after`; non-real-time recording maintains exact frame pacing even on slow hardware.
+
+**Limits:** exported-project MovieWriter outputs AVI/MJPEG (4 GB cap) or PNG+WAV. OGV/Theora/Vorbis recording is editor-build only. MP4 requires FFmpeg. PNG sequences are disk-heavy; AVI chunks need to remain below 4 GB. A custom GDExtension MovieWriter could pipe frames to FFmpeg but is extra C++ work.
+
+**Decision:** STRONG RENDER PIPELINE CANDIDATE. First proof should render short scene chunks to AVI and PNG/WAV, then assemble MP4 with a pinned LGPL-compatible FFmpeg build. Evaluate a custom FFmpeg MovieWriter only if the basic chunk pipeline is insufficient.
+
+## Candidate W — FFmpeg + OpenH264 for MP4
+
+- FFmpeg default is LGPL-2.1-or-later; `--enable-gpl` components such as libx264/libx265 change the build license to GPL. Do not use an arbitrary prebuilt Windows package.
+- OpenH264 is BSD-licensed and is a possible H.264 encoder in an LGPL FFmpeg build without GPL components. It has documented bitrate-control and 4K limits; target 1080p is within the resolution limit.
+- Exact binary, source, configure flags, codec list, notices and dynamic-linking compliance must be pinned before packaging.
+
+**Decision:** candidate final encoder only; no binary selected or bundled.
+
+## Candidate X — CC0 audio and music assets
+
+Kenney's Music Jingles, Impact Sounds, Digital Audio, Interface Sounds, UI Audio, RPG Audio and Voiceover Pack are individually marked CC0. Music Jingles are short stingers, not background loops. OpenGameArt has CC0 music loop packs/collections, but every track needs its own license and Content ID check.
+
+**Decision:** build an audio asset catalog with stable IDs, source URLs, exact license, attribution, duration, loop points and Content ID status. No audio asset is downloaded or bundled yet. Prefer original music or tracks with no known Content ID registration for YouTube-safe publishing.

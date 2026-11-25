@@ -257,3 +257,42 @@ A Godot-native stack can now cover more of the master brief without requiring Bl
 - Quaternius CC0 GLB packs for modular characters, outfits, streets, buildings, interiors, vehicles and animations.
 - Original Cartoon Studio code for persistent character/world recipes, face expressions/visemes, scene assembly, Urdu dialogue, camera/lighting, render jobs and episode production.
 This is only a research candidate; the full stack has not been imported, tested together or benchmarked on the target PC.
+
+## 2026-11-25 — Audio, lip-sync and final-video pipeline sweep
+
+### Godot animation/audio timeline
+- Godot 4.7 AnimationPlayer supports Audio Playback Tracks that display an audio waveform and schedule clips at timeline positions. AudioStreamPlayer nodes can route through named buses.
+- Godot Audio Buses support independent routing, VU meters and effect processors. This can separate dialogue, music, ambience and SFX; keep master output below 0 dB to avoid clipping.
+- This supports a custom episode timeline without a separate DAW dependency: scene animation tracks, dialogue clips, sound effects, ambience and music can be stored as versioned scene/audio data.
+
+### Godot MovieWriter and FFmpeg
+- Official Godot 4.7 Movie Maker docs: https://docs.godotengine.org/en/4.7/tutorials/animation/creating_movies.html
+- `--write-movie`, `--fixed-fps`, `--resolution` and `--quit-after` work with exported projects. Movie Maker runs non-real-time with fixed delta, so slow hardware can render without dropped frames or real-time pacing loss.
+- Exported-project built-in outputs: AVI/MJPEG with uncompressed audio (maximum 4 GB per file), or PNG image sequence plus WAV. OGV/Theora/Vorbis is only recordable in editor builds, not export templates. Godot docs show FFmpeg commands for converting PNG/WAV to MP4.
+- For audio sync, the MovieWriter mix rate must be divisible by the recorded FPS. 48 kHz is divisible by 24, 30 and 60 FPS and is a suitable candidate.
+- Custom MovieWriter implementations can be built as GDExtensions and can pipe frames to third-party encoders. This could avoid huge PNG sequences and the 4 GB AVI cap, but it is additional C++ work and not yet proven.
+- Candidate render strategy: render independent scene/chunk clips, checkpoint each chunk, then FFmpeg-concatenate and mix dialogue/music/SFX. For a simple first proof use AVI chunks below 4 GB or PNG/WAV chunks; evaluate a custom FFmpeg writer only if required.
+
+### FFmpeg codec and license constraints
+- Official legal page: https://www.ffmpeg.org/legal.html
+- FFmpeg is LGPL-2.1-or-later by default. Enabling GPL components (notably libx264/libx265) changes the FFmpeg build to GPL; nonfree builds may be unredistributable. Official LGPL checklist requires preserving the exact corresponding source/build configuration and license notices, and dynamic linking when linking libraries.
+- **OpenH264** — https://github.com/cisco/openh264: BSD-licensed H.264 codec with a patent grant. It is a possible H.264 encoder in an FFmpeg build without `--enable-gpl`; it has documented limitations (encoder errors above 3840x2160 and bitrate-control caveats). 1080p is within its documented resolution limit, but quality/performance need testing.
+- Do not bundle an arbitrary FFmpeg Windows build: many include libx264 and therefore GPL. Pin the exact build, configure flags, enabled codecs and source archive. Prefer an LGPL-compatible build with OpenH264 if its quality is acceptable; otherwise make the licensing decision explicit.
+
+### CC0 audio assets and music
+- Kenney Music Jingles (85 CC0 short stingers): https://kenney.nl/assets/music-jingles. These are short cues, not seamless background beds.
+- Kenney Impact Sounds (130 CC0 effects): https://kenney.nl/assets/impact-sounds.
+- Kenney Digital Audio (60 CC0 effects): https://kenney.nl/assets/digital-audio.
+- Kenney Interface Sounds (100 CC0 effects): https://kenney.nl/assets/interface-sounds.
+- Kenney UI Audio (50 CC0 effects): https://kenney.nl/assets/ui-audio.
+- Kenney RPG Audio (50 CC0 effects): https://kenney.nl/assets/rpg-audio.
+- Kenney Voiceover Pack (90 CC0 voice clips): https://kenney.nl/assets/voiceover-pack. These are not Urdu dialogue.
+- OpenGameArt CC0 music sources inspected: https://opengameart.org/content/music-loops (pauliuw), https://opengameart.org/content/short-loops-background-music-pack, https://opengameart.org/content/two-simple-game-music-loops, and the CC0 Music collection https://opengameart.org/content/cc0-music. Each track must be individually checked; a collection title is not sufficient proof for every included file.
+- A curated GitHub catalog, https://github.com/S3M1TR4SH/asset-library, demonstrates stable asset IDs, genre packs and a `LICENSES.md` provenance table. It has no root code license, so do not copy its code. Its v0.4.0 music entries include CC0 OpenGameArt tracks; verify each original track page before use.
+- YouTube Content ID status is separate from copyright license. The catalog https://github.com/TMHSDigital/Free-Game-Dev-Assets explicitly tracks Content ID risk and warns that a legally usable track can still trigger a claim. For episode publishing, prefer original music or tracks whose source has no known Content ID registration; retain track provenance and be ready to replace a claimed track.
+
+### Urdu phoneme/lip-sync correction
+- Allosaurus universal model is CPU-capable by default and supports around 2,000 language phone inventories; the only language-dependent acoustic model listed in its README is English. Its phone timestamps are explicitly approximate CTC timestamps, not word-level forced alignment.
+- The model archive `uni2005` is about 41.5 MB; PyTorch dependencies and CPU time are additional. The exact Urdu ISO inventory entry must be checked with `python -m allosaurus.bin.list_lang` on the pinned model; no Urdu-specific acoustic model is listed.
+- Parrot Lipsync v1.1.2 uses Allosaurus and an editable phoneme-to-mouth-pose table; its release supports Blender 4.5. It is GPL-3.0 and is a Blender add-on, not a Godot plugin. If Godot remains the runtime, only the data-flow concept is relevant; a Godot-owned viseme track generator would be required.
+- For Urdu, do not rely on generic “25+ languages” claims. The proof must use native Pakistani Urdu audio, verify phone inventory and pronunciation, map phones to Cartoon Studio visemes, and allow manual timeline correction. Keep manual voice recording and manual mouth-keyframe editing as fallbacks.

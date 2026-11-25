@@ -84,3 +84,25 @@ The creator's site now offers both CC0 and QAL packs; only the exact pages below
 QAL v1.0 (https://quaternius.com/license.html, updated 2026-08-28) allows incorporation into a finished product but prohibits redistributing the assets themselves as a standalone pack. For Cartoon Studio's downloadable in-app asset library, prefer CC0 packs to avoid ambiguity. Never label all Quaternius assets CC0 globally.
 
 Ducz.CharacterCreator code remains unlicensed and must not be copied. The Quaternius packs it credits may be used only under their own CC0 pack licenses. No pack has been downloaded or bundled yet.
+
+## Audio assets individually inspected — 2026-11-25
+
+| Pack / source | Exact source | License evidence | Notes |
+|---|---|---|---|
+| Kenney Music Jingles | https://kenney.nl/assets/music-jingles | CC0 | 85 short stingers; not seamless background loops |
+| Kenney Impact Sounds | https://kenney.nl/assets/impact-sounds | CC0 | 130 SFX |
+| Kenney Digital Audio | https://kenney.nl/assets/digital-audio | CC0 | 60 SFX |
+| Kenney Interface Sounds | https://kenney.nl/assets/interface-sounds | CC0 | 100 UI sounds |
+| Kenney UI Audio | https://kenney.nl/assets/ui-audio | CC0 | 50 UI sounds |
+| Kenney RPG Audio | https://kenney.nl/assets/rpg-audio | CC0 | 50 foley/RPG sounds |
+| Kenney Voiceover Pack | https://kenney.nl/assets/voiceover-pack | CC0 | 90 voice clips; not Urdu dialogue |
+| OpenGameArt Music Loops (pauliuw) | https://opengameart.org/content/music-loops | CC0 per page | Four loop files; retain author/source record |
+| Short Loops Background Music Pack | https://opengameart.org/content/short-loops-background-music-pack | CC0 per page | Four short seamless OGG loops |
+| Two Simple Game Music Loops | https://opengameart.org/content/two-simple-game-music-loops | CC0 per page | Two WAV/OGG loops |
+| OpenGameArt CC0 Music collections | https://opengameart.org/content/cc0-music | Collection includes CC0 entries; inspect each original track | Do not assume every track in a collection has identical license |
+| Abstraction Music Loop Bundle | https://tallbeard.itch.io/abstraction | CC0 per source catalog | 200+ loops reported; Content ID status not established |
+| S3M1TR4SH asset-library catalog | https://github.com/S3M1TR4SH/asset-library | No root code license found; `LICENSES.md` records source asset licenses | Catalog schema reference only; do not copy code |
+| OpenH264 | https://github.com/cisco/openh264 | BSD | Candidate H.264 codec; review patent grant and exact binary |
+| FFmpeg | https://www.ffmpeg.org/legal.html | LGPL-2.1+ default; GPL components change build to GPL | Use known LGPL build, no libx264/libx265; preserve source/config/notice |
+
+YouTube Content ID status is not the same as copyright permission. For every music track, record whether the source reports Content ID registration/claims. Prefer original music or sources with no known Content ID registration; no claim-free guarantee is made. No audio assets or FFmpeg binaries have been downloaded or bundled.

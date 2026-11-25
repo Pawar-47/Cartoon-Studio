@@ -60,3 +60,20 @@ Adoption gate: no dependency until exact version, source, compatibility, softwar
 | https://quaternius.com/packs/ultimatefurniture.html | Furniture | CC0 per exact pack page | 20 furniture pieces | Asset proof |
 | https://quaternius.com/packs/cars.html | Cars | CC0 per exact pack page | 8 car models | Asset proof; rig wheels/doors separately |
 | https://quaternius.com/packs/publictransport.html | Public transport | CC0 per exact pack page | 12 vehicles incl. bus/ambulance/train | Asset proof; rig animation separately |
+
+| https://docs.godotengine.org/en/4.7/tutorials/animation/creating_movies.html | Movie render pipeline | Godot docs/API | Non-real-time fixed-FPS render; AVI/PNG+WAV in exported projects; OGV only editor build; custom MovieWriter via extension | Strong proof candidate |
+| https://docs.godotengine.org/en/4.7/tutorials/audio/audio_buses.html | Audio mixing | Godot built-in | Independent buses, routing, meters and effects | Use built-in audio engine |
+| https://docs.godotengine.org/en/4.7/tutorials/animation/animation_track_types.html | Dialogue/SFX timing | Godot built-in | Audio playback tracks with waveform and animation timing | Use built-in tracks |
+| https://github.com/cisco/openh264 | H.264 encoding | BSD | H.264 codec; 4K and bitrate-control caveats | Possible FFmpeg LGPL encoder; test |
+| https://kenney.nl/assets/music-jingles | Music cues | CC0 | 85 short stingers, not loops | Safe short cues after pack inventory |
+| https://kenney.nl/assets/impact-sounds | SFX | CC0 | 130 impact sounds | Safe SFX pack |
+| https://kenney.nl/assets/digital-audio | SFX | CC0 | 60 effects | Safe SFX pack |
+| https://kenney.nl/assets/interface-sounds | UI SFX | CC0 | 100 interface sounds | Safe UI pack |
+| https://kenney.nl/assets/ui-audio | UI SFX | CC0 | 50 UI sounds | Safe UI pack |
+| https://kenney.nl/assets/rpg-audio | Foley/SFX | CC0 | 50 RPG effects | Safe SFX pack |
+| https://kenney.nl/assets/voiceover-pack | Voice clips | CC0 | 90 clips; not Urdu dialogue | Placeholder only |
+| https://opengameart.org/content/music-loops | Background loops | CC0 per page | 4 loops by pauliuw | Track-level verification and Content ID check |
+| https://opengameart.org/content/short-loops-background-music-pack | Background loops | CC0 per page | 4 short seamless loops | Track-level verification |
+| https://opengameart.org/content/two-simple-game-music-loops | Background loops | CC0 per page | 2 loops | Track-level verification |
+| https://github.com/S3M1TR4SH/asset-library | Asset catalog schema reference | No root code license found; asset licenses listed individually | Stable IDs, genre packs, provenance and CC0/CC-BY metadata | Design reference only; do not copy code |
+| https://github.com/TMHSDigital/Free-Game-Dev-Assets | Asset discovery/Content ID catalog | Catalog repo license not evaluated as reusable code | Tracks license and Content ID risk per source | Discovery reference only |

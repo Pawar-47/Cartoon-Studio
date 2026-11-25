@@ -56,3 +56,13 @@ Blender 4.5.17 remains an optional asset-authoring candidate, not the current ta
 A low-hardware Godot Character Studio can be evaluated using a recipe-based model: one stable humanoid skeleton, swappable CC0 head/body/outfit/accessory GLBs, material recoloring, a JSON character definition and GLB export. Quaternius Universal Base Characters, Modular Character Outfits and UAL/UAL2 provide a starting point for bodies, clothing and 250+ animations. Cartoon Studio must create its own persistent IDs, face-expression/viseme controls, Pakistani clothing variants and character consistency layer; no unlicensed character-builder code is copied.
 
 A Godot-native world proof can combine Terrain3D, Road Generator, Building Generator and Roommate with exact CC0 Quaternius city/street/building/interior/vehicle packs. Use LODs and asset instancing; test draw calls, object count, texture memory and scene load time on the HD 5500. No asset is imported into the production repository before engine freeze and per-pack license manifest.
+
+## Episode audio and video output candidate
+
+Use Godot's built-in AnimationPlayer audio tracks and Audio Buses to arrange dialogue, ambience, music and SFX. Store each track as a versioned asset reference with start/end, gain, fade, loop and source/license metadata. Keep dialogue separate from music/SFX for later mix and ducking.
+
+Use Godot Movie Maker mode with fixed FPS and non-real-time rendering. Render scene chunks independently so a crash does not force a full-episode rerender. For exported builds, begin with AVI/MJPEG chunks below 4 GB or PNG+WAV chunks; OGV is editor-build only. Assemble/normalize/mix with a pinned FFmpeg build and export MP4. A custom GDExtension MovieWriter that pipes frames to FFmpeg is a later optimization, not a Phase 0 assumption.
+
+FFmpeg must be built without GPL/nonfree components unless the project license decision explicitly permits them. OpenH264 (BSD) is a possible H.264 encoder, subject to quality/bitrate tests and patent review. Record codec, encoder version, configure flags and licenses in the build manifest.
+
+For audio assets, maintain a local catalog with stable IDs, source, exact pack license, author, attribution, duration, loop points and Content ID status. Kenney CC0 packs cover SFX/stingers but not a complete soundtrack; OpenGameArt CC0 tracks require per-track checks. Preserve manual music import and original soundtrack options.
