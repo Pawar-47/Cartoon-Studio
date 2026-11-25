@@ -11,7 +11,7 @@ from typing import Any
 REQUIRED_HUMANOID_BONES: dict[str, frozenset[str]] = {
     "Hips": frozenset({"hips", "hip", "pelvis", "torsojoint1"}),
     "Spine": frozenset({"spine", "spine1", "spine01", "spine001", "torsojoint2", "abdomen"}),
-    "Head": frozenset({"head", "neckjoint2"}),
+    "Head": frozenset({"head", "head2", "neckjoint2"}),
     "LeftUpperLeg": frozenset(
         {"leftupleg", "leftupperleg", "leftthigh", "uplegl", "thighl", "upperlegl", "legjointl1"}
     ),

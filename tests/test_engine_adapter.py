@@ -380,7 +380,7 @@ def test_pinned_godot_worker_retargets_robot_expressive_selected_clip(tmp_path):
     )
     assert source_rig["hierarchy_validation"]["status"] == "valid"
     assert source_rig["godot_profile_mapping"]["Spine"]["source_name"] == "Abdomen"
-    assert source_rig["godot_profile_mapping"]["LeftHand"]["source_name"] == "Palm2L"
+    assert source_rig["godot_profile_mapping"]["LeftHand"]["source_name"] == "Palm2.L"
     assert target_rig["status"] == "humanoid_names_complete"
 
     animation_names = source_inspection["animation_names"]
