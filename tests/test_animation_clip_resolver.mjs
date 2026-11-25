@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { normalizeAnimationName, resolveAnimationClip } from "../app/static/animation-clip.mjs";
+import {
+  normalizeAnimationName,
+  resolveAnimationClip,
+  resolveDefaultAnimationClip,
+} from "../app/static/animation-clip.mjs";
 
 const clips = [
   { name: "RESET" },
@@ -39,4 +43,28 @@ test("never resolves the internal RESET track", () => {
 test("rejects ambiguous normalized names instead of guessing", () => {
   const ambiguous = [{ name: "Walking" }, { name: "RobotArmature/Walking" }];
   assert.equal(resolveAnimationClip(ambiguous, "Other/Walking"), null);
+});
+
+test("prefers an exact idle clip over other idle variants", () => {
+  const previewClips = [
+    { name: "Death" },
+    { name: "Idle_Gun" },
+    { name: "RobotArmature/Idle" },
+    { name: "Idle_Neutral" },
+  ];
+  assert.equal(resolveDefaultAnimationClip(previewClips), previewClips[2]);
+});
+
+test("uses a named idle variant when no exact idle clip exists", () => {
+  const previewClips = [{ name: "RESET" }, { name: "Death" }, { name: "Idle_Neutral" }];
+  assert.equal(resolveDefaultAnimationClip(previewClips), previewClips[2]);
+});
+
+test("falls back to the first playable clip when no idle clip exists", () => {
+  const previewClips = [{ name: "RESET" }, { name: "Walking" }, { name: "Running" }];
+  assert.equal(resolveDefaultAnimationClip(previewClips), previewClips[1]);
+});
+
+test("returns no default when only the internal reset clip is available", () => {
+  assert.equal(resolveDefaultAnimationClip([{ name: "RESET" }]), null);
 });

@@ -2,9 +2,17 @@
 
 ## Current checkpoint
 
-Main is `6a3406efb320a0895d4b2a7253395a107d6a394d`. PR #17 adds generated 3D hairstyles and PR #19 adds transparent PNG portrait export; CI runs #421 and #423 passed. PR #20, four-view turnaround export, remains open with CI #425 passed. Phase 2 remains active; automated API/worker coverage does not count as interactive browser or visual acceptance.
+Main is `4d2a7848b7c123358b868f56eac0704a80f6c58d`; main CI #426 passed. PR #20, four-view turnaround export, remains open with CI #428 passed. PR #21, character-preview polish, is open from `work/character-preview-polish` with CI #429 passed. It prefers exact Idle clips, then Idle variants, and avoids playing a RESET-only clip. Phase 2 remains active; automated coverage does not count as new interactive visual acceptance.
 
-Local continuation is on `work/p2-2-body-shape-acceptance`, based on current main and containing the committed profile UI fixes. The browser passes functional acceptance on the synthetic humanoid fixture and pinned CC0 Male Adventurer GLB, but P2.2 remains PARTIAL.
+The preview-polish branch is based on current main and remains separate from PR #20. P2.2 remains PARTIAL.
+
+## Completed continuation batch — Character preview defaults
+
+- Added default clip resolution that prefers exact normalized `Idle`, then an Idle variant, then the first playable clip; the internal `RESET` clip is excluded by the existing playable-clip resolver.
+- RESET-only assets now display “No playable animations” instead of attempting playback.
+- Local targeted tests: `python -m pytest -o addopts= -q -rs tests/test_characters.py` — 16 passed.
+- Windows GitHub Actions CI #429 passed the Node-backed browser helper tests, JavaScript syntax checks, lint, compilation and full pytest suite.
+- No fresh visual browser acceptance was completed in this batch. Keep Phase 2 active and P2.2 partial.
 
 ## Active batch — Phase 2 Character Studio
 
