@@ -85,3 +85,15 @@
 - The Godot 4.7.2 proof project now constructs a canonical source/target humanoid skeleton pair with different limb proportions.
 - A native `RetargetModifier3D` and `SkeletonProfileHumanoid` transfer a keyed source arm animation to the target skeleton.
 - CI checks source animation playback, different rest lengths, target pose transfer and saved/reopened retarget hierarchy. This is a runtime capability proof, not yet retargeting of imported user models or a production animation library.
+
+
+## Indexed humanoid profile mapping — implementation batch
+
+- Maps the conservative core humanoid set to Godot SkeletonProfileHumanoid profile bone names.
+- Each unambiguous mapping preserves imported source bone index, source name, parent index and parent name.
+- Duplicate aliases (for example Hips and Pelvis) are reported as ambiguous and excluded rather than silently choosing the first candidate.
+- Missing required profile bones and unrecognized source bones are reported separately; separate Skeleton3D nodes are never combined.
+- Mapping is derived from Godot import inspection and does not rewrite the original GLB.
+- Regression tests cover canonical profile keys, source indices/parents, duplicate aliases, unmapped bones and strongest unambiguous skeleton selection.
+- This is name-based preflight, not proof of imported rest-pose, axis, skin-weight or animation compatibility. Imported-character RetargetModifier3D integration remains open.
+- Windows CI for this batch is pending.

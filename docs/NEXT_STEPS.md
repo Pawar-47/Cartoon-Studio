@@ -29,3 +29,13 @@
 ## Policy
 
 Work in coherent feature batches, preserve all existing work, use GitHub main as the source of truth, and do not use physical-PC testing as an early gate.
+
+
+## Indexed humanoid mapping batch (pending CI)
+
+- Windows CI #225 passed on pre-batch commit 8649ae66d364d0b434a69a6f6e17a0683370ad1c, including full installer lifecycle.
+- app/rig_analysis.py now maps the conservative core bone set to Godot SkeletonProfileHumanoid profile names, preserving source bone indices and parent metadata.
+- Duplicate aliases are excluded and reported as ambiguous; missing and unmapped bones are distinct diagnostics. Separate skeleton nodes are never combined and the GLB remains untouched.
+- tests/test_rig_analysis.py adds coverage for indexed mapping, parent metadata, ambiguity, unmapped bones and candidate selection.
+- Source/test commits: 80d68935994ce014b3a3a3f8ca9d97dff32391ab and ec17ed2ae5139f4033c86058f61a3464c596aa43. Documentation update and batch CI pending.
+- Next: bind imported skeletons to Godot retarget hierarchies, then prove retargeting on a real imported source/target GLB pair. Generated-skeleton proof #5 is not imported-asset acceptance.
