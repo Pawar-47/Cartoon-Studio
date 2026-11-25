@@ -180,7 +180,7 @@ async function loadCharacters(){
      }
      assemblyAccessories=(asset.assembly.accessories||[]).map(item=>({
       relative_path:item.relative_path,mesh_path:item.mesh_path,attachment_bone:item.attachment_bone||"",
-      label=(assemblyAssets.find(source=>source.relative_path===item.relative_path)?.assembly_label||"Saved source")+" / "+item.mesh_path.split("/").pop()
+      label:(assemblyAssets.find(source=>source.relative_path===item.relative_path)?.assembly_label||"Saved source")+" / "+item.mesh_path.split("/").pop()
      }));
      renderAssemblyAccessories();
      refreshAssemblyControls();
