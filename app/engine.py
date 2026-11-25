@@ -149,7 +149,9 @@ class GodotEngineAdapter:
             raise EnginePathError("Refusing to overwrite an existing assembly.")
         required_slots = {"head", "body", "legs", "feet"}
         if len(parts) != 4 or {part.get("slot") for part in parts} != required_slots:
-            raise EnginePathError("Choose exactly one mesh for each slot: head, body, legs and feet.")
+            raise EnginePathError(
+                "Choose exactly one mesh for each slot: head, body, legs and feet."
+            )
         validated_parts: list[dict[str, str]] = []
         for part in parts:
             source = Path(part.get("source_path", "")).resolve(strict=True)
