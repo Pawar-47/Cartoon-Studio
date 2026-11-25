@@ -23,3 +23,7 @@
 
 ## Verification standard
 Every new test result must record exact commit/version, environment, command, exit code, elapsed time, artifacts, observed output and unresolved limitations. CI success is not a substitute for target-PC or visual/audio quality verification.
+
+## P0.4 follow-up model audit
+- Inspected WhisperX Urdu aligner model card/file size, Urdu Whisper Turbo ASR model card/file size and Smol Urdu TTS source tree. Evidence is documented in URDU_VOICE_FEASIBILITY.md and CANDIDATE_SCORECARD.md.
+- This was source/model-card inspection only. No model weights were downloaded, no inference was run, and no Pakistani audio was processed.

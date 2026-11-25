@@ -74,3 +74,26 @@ Keep audio and timing independent from the 3D engine. Never make cloud TTS manda
 - Hugging Face aligner model license/data provenance needs separate review.
 - Qwen voice access, price, privacy and accent quality need approval and testing.
 - No automatic Urdu lip-sync system is proven. Manual viseme editing remains required.
+
+## 6. Additional model-card and implementation audit
+
+### Urdu wav2vec2 model used by WhisperX
+The exact Hugging Face model card is https://huggingface.co/kingabzpro/wav2vec2-large-xls-r-300m-Urdu:
+- License metadata: Apache-2.0.
+- 300M parameters; repository model file size shown as 1.41 GB; FP32 weights.
+- Trained on Mozilla Common Voice 8.0 Urdu.
+- Self-reported full test-set results: 39.89% WER / 16.70% CER with its 5-gram language model; greedy CTC 56.07% WER / 23.70% CER.
+- This is a poor standalone ASR result for production transcript creation. It remains in the shortlist only because WhisperX uses it as the language-specific forced-alignment acoustic model. Forced-alignment boundary quality must be tested separately using a human-corrected transcript; do not reuse the WER as an alignment metric.
+
+### Newer Urdu Whisper ASR candidate
+The separate model https://huggingface.co/kingabzpro/whisper-large-v3-turbo-urdu is Apache-2.0 and reports 26.234% WER / 8.795% CER on Common Voice 17.0 Urdu (model-card self-reported). It has 0.8B parameters and the model repository shows a 3.24 GB FP32 checkpoint. This is ASR, not WhisperX's current forced-alignment model. It is too large to assume comfortable use on an 8 GB i3 laptop. An 824 MB CTranslate2 int8 conversion is listed at https://huggingface.co/kingabzpro/whisper-large-v3-urdu-ct2, but it still requires a real CPU/RAM test and its exact variant/accuracy must be checked before use.
+
+### Smol Urdu TTS code audit
+The model card https://huggingface.co/ProximaAI/smol-urdu-tts-v1 describes an experimental 135M-parameter Urdu TTS model, Apache-2.0 metadata, BF16 weights and 24 kHz output. Its linked code repository https://github.com/Proxima-AI-Co/smolurdu has no LICENSE file in its current tree.
+- The source requires PyTorch, torchaudio, Transformers, Liger Kernel and separate WavTokenizer model/config files.
+- Inference loads the language model in bfloat16 and uses a separate WavTokenizer decoder checkpoint.
+- The repository's setup.py does not declare all runtime dependencies (Liger Kernel/WavTokenizer path); the model and code licensing are not aligned clearly enough for redistribution.
+- BF16 execution on the target Broadwell i3-5005U is unverified and may be inefficient or unsupported by the available CPU kernels.
+- Decision: do not approve Smol Urdu TTS for bundling or the target-PC default. It may be tested in an isolated experiment only after license/dependency review and only if it runs within the hardware budget.
+
+These model-card scores are published evaluation results, not measurements on Pakistani conversational speech. None establishes native-speaker quality for the Cartoon Studio use case.

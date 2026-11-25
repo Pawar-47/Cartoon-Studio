@@ -41,8 +41,8 @@
 - Target PC baseline supplied by user: Windows 10, Intel Core i3-5005U, Intel HD Graphics 5500, 8 GB RAM, SSD. Exact OS build and installed Intel driver remain unknown.
 - Godot 4.7.2 Compatibility is the leading on-paper runtime candidate only; no target-PC startup/performance/render test has run.
 - Blender 4.5.17 LTS remains an optional authoring candidate, but target CPU is below Blender's published 4-core minimum and the HD 5500 has documented driver caveats.
-- eSpeak NG contains Urdu-script pronunciation rules and can emit phoneme/IPA traces; it is a G2P candidate, not a natural Urdu voice.
-- WhisperX upstream currently maps ur to a 300M Urdu wav2vec2 aligner; CPU int8 is supported by its CLI, but target memory/speed/accuracy are untested.
+- eSpeak NG contains Urdu-script pronunciation rules and can emit phoneme/IPA traces; it is a G2P candidate, not a natural Urdu voice. Smol Urdu TTS V1 is not approved because the linked code has no LICENSE and requires a BF16/Liger/WavTokenizer stack.
+- WhisperX upstream maps ur to a 300M / 1.41 GB FP32 Urdu wav2vec2 aligner (Apache-2.0 model metadata); its Common Voice 8 Urdu ASR score is 39.89% WER, so retain it only as a forced-aligner candidate, not transcript ASR. A separate 0.8B Urdu Whisper Turbo ASR model reports 26.23% WER but is 3.24 GB FP32. CPU memory/speed and Pakistani conversational quality are untested.
 - Qwen Audio TTS Flash lists male Urdu voice Sahar, but its documented endpoints are Singapore and China North 2 and its standard pricing is paid. No provider is approved.
 - Gemini API official supported-region list includes Pakistan; free-tier data-use and changing per-model quotas remain caveats.
 - Groq free limits are model/organization-specific; its documented data centres are outside Pakistan. Cloudflare Workers AI and OpenRouter have limited free quotas, not unlimited free inference.

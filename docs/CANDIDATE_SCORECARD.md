@@ -100,3 +100,8 @@ A minimal Cartoon Studio-owned SQLite queue may still be simpler; choose in P0.5
 ## P0.3 outcome and next gates
 
 P0.3 source-level research and provisional scorecard are complete. The scorecard does not select an engine or authorize code/assets. P0.4 now owns target-PC compatibility, Pakistan region/account quota, native Urdu quality, privacy and cost feasibility. P0.5 will freeze the engine-neutral architecture only after P0.4; P0.6 will run bounded proofs after P0.5. Preserve the current FastAPI/browser/SQLite and Story Generator work; do not restart or expand production features before P0.7.
+
+## P0.4 Urdu model-card refinements — 2026-11-25
+- WhisperX Urdu forced-alignment candidate: Apache-2.0 model card, 300M parameters / 1.41 GB FP32; Common Voice 8 Urdu WER 39.89% and CER 16.70% with 5-gram decoder. Retain only for forced-alignment experiments, not as production ASR. Boundary quality must be measured separately.
+- Urdu Whisper large-v3-turbo ASR candidate: Apache-2.0 model card, 0.8B parameters / 3.24 GB FP32; Common Voice 17 Urdu WER 26.234% and CER 8.795% self-reported. CTranslate2 int8 conversion is 824 MB. Too large to assume viable on the 8 GB target without testing.
+- Smol Urdu TTS V1: 135M BF16 weights and Apache-2.0 model-card metadata, but linked inference repository has no LICENSE, requires Liger Kernel and separate WavTokenizer files, and BF16 CPU operation on Broadwell is unverified. Not approved for bundling.
