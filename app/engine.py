@@ -240,6 +240,49 @@ class GodotEngineAdapter:
             timeout_seconds=timeout_seconds, cancel_event=cancel_event,
         )
 
+    def customize_character_proportions(
+        self,
+        source_path: Path,
+        proportions: dict[str, float],
+        output_path: Path,
+        allowed_root: Path,
+        timeout_seconds: float | None = None,
+        cancel_event: threading.Event | None = None,
+    ) -> dict[str, Any]:
+        root = Path(allowed_root).resolve(strict=False)
+        source = Path(source_path).resolve(strict=True)
+        output = Path(output_path).resolve(strict=False)
+        if source == root or root not in source.parents:
+            raise EnginePathError("Proportion source path escapes the allowed project directory.")
+        if not root.is_dir() or source.suffix.lower() != ".glb" or not source.is_file():
+            raise EnginePathError("Proportion editing requires an existing project GLB.")
+        if source.stat().st_size > MAX_GLB_BYTES:
+            raise EnginePathError("The proportion source GLB exceeds the 512 MiB limit.")
+        if output == root or root not in output.parents or output.suffix.lower() != ".glb":
+            raise EnginePathError("Proportion output must be a project-local .glb file.")
+        if output.exists():
+            raise EnginePathError("Refusing to overwrite an existing proportion export.")
+        allowed = {"torso_length", "shoulder_width", "arm_length", "leg_length", "head_size"}
+        if set(proportions) - allowed:
+            raise EnginePathError("Unsupported body-proportion control.")
+        validated: dict[str, float] = {}
+        for name in allowed:
+            value = proportions.get(name, 1.0)
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise EnginePathError(f"{name} must be a numeric scale factor.")
+            if not 0.75 <= float(value) <= 1.25:
+                raise EnginePathError(f"{name} must be between 0.75 and 1.25.")
+            validated[name] = float(value)
+        if all(abs(value - 1.0) < 0.0001 for value in validated.values()):
+            raise EnginePathError("Change at least one body proportion before applying.")
+        output.parent.mkdir(parents=True, exist_ok=True)
+        return self._run(
+            "customize_character_proportions",
+            {"project_root": str(root), "source_path": str(source),
+             "output_path": str(output), "proportions": validated},
+            timeout_seconds=timeout_seconds, cancel_event=cancel_event,
+        )
+
     def assemble_modular_character(
         self,
         base_path: Path,

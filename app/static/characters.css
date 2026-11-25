@@ -6,6 +6,12 @@
 #model-preview{display:none;width:100%;height:100%;outline:none;touch-action:none}
 #preview-empty{position:absolute;inset:0;display:grid;place-items:center;padding:20px;text-align:center;color:#8999ad;font-size:12px;pointer-events:none}
 .preview-controls{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:9px}
+.proportion-editor{margin-top:14px;padding:14px;border:1px solid #344356;border-radius:12px;background:#111a25}
+.proportion-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:12px 0}
+.proportion-grid label{display:grid;grid-template-columns:1fr auto;gap:6px;font-size:12px}
+.proportion-grid output{color:#9ec5ff;font-variant-numeric:tabular-nums}
+.proportion-grid input{grid-column:1/-1;width:100%;accent-color:#79a9e8}
+.proportion-editor .helper{margin:8px 0;color:#aab7c7;font-size:12px}
 .camera-presets,.playback-controls{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .camera-presets button,.playback-controls button{margin:0;padding:8px 10px;font-size:11px}
 .playback-controls label{margin:0;font-size:11px}

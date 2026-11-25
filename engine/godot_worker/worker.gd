@@ -64,7 +64,7 @@ func _handle_request(request_value: Variant) -> Dictionary:
     if operation == "ping":
         response["ok"] = true
         response["capabilities"] = [
-            "ping", "glb_inspect", "scene_metrics", "skeleton_report", "retarget_glb_pair", "assemble_modular_character", "probe_glb_animation", "export_character_appearance"
+            "ping", "glb_inspect", "scene_metrics", "skeleton_report", "retarget_glb_pair", "assemble_modular_character", "probe_glb_animation", "export_character_appearance", "customize_character_proportions"
         ]
         return response
 
@@ -78,6 +78,12 @@ func _handle_request(request_value: Variant) -> Dictionary:
         var appearance_result: Dictionary = await _export_character_appearance(payload)
         for key in appearance_result:
             response[key] = appearance_result[key]
+        return response
+
+    if operation == "customize_character_proportions":
+        var proportion_result: Dictionary = await _customize_character_proportions(payload)
+        for key in proportion_result:
+            response[key] = proportion_result[key]
         return response
 
     if operation == "assemble_modular_character":
@@ -474,6 +480,172 @@ func _export_character_appearance(payload: Dictionary) -> Dictionary:
     verification["applied_morph_count"] = applied_morphs.size()
     verification["applied_materials"] = applied_materials
     verification["applied_morph_targets"] = applied_morphs
+    return verification
+
+
+
+func _customize_character_proportions(payload: Dictionary) -> Dictionary:
+    var project_root := _normalise_path(str(payload.get("project_root", "")))
+    var source_path := _normalise_path(str(payload.get("source_path", "")))
+    var output_path := _normalise_path(str(payload.get("output_path", "")))
+    if project_root.is_empty() or not DirAccess.dir_exists_absolute(project_root):
+        return {"error_code": "invalid_project_root", "error": "A valid project root is required."}
+    var root_prefix := project_root.trim_suffix("/") + "/"
+    for path in [source_path, output_path]:
+        if not path.to_lower().begins_with(root_prefix.to_lower()):
+            return {"error_code": "path_outside_project", "error": "A body-proportion path resolves outside the project."}
+    if not source_path.to_lower().ends_with(".glb") or not FileAccess.file_exists(source_path):
+        return {"error_code": "source_glb_missing", "error": "The body-proportion source GLB does not exist."}
+    if not output_path.to_lower().ends_with(".glb") or FileAccess.file_exists(output_path):
+        return {"error_code": "invalid_output_path", "error": "Body-proportion editing must create a new GLB file."}
+    var proportions_value: Variant = payload.get("proportions", {})
+    if typeof(proportions_value) != TYPE_DICTIONARY:
+        return {"error_code": "invalid_proportions", "error": "Body proportions must be an object."}
+    var proportions: Dictionary = proportions_value
+    var allowed_names := ["torso_length", "shoulder_width", "arm_length", "leg_length", "head_size"]
+    var changed_values: Dictionary = {}
+    for name in allowed_names:
+        var factor := float(proportions.get(name, 1.0))
+        if factor < 0.75 or factor > 1.25:
+            return {"error_code": "proportion_out_of_range", "error": "Every body-proportion factor must be between 0.75 and 1.25."}
+        changed_values[name] = factor
+    var has_change := false
+    for name in changed_values:
+        if absf(float(changed_values[name]) - 1.0) >= 0.0001:
+            has_change = true
+    if not has_change:
+        return {"error_code": "empty_proportions", "error": "Change at least one body proportion before applying."}
+    var document := GLTFDocument.new()
+    var state := GLTFState.new()
+    var import_error := document.append_from_file(source_path, state)
+    if import_error != OK:
+        return {"error_code": "proportion_import_failed", "error": "Godot could not import the body-proportion source GLB.", "godot_error": import_error}
+    var scene := document.generate_scene(state)
+    if scene == null:
+        return {"error_code": "proportion_scene_failed", "error": "Godot could not create the body-proportion scene."}
+    root.add_child(scene)
+    await process_frame
+    var skeleton_nodes := scene.find_children("*", "Skeleton3D", true, false)
+    if skeleton_nodes.size() != 1:
+        scene.queue_free()
+        return {"error_code": "proportion_skeleton_count", "error": "Body-proportion editing requires exactly one humanoid Skeleton3D."}
+    var skeleton := skeleton_nodes[0] as Skeleton3D
+    var skinned_mesh_count := 0
+    for mesh_node in scene.find_children("*", "MeshInstance3D", true, false):
+        var mesh := mesh_node as MeshInstance3D
+        if mesh.skin != null and mesh.get_node_or_null(mesh.get_skeleton_path()) == skeleton:
+            skinned_mesh_count += 1
+    if skinned_mesh_count == 0:
+        scene.queue_free()
+        return {"error_code": "proportion_skin_missing", "error": "The source character has no mesh bound to its humanoid skeleton."}
+    var original_bone_rests: Dictionary = {}
+    for bone_index in range(skeleton.get_bone_count()):
+        original_bone_rests[str(skeleton.get_bone_name(bone_index))] = skeleton.get_bone_rest(bone_index)
+    var changed_bones: Array[String] = []
+    var groups := [
+        {"name": "torso_length", "aliases": ["spine", "spine1", "spine2", "neck", "head"], "mode": "vertical", "minimum": 2},
+        {"name": "shoulder_width", "aliases": ["leftshoulder", "rightshoulder", "leftarm", "rightarm", "leftupperarm", "rightupperarm"], "mode": "horizontal", "minimum": 2},
+        {"name": "arm_length", "aliases": ["leftforearm", "rightforearm", "lefthand", "righthand"], "mode": "vector", "minimum": 2},
+        {"name": "leg_length", "aliases": ["leftleg", "rightleg", "leftfoot", "rightfoot"], "mode": "vector", "minimum": 2},
+        {"name": "head_size", "aliases": ["head"], "mode": "basis", "minimum": 1}
+    ]
+    for group_value in groups:
+        var group: Dictionary = group_value
+        var factor := float(changed_values[group["name"]])
+        if absf(factor - 1.0) < 0.0001:
+            continue
+        var aliases: Array = group["aliases"]
+        var matched := 0
+        for bone_index in range(skeleton.get_bone_count()):
+            var bone_name := str(skeleton.get_bone_name(bone_index))
+            var token_parts := bone_name.to_lower().split(":")
+            var token := str(token_parts[token_parts.size() - 1]).replace("_", "").replace(" ", "")
+            if not aliases.has(token):
+                continue
+            var rest := skeleton.get_bone_rest(bone_index)
+            if group["mode"] == "vertical":
+                rest.origin.y *= factor
+            elif group["mode"] == "horizontal":
+                rest.origin.x *= factor
+            elif group["mode"] == "vector":
+                rest.origin *= factor
+            elif group["mode"] == "basis":
+                rest.basis = Basis(rest.basis.x * factor, rest.basis.y * factor, rest.basis.z * factor)
+            skeleton.set_bone_rest(bone_index, rest)
+            var original_rest: Transform3D = original_bone_rests[bone_name]
+            var actual_change := original_rest.origin.distance_to(rest.origin) > 0.0001
+            actual_change = actual_change or original_rest.basis.x.distance_to(rest.basis.x) > 0.0001
+            actual_change = actual_change or original_rest.basis.y.distance_to(rest.basis.y) > 0.0001
+            actual_change = actual_change or original_rest.basis.z.distance_to(rest.basis.z) > 0.0001
+            if actual_change:
+                matched += 1
+                if not changed_bones.has(bone_name):
+                    changed_bones.append(bone_name)
+        if matched < int(group["minimum"]):
+            scene.queue_free()
+            return {"error_code": "proportion_bones_missing", "error": "The imported rig does not expose enough transformable named bones for " + str(group["name"]) + "."}
+    skeleton.reset_bone_poses()
+    var expected_bone_rests: Dictionary = {}
+    for bone_name in changed_bones:
+        expected_bone_rests[bone_name] = skeleton.get_bone_rest(skeleton.find_bone(bone_name))
+    var source_animation_names := _scene_animation_names(scene)
+    var export_document := GLTFDocument.new()
+    var export_state := GLTFState.new()
+    var export_error := export_document.append_from_scene(scene, export_state)
+    if export_error != OK:
+        scene.queue_free()
+        return {"error_code": "proportion_export_prepare_failed", "error": "Godot could not prepare the proportioned character for GLB export.", "godot_error": export_error}
+    var output_error := export_document.write_to_filesystem(export_state, output_path)
+    scene.queue_free()
+    if output_error != OK or not FileAccess.file_exists(output_path):
+        if FileAccess.file_exists(output_path):
+            DirAccess.remove_absolute(output_path)
+        return {"error_code": "proportion_export_failed", "error": "Godot could not write the proportioned character GLB.", "godot_error": output_error}
+    var verification := _inspect_glb({"project_root": project_root, "source_path": output_path})
+    if not bool(verification.get("ok", false)):
+        DirAccess.remove_absolute(output_path)
+        return {"error_code": "proportion_reimport_failed", "error": str(verification.get("error", "The proportioned GLB failed re-import verification."))}
+    var exported_animation_names: Array = verification.get("animation_names", [])
+    if int(verification.get("skeleton_count", 0)) != 1 or exported_animation_names.size() != source_animation_names.size():
+        DirAccess.remove_absolute(output_path)
+        return {"error_code": "proportion_rig_verification_failed", "error": "The proportioned GLB did not retain its skinned humanoid rig and original animation clips."}
+    for animation_name in source_animation_names:
+        if not exported_animation_names.has(animation_name):
+            DirAccess.remove_absolute(output_path)
+            return {"error_code": "proportion_animation_verification_failed", "error": "A source animation was lost during body-proportion export: " + str(animation_name)}
+    var exported_bones: Array = []
+    var output_skeletons: Array = verification.get("skeletons", [])
+    if output_skeletons.size() == 1:
+        exported_bones = output_skeletons[0].get("bones", [])
+    var verified_changed_bones: Array[String] = []
+    for output_bone_value in exported_bones:
+        var output_bone: Dictionary = output_bone_value
+        var output_name := str(output_bone.get("name", ""))
+        if not changed_bones.has(output_name):
+            continue
+        var output_rest: Dictionary = output_bone.get("rest_transform", {})
+        var output_origin: Array = output_rest.get("origin", [])
+        var output_scale: Array = output_rest.get("scale", [])
+        if not expected_bone_rests.has(output_name) or not original_bone_rests.has(output_name):
+            continue
+        var expected_rest: Transform3D = expected_bone_rests[output_name]
+        var original_rest: Transform3D = original_bone_rests[output_name]
+        var output_origin_vector := Vector3(float(output_origin[0]), float(output_origin[1]), float(output_origin[2])) if output_origin.size() == 3 else Vector3.ZERO
+        var output_scale_vector := Vector3(float(output_scale[0]), float(output_scale[1]), float(output_scale[2])) if output_scale.size() == 3 else Vector3.ONE
+        var origin_was_changed := expected_rest.origin.distance_to(original_rest.origin) > 0.0001
+        var scale_was_changed := expected_rest.basis.get_scale().distance_to(original_rest.basis.get_scale()) > 0.0001
+        var origin_matches := origin_was_changed and output_origin_vector.distance_to(expected_rest.origin) <= 0.002
+        var scale_matches := scale_was_changed and output_scale_vector.distance_to(expected_rest.basis.get_scale()) <= 0.002
+        if origin_matches or scale_matches:
+            verified_changed_bones.append(output_name)
+    if verified_changed_bones.is_empty():
+        DirAccess.remove_absolute(output_path)
+        return {"error_code": "proportion_geometry_verification_failed", "error": "No edited humanoid bone transforms survived GLB export and re-import."}
+    verification["proportions_verified"] = true
+    verification["applied_proportions"] = changed_values
+    verification["changed_bones"] = verified_changed_bones
+    verification["source_animation_names"] = source_animation_names
+    verification["skinned_mesh_count"] = skinned_mesh_count
     return verification
 
 

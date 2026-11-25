@@ -78,6 +78,21 @@ class FakeEngine:
         return result
 
 
+    def customize_character_proportions(
+        self, source_path, proportions, destination, allowed_root
+    ):
+        assert source_path.is_relative_to(allowed_root)
+        assert any(abs(value - 1.0) > 0.0001 for value in proportions.values())
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(make_glb())
+        result = self.inspect_glb(destination, allowed_root)
+        result.update({
+            "proportions_verified": True,
+            "applied_proportions": proportions,
+            "changed_bones": ["mixamorig:Spine", "mixamorig:Head"],
+        })
+        return result
+
     def assemble_modular_character(
         self, base_path, parts, destination, allowed_root, accessories=None
     ):
@@ -164,6 +179,11 @@ def test_browser_preview_modules_are_served_from_local_static_assets():
     assert "function frameCharacter" in preview.text
     assert 'data-camera-frame="head"' in page.text
     assert 'id="preview-speed"' in page.text
+    assert 'id="body-morph-controls"' in page.text
+    assert 'id="body-morph-status"' in page.text
+    assert 'id="torso-length"' in page.text
+    assert 'id="apply-proportions"' in page.text
+    assert "applyBodyProportions" in client.get("/static/characters.js").text
     assert 'id="body-morph-controls"' in page.text
     assert 'id="body-morph-status"' in page.text
     assert "morphTargetByKey.clear();" in preview.text
@@ -349,6 +369,44 @@ def test_modular_assembly_recipe_survives_profile_reopen_and_reassembly(
     assert replayed.json()["assembly"]["parts"] == recipe["parts"]
     assert replayed.json()["assembly"]["accessories"] == recipe["accessories"]
     assert replayed.json()["assembly"]["animation_preserved"] is True
+
+
+
+def test_body_proportion_edit_creates_verified_asset_without_mutating_source(tmp_path, monkeypatch):
+    client, project_id = setup_project(tmp_path, monkeypatch)
+    source = import_asset(client, project_id)
+    source_path = tmp_path / "projects" / project_id / source["relative_path"]
+    original_bytes = source_path.read_bytes()
+    response = client.post(
+        f"/api/projects/{project_id}/character-assets/{source['asset_id']}/proportions",
+        json={"torso_length": 1.12, "shoulder_width": 1.08, "arm_length": 0.94,
+              "leg_length": 1.06, "head_size": 1.1},
+    )
+    assert response.status_code == 201, response.text
+    result = response.json()
+    assert result["geometry_edit"]["verified"] is True
+    assert result["geometry_edit"]["type"] == "humanoid_body_proportions"
+    assert result["geometry_edit"]["changed_bones"]
+    assert result["geometry_edit"]["source_relative_path"] == source["relative_path"]
+    assert source_path.read_bytes() == original_bytes
+    manifest = client.get(
+        f"/api/projects/{project_id}/character-assets/{result['asset_id']}/manifest"
+    )
+    assert manifest.status_code == 200
+    assert manifest.json()["geometry_edit"]["proportions"]["torso_length"] == 1.12
+    download = client.get(
+        f"/api/projects/{project_id}/character-assets/{result['asset_id']}"
+    )
+    assert download.status_code == 200
+    assert download.content.startswith(b"glTF")
+
+
+def test_body_proportion_edit_rejects_noop_and_out_of_range_values(tmp_path, monkeypatch):
+    client, project_id = setup_project(tmp_path, monkeypatch)
+    source = import_asset(client, project_id)
+    url = f"/api/projects/{project_id}/character-assets/{source['asset_id']}/proportions"
+    assert client.post(url, json={}).status_code == 422
+    assert client.post(url, json={"head_size": 1.8}).status_code == 422
 
 
 def test_material_appearance_recipe_persists_and_survives_profile_updates(tmp_path, monkeypatch):
