@@ -642,6 +642,12 @@ def create_character_retarget(
     for label, asset in (("source", source_asset), ("target", target_asset)):
         rig = asset.get("rig_analysis", {})
         hierarchy = rig.get("hierarchy_validation", {})
+        inspection = asset.get("engine_inspection", {})
+        if int(inspection.get("skeleton_count", 0) or 0) != 1:
+            raise HTTPException(
+                status_code=422,
+                detail=f"The {label} character must contain exactly one skeleton.",
+            )
         if rig.get("status") != "humanoid_names_complete":
             raise HTTPException(
                 status_code=422,
@@ -779,6 +785,50 @@ def list_character_retargets(project_id: str) -> list[dict[str, Any]]:
             if document.get("document_type") == "character_retarget":
                 documents.append(document)
     return documents
+
+
+@app.get(
+    "/api/projects/{project_id}/retargets/{retarget_id}/scene",
+    response_class=FileResponse,
+)
+def download_character_retarget_scene(
+    project_id: str, retarget_id: str
+) -> FileResponse:
+    initialize_database()
+    with connect_db() as connection:
+        exists = connection.execute(
+            "SELECT 1 FROM projects WHERE id = ?", (project_id,)
+        ).fetchone()
+    if exists is None:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    try:
+        safe_id = str(uuid.UUID(retarget_id))
+        config_path = resolve_project_relative(
+            DATA_DIR, project_id, f"retargets/{safe_id}.json"
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail="Invalid retarget ID.") from error
+    if not config_path.is_file():
+        raise HTTPException(status_code=404, detail="Retarget record not found.")
+    document = read_json(config_path)
+    if (
+        document.get("document_type") != "character_retarget"
+        or document.get("id") != safe_id
+    ):
+        raise HTTPException(status_code=409, detail="Retarget record is invalid.")
+    scene_relative = str(document.get("data", {}).get("scene_relative_path", ""))
+    if not scene_relative.startswith("retargets/") or not scene_relative.endswith(
+        ".tscn"
+    ):
+        raise HTTPException(status_code=409, detail="Retarget scene path is invalid.")
+    scene_path = resolve_project_relative(DATA_DIR, project_id, scene_relative)
+    if not scene_path.is_file():
+        raise HTTPException(status_code=404, detail="Retarget scene file is missing.")
+    return FileResponse(
+        scene_path,
+        media_type="text/plain",
+        filename=f"retarget-{safe_id}.tscn",
+    )
 
 
 @app.get("/api/projects/{project_id}/characters")

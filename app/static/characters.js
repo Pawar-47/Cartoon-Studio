@@ -51,7 +51,7 @@ function updateRetargetCharacterOptions(characters){
  }
  for(const characterDoc of characters){
   const data=characterDoc.data||{},asset=data.asset||{},inspection=asset.engine_inspection||{},container=asset.container||{},rig=asset.rig_analysis||{},hierarchy=rig.hierarchy_validation||{};
-  const compatible=rig.status==="humanoid_names_complete"&&hierarchy.status==="valid";
+  const compatible=rig.status==="humanoid_names_complete"&&hierarchy.status==="valid"&&Number(inspection.skeleton_count||0)===1;
   const skinCount=Number(container.skin_count??inspection.skin_count??0);
   if(compatible&&Number(inspection.animation_count||0)>0)source.append(documentElementOption(characterDoc));
   if(compatible&&skinCount>0)target.append(documentElementOption(characterDoc));
@@ -69,7 +69,8 @@ async function loadRetargets(){
   const row=document.createElement("div");row.className="retarget-record";
   const title=document.createElement("strong");title.textContent=(item.data.source_character_name||"Source")+" → "+(item.data.target_character_name||"Target");
   const detail=document.createElement("span");detail.textContent=(item.data.animation_name||"Imported animation")+" · "+item.data.mapped_bone_count+"/15 bones · "+(item.data.scene_reopened?"saved scene reopened":"scene saved");
-  row.append(title,detail);container.append(row);
+  const download=document.createElement("a");download.href="/api/projects/"+encodeURIComponent(activeProject)+"/retargets/"+encodeURIComponent(item.id)+"/scene";download.textContent="Download Godot scene";download.className="retarget-download";
+  row.append(title,detail,download);container.append(row);
  }
  if(!documents.length){const empty=document.createElement("p");empty.className="inline-status";empty.textContent="No retarget scenes saved in this project yet.";container.append(empty)}
 }

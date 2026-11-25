@@ -129,7 +129,7 @@ def _seed_retarget_character(tmp_path, project_id, name):
             "godot_profile_mapping": mapping,
         },
         "container": {"skin_count": 1},
-        "engine_inspection": {"animation_count": 1},
+        "engine_inspection": {"animation_count": 1, "skeleton_count": 1},
     }
     now = datetime.now(UTC).isoformat()
     document = main.make_envelope(
@@ -178,6 +178,11 @@ def test_character_retarget_api_saves_scene_and_persistent_record(tmp_path, monk
     listed = client.get(f"/api/projects/{project_id}/retargets")
     assert listed.status_code == 200
     assert [item["id"] for item in listed.json()] == [record["id"]]
+    download = client.get(
+        f"/api/projects/{project_id}/retargets/{record['id']}/scene"
+    )
+    assert download.status_code == 200
+    assert download.text == "[gd_scene format=3]"
 
 
 def test_character_retarget_api_rejects_invalid_hierarchy_before_engine_call(
