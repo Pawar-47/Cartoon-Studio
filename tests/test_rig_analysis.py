@@ -183,12 +183,36 @@ def test_partial_humanoid_hierarchy_is_not_misreported_as_fully_valid():
 
 def test_rest_pose_transforms_are_preserved_and_summarized_without_readiness_claim():
     bones = [
-        {"index": 0, "name": "Hips", "parent_index": -1,
-         "rest_transform": {"origin": [0.0, 1.0, 0.0], "rotation": [0, 0, 0, 1], "scale": [1, 1, 1]}},
-        {"index": 1, "name": "Spine", "parent_index": 0,
-         "rest_transform": {"origin": [0.0, 0.25, 0.0], "rotation": [0, 0, 0, 1], "scale": [1, 1, 1]}},
-        {"index": 2, "name": "Head", "parent_index": 1,
-         "rest_transform": {"origin": [0.0, 0.15, 0.0], "rotation": [0, 0, 0, 1], "scale": [1, 1, 1]}},
+        {
+            "index": 0,
+            "name": "Hips",
+            "parent_index": -1,
+            "rest_transform": {
+                "origin": [0.0, 1.0, 0.0],
+                "rotation": [0, 0, 0, 1],
+                "scale": [1, 1, 1],
+            },
+        },
+        {
+            "index": 1,
+            "name": "Spine",
+            "parent_index": 0,
+            "rest_transform": {
+                "origin": [0.0, 0.25, 0.0],
+                "rotation": [0, 0, 0, 1],
+                "scale": [1, 1, 1],
+            },
+        },
+        {
+            "index": 2,
+            "name": "Head",
+            "parent_index": 1,
+            "rest_transform": {
+                "origin": [0.0, 0.15, 0.0],
+                "rotation": [0, 0, 0, 1],
+                "scale": [1, 1, 1],
+            },
+        },
     ]
     result = _analyze_rig({"skeleton_count": 1, "skeletons": [{
         "bone_count": 3, "bones": bones,

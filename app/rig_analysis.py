@@ -93,7 +93,10 @@ def _summarize_rest_pose(
         "status": "available" if segment_lengths else "not_available",
         "measured_bone_count": len(segment_lengths),
         "local_offset_lengths": segment_lengths,
-        "units_note": "Lengths use imported Godot scene units and are local rest offsets, not world-space limb measurements.",
+        "units_note": (
+            "Lengths use imported Godot scene units and are local rest offsets, "
+            "not world-space limb measurements."
+        ),
     }
 
 def _validate_humanoid_hierarchy(
