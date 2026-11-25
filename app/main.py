@@ -15,6 +15,12 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from app.engine import (
+    EngineError,
+    EngineTimeoutError,
+    EngineUnavailableError,
+    GodotEngineAdapter,
+)
 from app.storage import connect_db as open_database
 from app.storage import (
     default_data_dir,
@@ -41,6 +47,10 @@ _INITIALIZED_DB_KEY: tuple[str, str] | None = None
 
 def connect_db():
     return open_database(DATA_DIR, DB_PATH)
+
+
+def get_engine_adapter() -> GodotEngineAdapter:
+    return GodotEngineAdapter(data_dir=DATA_DIR)
 
 
 def initialize_database() -> None:
@@ -76,6 +86,10 @@ class ProjectCreate(BaseModel):
 class ProjectUpdate(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     description: str = Field(default="", max_length=1000)
+
+
+class GlbInspectRequest(BaseModel):
+    relative_path: str = Field(min_length=1, max_length=512)
 
 
 class ProjectRecord(BaseModel):
@@ -139,6 +153,72 @@ def health() -> dict[str, str]:
     }
 
 
+@app.get("/api/engine/status")
+def engine_status() -> dict[str, Any]:
+    adapter = get_engine_adapter()
+    if not adapter.available:
+        return {
+            "available": False,
+            "status": "runtime_not_found",
+            "expected_version": "4.7.2-stable",
+        }
+    try:
+        result = adapter.ping()
+    except EngineError as error:
+        return {
+            "available": False,
+            "status": "worker_error",
+            "expected_version": "4.7.2-stable",
+            "detail": str(error),
+        }
+    return {
+        "available": True,
+        "status": "ready",
+        "engine_version": result.get("engine_version", "unknown"),
+        "protocol_version": result.get("protocol_version"),
+        "capabilities": result.get("capabilities", []),
+        "elapsed_ms": result.get("elapsed_ms"),
+    }
+
+
+@app.post("/api/projects/{project_id}/engine/inspect-glb")
+def inspect_project_glb(
+    project_id: str,
+    payload: GlbInspectRequest,
+) -> dict[str, Any]:
+    initialize_database()
+    with connect_db() as connection:
+        project = connection.execute(
+            "SELECT id FROM projects WHERE id = ?", (project_id,)
+        ).fetchone()
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    try:
+        project_root = project_directory(DATA_DIR, project_id)
+        source_path = resolve_project_relative(
+            DATA_DIR, project_id, payload.relative_path
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    if source_path.suffix.lower() != ".glb":
+        raise HTTPException(status_code=422, detail="Only .glb files can be inspected.")
+    if not source_path.is_file():
+        raise HTTPException(status_code=404, detail="GLB file not found in this project.")
+    try:
+        return get_engine_adapter().inspect_glb(
+            source_path,
+            allowed_root=project_root,
+        )
+    except EngineUnavailableError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    except EngineTimeoutError as error:
+        raise HTTPException(status_code=504, detail=str(error)) from error
+    except EngineError as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error
+
+
+
+
 @app.get("/api/status")
 def status() -> dict[str, Any]:
     initialize_database()
@@ -155,9 +235,17 @@ def status() -> dict[str, Any]:
         "project_count": project_count,
         "database_schema_version": schema_version,
         "storage_mode": "local",
-        "production_engine": "Godot 4.7.2 Compatibility worker selected; integration pending",
-        "rendering": "not available in current app build",
-        "next_milestone": "project lifecycle and portable document storage",
+        "production_engine": (
+            "Godot 4.7.2 Compatibility worker available"
+            if get_engine_adapter().available
+            else "Godot 4.7.2 Compatibility selected; worker runtime unavailable"
+        ),
+        "rendering": (
+            "GLB inspection worker available"
+            if get_engine_adapter().available
+            else "not available in current app build"
+        ),
+        "next_milestone": "Character Studio engine integration",
     }
 
 

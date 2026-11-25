@@ -1,0 +1,12 @@
+{
+  "component": "Godot Engine",
+  "version": "4.7.2-stable",
+  "platform": "windows-x86_64",
+  "archive_name": "Godot_v4.7.2-stable_win64.exe.zip",
+  "archive_sha256": "731980f9608d61333e5baf54a2ef17210acc7a538446c0cb9969f002aca1e953",
+  "download_url": "https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_win64.exe.zip",
+  "binary_name": "Godot_v4.7.2-stable_win64.exe",
+  "license": "MIT",
+  "license_url": "https://raw.githubusercontent.com/godotengine/godot/4.7.2-stable/LICENSE.txt",
+  "authors_url": "https://raw.githubusercontent.com/godotengine/godot/4.7.2-stable/AUTHORS.md"
+}

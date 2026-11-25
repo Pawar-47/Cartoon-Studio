@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import socket
 import subprocess
 import tempfile
@@ -11,7 +12,13 @@ import urllib.request
 from pathlib import Path
 
 
-def request(base: str, path: str, method: str = "GET", payload: dict | None = None):
+def request(
+    base: str,
+    path: str,
+    method: str = "GET",
+    payload: dict | None = None,
+    timeout: float = 5,
+):
     data = None if payload is None else json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
         f"{base}{path}",
@@ -19,7 +26,7 @@ def request(base: str, path: str, method: str = "GET", payload: dict | None = No
         method=method,
         headers={"Content-Type": "application/json"},
     )
-    with urllib.request.urlopen(req, timeout=5) as response:
+    with urllib.request.urlopen(req, timeout=timeout) as response:
         return response.status, json.loads(response.read())
 
 
@@ -31,6 +38,7 @@ def start_application(
 ) -> subprocess.Popen:
     environment = os.environ.copy()
     environment["CARTOON_STUDIO_DATA"] = str(data_dir)
+    environment.pop("CARTOON_STUDIO_GODOT_PATH", None)
     environment["CARTOON_STUDIO_PORT"] = str(port)
     environment["CARTOON_STUDIO_NO_BROWSER"] = "1"
     process = subprocess.Popen(
@@ -90,6 +98,20 @@ def assert_registry_key_absent(key: str) -> None:
             )
 
 
+def assert_registry_key_absent(key: str) -> None:
+    for view in ("/reg:32", "/reg:64"):
+        result = subprocess.run(
+            ["reg", "query", key, view],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode == 0:
+            raise AssertionError(
+                f"Uninstall left registry key {key} in {view}: {result.stdout}"
+            )
+
+
 def uninstall(install_dir: Path) -> None:
     uninstaller = install_dir / "Uninstall.exe"
     if not uninstaller.is_file():
@@ -97,55 +119,70 @@ def uninstall(install_dir: Path) -> None:
     subprocess.run([str(uninstaller), "/S"], check=True, timeout=180)
 
     # NSIS starts a temporary copy of the uninstaller and exits the original
-    # process first. Wait for that child process to finish its cleanup.
+    # process first. Wait for that child process to remove the complete app folder.
     deadline = time.monotonic() + 45
-    executable = install_dir / "CartoonStudio.exe"
-    while uninstaller.exists() or executable.exists():
+    while install_dir.exists():
         if time.monotonic() >= deadline:
             break
         time.sleep(0.25)
 
-    if executable.exists() or uninstaller.exists():
-        registry32 = subprocess.run(
-            ["reg", "query", r"HKCU\Software\CartoonStudio", "/s", "/reg:32"],
-            check=False,
-            capture_output=True,
-            text=True,
-        )
-        registry64 = subprocess.run(
-            ["reg", "query", r"HKCU\Software\CartoonStudio", "/s", "/reg:64"],
-            check=False,
-            capture_output=True,
-            text=True,
-        )
-        remaining = (
-            sorted(path.name for path in install_dir.iterdir())
-            if install_dir.exists()
-            else []
-        )
-        raise AssertionError(
-            f"Uninstaller did not finish cleanup; remaining files={remaining!r}; "
-            f"registry32={registry32.stdout + registry32.stderr!r}; "
-            f"registry64={registry64.stdout + registry64.stderr!r}"
-        )
-
-    registry_keys = (
-        r"HKCU\Software\CartoonStudio",
-        r"HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\CartoonStudio",
-    )
-    for key in registry_keys:
-        for view in ("/reg:32", "/reg:64"):
-            result = subprocess.run(
+    if install_dir.exists():
+        remaining = sorted(path.name for path in install_dir.iterdir())
+        registry = [
+            subprocess.run(
                 ["reg", "query", key, "/s", view],
                 check=False,
                 capture_output=True,
                 text=True,
             )
-            if result.returncode == 0:
-                raise AssertionError(
-                    f"Uninstaller left registry key {key} ({view}): "
-                    f"{result.stdout + result.stderr}"
-                )
+            for key in (
+                r"HKCU\Software\CartoonStudio",
+                r"HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\CartoonStudio",
+            )
+            for view in ("/reg:32", "/reg:64")
+        ]
+        raise AssertionError(
+            f"Uninstaller did not remove {install_dir}; remaining={remaining!r}; "
+            f"registry={[item.stdout + item.stderr for item in registry]!r}"
+        )
+
+    assert_registry_key_absent(r"HKCU\Software\CartoonStudio")
+    assert_registry_key_absent(
+        r"HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\CartoonStudio"
+    )
+
+
+def verify_engine(
+    base_url: str,
+    install_dir: Path,
+    data_dir: Path,
+    project_id: str,
+    fixture_path: Path,
+) -> None:
+    binary = install_dir / "engine" / "Godot_v4.7.2-stable_win64.exe"
+    worker_project = install_dir / "engine" / "godot_worker" / "project.godot"
+    assert binary.is_file(), "The installer did not bundle the pinned Godot runtime."
+    assert worker_project.is_file(), "The installer did not bundle the Godot worker project."
+
+    status, engine = request(base_url, "/api/engine/status")
+    assert status == 200 and engine["available"], engine
+    assert engine["engine_version"].startswith("4.7.2"), engine
+
+    asset_dir = data_dir / "projects" / project_id / "assets"
+    asset_dir.mkdir(parents=True, exist_ok=True)
+    fixture = asset_dir / "proof_triangle.glb"
+    shutil.copy2(fixture_path, fixture)
+    status, inspection = request(
+        base_url,
+        f"/api/projects/{project_id}/engine/inspect-glb",
+        "POST",
+        {"relative_path": "assets/proof_triangle.glb"},
+        timeout=60,
+    )
+    assert status == 200, inspection
+    assert inspection["mesh_count"] >= 1, inspection
+    assert inspection["engine_version"].startswith("4.7.2"), inspection
+
 
 def main() -> int:
     if len(os.sys.argv) != 3:
@@ -155,6 +192,15 @@ def main() -> int:
     v2_installer = Path(os.sys.argv[2]).resolve()
     if not v1_installer.is_file() or not v2_installer.is_file():
         raise SystemExit("Both versioned installer files must exist.")
+
+    fixture_path = (
+        Path(__file__).resolve().parents[1]
+        / "tools"
+        / "godot_engine_proof"
+        / "fixtures"
+        / "proof_triangle.glb"
+    )
+    assert fixture_path.is_file()
 
     with tempfile.TemporaryDirectory(prefix="cartoon-studio-installer-") as temporary:
         root = Path(temporary)
@@ -181,15 +227,6 @@ def main() -> int:
         install(v1_installer)
         executable = install_dir / "CartoonStudio.exe"
         if not executable.is_file():
-            debug = [
-                subprocess.run(
-                    ["reg", "query", r"HKCU\Software\CartoonStudioDebug", "/s", view],
-                    check=False,
-                    capture_output=True,
-                    text=True,
-                )
-                for view in ("/reg:32", "/reg:64")
-            ]
             registry = [
                 subprocess.run(
                     ["reg", "query", r"HKCU\Software\CartoonStudio", "/s", view],
@@ -202,7 +239,6 @@ def main() -> int:
             raise AssertionError(
                 f"Installer did not place the app at {executable}; "
                 f"LOCALAPPDATA={os.environ.get('LOCALAPPDATA')!r}; "
-                f"debug={[item.stdout + item.stderr for item in debug]!r}; "
                 f"registry={[item.stdout + item.stderr for item in registry]!r}"
             )
         assert start_menu.is_file()
@@ -221,6 +257,9 @@ def main() -> int:
             )
             assert status == 201
             project_id = created["id"]
+            verify_engine(
+                f"http://127.0.0.1:{port}", install_dir, data_dir, project_id, fixture_path
+            )
         finally:
             stop_application(process)
 
@@ -264,6 +303,9 @@ def main() -> int:
             status, projects = request(f"http://127.0.0.1:{port}", "/api/projects")
             assert status == 200
             assert any(project["id"] == project_id for project in projects)
+            verify_engine(
+                f"http://127.0.0.1:{port}", install_dir, data_dir, project_id, fixture_path
+            )
         finally:
             stop_application(process)
 
@@ -282,6 +324,9 @@ def main() -> int:
             status, projects = request(f"http://127.0.0.1:{port}", "/api/projects")
             assert status == 200
             assert any(project["id"] == project_id for project in projects)
+            verify_engine(
+                f"http://127.0.0.1:{port}", install_dir, data_dir, project_id, fixture_path
+            )
         finally:
             stop_application(process)
 

@@ -29,11 +29,15 @@ jobs:
           uv lock --check
       - name: Install exact locked environment
         run: uv sync --locked --group dev
+      - name: Fetch pinned Godot 4.7.2 runtime
+        run: uv run --locked python scripts/fetch_godot_runtime.py --output-dir build/godot-runtime
       - name: Lint
-        run: uv run --locked ruff check app tests
+        run: uv run --locked ruff check app tests scripts/fetch_godot_runtime.py scripts/augment_sbom.py
       - name: Compile Python
-        run: uv run --locked python -m compileall -q app
+        run: uv run --locked python -m compileall -q app scripts
       - name: Test
+        env:
+          CARTOON_STUDIO_GODOT_PATH: ${{ github.workspace }}/build/godot-runtime/Godot_v4.7.2-stable_win64.exe
         run: uv run --locked python -m pytest -q
       - name: Export locked runtime requirements
         run: uv export --locked --no-dev --format requirements.txt --output-file requirements.lock
@@ -41,6 +45,8 @@ jobs:
         run: git diff --exit-code -- requirements.lock
       - name: Export dependency inventory
         run: uv export --locked --all-groups --format cyclonedx1.5 --output-file dependency-sbom.cdx.json
+      - name: Add Godot runtime to CycloneDX inventory
+        run: uv run --locked python scripts/augment_sbom.py --sbom dependency-sbom.cdx.json --manifest engine/godot_runtime.json --runtime-report build/godot-runtime/godot-runtime-report.json
       - name: Package Windows bootstrap
         shell: pwsh
         run: |
@@ -57,6 +63,10 @@ jobs:
           $bundle = (Resolve-Path "dist/installer-v1/CartoonStudio").Path
           Copy-Item LICENSES -Destination $bundle -Recurse -Force
           Copy-Item docs/THIRD_PARTY_NOTICES.md, dependency-sbom.cdx.json -Destination $bundle -Force
+          $engineRoot = Join-Path $bundle "engine"
+          New-Item -ItemType Directory -Force -Path $engineRoot | Out-Null
+          Copy-Item build/godot-runtime/Godot_v4.7.2-stable_win64.exe -Destination $engineRoot -Force
+          Copy-Item engine/godot_worker -Destination $engineRoot -Recurse -Force
       - name: Build self-contained application v2
         shell: pwsh
         run: |
@@ -66,6 +76,10 @@ jobs:
           $bundle = (Resolve-Path "dist/installer-v2/CartoonStudio").Path
           Copy-Item LICENSES -Destination $bundle -Recurse -Force
           Copy-Item docs/THIRD_PARTY_NOTICES.md, dependency-sbom.cdx.json -Destination $bundle -Force
+          $engineRoot = Join-Path $bundle "engine"
+          New-Item -ItemType Directory -Force -Path $engineRoot | Out-Null
+          Copy-Item build/godot-runtime/Godot_v4.7.2-stable_win64.exe -Destination $engineRoot -Force
+          Copy-Item engine/godot_worker -Destination $engineRoot -Recurse -Force
           uv run --locked python scripts/set_build_version.py 0.1.0
       - name: Install pinned NSIS compiler
         run: choco install nsis --version=3.13.0 --yes --no-progress
