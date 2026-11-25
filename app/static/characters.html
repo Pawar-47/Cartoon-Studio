@@ -15,7 +15,18 @@
  <label>Active project<select id="project-select"><option value="">Loading projects…</option></select></label>
  <span id="project-status" class="inline-status">Choose a project to begin.</span>
 </section>
-<div class="character-grid">
+<section class="panel library-panel">
+  <span class="eyebrow">00 / START FROM THE CC0 LIBRARY</span><h2>Character model library</h2>
+  <p class="helper">Browse 21 pinned, integrity-verified modular character outfits. Preview a complete source model, then import it into this project to create a character. These are complete outfit models; independent part swapping is being built as the next assembly layer.</p>
+  <div class="library-controls">
+   <label>Character pack<select id="library-pack"><option value="Male">Ultimate Modular Men</option><option value="Female">Ultimate Modular Women</option></select></label>
+   <label>Outfit<select id="library-outfit"><option value="">Loading library…</option></select></label>
+   <div class="library-actions"><button id="library-preview" class="secondary" type="button" disabled>Preview outfit</button><button id="library-import" type="button" disabled>Import selected outfit</button></div>
+  </div>
+  <p id="library-status" class="inline-status" role="status">Loading verified CC0 model catalog…</p>
+  <p class="library-license">Source: Quaternius Ultimate Modular Characters · CC0 1.0 · pinned upstream revision.</p>
+ </section>
+ <div class="character-grid">
  <section class="panel">
   <span class="eyebrow">01 / MODEL IMPORT</span><h2>Import a 3D character</h2>
   <p class="helper">Supported in this batch: binary glTF (.glb). The file is stored inside this project's local assets folder and inspected by the bundled Godot worker.</p>

@@ -292,4 +292,62 @@ $("character-form").addEventListener("submit",async event=>{
 });
 $("cancel-edit-profile").addEventListener("click",cancelProfileEdit);
 $("refresh-characters").addEventListener("click",()=>loadCharacters().catch(error=>$("project-status").textContent=error.message));
+
+let characterLibrary=[];
+function selectedLibraryModel(){
+ return characterLibrary.find(item=>item.pack===$("library-pack").value&&item.id===$("library-outfit").value)||null;
+}
+function populateLibraryOutfits(){
+ const pack=$("library-pack").value,select=$("library-outfit"),previous=select.value;
+ select.replaceChildren();
+ const models=characterLibrary.filter(item=>item.pack===pack);
+ for(const model of models){
+  const option=document.createElement("option");option.value=model.id;option.textContent=model.name.replaceAll("_"," ");select.append(option);
+ }
+ if(models.some(item=>item.id===previous))select.value=previous;
+ $("library-preview").disabled=!models.length;
+ $("library-import").disabled=!models.length||!activeProject;
+}
+async function loadCharacterLibrary(){
+ const status=$("library-status");
+ try{
+  const response=await fetch("/api/character-builder/catalog");
+  if(!response.ok)throw new Error("The verified model catalog could not be loaded.");
+  const catalog=await response.json();
+  if(!Array.isArray(catalog.outfits)||catalog.outfits.length!==21)throw new Error("The model catalog did not pass its expected 21-outfit check.");
+  characterLibrary=catalog.outfits;
+  populateLibraryOutfits();
+  status.textContent=catalog.outfits.length+" pinned models ready · "+catalog.source.license+" · source revision "+catalog.source.commit.slice(0,12)+".";
+ }catch(error){status.textContent=error.message}
+}
+$("library-pack").addEventListener("change",populateLibraryOutfits);
+$("library-outfit").addEventListener("change",()=>{const model=selectedLibraryModel();$("library-preview").disabled=!model;$("library-import").disabled=!model||!activeProject});
+$("library-preview").addEventListener("click",async()=>{
+ const model=selectedLibraryModel();if(!model)return;
+ const button=$("library-preview");button.disabled=true;$("library-status").textContent="Downloading and verifying "+model.name+"…";
+ try{
+  const response=await fetch(model.asset_url);if(!response.ok)throw new Error("Could not retrieve the selected pinned model.");
+  const buffer=await response.arrayBuffer();
+  const loaded=await showCharacterPreview(buffer,model.pack+" · "+model.name);
+  if(!loaded)throw new Error("The model downloaded, but the browser preview could not be created.");
+  $("library-status").textContent=model.name+" preview loaded. The pinned source GLB is unchanged.";
+  document.querySelector(".preview-panel").scrollIntoView({behavior:"smooth",block:"center"});
+ }catch(error){$("library-status").textContent=error.message}
+ finally{button.disabled=!selectedLibraryModel()}
+});
+$("library-import").addEventListener("click",async()=>{
+ const model=selectedLibraryModel();if(!model||!activeProject)return;
+ const button=$("library-import");button.disabled=true;$("library-status").textContent="Fetching "+model.name+" for project import…";
+ try{
+  const response=await fetch(model.asset_url);if(!response.ok)throw new Error("Could not retrieve the selected pinned model.");
+  const blob=await response.blob(),file=new File([blob],model.name+".glb",{type:"model/gltf-binary"});
+  const transfer=new DataTransfer();transfer.items.add(file);$("model-file").files=transfer.files;
+  $("model-file").dispatchEvent(new Event("change",{bubbles:true}));
+  $("library-status").textContent=model.name+" selected. Godot inspection and project import started.";
+  $("import-model").click();
+  document.querySelector("#profile-panel").scrollIntoView({behavior:"smooth",block:"start"});
+ }catch(error){$("library-status").textContent=error.message}
+ finally{button.disabled=!selectedLibraryModel()||!activeProject}
+});
+
 loadProjects().catch(error=>{$("project-status").textContent=error.message;$("character-list").textContent=error.message});
