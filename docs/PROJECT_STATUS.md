@@ -5,7 +5,7 @@
 - Repository: Pawar-47/Cartoon-Studio
 - Source-of-truth branch: `main`, at `062400e58cbbf491ec92869dc140b60a9b354d7f`. The active follow-up branch is `work/mainline-followup`, based on that commit.
 - Latest main CI run [#471](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45791209337) failed because `engine/godot_worker/worker.gd` declared `"action_cue_count"` twice in the episode result dictionary; the parse error prevented the worker from loading.
-- The working-branch fix removes the duplicate key and tests action/camera timeline cues using pinned Godot 4.7.2. Local validation: full pytest **136 passed, 4 skipped**; targeted episode-scene integration **1 passed**. These results are for the unpushed working-tree fix, not a GitHub Actions run.
+- Commit `be169c4` on the pushed `work/mainline-followup` branch removes the duplicate key and tests action/camera timeline cues using pinned Godot 4.7.2. Local validation: full pytest **136 passed, 4 skipped**; targeted episode-scene integration **1 passed**. No post-fix GitHub Actions run has completed.
 - Phase 0: COMPLETE.
 - Phase 1: COMPLETE.
 - Phase 2 — Character Studio: ACTIVE; import, preview, profiles, appearance recipes, rig-based body-proportion export, procedural Head-attached hairstyles, transparent PNG portrait export, rig diagnostics and retargeting are implemented. Preview defaults now prefer an Idle clip and safely handle RESET-only assets. CI validates this behavior; P2.2 remains PARTIAL, with broader visual acceptance and original face geometry still open.
@@ -63,7 +63,7 @@ Godot may normalize raw skin-joint ordering during import. The application uses 
 
 ## Next implementation batch
 
-1. Re-run CI on `work/mainline-followup` to verify the Godot worker parse fix on Windows.
+1. Open a PR from `work/mainline-followup` to `main` to trigger CI, then verify the Godot worker parse fix on Windows.
 2. Complete browser acceptance for procedural hairstyles and transparent PNG exports; verify saved-profile hair selection and output appearance.
 3. Extend acceptance to modular assembly, imported morph controls and baked appearance on representative, hierarchy-validated rigs.
 4. Resolve and document the body-edit compatibility boundary: the pinned Adventurer edit succeeded, but its import report still flags 13/15 humanoid names and a hierarchy needing review.

@@ -4,7 +4,7 @@ Updated: 2026-11-26
 Repository: https://github.com/Pawar-47/Cartoon-Studio
 Source of truth: `main` at `062400e58cbbf491ec92869dc140b60a9b354d7f`.
 Active working branch: `work/mainline-followup`, created from that main commit.
-Latest main CI #471 failed because Godot could not parse a duplicate `action_cue_count` dictionary key in the episode worker. The working-branch fix and cue regression test pass locally; full pytest is 136 passed, 4 skipped. Post-fix CI is pending.
+Latest main CI #471 failed because Godot could not parse a duplicate `action_cue_count` dictionary key in the episode worker. Commit `be169c4` on the pushed working branch fixes it; the cue regression test and full pytest pass locally (136 passed, 4 skipped). Post-fix CI is pending; the workflow requires a PR targeting `main`.
 
 ## Mission and operating rules
 

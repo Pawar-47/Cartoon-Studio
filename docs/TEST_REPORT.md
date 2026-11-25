@@ -5,7 +5,7 @@
 - Current main commit `062400e58cbbf491ec92869dc140b60a9b354d7f` failed Windows CI [#471](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45791209337): Godot rejected the duplicate `"action_cue_count"` dictionary key in `engine/godot_worker/worker.gd`, preventing the worker script from loading.
 - The working-branch fix removes the redundant raw-list count and keeps the count returned by timeline generation. `tests/test_engine_adapter.py::test_pinned_godot_worker_builds_episode_scenes_with_world_and_character_glb` supplies one valid wave action cue and one targeted dolly camera cue, asserting counts of 1/1 and five animation tracks; empty scenes retain three camera tracks.
 - Pinned Godot 4.7.2 targeted test: **1 passed**. Full local suite with `CARTOON_STUDIO_GODOT_PATH` set: **136 passed, 4 skipped, 1 existing Starlette/httpx deprecation warning** in 132.52 seconds.
-- These are local results for the working-tree fix. No post-fix GitHub Actions run has completed; do not describe #471 as fixed or passing.
+- These are local results for commit `be169c4` on pushed branch `work/mainline-followup`. No post-fix GitHub Actions run has completed; the workflow runs on pushes to `main` and pull requests targeting `main`, so #471 is not yet fixed or passing in CI.
 
 ## Latest main validation and CI coverage audit — 2026-11-25
 
