@@ -51,7 +51,11 @@ jobs:
       - name: Build self-contained application v1
         shell: pwsh
         run: |
-          Set-Content -Path app/version.py -Value '"""Single source for the installed application version."""`n`nAPP_VERSION = "0.1.0"' -Encoding utf8
+          Set-Content -Path app/version.py -Value @'
+"""Single source for the installed application version."""
+
+APP_VERSION = "0.1.0"
+'@ -Encoding utf8
           uv run --locked pyinstaller --noconfirm --clean --onedir --windowed --name CartoonStudio --specpath build/pyinstaller-v1 --workpath build/pyinstaller-v1/work --distpath dist/installer-v1 --add-data "app/static;app/static" --collect-submodules uvicorn app/desktop.py
           $bundle = (Resolve-Path "dist/installer-v1/CartoonStudio").Path
           Copy-Item LICENSES -Destination $bundle -Recurse -Force
@@ -59,18 +63,26 @@ jobs:
       - name: Build self-contained application v2
         shell: pwsh
         run: |
-          Set-Content -Path app/version.py -Value '"""Single source for the installed application version."""`n`nAPP_VERSION = "0.1.1"' -Encoding utf8
+          Set-Content -Path app/version.py -Value @'
+"""Single source for the installed application version."""
+
+APP_VERSION = "0.1.1"
+'@ -Encoding utf8
           uv run --locked pyinstaller --noconfirm --clean --onedir --windowed --name CartoonStudio --specpath build/pyinstaller-v2 --workpath build/pyinstaller-v2/work --distpath dist/installer-v2 --add-data "app/static;app/static" --collect-submodules uvicorn app/desktop.py
           $bundle = (Resolve-Path "dist/installer-v2/CartoonStudio").Path
           Copy-Item LICENSES -Destination $bundle -Recurse -Force
           Copy-Item docs/THIRD_PARTY_NOTICES.md, dependency-sbom.cdx.json -Destination $bundle -Force
-          Set-Content -Path app/version.py -Value '"""Single source for the installed application version."""`n`nAPP_VERSION = "0.1.0"' -Encoding utf8
+          Set-Content -Path app/version.py -Value @'
+"""Single source for the installed application version."""
+
+APP_VERSION = "0.1.0"
+'@ -Encoding utf8
       - name: Install pinned NSIS compiler
         run: choco install nsis --version=3.13.0 --yes --no-progress
       - name: Compile versioned Windows installers
         shell: pwsh
         run: |
-          $makensis = Join-Path `${env:ProgramFiles(x86)} "NSIS\makensis.exe"
+          $makensis = Join-Path ${env:ProgramFiles(x86)} "NSIS\makensis.exe"
           if (-not (Test-Path $makensis)) {
             $makensis = Join-Path $env:ProgramFiles "NSIS\makensis.exe"
           }
