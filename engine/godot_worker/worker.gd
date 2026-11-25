@@ -351,7 +351,7 @@ func _export_character_appearance(payload: Dictionary) -> Dictionary:
         if edit.has("metalness"):
             edited_material.metallic = float(edit["metalness"])
         mesh_instance.set_surface_override_material(surface_index, edited_material)
-        applied_materials.append({"mesh_name": mesh_name, "surface_index": surface_index, "color": color_value, "roughness": edited_material.roughness, "metalness": edited_material.metallic})
+        applied_materials.append({"mesh_name": mesh_name, "material_name": str(edit.get("material_name", "")), "surface_index": surface_index, "color": color_value, "roughness": edited_material.roughness, "metalness": edited_material.metallic})
     var applied_morphs: Array[Dictionary] = []
     for morph_value in morphs_value:
         if typeof(morph_value) != TYPE_DICTIONARY:
@@ -398,29 +398,35 @@ func _export_character_appearance(payload: Dictionary) -> Dictionary:
     if not bool(verification.get("ok", false)):
         DirAccess.remove_absolute(output_path)
         return {"error_code": "appearance_reimport_failed", "error": str(verification.get("error", "The customized GLB failed re-import verification."))}
+    var verified_material_surfaces: Array[String] = []
     for edit in applied_materials:
-        var mesh_records: Array[Dictionary] = []
-        for mesh_record in verification.get("mesh_inventory", []):
-            if str(mesh_record.get("node_name", "")) == str(edit["mesh_name"]):
-                mesh_records.append(mesh_record)
-        if mesh_records.size() != 1:
-            DirAccess.remove_absolute(output_path)
-            return {"error_code": "appearance_material_verification_failed", "error": "A customized material mesh did not survive export/re-import."}
-        var properties: Array = mesh_records[0].get("material_properties", [])
+        var material_verified := false
         var index := int(edit["surface_index"])
-        if index >= properties.size() or properties[index].is_empty():
+        for mesh_record in verification.get("mesh_inventory", []):
+            var properties: Array = mesh_record.get("material_properties", [])
+            if index >= properties.size() or properties[index].is_empty():
+                continue
+            var surface_key := str(mesh_record.get("node_name", "")) + ":" + str(index)
+            if verified_material_surfaces.has(surface_key):
+                continue
+            var actual: Dictionary = properties[index]
+            var matches_pbr := absf(float(actual.get("roughness", -1.0)) - float(edit["roughness"])) <= 0.02
+            matches_pbr = matches_pbr and absf(float(actual.get("metalness", -1.0)) - float(edit["metalness"])) <= 0.02
+            if not str(edit["color"]).is_empty():
+                var expected_color := Color.from_string(str(edit["color"]), Color.WHITE)
+                var actual_color: Array = actual.get("color", [])
+                matches_pbr = matches_pbr and actual_color.size() >= 3
+                if actual_color.size() >= 3:
+                    matches_pbr = matches_pbr and absf(float(actual_color[0]) - expected_color.r) <= 0.02
+                    matches_pbr = matches_pbr and absf(float(actual_color[1]) - expected_color.g) <= 0.02
+                    matches_pbr = matches_pbr and absf(float(actual_color[2]) - expected_color.b) <= 0.02
+            if matches_pbr:
+                material_verified = true
+                verified_material_surfaces.append(surface_key)
+                break
+        if not material_verified:
             DirAccess.remove_absolute(output_path)
-            return {"error_code": "appearance_material_verification_failed", "error": "A customized material could not be verified after export/re-import."}
-        var actual: Dictionary = properties[index]
-        if absf(float(actual.get("roughness", -1.0)) - float(edit["roughness"])) > 0.02 or absf(float(actual.get("metalness", -1.0)) - float(edit["metalness"])) > 0.02:
-            DirAccess.remove_absolute(output_path)
-            return {"error_code": "appearance_material_verification_failed", "error": "PBR material values changed during GLB export/re-import."}
-        if not str(edit["color"]).is_empty():
-            var expected_color := Color.from_string(str(edit["color"]), Color.WHITE)
-            var actual_color: Array = actual.get("color", [])
-            if actual_color.size() < 3 or absf(float(actual_color[0]) - expected_color.r) > 0.02 or absf(float(actual_color[1]) - expected_color.g) > 0.02 or absf(float(actual_color[2]) - expected_color.b) > 0.02:
-                DirAccess.remove_absolute(output_path)
-                return {"error_code": "appearance_material_verification_failed", "error": "Material color changed during GLB export/re-import."}
+            return {"error_code": "appearance_material_verification_failed", "error": "Customized material PBR values were not found after GLB export/re-import."}
     for edit in applied_morphs:
         var morph_verified := false
         for record in verification.get("morph_targets", []):
