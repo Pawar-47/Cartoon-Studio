@@ -4,12 +4,11 @@
 
 - Repository: Pawar-47/Cartoon-Studio
 - Branch: main
-- Latest implementation checkpoint: `7b703ec14b116440f5d6f1401ffce8bec5c7a16c`
+- Latest implementation checkpoint: `696929595b2d03e64e46a568ec9d163860ae3239`
 - Phase 0: COMPLETE.
 - Phase 1: COMPLETE.
 - Phase 2 — Character Studio: ACTIVE; import, preview, profiles, appearance recipes, rig diagnostics and the first user-facing imported-rig retarget workflow are implemented. Phase 2 is not complete.
-- Windows CI #303: full Windows pipeline PASSED on `0bfce71625d6e3084b4ceda9b64a9825cca95101`, including lint, Python compilation, full pytest, pinned Godot 4.7.2 worker, bootstrap, both self-contained builds, NSIS installer and clean install/upgrade/uninstall/reinstall lifecycle. It includes the third-party animated morph GLB import test.
-- Windows CI #304: current commit `7b703ec14b116440f5d6f1401ffce8bec5c7a16c`; lint, compilation and full pytest (including facial appearance persistence and validation) passed. Windows packaging and installer lifecycle are still running.
+- Windows CI #326: full pipeline PASSED on `696929595b2d03e64e46a568ec9d163860ae3239`, including lint, Python compilation, full pytest, pinned Godot 4.7.2 worker, Windows bootstrap, both self-contained application builds, NSIS installers and clean install/upgrade/uninstall/reinstall lifecycle.
 - Dedicated Godot native-worker proof #18 PASSED.
 - Chat-independent continuation record: `docs/SESSION_CHECKPOINT.md`.
 
@@ -48,10 +47,10 @@ Godot may normalize raw skin-joint ordering during import. The application uses 
 
 ## Next implementation batch
 
-1. Validate appearance-editor animation isolation and saved expression recipes in the full Windows CI pipeline.
-2. Add a genuinely facial third-party GLB fixture and verify expression controls against its real geometry.
-3. Add representative third-party GLB fixtures for rest-pose axes, bone roll, scale and multi-clip behavior.
-4. Compare browser retarget preview fidelity against the authoritative Godot scene before deterministic export expansion.
+1. Add a genuinely facial third-party GLB fixture and verify expression controls against its real geometry.
+2. Add representative third-party GLB fixtures for rest-pose axes, bone roll, scale and multi-clip behavior.
+3. Compare browser retarget preview fidelity against the authoritative Godot scene before deterministic export expansion.
+4. Keep per-commit CI limited to lint, compilation and automated tests; run complete application packaging only at a phase/release milestone.
 
 ## Frozen architecture and constraints
 

@@ -3,7 +3,7 @@
 Updated: 2026-11-25
 Repository: https://github.com/Pawar-47/Cartoon-Studio
 Branch: main
-Latest implementation checkpoint: 570c6f9b2d0fe35b64ec74e84ab8d0e702d7665d
+Latest implementation checkpoint: 696929595b2d03e64e46a568ec9d163860ae3239
 
 ## Mission and operating rules
 
@@ -45,13 +45,19 @@ Phase 2 — Character Studio is ACTIVE. Phase 0 and Phase 1 are complete. Do not
 
 - Windows CI #285 passed DCC naming-family tests and malformed-index rejection.
 - Windows CI #293 passed the full pipeline for Godot facial blend-shape inspection, the two-target GLB fixture, signed morph-weight persistence and Character Studio reporting.
-- Windows CI #299 passed the full Windows pipeline on commit `570c6f9b2d0fe35b64ec74e84ab8d0e702d7665d`, including the actual pinned Godot 4.7.2 third-party Rigged Figure import and retarget after scene save/reopen, bootstrap, both self-contained builds, NSIS installer and install/upgrade/uninstall/reinstall lifecycle.
+- Windows CI #326 passed the full Windows pipeline on commit `696929595b2d03e64e46a568ec9d163860ae3239`, including lint, compilation, full tests, pinned Godot 4.7.2 worker, bootstrap, both self-contained builds, NSIS installers and install/upgrade/uninstall/reinstall lifecycle.
 - Earlier synthetic Mixamo source/target retarget fixture remains green and preserves both source assets.
 - Dedicated browser visual acceptance has not been performed. Browser preview is not claimed to be equivalent to native Godot rendering.
 
 ## Important acceptance boundary
 
 One real third-party humanoid model has passed native Godot import and retarget acceptance. This is not blanket support for arbitrary GLBs. More rigs, unusual rest axes, bone roll, scale variation, multi-clip animations and real facial morph models still need fixture coverage. Phase 2 remains ACTIVE and incomplete.
+
+## CI execution policy
+
+- Push/PR CI runs lint, Python compilation and automated tests only; no PyInstaller or NSIS builds.
+- Full Windows application and installer validation lives in `.github/workflows/release-windows.yml` and is manually dispatched after a phase/release milestone.
+- Workflow concurrency groups prevent overlapping runs. Avoid duplicate CI runs for minor edits.
 
 ## Next substantial implementation batch
 
