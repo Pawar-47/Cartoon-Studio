@@ -237,3 +237,82 @@ def test_rest_pose_summary_ignores_malformed_or_non_finite_transforms():
     result = _analyze_rig({"skeleton_count": 1, "skeletons": [{"bones": bones}]})
     assert result["rest_pose_summary"]["status"] == "not_available"
     assert result["rest_pose_summary"]["measured_bone_count"] == 0
+
+def test_common_dcc_humanoid_naming_conventions_map_without_guessing():
+    naming_sets = {
+        "3ds_max_biped": [
+            "Bip01 Pelvis", "Bip01 Spine", "Bip01 Head",
+            "Bip01 L Thigh", "Bip01 L Calf", "Bip01 L Foot",
+            "Bip01 R Thigh", "Bip01 R Calf", "Bip01 R Foot",
+            "Bip01 L UpperArm", "Bip01 L Forearm", "Bip01 L Hand",
+            "Bip01 R UpperArm", "Bip01 R Forearm", "Bip01 R Hand",
+        ],
+        "character_creator": [
+            "CC_Base_Hip", "CC_Base_Spine01", "CC_Base_Head",
+            "CC_Base_L_Thigh", "CC_Base_L_Calf", "CC_Base_L_Foot",
+            "CC_Base_R_Thigh", "CC_Base_R_Calf", "CC_Base_R_Foot",
+            "CC_Base_L_Upperarm", "CC_Base_L_Forearm", "CC_Base_L_Hand",
+            "CC_Base_R_Upperarm", "CC_Base_R_Forearm", "CC_Base_R_Hand",
+        ],
+        "unreal_mannequin": [
+            "pelvis", "spine_01", "head",
+            "thigh_l", "calf_l", "foot_l",
+            "thigh_r", "calf_r", "foot_r",
+            "upperarm_l", "lowerarm_l", "hand_l",
+            "upperarm_r", "lowerarm_r", "hand_r",
+        ],
+        "blender_rigify_deform": [
+            "DEF-spine", "DEF-spine.001", "DEF-spine.006",
+            "DEF-thigh.L", "DEF-shin.L", "DEF-foot.L",
+            "DEF-thigh.R", "DEF-shin.R", "DEF-foot.R",
+            "DEF-upper_arm.L", "DEF-forearm.L", "DEF-hand.L",
+            "DEF-upper_arm.R", "DEF-forearm.R", "DEF-hand.R",
+        ],
+    }
+    for rig_name, names in naming_sets.items():
+        result = _analyze_rig({
+            "skeleton_count": 1,
+            "skeletons": [{
+                "node_path": f"Imported/{rig_name}/Skeleton3D",
+                "bone_count": len(names),
+                "bones": [{"name": name} for name in names],
+            }],
+        })
+        assert result["matched_bone_count"] == 15, rig_name
+        assert result["missing_bones"] == [], rig_name
+        assert result["ambiguous_bones"] == [], rig_name
+        assert result["retargeting_ready"] is False, rig_name
+
+
+def test_duplicate_indexed_bone_ids_are_rejected_as_malformed_hierarchy():
+    result = _analyze_rig({
+        "skeleton_count": 1,
+        "skeletons": [{
+            "bones": [
+                {"index": 0, "name": "Hips", "parent_index": -1},
+                {"index": 0, "name": "Spine", "parent_index": 0},
+            ],
+        }],
+    })
+    validation = result["hierarchy_validation"]
+    assert validation["status"] == "invalid"
+    assert validation["checked_relationships"] == 0
+    assert "Duplicate bone index 0" in validation["issues"][0]
+
+
+def test_negative_and_out_of_range_parent_indices_are_rejected():
+    negative = _analyze_rig({
+        "skeleton_count": 1,
+        "skeletons": [{
+            "bones": [{"index": -1, "name": "Hips", "parent_index": -1}],
+        }],
+    })
+    invalid_parent = _analyze_rig({
+        "skeleton_count": 1,
+        "skeletons": [{
+            "bones": [{"index": 0, "name": "Hips", "parent_index": -2}],
+        }],
+    })
+    assert negative["hierarchy_validation"]["status"] == "invalid"
+    assert invalid_parent["hierarchy_validation"]["status"] == "invalid"
+
