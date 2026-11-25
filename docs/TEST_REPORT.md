@@ -74,3 +74,9 @@ A green CI run proves only the checks that actually ran. Source presence, docume
 - Quaternius FAQ/license confirms packs may be CC0 or QAL; QAL v1.0 prohibits standalone asset redistribution. The selected CC0 pack list is not a blanket approval for other packs.
 - Godot Motion Matching repository has headless test scripts but no Actions workflow; no tests were executed in this research.
 - No CC0 pack was downloaded or imported; no Cartoon Studio scene/render test was performed.
+
+## Audio/video pipeline research evidence (not app tests)
+- Godot 4.7 MovieWriter, Audio Playback Tracks and Audio Bus documentation inspected; no scene render or audio mix test run.
+- FFmpeg official legal documentation and OpenH264 BSD license inspected; no binary built or bundled.
+- Kenney CC0 audio packs and OpenGameArt CC0 music pages inspected; no audio downloaded or added to the asset library.
+- Allosaurus/Parrot source and model docs inspected; no Urdu audio inference or viseme mapping test performed.

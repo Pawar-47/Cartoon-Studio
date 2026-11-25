@@ -55,3 +55,10 @@ Godot 4.7.2 remains the leading on-paper runtime candidate. The next research ta
 Finish the audio/MP4 pipeline research (MovieWriter output formats, FFmpeg build/codec licensing) and Urdu lip-sync/TTS candidate matrix. Then P0.4 tests Godot 4.7.2 Compatibility on the actual HD 5500 PC, measures RAM/render time and verifies Pakistani Urdu/provider availability. No paid/cloud service becomes mandatory.
 
 Do not begin production features before P0.7. Preserve the current Story Generator and keep it frozen until Phase 4.
+
+## P0.3 — next research work
+The Godot runtime/world/character/asset/provider/audio research is now documented. Complete the remaining subsystem comparison: Urdu phoneme inventory and timing, face blendshapes/visemes, retargeting, and the end-to-end scene-to-MP4 workflow. Record a concrete low-end scene budget and the integration model that preserves the current FastAPI/browser project.
+
+Then P0.4 tests Godot 4.7.2 Compatibility on the actual HD 5500 PC, measures RAM/render time and verifies Pakistani Urdu/provider availability. No paid/cloud service becomes mandatory. Do not download assets or integrate code until P0.5/P0.7 gates allow it.
+
+Do not begin production features before P0.7. Preserve the current Story Generator and keep it frozen until Phase 4.

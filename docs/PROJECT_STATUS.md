@@ -74,3 +74,10 @@ P0.3 — continue the comparative source-level research sweep. P0.4 hardware/Urd
 - Quaternius Universal Base Characters and Modular Character Outfits provide CC0 modular bodies/clothing; Downtown City, Modular Streets, buildings, interiors, furniture, cars and public transport packs provide CC0 environment assets.
 - These packs are not yet downloaded or imported. Exact pack license files must be preserved; QAL packs are excluded from the in-app asset library.
 - Godot Motion Matching is an optional MIT future candidate with no upstream CI; use simple AnimationTree + UAL first.
+
+## Audio and episode-render research checkpoint
+- Godot Audio Playback Tracks and Audio Buses can handle dialogue, music, ambience and SFX on a single timeline.
+- Godot MovieWriter supports non-real-time fixed-FPS rendering; exported projects output AVI/MJPEG (4 GB cap) or PNG+WAV. OGV is editor-build only. FFmpeg is required for MP4.
+- FFmpeg default LGPL build is compatible with a more permissive distribution path; avoid GPL libx264/libx265 unless the project license decision allows it. OpenH264 BSD is a possible H.264 encoder candidate, not tested.
+- Kenney CC0 packs cover SFX and short jingles; OpenGameArt CC0 loops are available but need per-track license and YouTube Content ID checks.
+- Urdu lip-sync remains unproven: Allosaurus universal model uses approximate phone timestamps and has no Urdu-specific acoustic model confirmed. Manual correction remains required.
