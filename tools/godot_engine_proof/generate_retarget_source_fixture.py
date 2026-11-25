@@ -59,7 +59,7 @@ def generate_source_fixture(source: Path, output: Path) -> None:
 
     json_bytes = json.dumps(document, separators=(",", ":")).encode("utf-8")
     json_bytes += b" " * ((-len(json_bytes)) % 4)
-    binary_bytes = binary + b"\\x00" * ((-len(binary)) % 4)
+    binary_bytes = binary + b"\x00" * ((-len(binary)) % 4)
     total_length = 12 + 8 + len(json_bytes) + 8 + len(binary_bytes)
     output_bytes = bytearray(struct.pack("<4sII", b"glTF", 2, total_length))
     output_bytes.extend(struct.pack("<II", len(json_bytes), 0x4E4F534A))
