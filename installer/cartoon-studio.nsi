@@ -18,6 +18,8 @@ InstallDir "$LOCALAPPDATA\Programs\Cartoon Studio"
 InstallDirRegKey HKCU "Software\CartoonStudio" "InstallDir"
 ShowInstDetails show
 ShowUnInstDetails show
+UninstPage uninstConfirm
+UninstPage instfiles
 VIProductVersion "${APP_VERSION}.0"
 VIAddVersionKey "ProductName" "Cartoon Studio"
 VIAddVersionKey "ProductVersion" "${APP_VERSION}"
@@ -69,6 +71,7 @@ SectionEnd
 
 Section "Uninstall"
     SetShellVarContext current
+    WriteRegStr HKCU "Software\CartoonStudioDebug" "SectionEntered" "yes"
     ExecWait '"$SYSDIR\taskkill.exe" /F /IM CartoonStudio.exe'
 
     Delete "$SMPROGRAMS\Cartoon Studio\Cartoon Studio.lnk"
