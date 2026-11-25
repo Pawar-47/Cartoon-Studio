@@ -1,12 +1,11 @@
 name: Retire all non-main branches (one-time)
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/retire-branches-once.yml'
   workflow_dispatch:
-    inputs:
-      confirmation:
-        description: Type DELETE-ALL-NON-MAIN-BRANCHES to proceed
-        required: true
-        type: string
 
 permissions:
   contents: write
@@ -24,7 +23,7 @@ jobs:
       - name: Archive unique branch tips and delete every non-main branch
         uses: actions/github-script@v7
         env:
-          CONFIRMATION: ${{ inputs.confirmation }}
+          CONFIRMATION: DELETE-ALL-NON-MAIN-BRANCHES
         with:
           script: |
             const owner = context.repo.owner;
