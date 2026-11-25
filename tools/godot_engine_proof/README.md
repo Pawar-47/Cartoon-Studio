@@ -18,8 +18,11 @@ Use the official Godot 4.7.2 stable Standard build and FFmpeg. On Linux, run the
 
 ```sh
 godot --headless --path tools/godot_engine_proof --editor --import --quit
-xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 godot --path tools/godot_engine_proof --write-movie artifacts/proof.avi --fixed-fps 24 -- --report=artifacts/report.json
-ffprobe -v error -show_entries format=duration -of json artifacts/proof.avi
+mkdir -p tools/godot_engine_proof/artifacts
+xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 godot --path tools/godot_engine_proof --write-movie artifacts/proof.avi --fixed-fps 24 -- --report=res://artifacts/report.json
+ffprobe -v error -show_entries format=duration -of json tools/godot_engine_proof/artifacts/proof.avi
+ffmpeg -i tools/godot_engine_proof/artifacts/proof.avi -c:v mpeg4 -q:v 5 -c:a aac -b:a 96k tools/godot_engine_proof/artifacts/proof.mp4
+ffprobe -v error -show_entries format=duration -of json tools/godot_engine_proof/artifacts/proof.mp4
 ```
 
-The GitHub Actions workflow pins Godot to 4.7.2 stable and uploads the JSON report, engine log and AVI for inspection. A passing CI proof demonstrates the engine boundary on the hosted runner only; target-PC performance remains Phase 8.
+The GitHub Actions workflow pins Godot to 4.7.2 stable and uploads the JSON report, engine log and AVI for inspection. The CI job also performs a temporary MP4 assembly using FFmpeg's built-in MPEG-4 Part 2/AAC encoders. This is a format-pipeline proof only, not approval of the final distribution codec or FFmpeg build. A passing CI proof demonstrates the engine boundary on the hosted runner only; target-PC performance remains Phase 8.

@@ -40,6 +40,10 @@ jobs:
           ffprobe -v error -show_entries format=duration:stream=codec_name,width,height,r_frame_rate -of json tools/godot_engine_proof/artifacts/godot-engine-proof.avi > tools/godot_engine_proof/artifacts/ffprobe.json
           cat tools/godot_engine_proof/artifacts/godot-engine-proof.json
           cat tools/godot_engine_proof/artifacts/ffprobe.json
+          ffmpeg -hide_banner -y -i tools/godot_engine_proof/artifacts/godot-engine-proof.avi -c:v mpeg4 -q:v 5 -c:a aac -b:a 96k -movflags +faststart tools/godot_engine_proof/artifacts/godot-engine-proof.mp4
+          ffprobe -v error -show_entries format=duration:stream=codec_name,width,height,r_frame_rate -of json tools/godot_engine_proof/artifacts/godot-engine-proof.mp4 > tools/godot_engine_proof/artifacts/ffprobe-mp4.json
+          test -s tools/godot_engine_proof/artifacts/godot-engine-proof.mp4
+          cat tools/godot_engine_proof/artifacts/ffprobe-mp4.json
       - name: Upload proof artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -48,5 +52,7 @@ jobs:
             tools/godot_engine_proof/artifacts/godot-engine-proof.json
             tools/godot_engine_proof/artifacts/godot-engine-proof.avi
             tools/godot_engine_proof/artifacts/ffprobe.json
+            tools/godot_engine_proof/artifacts/godot-engine-proof.mp4
+            tools/godot_engine_proof/artifacts/ffprobe-mp4.json
           if-no-files-found: error
           retention-days: 14
