@@ -568,6 +568,36 @@ async def upload_character_asset(project_id: str, request: Request) -> dict[str,
         temporary.unlink(missing_ok=True)
 
 
+@app.get("/api/projects/{project_id}/character-assets/{asset_id}")
+def get_character_asset(project_id: str, asset_id: str) -> FileResponse:
+    initialize_database()
+    with connect_db() as connection:
+        project = connection.execute(
+            "SELECT id FROM projects WHERE id = ?", (project_id,)
+        ).fetchone()
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    try:
+        safe_asset_id = str(uuid.UUID(asset_id))
+        manifest_path = resolve_project_relative(
+            DATA_DIR, project_id, f"assets/characters/{safe_asset_id}.json"
+        )
+        asset_path = resolve_project_relative(
+            DATA_DIR, project_id, f"assets/characters/{safe_asset_id}.glb"
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail="Invalid character asset ID.") from error
+    if not manifest_path.is_file() or not asset_path.is_file():
+        raise HTTPException(status_code=404, detail="Character asset not found.")
+    manifest = read_json(manifest_path)
+    if manifest.get("document_type") != "character_asset" or manifest.get("id") != safe_asset_id:
+        raise HTTPException(status_code=409, detail="Character asset manifest is invalid.")
+    return FileResponse(
+        asset_path,
+        media_type="model/gltf-binary",
+        filename=manifest["data"].get("original_filename", "character.glb"),
+    )
+
 @app.get("/api/projects/{project_id}/characters")
 def list_characters(project_id: str) -> list[dict[str, Any]]:
     initialize_database()

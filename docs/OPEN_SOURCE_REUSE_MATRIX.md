@@ -97,3 +97,10 @@ Adoption gate: no dependency until exact version, source, compatibility, softwar
 | [Quaternius CC0 character packs](https://quaternius.com/packs/universalbasecharacters.html) | Exact pack pages already recorded in this matrix and asset-license register. | CC0 only for individually confirmed CC0 pack pages; QAL packs are not globally CC0. | Candidate source of original base meshes after pack-level download, hash, and license inventory. No asset is claimed bundled yet. |
 
 No candidate code or character assets were copied or bundled by this research-only checkpoint. The next P2.2 implementation must pin exact upstream commits/releases and record all transitive/model/asset licenses before packaging.
+
+
+## Browser GLB preview runtime — 2026-11-25
+
+| Candidate | Evidence | License / pin | Decision |
+|---|---|---|---|
+| [mrdoob/three.js](https://github.com/mrdoob/three.js) | Official r187 release and package metadata reviewed. GLTFLoader supports glTF 2.0 scenes, meshes, materials, textures, skins and animation clips; OrbitControls provides interactive camera orbit/zoom. Required utility modules and module dependency imports were inspected. | MIT; version 0.187.0, tag r187, commit `7e89746a687bb88271253698fa108b1dd59825d0`. Exact license retained. | Selected as a locally vendored browser presentation layer. No CDN dependency. Godot remains the native importer/validator. |

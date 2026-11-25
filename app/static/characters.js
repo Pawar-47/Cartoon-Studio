@@ -1,3 +1,4 @@
+import { showCharacterPreview } from "./character-preview.js";
 const $=id=>document.getElementById(id);
 let activeProject="", importedAsset=null;
 const params=new URLSearchParams(window.location.search);
@@ -33,7 +34,9 @@ async function loadCharacters(){
   const rig=document.createElement("span");rig.className="tag"+(data.rig_status==="ready"?"":" warning");rig.textContent=data.rig_status==="ready"?"Rig detected":"No skeleton detected";
   const animations=document.createElement("span");animations.className="tag";animations.textContent=(asset.engine_inspection?.animation_count??asset.container?.animation_count??0)+" animations";
   const revision=document.createElement("p");revision.textContent="Revision "+document.revision+" · "+new Date(document.updated_at).toLocaleDateString();
-  card.append(title,description,model,rig,animations,revision);list.append(card);
+  const previewButton=document.createElement("button");previewButton.className="secondary preview-saved";previewButton.type="button";previewButton.textContent="Preview";
+  previewButton.addEventListener("click",async()=>{try{const assetId=(asset.relative_path||"").split("/").pop().replace(/\.glb$/i,"");const response=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(assetId));if(!response.ok)throw new Error("Could not load the saved GLB asset.");const buffer=await response.arrayBuffer();await showCharacterPreview(buffer,data.name);document.querySelector(".preview-panel").scrollIntoView({behavior:"smooth",block:"center"})}catch(error){$("project-status").textContent=error.message}});
+  card.append(title,description,model,rig,animations,revision,previewButton);list.append(card);
  }
 }
 $("project-select").addEventListener("change",event=>selectProject(event.target.value).catch(error=>$("project-status").textContent=error.message));
@@ -44,7 +47,7 @@ $("import-model").addEventListener("click",async()=>{
  try{
   const response=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/character-assets",{method:"POST",headers:{"Content-Type":"application/octet-stream","X-Asset-Filename":file.name},body:file});
   const data=await response.json();if(!response.ok)throw new Error(data.detail||"Model import failed.");
-  importedAsset=data;$("asset-report").hidden=false;$("asset-report").replaceChildren();
+  importedAsset=data;await showCharacterPreview(await file.arrayBuffer(),file.name);$("asset-report").hidden=false;$("asset-report").replaceChildren();
   const heading=document.createElement("strong");heading.textContent="Godot import successful · "+data.container.format;
   const metrics=document.createElement("div");metrics.className="asset-metrics";
   const items=[["Meshes",data.engine_inspection.mesh_count],["Skeletons",data.engine_inspection.skeleton_count],["Animations",data.engine_inspection.animation_count],["Nodes",data.engine_inspection.node_count],["File size",(data.container.size_bytes/1048576).toFixed(2)+" MiB"],["Rig readiness",data.rig_ready?"Skeleton detected":"No skeleton"]];

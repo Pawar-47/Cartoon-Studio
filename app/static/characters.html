@@ -23,6 +23,11 @@
   <button id="import-model" disabled>Import and inspect model</button>
   <p id="import-status" class="inline-status" role="status"></p>
   <div id="asset-report" class="asset-report" hidden></div>
+  <div class="preview-panel">
+   <div class="preview-heading"><strong>Live 3D preview</strong><span id="preview-status">Import a model to preview it.</span></div>
+   <div class="preview-stage"><canvas id="model-preview" aria-label="Interactive 3D character preview"></canvas><div id="preview-empty">Your imported character will appear here.</div></div>
+   <div class="preview-controls"><button id="reset-view" class="secondary" type="button" disabled>Reset view</button><label>Animation<select id="animation-select" disabled><option value="">No animation loaded</option></select></label></div>
+  </div>
  </section>
  <section class="panel" id="profile-panel">
   <span class="eyebrow">02 / CHARACTER IDENTITY</span><h2>Save reusable profile</h2>
@@ -56,5 +61,8 @@
 </div>
 <footer>GLB geometry and rig inspection are real Godot operations. Mesh editing, live 3D viewport, rig creation, facial controls and animation authoring are separate upcoming implementation batches.</footer>
 </main>
-<script src="/static/characters.js"></script>
+<script type="importmap">
+{"imports":{"three":"/static/vendor/three/build/three.module.js"}}
+</script>
+<script type="module" src="/static/characters.js"></script>
 </body></html>

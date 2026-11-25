@@ -46,7 +46,7 @@ jobs:
       - name: Export dependency inventory
         run: uv export --locked --all-groups --format cyclonedx1.5 --output-file dependency-sbom.cdx.json
       - name: Add Godot runtime to CycloneDX inventory
-        run: uv run --locked python scripts/augment_sbom.py --sbom dependency-sbom.cdx.json --manifest engine/godot_runtime.json --runtime-report build/godot-runtime/godot-runtime-report.json
+        run: uv run --locked python scripts/augment_sbom.py --sbom dependency-sbom.cdx.json --manifest engine/godot_runtime.json --runtime-report build/godot-runtime/godot-runtime-report.json --web-runtime-manifest third_party/threejs-runtime.json
       - name: Package Windows bootstrap
         shell: pwsh
         run: |

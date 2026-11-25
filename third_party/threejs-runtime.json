@@ -1,0 +1,17 @@
+{
+  "component": "three.js",
+  "version": "0.187.0",
+  "tag": "r187",
+  "commit": "7e89746a687bb88271253698fa108b1dd59825d0",
+  "license": "MIT",
+  "source": "https://github.com/mrdoob/three.js/tree/r187",
+  "files": [
+    "app/static/vendor/three/build/three.core.js",
+    "app/static/vendor/three/build/three.module.js",
+    "app/static/vendor/three/examples/jsm/loaders/GLTFLoader.js",
+    "app/static/vendor/three/examples/jsm/controls/OrbitControls.js",
+    "app/static/vendor/three/examples/jsm/utils/BufferGeometryUtils.js",
+    "app/static/vendor/three/examples/jsm/utils/SkeletonUtils.js",
+    "LICENSES/three.js/LICENSE"
+  ]
+}

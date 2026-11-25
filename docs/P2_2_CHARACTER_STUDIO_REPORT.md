@@ -28,3 +28,14 @@
 - The tests use a deterministic fake Godot adapter for API-level contract tests.
 - The existing Windows CI job also runs the real pinned Godot 4.7.2 worker integration tests.
 - Windows CI #208 passed on commit `41aabbb627e36f3f02f306e79e3cba33bd19dc84`: 45 tests passed; lint, compilation, runtime integrity, bootstrap smoke, both self-contained builds and the full installer lifecycle passed. The run uploaded the bootstrap, installer and SBOM artifacts.
+
+
+## Browser preview extension — 2026-11-25
+
+- Added locally vendored three.js 0.187.0 (r187, MIT) and its GLTFLoader, OrbitControls, BufferGeometryUtils and SkeletonUtils modules.
+- The browser can preview the original uploaded GLB and reopen a saved project's GLB using a project-scoped read endpoint.
+- Preview controls include orbit, zoom, camera reset and embedded animation selection.
+- The vendored library is pinned in `third_party/threejs-runtime.json`, its license is retained, and the CI SBOM script adds the npm component.
+- This is visual presentation only. Godot remains authoritative for GLB import/inspection; no mesh editing, rig creation, material editing, facial controls or export is included.
+- Browser preview requires WebGL 2. Draco/Meshopt decoders are not bundled; compressed files may be importable by Godot while unsupported by the browser viewer.
+- Windows CI acceptance is pending.

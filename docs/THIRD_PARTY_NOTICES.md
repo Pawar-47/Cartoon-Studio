@@ -24,3 +24,6 @@ Cartoon Studio's own distribution license has not yet been selected by the proje
 - Source: https://github.com/godotengine/godot/tree/4.7.2-stable
 - Release archive: https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_win64.exe.zip
 - SHA-256: `731980f9608d61333e5baf54a2ef17210acc7a538446c0cb9969f002aca1e953`
+
+
+| three.js | 0.187.0 (tag r187, commit 7e89746a687bb88271253698fa108b1dd59825d0), vendored browser GLB preview runtime | MIT; upstream license retained at LICENSES/three.js/LICENSE. The pinned runtime manifest is third_party/threejs-runtime.json and the vendored source modules are under app/static/vendor/three/. Included in the CycloneDX SBOM. |

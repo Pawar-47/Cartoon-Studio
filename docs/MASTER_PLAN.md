@@ -254,3 +254,8 @@ This is deliberately not the P2.2 exit gate. Live 3D viewport/thumbnail preview,
 Commit `41aabbb627e36f3f02f306e79e3cba33bd19dc84` passed the complete Windows pipeline on 2026-11-25. The 45-test suite passed with the pinned real Godot 4.7.2 runtime available; Ruff, Python compilation, dependency lock, SBOM, bootstrap smoke test, both self-contained builds, NSIS installers and the clean-install/upgrade/uninstall/reinstall lifecycle all passed.
 
 The accepted slice delivers GLB 2.0 import and inspection, persistent character profiles and project recovery. It does not close Phase 2. P2.2 continues with real 3D preview, mesh/rig/appearance authoring and export round-trip before the Character Studio exit gate can be considered.
+
+
+## P2.2 interactive browser preview batch — 2026-11-25
+
+A browser-side GLB presentation preview is implemented using locally vendored three.js 0.187.0 (MIT, pinned r187 commit `7e89746a687bb88271253698fa108b1dd59825d0`). It supports orbit/zoom, camera reset and embedded animation selection. The existing Godot worker remains the native import/inspection authority. The CI run for this preview batch is pending. This does not close Phase 2; mesh/rig/material editing and export remain required.

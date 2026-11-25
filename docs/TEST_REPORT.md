@@ -147,3 +147,8 @@ The tests use a deterministic fake adapter for API contract tests; the existing 
 - Full installer smoke passed: clean install, shortcuts, v1-to-v2 upgrade, project-data preservation, uninstall and reinstall.
 - All three CI artifacts uploaded: Windows bootstrap, self-contained Windows installer and dependency SBOM.
 - Scope limitation: tests validate import and inspection, not live rendering/preview or mesh/rig authoring. Target-PC benchmarking remains Phase 8.
+
+
+## P2.2 browser preview extension — Windows CI pending
+
+New coverage: project-scoped retrieval of a validated imported GLB asset for browser preview. The vendored three.js runtime is added to the CycloneDX SBOM via `third_party/threejs-runtime.json`. CI will verify lint, Python compilation, the API regression test, package contents, installer build and lifecycle. Visual browser rendering still requires an interactive WebGL 2 browser; the headless Godot CI worker is not used as a screenshot renderer.

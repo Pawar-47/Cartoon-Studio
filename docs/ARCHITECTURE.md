@@ -169,3 +169,15 @@ The first production slice keeps the project format engine-neutral and uses the 
 - No imported character assets are bundled with the application; uploaded user assets remain local to their project.
 
 Limitations are explicit: this slice does not create or edit meshes, rig a skeleton, edit materials/blend shapes, provide a live 3D viewport/thumbnail, export modified GLB, or import VRM. Those are still required work for the full Character Studio phase.
+
+
+## P2.2 browser-side GLB preview — 2026-11-25
+
+The Character Studio preview uses a pinned local copy of three.js 0.187.0 (upstream tag r187, commit `7e89746a687bb88271253698fa108b1dd59825d0`, MIT). The browser loads GLB data through the vendored GLTFLoader and presents a lit orbitable preview with embedded animation selection. OrbitControls supports pointer/touch orbit and zoom.
+
+- All viewer modules are served locally from `app/static/vendor/three/`; no CDN or runtime network request is required.
+- The three.js version, source commit, file inventory and MIT license are recorded in `third_party/threejs-runtime.json`, `LICENSES/three.js/LICENSE` and the CycloneDX SBOM.
+- Imported assets are fetched only from the selected local project via the new project-scoped asset endpoint.
+- Godot remains the authoritative import/inspection worker. Three.js is the browser presentation layer, not a replacement for the engine or a claim of rig editing.
+- Browser preview requires WebGL 2. Compressed GLB extensions requiring external Draco/Meshopt decoders are not bundled in this slice; such assets may import in Godot but fail browser preview with an explicit status.
+- Preview does not modify the source GLB. Mesh editing, material editing, rig editing, expression editing and export remain separate work.

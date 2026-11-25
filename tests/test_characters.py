@@ -130,6 +130,17 @@ def test_character_glb_import_profile_round_trip_and_project_reference(tmp_path,
     assert character_id in opened.json()["document"]["data"]["references"]["characters"]
 
 
+def test_saved_character_asset_can_be_retrieved_for_preview(tmp_path, monkeypatch):
+    client, project_id = setup_project(tmp_path, monkeypatch)
+    imported = import_asset(client, project_id)
+    response = client.get(
+        f"/api/projects/{project_id}/character-assets/{imported['asset_id']}"
+    )
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("model/gltf-binary")
+    assert response.content == make_glb()
+
+
 def test_character_import_rejects_bad_glb_and_unsafe_filename(tmp_path, monkeypatch):
     client, project_id = setup_project(tmp_path, monkeypatch)
     bad = client.post(

@@ -100,3 +100,14 @@ Continue P2.2 with:
 4. Tests and evidence for each capability; keep the project portable and local-first.
 
 Do not claim P2.2 complete until the phase exit gate is met. GLB is the only integrated import format; VRM remains a candidate.
+
+
+## P2.2 preview batch — 2026-11-25 (CI pending)
+
+The next P2.2 batch adds a local browser GLB preview:
+- three.js 0.187.0 pinned to upstream r187 commit `7e89746a687bb88271253698fa108b1dd59825d0`, vendored locally with MIT license.
+- GLTFLoader renders uploaded and saved project GLBs in an interactive canvas; OrbitControls provides orbit and zoom; embedded animation clips can be selected.
+- A project-scoped asset GET endpoint serves only the generated asset UUID and validated manifest.
+- CycloneDX SBOM augmentation records the vendored three.js component.
+
+After CI acceptance, continue with character profile editing and real mesh/material/rig authoring. Keep GLB compression decoder limitations explicit; no remote CDN dependency is permitted.

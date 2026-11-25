@@ -122,3 +122,13 @@
 - Both self-contained Windows application builds and NSIS installers succeeded.
 - Installer lifecycle passed clean install, shortcuts, v1-to-v2 upgrade, project preservation, uninstall and reinstall.
 - The first Character Studio vertical slice is accepted. Phase 2 remains active; preview, actual authoring, rig editing, export and animation tools remain open.
+
+
+## P2.2 browser preview implementation — 2026-11-25 (Windows CI pending)
+
+- Added a pinned, locally vendored three.js 0.187.0 GLTFLoader and OrbitControls stack with MIT notice and CycloneDX component registration.
+- Character Studio now has an interactive browser preview for uploaded and saved GLB assets, including orbit/zoom, camera reset and embedded animation selection.
+- Added a project-scoped GET endpoint to retrieve only validated character assets from their project.
+- Added an API regression test for saved-asset retrieval.
+- This is a presentation preview only; Godot remains the importer/validator. WebGL 2 is required. No mesh/rig/material editing or GLB export is claimed.
+- CI run for this batch is pending.
