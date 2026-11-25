@@ -83,6 +83,27 @@ def generate_target_fixture(source_path: Path, output_path: Path) -> None:
     document, binary = _read_glb(source_path.read_bytes())
     nodes = document["nodes"]
     node_by_name = {node.get("name"): index for index, node in enumerate(nodes)}
+    required_nodes = {
+        "Hips",
+        "Spine",
+        "Head",
+        "LeftUpperLeg",
+        "RightUpperLeg",
+        "LeftUpperArm",
+        "RightUpperArm",
+    }
+    if not required_nodes.issubset(node_by_name):
+        raise ValueError("Source fixture is missing required hierarchy nodes.")
+    nodes[node_by_name["Hips"]]["children"] = [
+        node_by_name["RightUpperLeg"],
+        node_by_name["LeftUpperLeg"],
+        node_by_name["Spine"],
+    ]
+    nodes[node_by_name["Spine"]]["children"] = [
+        node_by_name["RightUpperArm"],
+        node_by_name["LeftUpperArm"],
+        node_by_name["Head"],
+    ]
     for name, factor in REST_FACTORS.items():
         if name not in node_by_name:
             raise ValueError(f"Required fixture bone is missing: {name}")
