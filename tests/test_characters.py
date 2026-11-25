@@ -78,6 +78,21 @@ class FakeEngine:
         return result
 
 
+    def add_character_hair(self, source_path, style, color, destination, allowed_root):
+        assert source_path.is_relative_to(allowed_root)
+        assert style in {"short", "bob", "long", "ponytail", "spiky", "curly", "mohawk"}
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(make_glb())
+        result = self.inspect_glb(destination, allowed_root)
+        result.update({
+            "hair_verified": True,
+            "hair_style": style,
+            "hair_color": color,
+            "hair_attachment_bone": "mixamorig:Head",
+            "hair_mesh_count": 3,
+        })
+        return result
+
     def customize_character_proportions(
         self, source_path, proportions, destination, allowed_root
     ):
@@ -183,6 +198,9 @@ def test_browser_preview_modules_are_served_from_local_static_assets():
     assert 'id="body-morph-status"' in page.text
     assert 'id="torso-length"' in page.text
     assert 'id="apply-proportions"' in page.text
+    assert 'id="hair-style"' in page.text
+    assert 'id="apply-hair"' in page.text
+    assert "applyHairStyle" in client.get("/static/characters.js").text
     assert "applyBodyProportions" in client.get("/static/characters.js").text
     assert 'id="body-morph-controls"' in page.text
     assert 'id="body-morph-status"' in page.text
@@ -407,6 +425,39 @@ def test_body_proportion_edit_rejects_noop_and_out_of_range_values(tmp_path, mon
     url = f"/api/projects/{project_id}/character-assets/{source['asset_id']}/proportions"
     assert client.post(url, json={}).status_code == 422
     assert client.post(url, json={"head_size": 1.8}).status_code == 422
+
+
+
+def test_generated_hairstyle_creates_verified_asset_and_preserves_source(tmp_path, monkeypatch):
+    client, project_id = setup_project(tmp_path, monkeypatch)
+    source = import_asset(client, project_id)
+    source_path = tmp_path / "projects" / project_id / source["relative_path"]
+    original_bytes = source_path.read_bytes()
+    response = client.post(
+        f"/api/projects/{project_id}/character-assets/{source['asset_id']}/hair",
+        json={"style": "ponytail", "color": "#2b1b13"},
+    )
+    assert response.status_code == 201, response.text
+    result = response.json()
+    assert result["geometry_edit"]["type"] == "procedural_hair"
+    assert result["geometry_edit"]["verified"] is True
+    assert result["geometry_edit"]["style"] == "ponytail"
+    assert result["geometry_edit"]["mesh_count"] >= 2
+    assert result["geometry_edit"]["attachment_bone"].lower().endswith("head")
+    assert source_path.read_bytes() == original_bytes
+    manifest = client.get(
+        f"/api/projects/{project_id}/character-assets/{result['asset_id']}/manifest"
+    )
+    assert manifest.status_code == 200
+    assert manifest.json()["geometry_edit"]["color"] == "#2b1b13"
+
+
+def test_generated_hairstyle_rejects_invalid_style_or_color(tmp_path, monkeypatch):
+    client, project_id = setup_project(tmp_path, monkeypatch)
+    source = import_asset(client, project_id)
+    url = f"/api/projects/{project_id}/character-assets/{source['asset_id']}/hair"
+    assert client.post(url, json={"style": "invisible"}).status_code == 422
+    assert client.post(url, json={"style": "short", "color": "red"}).status_code == 422
 
 
 def test_material_appearance_recipe_persists_and_survives_profile_updates(tmp_path, monkeypatch):

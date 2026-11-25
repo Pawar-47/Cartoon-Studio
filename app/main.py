@@ -103,6 +103,11 @@ class GlbInspectRequest(BaseModel):
     relative_path: str = Field(min_length=1, max_length=512)
 
 
+class CharacterHairInput(BaseModel):
+    style: str = Field(pattern="^(short|bob|long|ponytail|spiky|curly|mohawk)$")
+    color: str = Field(default="#2b1b13", pattern=r"^#[0-9a-fA-F]{6}$")
+
+
 class CharacterProportionsInput(BaseModel):
     torso_length: float = Field(default=1.0, ge=0.75, le=1.25)
     shoulder_width: float = Field(default=1.0, ge=0.75, le=1.25)
@@ -965,6 +970,108 @@ def customize_character_asset_proportions(
     except ValueError as error:
         destination.unlink(missing_ok=True)
         raise HTTPException(status_code=422, detail=f"Invalid proportioned GLB: {error}") from error
+    except BaseException:
+        destination.unlink(missing_ok=True)
+        raise
+
+
+
+@app.post("/api/projects/{project_id}/character-assets/{asset_id}/hair", status_code=201)
+def add_character_asset_hair(
+    project_id: str, asset_id: str, payload: CharacterHairInput
+) -> dict[str, Any]:
+    initialize_database()
+    with connect_db() as connection:
+        project = connection.execute(
+            "SELECT id FROM projects WHERE id = ?", (project_id,)
+        ).fetchone()
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    try:
+        safe_asset_id = str(uuid.UUID(asset_id))
+        source_manifest_path = resolve_project_relative(
+            DATA_DIR, project_id, f"assets/characters/{safe_asset_id}.json"
+        )
+        source_manifest = read_json(source_manifest_path)
+        source_data = source_manifest.get("data", {})
+        source_relative_path = str(source_data.get("relative_path", ""))
+        project_root = project_directory(DATA_DIR, project_id)
+        source_path = resolve_project_relative(DATA_DIR, project_id, source_relative_path)
+    except (ValueError, OSError) as error:
+        raise HTTPException(
+            status_code=422, detail="The source character asset is invalid."
+        ) from error
+    if (
+        source_manifest.get("document_type") != "character_asset"
+        or source_manifest.get("id") != safe_asset_id
+        or not source_path.is_file()
+        or source_path.suffix.lower() != ".glb"
+    ):
+        raise HTTPException(status_code=404, detail="The source character GLB was not found.")
+    new_asset_id = str(uuid.uuid4())
+    relative_path = f"assets/characters/{new_asset_id}.glb"
+    destination = resolve_project_relative(DATA_DIR, project_id, relative_path)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        inspection = get_engine_adapter().add_character_hair(
+            source_path, payload.style, payload.color, destination, allowed_root=project_root
+        )
+        if not inspection.get("hair_verified"):
+            raise HTTPException(
+                status_code=422,
+                detail="Godot could not verify the hairstyle attachment after GLB export.",
+            )
+        container = _validate_glb_container(destination)
+        now = datetime.now(UTC).isoformat()
+        asset_data = {
+            "original_filename": f"{payload.style}-hairstyle-character.glb",
+            "relative_path": relative_path,
+            "container": container,
+            "engine_inspection": inspection,
+            "rig_analysis": analyze_rig(inspection),
+            "rig_ready": int(inspection.get("skeleton_count", 0)) > 0,
+            "animation_ready": int(inspection.get("animation_count", 0)) > 0,
+            "geometry_edit": {
+                "type": "procedural_hair",
+                "style": payload.style,
+                "color": payload.color,
+                "attachment_bone": inspection.get("hair_attachment_bone", ""),
+                "mesh_count": inspection.get("hair_mesh_count", 0),
+                "verified": True,
+            },
+        }
+        if source_data.get("assembly"):
+            asset_data["assembly"] = source_data["assembly"]
+        if source_data.get("geometry_edit"):
+            asset_data["previous_geometry_edit"] = source_data["geometry_edit"]
+        manifest = make_envelope("character_asset", new_asset_id, asset_data, now, now, 1)
+        manifest_path = resolve_project_relative(
+            DATA_DIR, project_id, f"assets/characters/{new_asset_id}.json"
+        )
+        digest = write_json_atomic(manifest_path, manifest)
+        with connect_db() as connection:
+            upsert_document_index(
+                connection, project_id, manifest,
+                f"assets/characters/{new_asset_id}.json", digest
+            )
+        return {"asset_id": new_asset_id, **asset_data}
+    except EngineUnavailableError as error:
+        destination.unlink(missing_ok=True)
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    except EngineTimeoutError as error:
+        destination.unlink(missing_ok=True)
+        raise HTTPException(status_code=504, detail=str(error)) from error
+    except EnginePathError as error:
+        destination.unlink(missing_ok=True)
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    except EngineError as error:
+        destination.unlink(missing_ok=True)
+        raise HTTPException(
+            status_code=422, detail=f"Hairstyle generation failed: {error}"
+        ) from error
+    except ValueError as error:
+        destination.unlink(missing_ok=True)
+        raise HTTPException(status_code=422, detail=f"Invalid hairstyle GLB: {error}") from error
     except BaseException:
         destination.unlink(missing_ok=True)
         raise

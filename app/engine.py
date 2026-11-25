@@ -240,6 +240,39 @@ class GodotEngineAdapter:
             timeout_seconds=timeout_seconds, cancel_event=cancel_event,
         )
 
+    def add_character_hair(
+        self, source_path: Path, style: str, color: str, output_path: Path,
+        allowed_root: Path, timeout_seconds: float | None = None,
+        cancel_event: threading.Event | None = None,
+    ) -> dict[str, Any]:
+        root = Path(allowed_root).resolve(strict=False)
+        source = Path(source_path).resolve(strict=True)
+        output = Path(output_path).resolve(strict=False)
+        if source == root or root not in source.parents:
+            raise EnginePathError("Hair source path escapes the allowed project directory.")
+        if not root.is_dir() or source.suffix.lower() != ".glb" or not source.is_file():
+            raise EnginePathError("Hair generation requires an existing project GLB.")
+        if source.stat().st_size > MAX_GLB_BYTES:
+            raise EnginePathError("The hair source GLB exceeds the 512 MiB limit.")
+        if output == root or root not in output.parents or output.suffix.lower() != ".glb":
+            raise EnginePathError("Hair output must be a project-local .glb file.")
+        if output.exists():
+            raise EnginePathError("Refusing to overwrite an existing hair export.")
+        allowed_styles = {"short", "bob", "long", "ponytail", "spiky", "curly", "mohawk"}
+        if style not in allowed_styles:
+            raise EnginePathError("Unsupported generated hairstyle.")
+        if len(color) != 7 or color[0] != "#" or any(
+            character not in "0123456789abcdefABCDEF" for character in color[1:]
+        ):
+            raise EnginePathError("Hair color must be a six-digit hexadecimal color.")
+        output.parent.mkdir(parents=True, exist_ok=True)
+        return self._run(
+            "add_character_hair",
+            {"project_root": str(root), "source_path": str(source),
+             "output_path": str(output), "style": style, "color": color},
+            timeout_seconds=timeout_seconds, cancel_event=cancel_event,
+        )
+
     def customize_character_proportions(
         self,
         source_path: Path,

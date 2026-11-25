@@ -88,6 +88,7 @@ def test_godot_worker_ping_and_glb_inspection(tmp_path):
     assert "probe_glb_animation" in ping["capabilities"]
     assert "export_character_appearance" in ping["capabilities"]
     assert "customize_character_proportions" in ping["capabilities"]
+    assert "add_character_hair" in ping["capabilities"]
 
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -196,6 +197,42 @@ def test_godot_worker_assembles_four_parts_from_distinct_shared_rig_outfits(tmp_
     assert probe["skinned_mesh_count"] >= 4
     assert probe["bone_count"] == result["skeletons"][0]["bone_count"]
 
+
+
+
+@pytest.mark.skipif(not HAS_GODOT, reason="Pinned Godot runtime is supplied by Windows CI.")
+def test_godot_worker_generates_attached_hair_and_preserves_animation(tmp_path):
+    adapter = GodotEngineAdapter(data_dir=tmp_path, timeout_seconds=120)
+    project_root = tmp_path / "hair-project"
+    project_root.mkdir()
+    source = project_root / "source-humanoid.glb"
+    output = project_root / "ponytail-humanoid.glb"
+    shutil.copy2(
+        Path(__file__).resolve().parents[1]
+        / "tools"
+        / "godot_engine_proof"
+        / "fixtures"
+        / "proof_humanoid.glb",
+        source,
+    )
+    original_bytes = source.read_bytes()
+    before = adapter.inspect_glb(source, allowed_root=project_root)
+    result = adapter.add_character_hair(
+        source, "ponytail", "#2b1b13", output,
+        allowed_root=project_root, timeout_seconds=120,
+    )
+    assert result["hair_verified"] is True
+    assert result["hair_attachment_verified"] is True
+    assert result["hair_mesh_count"] >= 3
+    assert result["hair_attachment_bone"].lower().endswith("head")
+    assert result["animation_names"] == before["animation_names"]
+    assert source.read_bytes() == original_bytes
+    playback = adapter.probe_glb_animation(
+        output, before["animation_names"][0],
+        allowed_root=project_root, timeout_seconds=60,
+    )
+    assert playback["pose_changed"] is True
+    assert playback["skinned_mesh_count"] >= 1
 
 
 @pytest.mark.skipif(not HAS_GODOT, reason="Pinned Godot runtime is supplied by Windows CI.")
