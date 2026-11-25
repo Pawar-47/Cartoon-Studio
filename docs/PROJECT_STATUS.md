@@ -4,13 +4,12 @@
 
 - Repository: Pawar-47/Cartoon-Studio
 - Branch: main
-- Latest implementation checkpoint: `f1c40ec251ebce18e91a8261eeed7fa93d89ff8e`
+- Latest implementation checkpoint: `6a1c288a59841fd03ada7a572fa9e04c59d54802`
 - Phase 0: COMPLETE.
 - Phase 1: COMPLETE.
 - Phase 2 — Character Studio: ACTIVE; import, preview, profiles, appearance recipes, rig diagnostics and the first user-facing imported-rig retarget workflow are implemented. Phase 2 is not complete.
-- Windows CI #257 PASSED, including real source-to-target pose transfer in the reopened imported retarget scene and the full Windows packaging lifecycle.
-- Dedicated Godot native-worker proof #12 PASSED.
-- Latest distinct-fixture batch CI #259 failed only because the API fake adapter omitted new playback/angle fields; the fake is corrected and CI is being rerun.
+- Windows CI #267 PASSED, including the real Godot worker test, application builds, installer compilation and install/upgrade/uninstall/reinstall lifecycle.
+- Dedicated Godot native-worker proof #18 PASSED.
 - Chat-independent continuation record: `docs/SESSION_CHECKPOINT.md`.
 
 ## Current Character Studio capabilities
@@ -22,13 +21,16 @@
 - Indexed 15-bone humanoid mapping, parent-chain diagnostics and per-bone rest-transform measurements.
 - Imported-GLB retarget workflow with source/target selection, strict preflight, Godot scene creation, persistent history and scene download.
 - Worker verifies that the reopened source AnimationPlayer starts and that its upper-arm pose reaches the target skeleton after 72 frames. Failed pose verification removes the generated scene.
-- Original source and target GLBs are preserved.
+- Retarget history displays source/target pose angles and verification state.
+- Original source and target GLBs remain byte-identical.
 
 ## Distinct imported fixture coverage
 
-The source fixture is a canonical animated humanoid. The target is a separate imported GLB with Mixamo-style bone names, different arm/leg rest proportions and no target animation. A committed generator script reproduces the target fixture. The worker test checks mapping, hierarchy, rest-length difference, target skin binding, animation playback, pose transfer, scene save/reopen and byte-identical preservation of both GLBs.
+The source fixture is a canonical animated humanoid. The target is a separate Mixamo-named imported GLB with different arm/leg rest proportions, reordered skin joints and recalculated inverse-bind matrices. The fixture generator is committed and tested.
 
-This is bounded fixture acceptance, not arbitrary third-party GLB acceptance. Different bone ordering, broader animation-track conventions and visual acceptance in the app remain future work.
+Godot may normalize raw skin-joint ordering during import. The application uses the actual bone names and indices returned by the Godot inspection worker, not raw GLB array positions. The worker test verifies hierarchy, mappings, rest-length differences, source animation playback, actual target pose transfer, save/reopen and source-file preservation.
+
+This is bounded fixture acceptance, not arbitrary third-party GLB acceptance. Animation-track compatibility for a Mixamo-named animated source, broader animation conventions and visual acceptance in the app remain future work.
 
 ## Phase status
 
@@ -46,11 +48,11 @@ This is bounded fixture acceptance, not arbitrary third-party GLB acceptance. Di
 
 ## Next implementation batch
 
-1. Complete Windows CI for the distinct imported source/target fixture and API playback-metrics test.
-2. Add a target fixture with different bone ordering and verify animation-track path compatibility.
+1. Verify animation-track compatibility using a Mixamo-named animated source GLB.
+2. Add an in-app preview/open action for saved retarget scenes.
 3. Exercise representative third-party GLBs and document compatibility limits.
-4. Add a practical in-app preview/open action for saved retarget scenes.
-5. Validate real facial morph controls and continue deterministic export/round-trip after broader retarget acceptance.
+4. Validate real facial morph controls.
+5. Continue deterministic export and round-trip work after broader rig acceptance.
 
 ## Frozen architecture and constraints
 
