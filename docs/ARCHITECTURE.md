@@ -66,3 +66,16 @@ Use Godot Movie Maker mode with fixed FPS and non-real-time rendering. Render sc
 FFmpeg must be built without GPL/nonfree components unless the project license decision explicitly permits them. OpenH264 (BSD) is a possible H.264 encoder, subject to quality/bitrate tests and patent review. Record codec, encoder version, configure flags and licenses in the build manifest.
 
 For audio assets, maintain a local catalog with stable IDs, source, exact pack license, author, attribution, duration, loop points and Content ID status. Kenney CC0 packs cover SFX/stingers but not a complete soundtrack; OpenGameArt CC0 tracks require per-track checks. Preserve manual music import and original soundtrack options.
+
+## Humanoid face, emotion and Urdu lip-sync candidate
+
+Use VRM 1.0 or a compatible Cartoon Studio expression schema for humanoid character assets. Standard presets cover emotions (happy, angry, sad, relaxed, surprised), five vowel visemes (aa, ih, ou, ee, oh), blink and gaze; custom expressions and overrides prevent lip-sync from fighting emotion/blink. Every character must provide its own valid morph targets; the schema does not create facial geometry.
+
+Candidate pipeline:
+1. Text: normalize Urdu script and obtain phonemes using eSpeak NG `ur` rules for offline G2P; retain the original Urdu text.
+2. Voice: prefer human recording or an approved natural Urdu TTS provider; eSpeak NG is only an offline placeholder/emergency voice.
+3. Timing: use actual audio-to-phone/forced-alignment evidence (Allosaurus is a candidate, not proven); never apply eSpeak text durations blindly to a different voice recording.
+4. Mapping: map Urdu phones to a compact viseme set plus custom mouth shapes, then animate VRM/Cartoon Studio expression weights.
+5. Editing: expose a manual timeline for viseme correction, emotion layering, blinks and gaze.
+
+Godot VRM/MToon is a candidate import/export and shading path. Keep non-humanoid characters on GLB/custom rigs. Do not bundle VRM sample avatars; preserve each external avatar's license metadata.

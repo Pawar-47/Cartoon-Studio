@@ -217,3 +217,26 @@ Source: Godot 4.7 docs: https://docs.godotengine.org/en/4.7/tutorials/animation/
 Kenney's Music Jingles, Impact Sounds, Digital Audio, Interface Sounds, UI Audio, RPG Audio and Voiceover Pack are individually marked CC0. Music Jingles are short stingers, not background loops. OpenGameArt has CC0 music loop packs/collections, but every track needs its own license and Content ID check.
 
 **Decision:** build an audio asset catalog with stable IDs, source URLs, exact license, attribution, duration, loop points and Content ID status. No audio asset is downloaded or bundled yet. Prefer original music or tracks with no known Content ID registration for YouTube-safe publishing.
+
+## Candidate Y — V-Sekai Godot VRM + MToon
+Source: https://github.com/V-Sekai/godot-vrm  
+MIT root code and MIT MToon shader; 486 stars; latest inspected commit `e15199f980064028bfa4fbee5e70dddb82dd55c3` updates Godot 4.7 imports; no upstream CI found.
+
+**Advantages:** VRM 0.0/1.0 import, VRM 1.0 export, MToon toon shader, humanoid SkeletonProfile retargeting, facial expression blendshape/material binds as animation tracks, metadata including avatar license information. VRM 1.0 standardizes emotional expressions, five vowel visemes, blink and gaze plus custom expressions.
+
+**Risks:** node constraints have retargeting bugs; spring bones need optimization; lookAt tracks require app logic; VRM animation extension not implemented; standalone glTF export can corrupt materials. Sample avatar licenses differ from the add-on; do not bundle samples. Compatibility renderer behavior and HD 5500 performance untested.
+
+**Decision:** HIGH-PRIORITY Character Studio/face-expression proof candidate; no code or sample model copied.
+
+## Candidate Z — eSpeak NG Urdu phonemizer and fallback TTS
+Source: https://github.com/espeak-ng/espeak-ng  
+GPL-3.0, latest inspected commit `ee9fa7cc4704d683020526f47a9655f14c8d5f4c`, compact C implementation, Windows support, Urdu `ur` source rules/list and WAV/phoneme output.
+
+**Advantages:** offline Urdu grapheme-to-phoneme conversion, pitch/length information for phonemes, small runtime footprint, potential timing seed for its own synthesized speech.
+
+**Risks:** formant synthesis is less natural than neural/human speech; Pakistani accent quality not independently evaluated; GPL-3.0 distribution implications; eSpeak text phoneme durations do not align to unrelated human/neural audio.
+
+**Decision:** OFFLINE PHONEMIZER / EMERGENCY TTS CANDIDATE, not the main voice solution. Native Urdu samples must be tested; preserve manual recording and manual viseme editing.
+
+## Revised facial-animation data contract candidate
+VRM 1.0 offers a useful standard: `happy/angry/sad/relaxed/surprised`, `aa/ih/ou/ee/oh`, `blink`, left/right blink and gaze, plus custom expressions and mouth/blink/look overrides. The actual mesh must supply blendshapes; the spec does not define their shape. Add Cartoon Studio custom Urdu visemes and emotion layering rather than assuming the five vowel presets cover every Urdu consonant.

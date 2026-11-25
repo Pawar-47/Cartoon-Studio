@@ -77,3 +77,7 @@ Adoption gate: no dependency until exact version, source, compatibility, softwar
 | https://opengameart.org/content/two-simple-game-music-loops | Background loops | CC0 per page | 2 loops | Track-level verification |
 | https://github.com/S3M1TR4SH/asset-library | Asset catalog schema reference | No root code license found; asset licenses listed individually | Stable IDs, genre packs, provenance and CC0/CC-BY metadata | Design reference only; do not copy code |
 | https://github.com/TMHSDigital/Free-Game-Dev-Assets | Asset discovery/Content ID catalog | Catalog repo license not evaluated as reusable code | Tracks license and Content ID risk per source | Discovery reference only |
+
+| https://github.com/V-Sekai/godot-vrm | VRM character import/export and face expressions | MIT root + MIT MToon shader; no CI found | VRM0/1 import, VRM1 export, humanoid retarget, expressions as animation tracks; some incomplete/buggy features | High-priority proof candidate |
+| https://github.com/vrm-c/vrm-specification/blob/master/specification/VRMC_vrm-1.0/expressions.md | Facial-expression/viseme schema | Open specification; no code copied | Emotion presets, 5 vowel visemes, blink/gaze and custom expressions | Candidate canonical expression contract |
+| https://github.com/espeak-ng/espeak-ng | Urdu G2P and fallback TTS | GPL-3.0; commit ee9fa7cc4704d683020526f47a9655f14c8d5f4c | Urdu rules/list, phoneme pitch/length, WAV output, compact; robotic/formant voice | Offline phonemizer/placeholder only |

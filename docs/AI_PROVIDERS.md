@@ -61,3 +61,9 @@ No local Urdu TTS is approved yet. Keep TTS modular and provide manual recording
 6. ChatGPT, Claude and Perplexity free apps — manual supported workflows only unless a separate official API/paid benefit is approved.
 
 No API key or provider has been connected. No paid service is approved. P0.4 must verify Pakistan availability, account-specific quotas, data handling, API terms, output quality and whether the selected provider can legally be used in the intended application.
+
+## Offline Urdu phonemizer / emergency voice option
+
+**eSpeak NG** is not an AI provider, but its current source includes Urdu (`ur`) pronunciation rules and a language list, supports Windows, WAV output and grapheme-to-phoneme output with phoneme pitch/length information. It is compact and fully local. Its formant-synthesized voice is substantially less natural than neural/human speech, so it is not approved as the main episode voice. Use it as an optional offline phonemizer and emergency placeholder only after native Pakistani Urdu quality tests.
+
+License: GPL-3.0. Review distribution obligations before bundling. For neural TTS/human recordings, its phoneme sequence does not provide accurate timing for that separate audio; an audio aligner or manual correction is still required.

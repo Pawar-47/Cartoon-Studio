@@ -106,3 +106,16 @@ Ducz.CharacterCreator code remains unlicensed and must not be copied. The Quater
 | FFmpeg | https://www.ffmpeg.org/legal.html | LGPL-2.1+ default; GPL components change build to GPL | Use known LGPL build, no libx264/libx265; preserve source/config/notice |
 
 YouTube Content ID status is not the same as copyright permission. For every music track, record whether the source reports Content ID registration/claims. Prefer original music or sources with no known Content ID registration; no claim-free guarantee is made. No audio assets or FFmpeg binaries have been downloaded or bundled.
+
+## Facial-expression and Urdu phoneme components — 2026-11-25
+
+| Component | Source | License evidence | Notes |
+|---|---|---|---|
+| Godot VRM add-on | https://github.com/V-Sekai/godot-vrm | Root MIT | Import/export code; no CI; sample avatars separately licensed |
+| Godot MToon shader | https://github.com/V-Sekai/godot-vrm/tree/master/addons/Godot-MToon-Shader | Separate MIT LICENSE | Toon shader and outlines; test Compatibility renderer |
+| VRM sample Alicia Solid | https://github.com/V-Sekai/godot-vrm/tree/master/vrm_samples | Separate Alicia terms | Do not bundle without separate permission |
+| VRM sample Godette | https://github.com/V-Sekai/godot-vrm/tree/master/vrm_samples | CC-BY 3.0 per sample license file | Attribution required; not bundled |
+| VRM 1.0 expression specification | https://github.com/vrm-c/vrm-specification/blob/master/specification/VRMC_vrm-1.0/expressions.md | Specification reference only | No sample models or implementation code copied |
+| eSpeak NG | https://github.com/espeak-ng/espeak-ng | GPL-3.0 | Urdu phoneme data and formant TTS; copyleft review required before bundling |
+
+No VRM sample model, eSpeak binary or model has been downloaded or included in Cartoon Studio.

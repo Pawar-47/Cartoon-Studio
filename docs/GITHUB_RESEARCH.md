@@ -296,3 +296,31 @@ This is only a research candidate; the full stack has not been imported, tested 
 - The model archive `uni2005` is about 41.5 MB; PyTorch dependencies and CPU time are additional. The exact Urdu ISO inventory entry must be checked with `python -m allosaurus.bin.list_lang` on the pinned model; no Urdu-specific acoustic model is listed.
 - Parrot Lipsync v1.1.2 uses Allosaurus and an editable phoneme-to-mouth-pose table; its release supports Blender 4.5. It is GPL-3.0 and is a Blender add-on, not a Godot plugin. If Godot remains the runtime, only the data-flow concept is relevant; a Godot-owned viseme track generator would be required.
 - For Urdu, do not rely on generic “25+ languages” claims. The proof must use native Pakistani Urdu audio, verify phone inventory and pronunciation, map phones to Cartoon Studio visemes, and allow manual timeline correction. Keep manual voice recording and manual mouth-keyframe editing as fallbacks.
+
+## 2026-11-25 — VRM character format and local Urdu phoneme/TTS sweep
+
+### VRM 1.0 facial-expression contract
+- Official VRM 1.0 expression specification: https://github.com/vrm-c/vrm-specification/blob/master/specification/VRMC_vrm-1.0/expressions.md
+- Preset emotions: happy, angry, sad, relaxed, surprised, neutral.
+- Procedural mouth presets: aa, ih, ou, ee, oh. Procedural blink presets: blink, blinkLeft, blinkRight. Gaze presets: lookUp, lookDown, lookLeft, lookRight. Custom expressions are supported.
+- The specification maps expressions to morph targets/material/texture binds and allows overrideMouth/overrideBlink/overrideLookAt so emotion and procedural lip-sync do not fight each other. It does not prescribe the actual facial deformation; each character must supply suitable blendshapes.
+- For Urdu, the five vowel presets are only a starting point. Add custom viseme shapes for bilabial closures and other visually distinct consonant classes, then map Urdu phones to the character's expression set. Manual mouth-keyframe correction remains necessary.
+
+### Godot VRM importer/exporter and MToon
+**V-Sekai/godot-vrm** — https://github.com/V-Sekai/godot-vrm
+- Root code and separate MToon shader are MIT. Latest inspected commit `e15199f980064028bfa4fbee5e70dddb82dd55c3`, pushed 2026-07-08 with Godot 4.7 import updates; 486 stars; no GitHub Actions workflow found.
+- README claims VRM 0.0/1.0 import and VRM 1.0 export, MToon shader, humanoid SkeletonProfileHumanoid retargeting, and expression blendshape/material binds represented as animation tracks.
+- Limitations: VRMC_node_constraint has known retargeting bugs; spring bones need optimization; lookAt only creates tracks (the app must build its own BlendSpace2D); VRM animation extension is not implemented; standalone glTF export may destructively alter materials. Treat it as an import/export and expression candidate, not a complete animation editor.
+- Sample models have separate licenses: Alicia Solid is under its own terms; Godette is CC-BY 3.0. Do not bundle sample avatars by assuming the add-on's MIT license covers them.
+- MToon is a promising anime/toon shader with outline support, but Compatibility renderer visual behavior, shadows and performance must be tested on HD 5500.
+
+### Local Urdu text-to-phoneme and fallback TTS
+**eSpeak NG** — https://github.com/espeak-ng/espeak-ng
+- GPL-3.0; latest inspected commit `ee9fa7cc4704d683020526f47a9655f14c8d5f4c`, pushed 2026-11-19.
+- The current source language table includes Urdu identifier `ur`; `dictsource/ur_rules` and `dictsource/ur_list` contain Urdu phoneme/pronunciation rules and are credited to Him Prasad Gautam and Ejaz Shah (Pakistan). Verify the distributed Windows binary with `espeak-ng --voices` before shipping.
+- README describes a compact C formant synthesizer (program and data only a few MB), Windows support, WAV output, SSML, and grapheme-to-phoneme output including phoneme codes with pitch and length information.
+- README explicitly says speech is less natural/smooth than larger synthesizers based on human recordings. Therefore: useful offline Urdu phonemizer and emergency/placeholder TTS, not approved as the main high-quality Pakistani Urdu voice.
+- For eSpeak-generated audio, its own phoneme/pitch/duration output can seed mouth animation. For human recordings or other neural TTS audio, eSpeak text phonemes do not establish actual audio timing; use an audio aligner or manual correction.
+
+### Revised character/lip-sync architecture candidate
+Use VRM 1.0 or a Cartoon Studio-owned equivalent face-expression schema for humanoid characters. Import/export through the MIT Godot VRM add-on is a candidate. Map Urdu phonemes to standard and custom viseme blendshapes; use eSpeak NG for offline Urdu G2P/placeholder TTS, Allosaurus only as a candidate audio-to-phone recognizer, and manual correction for final quality. Keep neural TTS (e.g. Qwen Audio TTS Flash) optional and replaceable. No model, plugin or voice is selected.
