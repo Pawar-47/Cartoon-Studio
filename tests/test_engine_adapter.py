@@ -462,7 +462,7 @@ def test_node_morph_weights_override_mesh_defaults(tmp_path):
         for entry in response["morph_targets"]
     } == {"Smile": 0.35, "Blink": 0.8}
     assert all(
-        entry["default_value_source"] == "node"
+        entry["default_value_source"] == "gltf_node"
         for entry in response["morph_targets"]
     )
 
