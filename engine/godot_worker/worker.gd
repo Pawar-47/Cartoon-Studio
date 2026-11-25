@@ -444,14 +444,57 @@ func _retarget_glb_pair(payload: Dictionary) -> Dictionary:
         var source_arm_index := reopened_source.find_bone("LeftUpperArm")
         var target_arm_index := (reopened_target as Skeleton3D).find_bone("LeftUpperArm")
         if source_arm_index >= 0 and target_arm_index >= 0:
-            var source_rotation := reopened_source.get_bone_pose_rotation(source_arm_index)
-            var target_rotation := (reopened_target as Skeleton3D).get_bone_pose_rotation(target_arm_index)
+            var target_skeleton_after_reopen := reopened_target as Skeleton3D
+            var source_pose := reopened_source.get_bone_pose(source_arm_index)
+            var target_pose := target_skeleton_after_reopen.get_bone_pose(target_arm_index)
+            var source_rest := reopened_source.get_bone_rest(source_arm_index)
+            var target_rest := target_skeleton_after_reopen.get_bone_rest(target_arm_index)
+            var source_rotation := source_pose.basis.get_rotation_quaternion()
+            var target_rotation := target_pose.basis.get_rotation_quaternion()
             source_angle = source_rotation.angle_to(Quaternion.IDENTITY)
             target_angle = target_rotation.angle_to(Quaternion.IDENTITY)
+
+            var source_parent_index := reopened_source.get_bone_parent(source_arm_index)
+            var target_parent_index := target_skeleton_after_reopen.get_bone_parent(target_arm_index)
+            var source_parent_global_rest := Transform3D.IDENTITY
+            var target_parent_global_rest := Transform3D.IDENTITY
+            if source_parent_index >= 0:
+                source_parent_global_rest = reopened_source.get_bone_global_rest(source_parent_index)
+            if target_parent_index >= 0:
+                target_parent_global_rest = target_skeleton_after_reopen.get_bone_global_rest(target_parent_index)
+
+            # Match Godot's RetargetModifier3D model-space rest correction. Comparing
+            # raw local Euler/Quaternion angles is invalid when source and target
+            # rigs have different bone-roll and rest-axis conventions.
+            var expected_target_basis := (
+                target_parent_global_rest.basis.inverse()
+                * source_parent_global_rest.basis
+                * source_pose.basis
+                * source_rest.basis.inverse()
+                * source_parent_global_rest.basis.inverse()
+                * target_parent_global_rest.basis
+                * target_rest.basis
+            )
+            var expected_target_origin := (
+                target_parent_global_rest.basis.inverse()
+                * (
+                    source_parent_global_rest.basis
+                    * (source_pose.origin - source_rest.origin)
+                )
+                + target_rest.origin
+            )
+            var source_pose_changed := (
+                not source_pose.basis.is_equal_approx(source_rest.basis)
+                or not source_pose.origin.is_equal_approx(source_rest.origin)
+            )
+            var target_pose_matches := (
+                target_pose.basis.is_equal_approx(expected_target_basis)
+                and target_pose.origin.is_equal_approx(expected_target_origin)
+            )
             pose_transferred = (
                 source_animation_playing
-                and source_angle > deg_to_rad(10.0)
-                and absf(source_angle - target_angle) < deg_to_rad(3.0)
+                and source_pose_changed
+                and target_pose_matches
             )
     var source_bone_count := source_skeleton.get_bone_count()
     var target_bone_count := target_skeleton.get_bone_count()
