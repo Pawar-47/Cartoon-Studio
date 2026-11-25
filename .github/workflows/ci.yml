@@ -70,9 +70,6 @@ jobs:
           $engineNotices = Join-Path $engineRoot "notices"
           New-Item -ItemType Directory -Force -Path $engineNotices | Out-Null
           Copy-Item "third_party/godot-4.7.2/LICENSE.txt", "third_party/godot-4.7.2/COPYRIGHT.txt", "third_party/godot-4.7.2/AUTHORS.md" -Destination $engineNotices -Force
-          $engineNotices = Join-Path $engineRoot "notices"
-          New-Item -ItemType Directory -Force -Path $engineNotices | Out-Null
-          Copy-Item "third_party/godot-4.7.2/LICENSE.txt", "third_party/godot-4.7.2/COPYRIGHT.txt", "third_party/godot-4.7.2/AUTHORS.md" -Destination $engineNotices -Force
       - name: Build self-contained application v2
         shell: pwsh
         run: |
@@ -86,6 +83,9 @@ jobs:
           New-Item -ItemType Directory -Force -Path $engineRoot | Out-Null
           Copy-Item build/godot-runtime/Godot_v4.7.2-stable_win64.exe -Destination $engineRoot -Force
           Copy-Item engine/godot_worker -Destination $engineRoot -Recurse -Force
+          $engineNotices = Join-Path $engineRoot "notices"
+          New-Item -ItemType Directory -Force -Path $engineNotices | Out-Null
+          Copy-Item "third_party/godot-4.7.2/LICENSE.txt", "third_party/godot-4.7.2/COPYRIGHT.txt", "third_party/godot-4.7.2/AUTHORS.md" -Destination $engineNotices -Force
           uv run --locked python scripts/set_build_version.py 0.1.0
       - name: Install pinned NSIS compiler
         run: choco install nsis --version=3.13.0 --yes --no-progress

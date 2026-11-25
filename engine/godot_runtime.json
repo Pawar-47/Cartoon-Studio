@@ -7,6 +7,9 @@
   "download_url": "https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_win64.exe.zip",
   "binary_name": "Godot_v4.7.2-stable_win64.exe",
   "license": "MIT",
+  "license_file": "third_party/godot-4.7.2/LICENSE.txt",
+  "copyright_file": "third_party/godot-4.7.2/COPYRIGHT.txt",
+  "authors_file": "third_party/godot-4.7.2/AUTHORS.md",
   "license_url": "https://raw.githubusercontent.com/godotengine/godot/4.7.2-stable/LICENSE.txt",
   "authors_url": "https://raw.githubusercontent.com/godotengine/godot/4.7.2-stable/AUTHORS.md"
 }

@@ -150,7 +150,7 @@ def verify_engine(
     assert binary.is_file(), "The installer did not bundle the pinned Godot runtime."
     assert worker_project.is_file(), "The installer did not bundle the Godot worker project."
 
-    status, engine = request(base_url, "/api/engine/status")
+    status, engine = request(base_url, "/api/engine/status", timeout=30)
     assert status == 200 and engine["available"], engine
     assert engine["engine_version"].startswith("4.7.2"), engine
 

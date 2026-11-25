@@ -3,9 +3,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
-import subprocess
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -13,6 +11,27 @@ from fastapi.testclient import TestClient
 from app import main
 from app.engine import EngineTimeoutError, EngineUnavailableError, GodotEngineAdapter
 from app.storage import project_directory
+
+class _TimedOutProcess:
+    def __init__(self) -> None:
+        self.returncode = None
+        self.terminated = False
+
+    def poll(self):
+        return self.returncode
+
+    def terminate(self):
+        self.terminated = True
+        self.returncode = -15
+
+    def kill(self):
+        self.returncode = -9
+
+    def wait(self, timeout=None):
+        if self.returncode is None:
+            self.returncode = 0
+        return self.returncode
+
 
 FIXTURE = (
     Path(__file__).resolve().parents[1]
@@ -100,7 +119,7 @@ def test_project_glb_inspection_api(tmp_path, monkeypatch):
     assert rejected.status_code == 422
 
 
-def test_adapter_timeout_is_logged_and_raised(tmp_path):
+def test_adapter_timeout_is_logged_and_raised(tmp_path, monkeypatch):
     executable = tmp_path / "godot.exe"
     executable.write_bytes(b"test-runtime")
     worker_project = tmp_path / "worker"
@@ -108,14 +127,15 @@ def test_adapter_timeout_is_logged_and_raised(tmp_path):
     (worker_project / "project.godot").write_text("config_version=5", encoding="utf-8")
     adapter = GodotEngineAdapter(
         data_dir=tmp_path,
-        timeout_seconds=1,
+        timeout_seconds=0.01,
         executable=executable,
         worker_project=worker_project,
     )
-    timeout = subprocess.TimeoutExpired(cmd="godot", timeout=1)
-    with patch("app.engine.subprocess.run", side_effect=timeout):
-        with pytest.raises(EngineTimeoutError, match="time budget"):
-            adapter.ping()
+    process = _TimedOutProcess()
+    monkeypatch.setattr("app.engine.subprocess.Popen", lambda *args, **kwargs: process)
+    with pytest.raises(EngineTimeoutError, match="time budget"):
+        adapter.ping()
+    assert process.terminated
 
     log_path = tmp_path / "logs" / "godot-worker.jsonl"
     assert log_path.is_file()

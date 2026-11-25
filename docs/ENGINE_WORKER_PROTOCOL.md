@@ -12,7 +12,7 @@ The Python adapter launches the bundled executable with:
 Godot_v4.7.2-stable_win64.exe --headless --path <worker-project> --script res://worker.gd -- --request-file=<request.json> --response-file=<response.json>
 ```
 
-The adapter uses argument arrays (never a shell), a bounded timeout, optional cancellation, a dedicated log file and guaranteed terminate/kill cleanup. The temporary request, response and log directory is removed when the call ends.
+The adapter uses argument arrays (never a shell), a bounded timeout, optional cancellation and guaranteed terminate/kill cleanup. Request/response files and captured worker output live in a private temporary directory; concise structured JSONL records are retained in the per-user application log directory.
 
 ## Request
 
@@ -36,6 +36,7 @@ Every response includes `protocol_version`, the matching `request_id`, `ok`, `en
 - Request/response files are private temporary files and are not placed in the project.
 - Python resolves symlinks and rejects absolute paths, parent traversal, paths outside the project, non-files, non-GLB extensions and files over 512 MiB.
 - The worker repeats the root-boundary check before calling `GLTFDocument.append_from_file`.
+- GLB files are capped at 512 MiB before import.
 - Requests have a 60-second default deadline. Callers can pass a cancellation event; timeout/cancellation terminates and waits for the child, then force-kills if needed.
 - Worker logs are captured for diagnostics; no project contents or provider secrets are written to application logs.
 - This batch implements engine discovery, handshake and GLB inspection only. It does not claim character creation, rigging, preview rendering or animation authoring.
