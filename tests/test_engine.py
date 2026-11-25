@@ -341,7 +341,8 @@ def test_godot_worker_bakes_and_reimports_material_and_facial_edits(tmp_path):
     assert baked_morph["default_value"] == pytest.approx(0.65, abs=0.02)
     baked_mesh = next(
         item for item in after["mesh_inventory"]
-        if item["node_name"] == material_mesh["node_name"]
+        if item["mesh_resource_name"].removeprefix("customized_")
+        == material_mesh["mesh_resource_name"]
     )
     baked_material = baked_mesh["material_properties"][0]
     assert baked_material["color"][:3] == pytest.approx([232 / 255, 93 / 255, 63 / 255], abs=0.02)
