@@ -2,6 +2,7 @@ import * as THREE from "/static/vendor/three/build/three.module.js";
 import { GLTFLoader } from "/static/vendor/three/examples/jsm/loaders/GLTFLoader.js";
 import { OrbitControls } from "/static/vendor/three/examples/jsm/controls/OrbitControls.js";
 import { retargetClip } from "/static/vendor/three/examples/jsm/utils/SkeletonUtils.js";
+import { resolveAnimationClip } from "./animation-clip.mjs";
 
 const canvas = document.getElementById("model-preview");
 const status = document.getElementById("preview-status");
@@ -283,9 +284,15 @@ export async function showRetargetPreview(sourceBuffer, targetBuffer, sourceMapp
     };
     const sourceMesh = findSkinnedMesh(sourceGltf.scene), targetMesh = findSkinnedMesh(targetGltf.scene);
     if (!sourceMesh || !targetMesh) throw new Error("Both GLBs must contain a skinned humanoid mesh.");
-    const clip = sourceGltf.animations.find((item) => item.name === animationName)
-      || sourceGltf.animations.find((item) => item.name.toUpperCase() !== "RESET");
-    if (!clip) throw new Error("The saved source animation is no longer available.");
+    const requestedAnimation = String(animationName || "").trim();
+    const clip = resolveAnimationClip(sourceGltf.animations, requestedAnimation);
+    if (!clip) {
+      throw new Error(
+        requestedAnimation
+          ? 'The selected source animation "' + requestedAnimation + '" is unavailable in the GLB; no substitute clip was previewed.'
+          : "The source GLB contains no playable animation clips."
+      );
+    }
     const names = {};
     for (const profileName of Object.keys(sourceMapping || {})) {
       const sourceName = sourceMapping[profileName], targetName = targetMapping?.[profileName];
@@ -324,7 +331,7 @@ export async function showRetargetPreview(sourceBuffer, targetBuffer, sourceMapp
     animationSelect.disabled = true;
     empty.hidden = true;
     resetButton.disabled = false;
-    status.textContent = label + " · browser preview only; saved Godot scene remains authoritative.";
+    status.textContent = label + " · " + clip.name + " · browser preview only; saved Godot scene remains authoritative.";
     return true;
   } catch (error) {
     status.textContent = "Retarget preview unavailable: " + error.message;

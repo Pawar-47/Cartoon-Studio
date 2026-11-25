@@ -120,6 +120,9 @@ def test_browser_preview_modules_are_served_from_local_static_assets():
     assert "options.playAnimations !== false" in preview.text
     assert "if (playAnimations) mixer.clipAction(clips[0]).play();" in preview.text
     assert "morphTargetByKey.clear();" in preview.text
+    clip_helper = client.get("/static/animation-clip.mjs")
+    assert clip_helper.status_code == 200
+    assert "resolveAnimationClip" in clip_helper.text
 
     for path in (
         "/static/character-preview.js",
@@ -154,6 +157,8 @@ def test_character_studio_page_is_served():
     preview = TestClient(main.app).get("/static/character-preview.js")
     assert preview.status_code == 200
     assert 'meshName: node.name || "Mesh"' in preview.text
+    assert "resolveAnimationClip(sourceGltf.animations, requestedAnimation)" in preview.text
+    assert "no substitute clip was previewed" in preview.text
     assert 'target.meshName?target.meshName+" · ":""' in script.text
     assert "morph weight" in script.text
     assert "appearanceRecipe.morph_targets[target.key]=target.value" in script.text
