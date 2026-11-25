@@ -84,6 +84,12 @@ def uninstall(install_dir: Path) -> None:
     uninstaller = install_dir / "Uninstall.exe"
     if not uninstaller.is_file():
         raise AssertionError("Installed uninstaller is missing.")
+    subprocess.run(
+        ["reg", "delete", r"HKCU\\Software\\CartoonStudioDebug", "/f"],
+        check=False,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
     subprocess.run([str(uninstaller), "/S"], check=True, timeout=180)
     if (install_dir / "CartoonStudio.exe").exists():
         debug = subprocess.run(
