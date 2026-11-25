@@ -53,7 +53,7 @@ async function applyBodyProportions(){
  }catch(error){$("proportion-status").textContent=error.message;updateProportionButton()}
 }
 function resetProfileEditor(){editingCharacter=null;$("character-form").reset();$("profile-heading").textContent="Save reusable profile";$("save-character").textContent="Save character profile";$("cancel-edit-profile").hidden=true;$("save-character").disabled=!importedAsset;resetProportionControls();previewCharacterBodyProportions(readProportionControls(),importedAsset?.rig_analysis?.bone_mapping||{});updateProportionButton()}
-function cancelProfileEdit(){resetProfileEditor();$("profile-status").textContent="Profile editing cancelled. The saved character was not changed."}
+function cancelProfileEdit(){importedAsset=null;resetProfileEditor();$("profile-status").textContent="Profile editing cancelled. The saved character was not changed."}
 async function editCharacterProfile(document){
  const data=document.data||{};editingCharacter=document;
  const savedAsset=data.asset||{},savedAssetId=(savedAsset.relative_path||"").split("/").pop().replace(/\.glb$/i,"");
@@ -483,8 +483,7 @@ $("reset-proportions").addEventListener("click",async()=>{
  resetProportionControls();
  try{await restoreOriginalProportionAsset()}catch(error){$("proportion-status").textContent=error.message}
  const values=readProportionControls();
- const stored=JSON.parse($("body-proportions").value||"{}");
- $("body-proportions").value=JSON.stringify({...stored,...values},null,2);
+ $("body-proportions").value=JSON.stringify(values,null,2);
  previewCharacterBodyProportions(values,importedAsset?.rig_analysis?.bone_mapping||{});
  updateProportionButton();
  $("proportion-status").textContent="Original proportions restored. Adjust the preview again or save the original shape.";
