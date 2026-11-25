@@ -39,3 +39,15 @@
 - This is visual presentation only. Godot remains authoritative for GLB import/inspection; no mesh editing, rig creation, material editing, facial controls or export is included.
 - Browser preview requires WebGL 2. Draco/Meshopt decoders are not bundled; compressed files may be importable by Godot while unsupported by the browser viewer.
 - Windows CI acceptance is pending.
+
+
+## Material appearance editor — implementation batch (2026-11-25)
+
+- Added a browser-side material catalogue using stable GLB scene-node paths and material-slot indices.
+- Saved character cards can reopen their source GLB, inspect material slots, preview base-colour/roughness/metalness adjustments, and persist those adjustments to the character profile.
+- The editor changes supported Three.js PBR material properties in the live preview. The source GLB remains unchanged.
+- Added a project-scoped appearance API with validated hex colours and 0–1 roughness/metalness ranges. Saving increments the character revision and writes the recipe into the canonical character JSON document.
+- Ordinary profile updates preserve the appearance recipe.
+- API tests cover valid save/reopen, revision increments, preservation across profile updates, invalid values and missing character handling.
+- This is non-destructive material customization, not mesh/material-slot reassignment, texture painting or GLB export. Facial blend-shape editing, rig editing and export remain future work.
+- Browser preview still requires WebGL 2 and visual inspection with representative models. Windows CI acceptance is pending.

@@ -18,6 +18,8 @@ let mixer = null;
 let clips = [];
 let clock = null;
 let cameraDistance = 3;
+let materialCatalog = [];
+let materialByKey = new Map();
 
 function ensureRenderer() {
   if (renderer) return true;
@@ -99,9 +101,58 @@ function disposeCurrentObject() {
   currentObject = null;
   mixer = null;
   clips = [];
+  materialCatalog = [];
+  materialByKey.clear();
 }
 
-export async function showCharacterPreview(buffer, label = "Character") {
+function collectMaterials(root) {
+  const entries = [];
+  const visit = (node, path) => {
+    if (node.isMesh && node.material) {
+      const materials = Array.isArray(node.material) ? node.material : [node.material];
+      materials.forEach((material, slot) => {
+        const key = path + "#material:" + slot;
+        if (materialByKey.has(key)) return;
+        const entry = {
+          key,
+          name: material.name || node.name || "Material",
+          color: material.color ? "#" + material.color.getHexString() : "#ffffff",
+          roughness: Number.isFinite(material.roughness) ? material.roughness : 0.5,
+          metalness: Number.isFinite(material.metalness) ? material.metalness : 0,
+        };
+        materialByKey.set(key, material);
+        entries.push(entry);
+      });
+    }
+    node.children.forEach((child, index) => {
+      const childName = child.name || child.type || "Node";
+      visit(child, path + "/" + index + ":" + childName);
+    });
+  };
+  visit(root, "0:" + (root.name || root.type || "Scene"));
+  materialCatalog = entries;
+}
+
+export function getCharacterMaterials() {
+  return materialCatalog.map((entry) => ({ ...entry }));
+}
+
+export function applyCharacterAppearance(recipe = {}) {
+  for (const [key, values] of Object.entries(recipe)) {
+    const material = materialByKey.get(key);
+    if (!material) continue;
+    if (values.color && material.color) material.color.set(values.color);
+    if (Number.isFinite(values.roughness) && "roughness" in material) {
+      material.roughness = values.roughness;
+    }
+    if (Number.isFinite(values.metalness) && "metalness" in material) {
+      material.metalness = values.metalness;
+    }
+    material.needsUpdate = true;
+  }
+}
+
+export async function showCharacterPreview(buffer, label = "Character", appearance = {}) {
   canvas.style.display = "block";
   if (!ensureRenderer()) return false;
   status.textContent = "Loading 3D model…";
@@ -112,6 +163,8 @@ export async function showCharacterPreview(buffer, label = "Character") {
     if (!currentObject) throw new Error("The GLB contains no previewable scene.");
     scene.add(currentObject);
     currentObject.updateMatrixWorld(true);
+    collectMaterials(currentObject);
+    applyCharacterAppearance(appearance);
 
     const bounds = new THREE.Box3().setFromObject(currentObject);
     if (bounds.isEmpty()) throw new Error("The GLB scene contains no visible geometry.");

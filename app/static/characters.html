@@ -27,6 +27,17 @@
    <div class="preview-heading"><strong>Live 3D preview</strong><span id="preview-status">Import a model to preview it.</span></div>
    <div class="preview-stage"><canvas id="model-preview" aria-label="Interactive 3D character preview"></canvas><div id="preview-empty">Your imported character will appear here.</div></div>
    <div class="preview-controls"><button id="reset-view" class="secondary" type="button" disabled>Reset view</button><label>Animation<select id="animation-select" disabled><option value="">No animation loaded</option></select></label></div>
+   <section id="material-editor" class="material-editor" hidden>
+    <div class="editor-heading"><strong>Appearance editor</strong><span>Non-destructive material recipe</span></div>
+    <label>Model material<select id="material-select"></select></label>
+    <div class="form-grid">
+     <label>Base colour<input id="material-color" type="color" value="#ffffff"></label>
+     <label>Roughness <output id="roughness-value">0.50</output><input id="material-roughness" type="range" min="0" max="1" step="0.01" value="0.5"></label>
+     <label>Metalness <output id="metalness-value">0.00</output><input id="material-metalness" type="range" min="0" max="1" step="0.01" value="0"></label>
+    </div>
+    <p id="appearance-status" class="inline-status" role="status">Choose a saved character to customize its materials.</p>
+    <button id="save-appearance" type="button" disabled>Save appearance to character</button>
+   </section>
   </div>
  </section>
  <section class="panel" id="profile-panel">
@@ -59,7 +70,7 @@
   <div id="character-list" class="character-list"><div class="empty">Select a project to see its characters.</div></div>
  </section>
 </div>
-<footer>GLB geometry and rig inspection use Godot; interactive browser preview is available. Mesh editing, rig creation, facial controls and animation authoring remain upcoming.</footer>
+<footer>GLB import and preview are available. Material colour, roughness and metalness can be saved as a reusable appearance recipe; mesh editing, rig creation, facial controls and animation authoring remain upcoming.</footer>
 </main>
 <script type="importmap">
 {"imports":{"three":"/static/vendor/three/build/three.module.js"}}

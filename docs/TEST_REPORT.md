@@ -152,3 +152,8 @@ The tests use a deterministic fake adapter for API contract tests; the existing 
 ## P2.2 browser preview extension — Windows CI pending
 
 New coverage: project-scoped retrieval of a validated imported GLB asset for browser preview. The vendored three.js runtime is added to the CycloneDX SBOM via `third_party/threejs-runtime.json`. CI will verify lint, Python compilation, the API regression test, package contents, installer build and lifecycle. Visual browser rendering still requires an interactive WebGL 2 browser; the headless Godot CI worker is not used as a screenshot renderer.
+
+
+## Character material appearance batch — 2026-11-25
+
+Added API coverage for material recipe validation, persistence, revision increments, reload and preservation through profile updates. The browser editor applies base colour, roughness and metalness to imported GLB materials through the locally bundled Three.js runtime. CI and visual browser review are pending; no mesh mutation or export is claimed.

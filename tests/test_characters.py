@@ -149,6 +149,67 @@ def test_character_glb_import_profile_round_trip_and_project_reference(tmp_path,
     assert character_id in opened.json()["document"]["data"]["references"]["characters"]
 
 
+def test_material_appearance_recipe_persists_and_survives_profile_updates(tmp_path, monkeypatch):
+    client, project_id = setup_project(tmp_path, monkeypatch)
+    imported = import_asset(client, project_id)
+    created = client.post(
+        f"/api/projects/{project_id}/characters",
+        json=profile_payload(imported["relative_path"]),
+    )
+    character_id = created.json()["id"]
+
+    saved = client.put(
+        f"/api/projects/{project_id}/characters/{character_id}/appearance",
+        json={
+            "materials": {
+                "0:Root#material:0": {
+                    "color": "#e85d3f",
+                    "roughness": 0.72,
+                    "metalness": 0.08,
+                }
+            }
+        },
+    )
+    assert saved.status_code == 200
+    assert saved.json()["revision"] == 2
+    assert saved.json()["data"]["appearance_recipe"]["materials"]["0:Root#material:0"] == {
+        "color": "#e85d3f",
+        "roughness": 0.72,
+        "metalness": 0.08,
+    }
+
+    updated_payload = profile_payload(imported["relative_path"])
+    updated_payload["personality"] = "More confident."
+    updated = client.put(
+        f"/api/projects/{project_id}/characters/{character_id}",
+        json=updated_payload,
+    )
+    assert updated.status_code == 200
+    assert updated.json()["revision"] == 3
+    assert updated.json()["data"]["appearance_recipe"]["materials"]["0:Root#material:0"][
+        "color"
+    ] == "#e85d3f"
+
+    reopened = client.get(f"/api/projects/{project_id}/characters/{character_id}")
+    assert reopened.json()["data"]["appearance_recipe"]["materials"]["0:Root#material:0"][
+        "roughness"
+    ] == 0.72
+
+
+def test_material_appearance_rejects_invalid_values_and_missing_character(tmp_path, monkeypatch):
+    client, project_id = setup_project(tmp_path, monkeypatch)
+    invalid = client.put(
+        f"/api/projects/{project_id}/characters/{'a' * 36}/appearance",
+        json={"materials": {"body": {"color": "red", "roughness": 1.5}}},
+    )
+    assert invalid.status_code == 422
+    missing = client.put(
+        f"/api/projects/{project_id}/characters/00000000-0000-0000-0000-000000000000/appearance",
+        json={"materials": {}},
+    )
+    assert missing.status_code == 404
+
+
 def test_saved_character_asset_can_be_retrieved_for_preview(tmp_path, monkeypatch):
     client, project_id = setup_project(tmp_path, monkeypatch)
     imported = import_asset(client, project_id)

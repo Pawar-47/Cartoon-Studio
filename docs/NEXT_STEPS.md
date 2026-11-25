@@ -111,3 +111,11 @@ The next P2.2 batch adds a local browser GLB preview:
 - CycloneDX SBOM augmentation records the vendored three.js component.
 
 After CI acceptance, continue with character profile editing and real mesh/material/rig authoring. Keep GLB compression decoder limitations explicit; no remote CDN dependency is permitted.
+
+
+## Next Character Studio batch after material recipes
+
+1. Validate the material appearance batch in Windows CI and fix any failures.
+2. Research and prove a facial-expression workflow using imported blend-shape/VRM expression channels; do not fake facial controls when the model has no compatible targets.
+3. Prove humanoid rig compatibility and retargeting using a pinned Godot/VRM integration or a project-owned minimal rig adapter.
+4. Add deterministic export only after appearance and rig recipes can be baked without damaging the original asset.

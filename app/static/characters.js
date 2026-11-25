@@ -1,6 +1,6 @@
-import { showCharacterPreview } from "./character-preview.js";
+import { showCharacterPreview, getCharacterMaterials, applyCharacterAppearance } from "./character-preview.js";
 const $=id=>document.getElementById(id);
-let activeProject="", importedAsset=null;
+let activeProject="", importedAsset=null, activeCharacter=null, appearanceRecipe={};
 const params=new URLSearchParams(window.location.search);
 function lines(value){return value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean)}
 async function loadProjects(){
@@ -35,10 +35,65 @@ async function loadCharacters(){
   const animations=document.createElement("span");animations.className="tag";animations.textContent=(asset.engine_inspection?.animation_count??asset.container?.animation_count??0)+" animations";
   const revision=document.createElement("p");revision.textContent="Revision "+document.revision+" · "+new Date(document.updated_at).toLocaleDateString();
   const previewButton=document.createElement("button");previewButton.className="secondary preview-saved";previewButton.type="button";previewButton.textContent="Preview";
-  previewButton.addEventListener("click",async()=>{try{const assetId=(asset.relative_path||"").split("/").pop().replace(/\.glb$/i,"");const response=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(assetId));if(!response.ok)throw new Error("Could not load the saved GLB asset.");const buffer=await response.arrayBuffer();await showCharacterPreview(buffer,data.name);document.querySelector(".preview-panel").scrollIntoView({behavior:"smooth",block:"center"})}catch(error){$("project-status").textContent=error.message}});
-  card.append(title,description,model,rig,animations,revision,previewButton);list.append(card);
+  previewButton.addEventListener("click",async()=>{try{const assetId=(asset.relative_path||"").split("/").pop().replace(/\.glb$/i,"");const response=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(assetId));if(!response.ok)throw new Error("Could not load the saved GLB asset.");const buffer=await response.arrayBuffer();await showCharacterPreview(buffer,data.name,data.appearance_recipe?.materials||{});document.querySelector(".preview-panel").scrollIntoView({behavior:"smooth",block:"center"})}catch(error){$("project-status").textContent=error.message}});
+  const customizeButton=document.createElement("button");customizeButton.className="secondary preview-saved";customizeButton.type="button";customizeButton.textContent="Customize appearance";
+  customizeButton.addEventListener("click",()=>openCharacterAppearance(document).catch(error=>$("project-status").textContent=error.message));
+  card.append(title,description,model,rig,animations,revision,previewButton,customizeButton);list.append(card);
  }
 }
+async function openCharacterAppearance(characterDoc){
+ const data=characterDoc.data,asset=data.asset||{},assetId=(asset.relative_path||"").split("/").pop().replace(/\.glb$/i,"");
+ if(!assetId)throw new Error("This character has no saved source model.");
+ const response=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(assetId));
+ if(!response.ok)throw new Error("Could not load the saved GLB asset.");
+ const buffer=await response.arrayBuffer();
+ activeCharacter=characterDoc;
+ appearanceRecipe=JSON.parse(JSON.stringify(data.appearance_recipe?.materials||{}));
+ const loaded=await showCharacterPreview(buffer,data.name,appearanceRecipe);
+ if(!loaded)throw new Error("The browser could not preview this GLB. Check WebGL 2 and model compression.");
+ const materials=getCharacterMaterials(),select=$("material-select");
+ select.replaceChildren();
+ for(const material of materials){
+  const option=window.document.createElement("option");
+  option.value=material.key;
+  option.textContent=material.name+" · "+material.key.slice(-24);
+  select.append(option);
+ }
+ $("material-editor").hidden=false;
+ $("save-appearance").disabled=!materials.length;
+ $("appearance-status").textContent=materials.length?materials.length+" editable material slot(s). Changes are a saved recipe; the source GLB is unchanged.":"No editable materials were found in this model.";
+ if(materials.length)selectMaterial(materials[0].key);
+ window.document.querySelector(".preview-panel").scrollIntoView({behavior:"smooth",block:"center"});
+}
+function selectMaterial(key){
+ const material=getCharacterMaterials().find(item=>item.key===key);if(!material)return;
+ const values=appearanceRecipe[key]||material;
+ $("material-color").value=values.color||material.color;
+ $("material-roughness").value=String(values.roughness??material.roughness);
+ $("material-metalness").value=String(values.metalness??material.metalness);
+ $("roughness-value").value=Number($("material-roughness").value).toFixed(2);
+ $("metalness-value").value=Number($("material-metalness").value).toFixed(2);
+}
+function previewSelectedMaterial(){
+ const key=$("material-select").value;if(!key)return;
+ const values={color:$("material-color").value,roughness:Number($("material-roughness").value),metalness:Number($("material-metalness").value)};
+ appearanceRecipe[key]=values;applyCharacterAppearance({[key]:values});
+ $("roughness-value").value=values.roughness.toFixed(2);$("metalness-value").value=values.metalness.toFixed(2);
+ $("appearance-status").textContent="Preview updated. Save to keep this appearance with the character.";
+}
+$("material-select").addEventListener("change",event=>selectMaterial(event.target.value));
+for(const id of ["material-color","material-roughness","material-metalness"])$(id).addEventListener("input",previewSelectedMaterial);
+$("save-appearance").addEventListener("click",async()=>{
+ if(!activeCharacter||!activeProject)return;
+ $("save-appearance").disabled=true;$("appearance-status").textContent="Saving appearance recipe…";
+ try{
+  const response=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/characters/"+encodeURIComponent(activeCharacter.id)+"/appearance",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({materials:appearanceRecipe})});
+  const result=await response.json();if(!response.ok)throw new Error(result.detail||"Could not save appearance.");
+  activeCharacter=result;$("appearance-status").textContent="Appearance saved · profile revision "+result.revision+".";
+  await loadCharacters();
+ }catch(error){$("appearance-status").textContent=error.message}
+ finally{$("save-appearance").disabled=!getCharacterMaterials().length}
+});
 $("project-select").addEventListener("change",event=>selectProject(event.target.value).catch(error=>$("project-status").textContent=error.message));
 $("model-file").addEventListener("change",()=>{$("import-model").disabled=!activeProject||!$("model-file").files.length;importedAsset=null;$("save-character").disabled=true;$("asset-report").hidden=true});
 $("import-model").addEventListener("click",async()=>{

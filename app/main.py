@@ -114,6 +114,16 @@ class CharacterProfileInput(BaseModel):
     asset_path: str = Field(min_length=1, max_length=512)
 
 
+class MaterialAppearanceInput(BaseModel):
+    color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
+    roughness: float | None = Field(default=None, ge=0, le=1)
+    metalness: float | None = Field(default=None, ge=0, le=1)
+
+
+class CharacterAppearanceInput(BaseModel):
+    materials: dict[str, MaterialAppearanceInput] = Field(default_factory=dict, max_length=256)
+
+
 class ProjectRecord(BaseModel):
     id: str
     name: str
@@ -667,6 +677,7 @@ def create_character(
     data["name"] = payload.name.strip()
     data["description"] = payload.description.strip()
     data["asset"] = manifest["data"]
+    data["appearance_recipe"] = {"materials": {}}
     data["rig_status"] = (
         "ready" if manifest["data"].get("rig_ready") else "unrigged"
     )
@@ -719,6 +730,7 @@ def update_character(
     data["name"] = payload.name.strip()
     data["description"] = payload.description.strip()
     data["asset"] = existing["data"]["asset"]
+    data["appearance_recipe"] = existing["data"].get("appearance_recipe", {"materials": {}})
     data["rig_status"] = existing["data"].get("rig_status", "unrigged")
     document = make_envelope(
         "character",
@@ -735,6 +747,44 @@ def update_character(
         upsert_document_index(connection, project_id, document, relative_path, digest)
         sync_character_reference(connection, DATA_DIR, project_id, document)
     return document
+
+
+@app.put("/api/projects/{project_id}/characters/{character_id}/appearance")
+def update_character_appearance(
+    project_id: str, character_id: str, payload: CharacterAppearanceInput
+) -> dict[str, Any]:
+    initialize_database()
+    with connect_db() as connection:
+        exists = connection.execute(
+            "SELECT 1 FROM projects WHERE id = ?", (project_id,)
+        ).fetchone()
+    if exists is None:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    document = _character_document(DATA_DIR, project_id, character_id)
+    materials = payload.model_dump(mode="json", exclude_none=True)["materials"]
+    if any(not key.strip() or len(key) > 512 for key in materials):
+        raise HTTPException(
+            status_code=422,
+            detail="Material identifiers must be 1–512 characters.",
+        )
+    now = datetime.now(UTC).isoformat()
+    data = dict(document["data"])
+    data["appearance_recipe"] = {"materials": materials}
+    updated = make_envelope(
+        "character",
+        character_id,
+        data,
+        document["created_at"],
+        now,
+        int(document.get("revision", 1)) + 1,
+    )
+    relative_path = f"characters/{character_id}.json"
+    path = resolve_project_relative(DATA_DIR, project_id, relative_path)
+    digest = write_json_atomic(path, updated)
+    with connect_db() as connection:
+        upsert_document_index(connection, project_id, updated, relative_path, digest)
+        sync_character_reference(connection, DATA_DIR, project_id, updated)
+    return updated
 
 
 @app.get("/story", include_in_schema=False)

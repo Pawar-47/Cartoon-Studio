@@ -132,3 +132,8 @@
 - Added an API regression test for saved-asset retrieval.
 - This is a presentation preview only; Godot remains the importer/validator. WebGL 2 is required. No mesh/rig/material editing or GLB export is claimed.
 - CI run for this batch is pending.
+
+
+## 2026-11-25 — Character Studio material customization
+
+Implemented a non-destructive PBR appearance recipe for imported GLB characters. Saved character cards can reopen the model, inspect material slots, preview base-colour/roughness/metalness adjustments, and persist those adjustments to the versioned character document. The original GLB remains immutable. Backend validation and persistence tests are added; Windows CI and visual browser review are pending. Mesh editing, facial blend-shape authoring, rig editing and GLB export remain unimplemented.
