@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.rig_analysis import analyze_rig
+from app.rig_analysis import analyze_rig  # noqa: I001
 
 
 MIXAMO_HUMANOID = [

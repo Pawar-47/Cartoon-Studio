@@ -16,13 +16,13 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from app.rig_analysis import analyze_rig
 from app.engine import (
     EngineError,
     EngineTimeoutError,
     EngineUnavailableError,
     GodotEngineAdapter,
 )
+from app.rig_analysis import analyze_rig
 from app.storage import connect_db as open_database
 from app.storage import (
     default_data_dir,

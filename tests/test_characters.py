@@ -31,13 +31,32 @@ class FakeEngine:
             "engine_version": "4.7.2.stable",
             "mesh_count": 1,
             "skeleton_count": 1,
-            "skeletons": [{"node_path": "Root/Skeleton3D", "bone_count": 15, "bones": [{"name": name} for name in (
-                "mixamorig:Hips", "mixamorig:Spine", "mixamorig:Head",
-                "mixamorig:LeftUpLeg", "mixamorig:LeftLeg", "mixamorig:LeftFoot",
-                "mixamorig:RightUpLeg", "mixamorig:RightLeg", "mixamorig:RightFoot",
-                "mixamorig:LeftArm", "mixamorig:LeftForeArm", "mixamorig:LeftHand",
-                "mixamorig:RightArm", "mixamorig:RightForeArm", "mixamorig:RightHand",
-            )]}],
+            "skeletons": [
+                {
+                    "node_path": "Root/Skeleton3D",
+                    "bone_count": 15,
+                    "bones": [
+                        {"name": name}
+                        for name in (
+                            "mixamorig:Hips",
+                            "mixamorig:Spine",
+                            "mixamorig:Head",
+                            "mixamorig:LeftUpLeg",
+                            "mixamorig:LeftLeg",
+                            "mixamorig:LeftFoot",
+                            "mixamorig:RightUpLeg",
+                            "mixamorig:RightLeg",
+                            "mixamorig:RightFoot",
+                            "mixamorig:LeftArm",
+                            "mixamorig:LeftForeArm",
+                            "mixamorig:LeftHand",
+                            "mixamorig:RightArm",
+                            "mixamorig:RightForeArm",
+                            "mixamorig:RightHand",
+                        )
+                    ],
+                }
+            ],
             "animation_player_count": 1,
             "animation_count": 1,
             "node_count": 1,

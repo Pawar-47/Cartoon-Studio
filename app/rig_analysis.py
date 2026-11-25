@@ -8,11 +8,19 @@ REQUIRED_HUMANOID_BONES: dict[str, frozenset[str]] = {
     "hips": frozenset({"hips", "pelvis"}),
     "spine": frozenset({"spine", "spine1", "spine01", "spine001"}),
     "head": frozenset({"head"}),
-    "leftUpperLeg": frozenset({"leftupleg", "leftupperleg", "leftthigh", "uplegl", "thighl", "upperlegl"}),
-    "leftLowerLeg": frozenset({"leftleg", "leftlowerleg", "leftcalf", "calfl", "lowerlegl", "shinl"}),
+    "leftUpperLeg": frozenset(
+        {"leftupleg", "leftupperleg", "leftthigh", "uplegl", "thighl", "upperlegl"}
+    ),
+    "leftLowerLeg": frozenset(
+        {"leftleg", "leftlowerleg", "leftcalf", "calfl", "lowerlegl", "shinl"}
+    ),
     "leftFoot": frozenset({"leftfoot", "footl"}),
-    "rightUpperLeg": frozenset({"rightupleg", "rightupperleg", "rightthigh", "uplegr", "thighr", "upperlegr"}),
-    "rightLowerLeg": frozenset({"rightleg", "rightlowerleg", "rightcalf", "calfr", "lowerlegr", "shinr"}),
+    "rightUpperLeg": frozenset(
+        {"rightupleg", "rightupperleg", "rightthigh", "uplegr", "thighr", "upperlegr"}
+    ),
+    "rightLowerLeg": frozenset(
+        {"rightleg", "rightlowerleg", "rightcalf", "calfr", "lowerlegr", "shinr"}
+    ),
     "rightFoot": frozenset({"rightfoot", "footr"}),
     "leftUpperArm": frozenset({"leftarm", "leftupperarm", "upperarml", "arml"}),
     "leftLowerArm": frozenset({"leftforearm", "leftlowerarm", "forearml", "lowerarml"}),
