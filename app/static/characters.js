@@ -68,7 +68,9 @@ async function loadRetargets(){
  for(const item of documents){
   const row=document.createElement("div");row.className="retarget-record";
   const title=document.createElement("strong");title.textContent=(item.data.source_character_name||"Source")+" → "+(item.data.target_character_name||"Target");
-  const detail=document.createElement("span");detail.textContent=(item.data.animation_name||"Imported animation")+" · "+item.data.mapped_bone_count+"/15 bones · "+(item.data.scene_reopened?"saved scene reopened":"scene saved");
+  const poseLabel=item.data.pose_transferred?"pose transfer verified":"pose transfer unverified";
+  const angles=Number.isFinite(item.data.source_pose_angle_degrees)&&Number.isFinite(item.data.target_pose_angle_degrees)?" · "+Number(item.data.source_pose_angle_degrees).toFixed(1)+"° → "+Number(item.data.target_pose_angle_degrees).toFixed(1)+"°":"";
+  const detail=document.createElement("span");detail.textContent=(item.data.animation_name||"Imported animation")+" · "+item.data.mapped_bone_count+"/15 bones · "+(item.data.scene_reopened?"scene reopened":"scene saved")+" · "+poseLabel+angles;
   const download=document.createElement("a");download.href="/api/projects/"+encodeURIComponent(activeProject)+"/retargets/"+encodeURIComponent(item.id)+"/scene";download.textContent="Download Godot scene";download.className="retarget-download";
   row.append(title,detail,download);container.append(row);
  }

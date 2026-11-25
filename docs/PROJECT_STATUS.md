@@ -8,7 +8,7 @@
 - Phase 0: COMPLETE.
 - Phase 1: COMPLETE.
 - Phase 2 — Character Studio: ACTIVE; GLB import/preview, profiles, appearance recipes, rig diagnostics and the first user-facing imported-rig retarget workflow are implemented. Phase 2 is not complete.
-- Latest full Windows CI: [run #257](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45616711222) PASSED, including the two-imported-GLB pose-transfer worker test, Godot integration, packaging and installer lifecycle.
+- Latest full Windows CI: [run #252](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45615829102) PASSED, including tests, Godot worker integration, packaging and installer lifecycle.
 - Dedicated Godot native-worker proof: [run #11](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45614672455) PASSED.
 - Chat-independent continuation record: `docs/SESSION_CHECKPOINT.md`.
 
@@ -30,9 +30,9 @@
 
 ## Retarget acceptance limits
 
-The Windows worker test currently uses two imported copies of the same humanoid fixture. It verifies scene creation/reopen, mapping, target skin binding and source-file preservation. Godot proof #11 separately verifies imported-source animation retargeted to a generated target skeleton with different proportions.
+The worker test now uses two different imported GLBs: a canonical animated source and a Mixamo-named target with different arm/leg rest proportions. It verifies indexed mapping, hierarchy, target skin binding, saved-scene reopen, actual upper-arm pose transfer and byte-identical preservation of both source files. Godot proof #11 separately verifies imported-source retargeting to a generated target skeleton with different proportions.
 
-The workflow is not yet accepted for arbitrary imported GLB pairs. Different imported proportions, bone order/naming, animation-track compatibility after bone renaming, and actual pose transfer in a saved two-imported-asset scene remain to be tested. No visual acceptance is claimed.
+This is still bounded fixture acceptance, not arbitrary imported-GLB compatibility. Different bone ordering, broader animation-track conventions and visual acceptance remain to be tested.
 
 ## Phase status
 
@@ -48,19 +48,12 @@ The workflow is not yet accepted for arbitrary imported GLB pairs. Different imp
 | Phase 7 — Episode Generator | NOT STARTED | No complete 5–7 minute production pipeline |
 | Phase 8 — Optimization and Reliability | DEFERRED | Physical-PC benchmarks remain late-stage work |
 
-## Retarget verification status
-
-- The real Godot worker test uses two separately imported copies of the humanoid fixture and verifies that the saved/reopened scene plays the source animation and transfers its LeftUpperArm pose to the target over 72 frames.
-- The worker deletes and rejects a scene if pose transfer is not verified. Both original GLB files remain unchanged.
-- Distinct imported proportions, non-canonical bone names/order and third-party GLB compatibility are not yet accepted. The separate generated-target Godot proof does not replace that work.
-
 ## Next implementation batch
 
-1. Create a second imported humanoid target fixture with different proportions and bone ordering.
-2. Verify animation track paths after canonical humanoid bone-name normalization.
+1. Validate the distinct-proportion Mixamo-named target fixture in full Windows CI.
+2. Add a target fixture with different bone ordering and test imported animation-track path compatibility.
 3. Exercise representative user-imported GLBs and document compatibility limits.
-4. Add a usable preview/open action for saved retarget scenes.
-5. Continue Character Studio authoring and deterministic export after retarget round-trip acceptance.
+4. Continue Character Studio authoring and deterministic export after broader retarget round-trip acceptance.
 
 ## Frozen architecture and constraints
 

@@ -38,3 +38,14 @@ The proof scene also builds a canonical humanoid source/target skeleton pair wit
 The checked-in `fixtures/proof_humanoid.glb` contains a skinned 15-bone humanoid and an imported arm animation. Its GLTF node hierarchy follows the validated core chains: Hips → Spine → Head, both legs, and both upper arms under Spine. The arm local translations are offset relative to Spine so their global rest positions remain unchanged from the previous fixture layout. The Windows worker test validates this hierarchy before it asks Godot to create a separate source-to-target retarget scene.
 
 The application retarget operation requires two distinct project-owned GLBs, a complete unambiguous humanoid mapping on each, valid parent-chain diagnostics, an animated source and a skinned target. It stores a separate Godot scene and JSON retarget record; it does not rewrite either imported GLB. The saved scene starts the selected source animation automatically. This remains a bounded fixture/worker proof until it is exercised against representative user-imported GLB pairs with differing proportions and naming conventions.
+
+
+### Distinct imported target fixture
+
+`fixtures/proof_humanoid_target.glb` is generated from the source fixture by `generate_humanoid_target_fixture.py`. It uses Mixamo-style bone names, a different arm and leg rest proportion, and no target animation. Its skin and hierarchy remain imported GLB data. The worker test imports this target separately from the animated source, validates the alias mapping and rest-length difference, then checks that the source upper-arm animation reaches the target skeleton after the saved scene is reopened. The source and target GLBs are byte-compared after the operation to verify non-destructive handling.
+
+Recreate it with:
+
+```powershell
+python tools/godot_engine_proof/generate_humanoid_target_fixture.py
+```

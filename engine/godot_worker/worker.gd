@@ -385,15 +385,16 @@ func _retarget_glb_pair(payload: Dictionary) -> Dictionary:
     var source_animation_playing := false
     if scene_reopened:
         root.add_child(reopened_instance)
-        for frame_index in range(72):
-            await process_frame
-        var reopened_source := reopened_modifier.get_parent() as Skeleton3D
         var source_players_after_reopen := reopened_instance.find_children(
             "*", "AnimationPlayer", true, false
         )
         if not source_players_after_reopen.is_empty():
             var reopened_player := source_players_after_reopen[0] as AnimationPlayer
+            await process_frame
             source_animation_playing = reopened_player.is_playing()
+            for frame_index in range(71):
+                await process_frame
+        var reopened_source := reopened_modifier.get_parent() as Skeleton3D
         var source_arm_index := reopened_source.find_bone("LeftUpperArm")
         var target_arm_index := (reopened_target as Skeleton3D).find_bone("LeftUpperArm")
         if source_arm_index >= 0 and target_arm_index >= 0:
@@ -439,6 +440,9 @@ func _retarget_glb_pair(payload: Dictionary) -> Dictionary:
         "mapped_bone_count": required_profile_bones.size(),
         "target_skinned_mesh_count": bound_target_meshes.size(),
         "scene_reopened": true,
+        "source_animation_playing": source_animation_playing,
+        "source_pose_angle_degrees": rad_to_deg(source_angle),
+        "target_pose_angle_degrees": rad_to_deg(target_angle),
         "pose_transferred": true
     }
 
