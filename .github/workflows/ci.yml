@@ -10,7 +10,7 @@ permissions:
 jobs:
   test-and-package-windows:
     runs-on: windows-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
         name: Checkout
@@ -48,6 +48,44 @@ jobs:
           Compress-Archive -Path README.md, start.bat, requirements.lock, app, docs -DestinationPath dist/Cartoon-Studio-Windows-Bootstrap.zip -Force
       - name: Smoke-test extracted Windows bootstrap
         run: uv run --locked python tests/smoke_windows_package.py dist/Cartoon-Studio-Windows-Bootstrap.zip
+      - name: Build self-contained application v1
+        shell: pwsh
+        run: |
+          Set-Content -Path app/version.py -Value '"""Single source for the installed application version."""`n`nAPP_VERSION = "0.1.0"' -Encoding utf8
+          uv run --locked pyinstaller --noconfirm --clean --onedir --windowed --name CartoonStudio --specpath build/pyinstaller-v1 --workpath build/pyinstaller-v1/work --distpath dist/installer-v1 --add-data "app/static;app/static" --collect-submodules uvicorn app/desktop.py
+          $bundle = (Resolve-Path "dist/installer-v1/CartoonStudio").Path
+          Copy-Item LICENSES -Destination $bundle -Recurse -Force
+          Copy-Item docs/THIRD_PARTY_NOTICES.md, dependency-sbom.cdx.json -Destination $bundle -Force
+      - name: Build self-contained application v2
+        shell: pwsh
+        run: |
+          Set-Content -Path app/version.py -Value '"""Single source for the installed application version."""`n`nAPP_VERSION = "0.1.1"' -Encoding utf8
+          uv run --locked pyinstaller --noconfirm --clean --onedir --windowed --name CartoonStudio --specpath build/pyinstaller-v2 --workpath build/pyinstaller-v2/work --distpath dist/installer-v2 --add-data "app/static;app/static" --collect-submodules uvicorn app/desktop.py
+          $bundle = (Resolve-Path "dist/installer-v2/CartoonStudio").Path
+          Copy-Item LICENSES -Destination $bundle -Recurse -Force
+          Copy-Item docs/THIRD_PARTY_NOTICES.md, dependency-sbom.cdx.json -Destination $bundle -Force
+          Set-Content -Path app/version.py -Value '"""Single source for the installed application version."""`n`nAPP_VERSION = "0.1.0"' -Encoding utf8
+      - name: Install pinned NSIS compiler
+        run: choco install nsis --version=3.13.0 --yes --no-progress
+      - name: Compile versioned Windows installers
+        shell: pwsh
+        run: |
+          $makensis = Join-Path `${env:ProgramFiles(x86)} "NSIS\makensis.exe"
+          if (-not (Test-Path $makensis)) {
+            $makensis = Join-Path $env:ProgramFiles "NSIS\makensis.exe"
+          }
+          if (-not (Test-Path $makensis)) { throw "NSIS 3.13.0 makensis.exe was not found." }
+          $distRoot = (Resolve-Path "dist").Path
+          $v1Dir = (Resolve-Path "dist/installer-v1/CartoonStudio").Path
+          $v2Dir = (Resolve-Path "dist/installer-v2/CartoonStudio").Path
+          $v1Out = Join-Path $distRoot "Cartoon-Studio-0.1.0-Setup.exe"
+          $v2Out = Join-Path $distRoot "Cartoon-Studio-0.1.1-Setup.exe"
+          & $makensis "/DAPP_VERSION=0.1.0" "/DAPP_DIST_DIR=$v1Dir" "/DOUTPUT_FILE=$v1Out" "installer/cartoon-studio.nsi"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & $makensis "/DAPP_VERSION=0.1.1" "/DAPP_DIST_DIR=$v2Dir" "/DOUTPUT_FILE=$v2Out" "installer/cartoon-studio.nsi"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Smoke-test clean install, upgrade, uninstall and reinstall
+        run: uv run --locked python tests/smoke_windows_installer.py dist/Cartoon-Studio-0.1.0-Setup.exe dist/Cartoon-Studio-0.1.1-Setup.exe
       - name: Upload Windows bootstrap
         uses: actions/upload-artifact@v4
         with:
@@ -55,6 +93,13 @@ jobs:
           path: dist/Cartoon-Studio-Windows-Bootstrap.zip
           if-no-files-found: error
           retention-days: 14
+      - name: Upload self-contained Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: Cartoon-Studio-Windows-Installer
+          path: dist/Cartoon-Studio-0.1.1-Setup.exe
+          if-no-files-found: error
+          retention-days: 30
       - name: Upload dependency inventory
         uses: actions/upload-artifact@v4
         with:
