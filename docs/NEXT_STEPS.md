@@ -3,38 +3,48 @@
 ## Live checkpoint
 - Repository: Pawar-47/Cartoon-Studio
 - Branch: main
-- Previous verified HEAD: bbca69d5ff9933dd04233a1fd757d86c7e60e83d
-- Latest verified CI: run #93 — SUCCESS on the previous verified HEAD facb0dd738e227d643d4e85d80bd5d3f620fc6e1; documentation batch commits are awaiting their own CI run.
-- Original 25-part master brief and 171-row registry/traceability baseline remain preserved.
+- Phase 0 is CLOSED; Phase 1 is ACTIVE.
+- Latest verified CI before the P0.7 documentation batch: run #102 SUCCESS on ae9bad178c9999d5f5b7017a6409c7ee9c490786.
+- Godot native-worker proof #3: SUCCESS on the same commit.
+- SQLite queue proof: run #101 SUCCESS; 17 total tests passed.
+- Full proof record: docs/P0_6_PROOF_REPORT.md.
+- Phase 0 freeze record: docs/P0_7_PHASE0_EXIT_REVIEW.md.
 
-## Gate correction — target-PC testing is deferred
-The user's physical Windows PC is not a prerequisite for architecture, implementation or phase progression. P0.4 uses source-level hardware/API requirements, Intel specifications, driver documentation and explicit resource-risk analysis. The existing diagnostic harness remains optional. Actual representative-scene measurements and quality-preset tuning are assigned to Phase 8 / P8.1. Do not ask the user to run the probe as a blocker, and do not claim performance that has not been measured.
+## Hardware gate
+The user's physical PC is not a prerequisite for architecture, implementation or phase progression. Keep i3-5005U / Intel HD 5500 / 8 GB / SSD as design constraints, allow slow rendering, serialize work and retain quality profiles. Actual frame-time, RAM, disk and quality-preset measurements are Phase 8 only.
 
-## Completed P0.5 architecture batch
-- DEPENDENCY_DECISIONS.md records core dependencies, candidate versions, license constraints, optional integrations, queue/media/voice strategy and proof gates.
-- ARCHITECTURE_TRACEABILITY.md maps all 171 atomic registry IDs to architecture homes, planned module boundaries and delivery phases.
-- ARCHITECTURE.md, contracts, decision log, candidate scorecard and phase plan now reflect these decisions.
-- P0.5 documentation is complete. No production engine, queue, FFmpeg build or TTS model is falsely marked integrated.
+## Completed
+- P0.1–P0.7: specification preservation, 171-row requirements/traceability, source research, source-based feasibility, architecture/dependency decisions, Godot/FFmpeg/SQLite proofs and architecture freeze.
+- Godot 4.7.2 Compatibility selected as native 3D runtime behind a supervised worker adapter.
+- FastAPI/browser remains primary UI/control plane; SQLite is local index and queue; FFmpeg process adapter is the media boundary.
+- Optional Godot Web viewport is deferred; it does not block native rendering.
 
-## Active batch — P0.6 bounded functional proofs
-1. Prove the Godot native worker boundary with a bounded import/animate/save/reopen/short-render test in a controlled CI/dev environment; no user-PC benchmark is needed.
-2. Verify FFmpeg build/codec licensing and output, and test SQLite queue state/retry/cancel/restart semantics with synthetic jobs.
-3. Treat the Web viewport as optional; failure to prove it does not block native production rendering. Keep physical-PC performance measurements in Phase 8.lation, crash recovery and migration strategy.
-4. Keep Godot Compatibility provisional until architecture-critical P0.6 proofs and licensing review; keep Blender optional for authoring rather than assuming it is the runtime.
-5. Keep Urdu TTS unselected until a native Pakistani Urdu sample is evaluated in Phase 6. Human recording, manual timing and manual viseme editing remain first-class fallbacks.
-6. Update architecture, decision log and batch plan in one coherent batch.
+## Active batch — P1.1 app and project foundation
+1. Re-audit current app routes, database schema, story-plan persistence and data-path handling against the frozen architecture.
+2. Implement project lifecycle and versioned portable project/document storage while preserving existing project UUIDs and story plans.
+3. Add numbered SQLite migrations, backup-before-migrate and startup reconciliation.
+4. Add integration tests for create/list/open/save/load/restart and data preservation.
+5. Keep CARTOON_STUDIO_DATA override; use user application data as packaged default.
+6. Commit the complete coherent batch and run CI once.
 
-## Downstream sequence
-- P0.6: bounded candidate proofs only for unresolved architecture-critical questions; no physical-PC benchmark prerequisite.
-- P0.7: Phase 0 compliance review and architecture freeze.
-- Phase 1: finish app foundation, reproducible Windows packaging and clean CI/VM installation path.
-- Phase 2 onward: follow the original brief exactly.
-- Phase 8: actual target-PC benchmarks, quality presets, optimization, recovery and final acceptance.
+## Phase 1 sequence
+- P1.1: app/project lifecycle, persistence, schema and migration foundation.
+- P1.2: exact dependency lock, reproducible CI, lint/compile/test and build metadata.
+- P1.3: portable Windows package and launcher; validate on clean Windows CI/VM.
+- P1.4: self-contained installer, upgrade/uninstall and project-data migration tests.
+
+## Deferred in correct phase
+- Character Studio: Phase 2.
+- World Builder: Phase 3.
+- Story/Scene schema normalization and full story engine: Phase 4 (preserve current partial Story Generator; do not expand early).
+- Animation/retargeting: Phase 5.
+- Pakistani Urdu TTS, voice profiles, lip-sync and audio: Phase 6.
+- Full 5–7 minute MP4 pipeline and production queue integration: Phase 7.
+- Target-PC benchmarks, four quality presets and optimization: Phase 8.
 
 ## Operating constraints
-- GitHub main is the only project source of truth.
-- Preserve all existing code and artifacts; no resets or restart from zero.
-- Work in substantial coherent batches and commit once per batch.
-- No mandatory paid APIs, cloud rendering or hidden quota bypass.
-- Do not send user audio/content to external providers without explicit approval.
-- Report implementation and test evidence separately; never invent performance, visual or audio results.
+- GitHub main is the sole source of truth. Never reset or restart completed work.
+- Work in substantial batches, not tiny edits/commits.
+- Run tests and inspect evidence; distinguish implemented, tested and verified.
+- No mandatory paid APIs, subscriptions, cloud rendering or online activation.
+- Do not send user audio/content to an external provider without explicit approval.

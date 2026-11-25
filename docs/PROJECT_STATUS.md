@@ -1,72 +1,86 @@
 # Project Status — 2026-11-25
 
-## Live checkpoint before this policy batch
+## Live checkpoint
 - Repository: Pawar-47/Cartoon-Studio
 - Branch: main
-- HEAD: 5470fab7e9ebaf89b22912e9f15cc17fc234ba8d
-- Latest CI: run #93 — SUCCESS on the previous verified HEAD facb0dd738e227d643d4e85d80bd5d3f620fc6e1; documentation batch commits are awaiting their own CI run.
-- Original 25-part brief remains verbatim at `docs/MASTER_EXECUTION_PROMPT.md`.
-- P0.2 complete: 171 atomic requirement rows, 171 one-to-one traceability rows, 75 legacy IDs retained.
+- HEAD at this status update: 21f51d4689f5398dde855915c0810e3920416608
+- Latest verified main CI: run #102 SUCCESS on ae9bad178c9999d5f5b7017a6409c7ee9c490786.
+- Godot native-worker proof #3: SUCCESS on ae9bad178c9999d5f5b7017a6409c7ee9c490786.
+- SQLite queue prototype: Windows CI run #101 SUCCESS on b05024110e76b684a5f8cee35eb57fa0428b2c11; 17 tests passed.
+- Original 25-part prompt is preserved verbatim at docs/MASTER_EXECUTION_PROMPT.md.
+- Requirements registry: 171 atomic rows; traceability: 171 rows; architecture crosswalk: 171 rows.
 
-## Corrected hardware-testing policy
-The user's physical PC is **not a gate** for architecture, implementation or phase progression. The project must still be designed around i3-5005U / Intel HD 5500 / 8 GB / SSD with sequential processing, caching, bounded memory and four quality modes.
-- P0.4 compatibility assessment is source-based and records unknowns honestly.
-- The PowerShell/Godot probe remains optional, not a required user task.
-- Actual representative-scene benchmarks and quality-preset tuning belong to Phase 8 / P8.1.
-- Slow rendering is an optimization target, not a reason to stop building the complete product.
-- No FPS/render-time/RAM/driver-stability claim is made without measurement.
-- Clean Windows install checks can run in CI or a clean VM; the user's PC is not the Phase 1 gate.
+## Phase status
 
-## Master brief phase order
-0. Specification/research/architecture; 1. GitHub and CI/CD foundation; 2. Character Studio; 3. World Builder; 4. Story and Scene Engine; 5. Animation Engine; 6. Urdu Voice and Lip-Sync; 7. Episode Generator; 8. Optimization and Reliability.
-
-## Phase 0 status
-| Batch | Status | Evidence / limitation |
+| Phase | Status | Evidence / limitation |
 |---|---|---|
-| P0.1 baseline and preservation audit | COMPLETE | Repository, source, tests, workflows and artifacts inspected |
-| P0.2 atomic requirements/traceability | COMPLETE | 171 atomic rows and 171 traceability rows; legacy IDs retained |
-| P0.3 comparative GitHub research | COMPLETE | Source-level candidate matrix and provisional scorecard |
-| P0.4 source-based hardware/Urdu/provider feasibility | COMPLETE | Official hardware/API, Urdu model/license, provider region/quota/privacy/cost evidence recorded; physical-PC benchmark deferred to P8.1; native-speaker voice evaluation remains in Phase 6 |
-| P0.5 architecture and dependency decisions | IN PROGRESS | Proceed now; no personal-PC test prerequisite |
-| P0.6 bounded candidate proofs | NEXT | After P0.5; architecture-critical proofs only |
-| P0.7 Phase 0 compliance/freeze | PENDING | After P0.2–P0.6 |
+| Phase 0 — Specification/research/architecture | COMPLETE | P0.1–P0.7 closed; see P0_7_PHASE0_EXIT_REVIEW.md |
+| Phase 1 — GitHub and CI/CD foundation | ACTIVE | Existing FastAPI/SQLite/browser shell and CI preserved; project lifecycle, migrations, reproducible lock and installer still need completion |
+| Phase 2 — Character Studio | NOT STARTED | No production character creation/import/rig/face studio |
+| Phase 3 — World Builder | NOT STARTED | No persistent production world/location builder |
+| Phase 4 — Story and Scene Engine | PARTIAL / FROZEN | Early Story Generator and saved story plan preserved; Ara-derived IDs are validation-only and must be normalized in Phase 4 |
+| Phase 5 — Animation Engine | NOT STARTED | No canonical action library, retargeting or production timeline |
+| Phase 6 — Urdu Voice and Lip-Sync | RESEARCH COMPLETE; IMPLEMENTATION NOT STARTED | Human recording fallback planned; no production TTS/lip-sync model approved |
+| Phase 7 — Episode Generator | NOT STARTED | No complete scene renderer, audio mix or end-to-end 5–7 minute MP4 |
+| Phase 8 — Optimization and Reliability | DEFERRED | Actual target-PC measurements and four quality profiles belong here |
 
-## Existing implementation — preserve it
-- FastAPI backend, static dashboard and Story Generator workspace.
-- SQLite project metadata and partial story-plan schema/validation.
-- CI workflow and Windows bootstrap ZIP; bootstrap is not a self-contained installer.
-- Ara-derived action/location/expression IDs are provisional validation catalogs only. Ara proof run #6 was cancelled during MP4 export; it is not an approved engine.
-- Existing early Story Generator remains preserved and frozen until Phase 4.
+## Phase 0 closeout
 
-## Known feasibility findings and risks
-- Godot 4.7.2 Compatibility is the leading source-based runtime candidate: HD 5500 reports OpenGL 4.3 versus Godot's OpenGL 3.3 Compatibility floor. This is paper compatibility, not measured performance.
-- Blender 4.5.17 remains an optional authoring candidate; documented CPU minimum and legacy Intel driver caveats make it a riskier default runtime.
-- eSpeak NG provides Urdu G2P/phoneme diagnostics, not an approved natural Urdu voice.
-- WhisperX's Urdu aligner is a forced-alignment candidate only; its model-card ASR metrics are weak and target performance is untested.
-- Smol Urdu TTS V1 is not approved for bundling due to missing code-repository license and heavy BF16/Liger/WavTokenizer stack.
-- Qwen Sahar is paid/cloud-only; no provider is approved for production Urdu TTS.
-- No API keys are connected and no user data has been sent.
+- P0.1 baseline/preservation: COMPLETE.
+- P0.2: 171 atomic requirements, 171 traceability rows and 75 legacy IDs retained.
+- P0.3: comparative source-level GitHub research and candidate scorecard complete.
+- P0.4: source-based hardware/API, Urdu model/voice feasibility and provider availability/quota/privacy/cost research complete. Physical-PC testing is not a gate; native-speaker Urdu evaluation remains in Phase 6.
+- P0.5: architecture contracts, dependency/licensing decisions and all-171-row architecture crosswalk complete.
+- P0.6: Godot 4.7.2 GLB/animation/save/reopen/MovieWriter proof, FFmpeg MP4 assembly proof and SQLite queue semantics proof passed in hosted CI.
+- P0.7: architecture freeze and Phase 0 exit review complete.
 
-## Implementation status
-No production Character Studio, persistent World Builder, canonical animation playback/library, direct multi-provider orchestration, research agent, approved Pakistani Urdu TTS, lip-sync, audio mixer, full 3D renderer, end-to-end MP4 episode pipeline, recovery/cache system or self-contained installer has been demonstrated. No requirement is VERIFIED solely from code presence or CI. No target-PC benchmark has been run; it is scheduled for Phase 8, not a blocker.
+## Frozen architecture
 
-## Immediate work
-1. Continue P0.5: engine-neutral contracts, adapter boundaries, data layout, queue/cache/recovery and dependency decisions.
-2. Keep Godot provisional until bounded P0.6 proofs; do not claim it selected/verified.
-3. Keep Urdu voice selection open until Phase 6 native-speaker sample evaluation.
-4. Complete Phase 0, then follow Phases 1–8 in the original order.
+- Python 3.11+ / FastAPI / Uvicorn / Pydantic / stdlib SQLite.
+- Existing browser UI remains primary control plane.
+- Godot 4.7.2-stable Compatibility is selected as native 3D runtime behind a supervised worker/engine adapter.
+- Engine-neutral versioned JSON documents and stable Cartoon Studio IDs; portable project files; SQLite local index/job journal.
+- App-owned sequential SQLite queue with per-scene checkpoints, leases, retries, cancellation and recovery.
+- FFmpeg process adapter; final production codec/build remains a release decision.
+- AI/cloud TTS optional; manual handoff and human-recorded Pakistani Urdu remain supported.
+- Optional Godot Web viewport deferred.
+- Physical-PC performance tests are Phase 8 only.
 
-## Operating constraints
-- GitHub main is the only project source of truth.
-- Preserve all source/artifacts; no reset or audit from zero.
-- Work in substantial coherent batches, one commit per batch.
-- No mandatory paid APIs, subscriptions, cloud inference or cloud rendering.
-- Do not send user content/audio to an external provider without explicit approval.
+## P0.6 evidence and limits
 
+See docs/P0_6_PROOF_REPORT.md:
+- Godot 4.7.2 Compatibility imported a self-generated GLB, found a MeshInstance3D, created/played an animation, saved/reopened the PackedScene and recorded 72 frames at 24 FPS.
+- MovieWriter AVI: 640x360, 3 seconds, MJPEG/PCM.
+- FFmpeg MP4: 640x360, 24 FPS, 3 seconds, MPEG-4 Part 2/AAC. This is not final codec approval.
+- Queue prototype tests: serial claims, lease expiry, checkpoint retention, cancellation and stale-worker rejection.
+- All proofs ran on hosted CI (llvmpipe for Godot), not the user's PC. They are candidate/function proofs, not production app integration.
 
-## P0.5 dependency and architecture checkpoint
-- Architecture contracts define portable document shapes, millisecond timeline semantics, storage/index/job-journal layout, migrations and recovery.
-- Added a 171-row architecture crosswalk mapping every registry ID to an architecture home, planned module boundary and delivery phase.
-- Added subsystem dependency/licensing decisions: Python/FastAPI/SQLite/browser core, provisional Godot native worker, optional web viewport, app-owned SQLite queue, FFmpeg adapter with codec/build gate, optional AI/TTS, manual Urdu recording, and PyInstaller/NSIS packaging candidates.
-- No engine is yet accepted, no renderer/queue/codec is integrated, and no candidate functional proof is claimed.
-- Root project LICENSE is absent; no copyleft dependency/model/asset is to be bundled until the project's own distribution/IP position is approved.
+## Phase 1 active batch
+
+**P1.1 — Harden app/project lifecycle and persistent local data.**
+- Audit current FastAPI routes, SQLite schema, project/story save/load paths and environment override.
+- Implement a versioned project data root and portable JSON document repository without breaking existing projects/story plans.
+- Add numbered SQLite migrations and backup-before-migrate behavior.
+- Add create/list/open/save/load/restart/data-preservation tests.
+- Keep CARTOON_STUDIO_DATA override; packaged default will move to user application data.
+- Do not implement Character Studio, World Builder or other later-phase features yet.
+
+After P1.1, continue P1.2 dependency lock/CI reproducibility, P1.3 portable Windows package, and P1.4 self-contained installer/upgrade tests.
+
+## Explicit risks and deferred decisions
+
+- No root LICENSE file exists; project distribution license must be approved before public redistribution or copyleft bundling.
+- Urdu TTS and lip-sync quality remain unproven; Phase 6 sample evaluation and manual fallbacks.
+- Final MP4 codec and redistributable FFmpeg build remain unresolved.
+- No actual target-PC benchmark exists or is required before Phase 8.
+- Current Windows bootstrap ZIP is not a self-contained installer.
+- No production character/world/animation/rendering/audio/episode pipeline is claimed complete.
+
+## Operating rules
+
+- GitHub main is the only source of truth; preserve existing work.
+- Execute substantial coherent batches and commit once per completed batch.
+- Run CI after the batch; report exact evidence.
+- No mandatory paid API, cloud rendering or online activation.
+- Never send user audio/content to external providers without explicit approval.
+- Never claim code presence or a candidate proof as production functionality.

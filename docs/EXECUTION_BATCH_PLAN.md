@@ -14,15 +14,17 @@ P0.2 checkpoint: atomic registry and traceability were expanded on 2026-11-25. T
 | P0.4 | Source-based hardware, Urdu and provider feasibility | HARDWARE_PROFILE, AI_PROVIDERS, URDU_VOICE_FEASIBILITY; optional target-PC probe retained | Official compatibility/resource evidence; Urdu G2P/alignment/TTS and model/license assessment; Pakistan API availability, quotas, privacy and cost; explicit unknowns | COMPLETE — source-level feasibility documented. Physical-PC benchmarks move to P8.1; native-speaker voice evaluation remains a Phase 6 prerequisite |
 | P0.5 | Engine-neutral architecture and dependency decisions | ARCHITECTURE, ARCHITECTURE_CONTRACTS, ARCHITECTURE_TRACEABILITY, DEPENDENCY_DECISIONS, DECISION_LOG | Canonical document contracts; service/adapter boundaries; 171-ID architecture crosswalk; core/engine/queue/media/voice/AI/packaging dependency and license decisions; offline, privacy, persistence, cache/recovery and release boundaries | DOCUMENTATION COMPLETE — proceed to bounded P0.6 proofs; exact-PC benchmark is Phase 8 only |
 | P0.6 | Bounded, diagnostic candidate proofs only where needed | Proof workflow, logs, sample outputs and measurements | Godot 4.7.2 Compatibility: GLB import, animation, save/reopen, 72-frame MovieWriter AVI; FFmpeg MP4/AAC assembly; SQLite lease/retry/cancel/checkpoint proof | COMPLETE — hosted-runner functional proofs pass; no physical-PC benchmark required |
-| P0.7 | Phase 0 compliance review and architecture freeze | P0_7_PHASE0_EXIT_REVIEW, MASTER_PLAN, EXECUTION_BATCH_PLAN, decision record | Reconcile 171 requirements/crosswalk; record proof evidence and remaining IP/voice/codec risks; freeze Godot native-worker architecture and Phase 1 dependency baseline | READY — proceed to final Phase 0 review |
+| P0.7 | Phase 0 compliance review and architecture freeze | P0_7_PHASE0_EXIT_REVIEW, MASTER_PLAN, EXECUTION_BATCH_PLAN, decision record | Reconcile 171 requirements/crosswalk; record proof evidence and remaining IP/voice/codec risks; freeze Godot native-worker architecture and Phase 1 dependency baseline | COMPLETE — Phase 0 closed; Phase 1 active |
 
 **Phase 0 rule:** no new production-feature implementation before P0.7 exits. Preserve existing source. The existing Story Generator/schema is an early partial slice; do not expand it until Phase 4. Physical-PC performance testing is not a Phase 0 gate; P8.1 owns actual benchmarks.
 
 ## Phase 1 — GitHub and CI/CD Foundation
 
+**Phase 1 is active following P0.7 architecture freeze.** Start with P1.1; do not jump ahead to Character Studio or World Builder.
+
 | Batch | Scope | Deliverables | Exit evidence | State |
 |---|---|---|---|---|
-| P1.1 | Harden existing FastAPI app, project lifecycle, SQLite persistence and versioned local data layout | App/storage contract and tests | Create/list/save/load/restart/data-preservation integration tests | PARTIAL |
+| P1.1 | Harden existing FastAPI app, project lifecycle, SQLite persistence and versioned local data layout | App/storage contract and tests | Create/list/save/load/restart/data-preservation integration tests | ACTIVE — preserve current projects and story plans |
 | P1.2 | Reproducible dependencies, lint/static checks and CI | Pinned/locked dependencies and CI workflow | Clean Windows runner builds/tests with reproducible logs | PARTIAL |
 | P1.3 | Portable Windows package and simple launcher | Bootstrap/portable package | Clean Windows CI/VM install, launch, shutdown and diagnostics test | PARTIAL — bootstrap only; no clean-install evidence; user's PC is not the gate |
 | P1.4 | Self-contained installer, upgrade and data migration | Installer and release pipeline | Install/upgrade/uninstall tests; project data survives upgrades | NOT STARTED |
