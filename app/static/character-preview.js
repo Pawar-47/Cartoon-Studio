@@ -12,6 +12,7 @@ const resetButton = document.getElementById("reset-view");
 const animationSelect = document.getElementById("animation-select");
 const playbackButton = document.getElementById("preview-playback");
 const playbackSpeed = document.getElementById("preview-speed");
+const exportPreviewButton = document.getElementById("export-preview-png");
 const frameButtons = document.querySelectorAll("[data-camera-frame]");
 const loader = new GLTFLoader();
 
@@ -38,7 +39,8 @@ function ensureRenderer() {
     renderer = new THREE.WebGLRenderer({
       canvas,
       antialias: true,
-      alpha: false,
+      alpha: true,
+      preserveDrawingBuffer: true,
       powerPreference: "low-power",
     });
   } catch (error) {
@@ -127,6 +129,7 @@ function updatePlaybackControls() {
   playbackButton.textContent = playbackPaused ? "Play" : "Pause";
   playbackButton.setAttribute("aria-pressed", String(!playbackPaused));
   playbackSpeed.disabled = !activeAction;
+  exportPreviewButton.disabled = !currentObject;
   frameButtons.forEach((button) => { button.disabled = !currentObject; });
 }
 
@@ -316,6 +319,45 @@ export async function showCharacterPreview(buffer, label = "Character", appearan
 
 export function resetCharacterPreview() {
   frameCharacter("full");
+}
+
+export async function exportCharacterPreview({ width = 1024, transparent = true } = {}) {
+  if (!renderer || !currentObject || !camera || !scene) {
+    throw new Error("Load a character preview before exporting a PNG.");
+  }
+  const size = Math.max(256, Math.min(4096, Math.round(Number(width) || 1024)));
+  const previousSize = renderer.getSize(new THREE.Vector2());
+  const previousPixelRatio = renderer.getPixelRatio();
+  const previousAspect = camera.aspect;
+  const previousBackground = scene.background;
+  const previousClearColor = renderer.getClearColor(new THREE.Color()).clone();
+  const previousClearAlpha = renderer.getClearAlpha();
+  try {
+    renderer.setPixelRatio(1);
+    renderer.setSize(size, size, false);
+    camera.aspect = 1;
+    camera.updateProjectionMatrix();
+    if (transparent) {
+      scene.background = null;
+      renderer.setClearColor(0x000000, 0);
+    }
+    renderer.render(scene, camera);
+    const blobPromise = new Promise((resolve, reject) => {
+      renderer.domElement.toBlob(
+        (blob) => blob ? resolve(blob) : reject(new Error("The browser could not encode the character PNG.")),
+        "image/png",
+      );
+    });
+    return await blobPromise;
+  } finally {
+    scene.background = previousBackground;
+    renderer.setClearColor(previousClearColor, previousClearAlpha);
+    renderer.setPixelRatio(previousPixelRatio);
+    renderer.setSize(previousSize.x, previousSize.y, false);
+    camera.aspect = previousAspect;
+    camera.updateProjectionMatrix();
+    renderer.render(scene, camera);
+  }
 }
 
 resetButton.addEventListener("click", resetCharacterPreview);

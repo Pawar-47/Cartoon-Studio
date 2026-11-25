@@ -12,7 +12,10 @@
 .proportion-grid output{color:#9ec5ff;font-variant-numeric:tabular-nums}
 .proportion-grid input{grid-column:1/-1;width:100%;accent-color:#79a9e8}
 .proportion-editor .helper{margin:8px 0;color:#aab7c7;font-size:12px}
-.camera-presets,.playback-controls{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.camera-presets,.playback-controls,.preview-export-controls{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.preview-export-controls label{display:flex;align-items:center;gap:5px;margin:0;font-size:11px}
+.preview-export-controls select{padding:7px;border:1px solid #3a4b60;border-radius:8px;background:#101822;color:#fff}
+.preview-export-controls input[type=checkbox]{width:auto;margin:0;accent-color:#79a9e8}
 .camera-presets button,.playback-controls button{margin:0;padding:8px 10px;font-size:11px}
 .playback-controls label{margin:0;font-size:11px}
 .playback-controls select{display:block;margin-top:5px;padding:8px;border:1px solid #3a4b60;border-radius:8px;background:#101822;color:#fff}
