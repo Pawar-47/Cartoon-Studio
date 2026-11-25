@@ -3,7 +3,7 @@ import { GLTFLoader } from "/static/vendor/three/examples/jsm/loaders/GLTFLoader
 import { OrbitControls } from "/static/vendor/three/examples/jsm/controls/OrbitControls.js";
 import { retargetClip } from "/static/vendor/three/examples/jsm/utils/SkeletonUtils.js";
 import { prepareRetargetedClip } from "./retarget-preview.mjs";
-import { resolveAnimationClip } from "./animation-clip.mjs";
+import { resolveAnimationClip, resolveDefaultAnimationClip } from "./animation-clip.mjs";
 
 const canvas = document.getElementById("model-preview");
 const status = document.getElementById("preview-status");
@@ -289,12 +289,23 @@ export async function showCharacterPreview(buffer, label = "Character", appearan
         option.textContent = clip.name || "Animation " + (index + 1);
         animationSelect.append(option);
       });
-      activeAction = mixer.clipAction(clips[0]);
-      activeAction.play();
-      playbackPaused = !playAnimations;
-      activeAction.paused = playbackPaused;
-      mixer.timeScale = Number(playbackSpeed.value) || 1;
-      animationSelect.disabled = !playAnimations;
+      const initialClip = resolveDefaultAnimationClip(clips);
+      if (initialClip) {
+        animationSelect.value = String(clips.indexOf(initialClip));
+        activeAction = mixer.clipAction(initialClip);
+        activeAction.play();
+        playbackPaused = !playAnimations;
+        activeAction.paused = playbackPaused;
+        mixer.timeScale = Number(playbackSpeed.value) || 1;
+        animationSelect.disabled = !playAnimations;
+      } else {
+        animationSelect.replaceChildren();
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = "No playable animations";
+        animationSelect.append(option);
+        animationSelect.disabled = true;
+      }
     } else {
       activeAction = null;
       playbackPaused = false;

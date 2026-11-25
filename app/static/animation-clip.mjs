@@ -21,3 +21,14 @@ export function resolveAnimationClip(clips, requestedName = "") {
   const matches = available.filter((clip) => normalizeAnimationName(clip?.name) === normalized);
   return matches.length === 1 ? matches[0] : null;
 }
+
+export function resolveDefaultAnimationClip(clips) {
+  const available = Array.isArray(clips) ? clips : [];
+  const exactIdle = available.find((clip) => normalizeAnimationName(clip?.name) === "idle");
+  if (exactIdle) return exactIdle;
+
+  const idleVariant = available.find((clip) =>
+    /^idle(?:$|[_\s-])/i.test(normalizeAnimationName(clip?.name))
+  );
+  return idleVariant ?? resolveAnimationClip(available);
+}

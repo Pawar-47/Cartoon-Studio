@@ -189,7 +189,8 @@ def test_browser_preview_modules_are_served_from_local_static_assets():
     preview = client.get("/static/character-preview.js")
     assert preview.status_code == 200
     assert "options.playAnimations !== false" in preview.text
-    assert "activeAction = mixer.clipAction(clips[0]);" in preview.text
+    assert "resolveDefaultAnimationClip(clips)" in preview.text
+    assert "activeAction = mixer.clipAction(initialClip);" in preview.text
     assert "activeAction.paused = playbackPaused;" in preview.text
     assert "function frameCharacter" in preview.text
     assert 'data-camera-frame="head"' in page.text
