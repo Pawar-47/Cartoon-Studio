@@ -441,6 +441,34 @@ def test_retarget_adapter_accepts_complete_humanoid_mapping_and_builds_request(
     )
     assert output.parent.is_dir()
 
+def test_pinned_godot_worker_reports_real_animated_morph_cube(tmp_path):
+    adapter = _real_godot_adapter(tmp_path)
+    fixture = (
+        Path(__file__).resolve().parent
+        / "fixtures"
+        / "third_party"
+        / "animated_morph_cube_cc0.glb"
+    )
+    assert fixture.is_file(), "The CC0 animated morph fixture is unavailable."
+    asset_dir = tmp_path / "animated-morph-assets"
+    asset_dir.mkdir()
+    target = asset_dir / "animated-morph-cube.glb"
+    shutil.copyfile(fixture, target)
+
+    inspection = adapter.inspect_glb(target, allowed_root=tmp_path)
+
+    assert inspection["ok"] is True
+    assert inspection["mesh_count"] >= 1
+    assert inspection["animation_count"] >= 1
+    assert inspection["morph_target_count"] == 2
+    assert {entry["name"] for entry in inspection["morph_targets"]} == {
+        "thin",
+        "angle",
+    }
+    assert all(entry["default_value"] == 0.0 for entry in inspection["morph_targets"])
+    assert target.read_bytes() == fixture.read_bytes()
+
+
 def test_pinned_godot_worker_reports_imported_blend_shape_names_and_defaults(tmp_path):
     adapter = _real_godot_adapter(tmp_path)
     asset_dir = tmp_path / "morph-assets"
