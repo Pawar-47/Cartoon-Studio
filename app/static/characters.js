@@ -1,7 +1,7 @@
 import { buildExpressionPreset } from "./character-expression-presets.js";
-import { showCharacterPreview, showRetargetPreview, getCharacterMaterials, applyCharacterAppearance, getCharacterMorphTargets, applyCharacterMorphTargets } from "./character-preview.js";
+import { showCharacterPreview, showRetargetPreview, getCharacterMaterials, applyCharacterAppearance, getCharacterMorphTargets, applyCharacterMorphTargets, getCharacterMeshTransforms, applyCharacterMeshTransforms } from "./character-preview.js";
 const $=id=>document.getElementById(id);
-let activeProject="", importedAsset=null, activeCharacter=null, editingCharacter=null, appearanceRecipe={materials:{},morph_targets:{},morph_bindings:{}}, retargetCharacters=[], assemblyAssets=[], assemblyAccessories=[];
+let activeProject="", importedAsset=null, activeCharacter=null, editingCharacter=null, appearanceRecipe={materials:{},morph_targets:{},morph_bindings:{},mesh_transforms:{}}, retargetCharacters=[], assemblyAssets=[], assemblyAccessories=[];
 const params=new URLSearchParams(window.location.search);
 function lines(value){return value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean)}
 function resetProfileEditor(){editingCharacter=null;$("character-form").reset();$("profile-heading").textContent="Save reusable profile";$("save-character").textContent="Save character profile";$("cancel-edit-profile").hidden=true;$("save-character").disabled=!importedAsset}
@@ -33,7 +33,7 @@ async function loadProjects(){
  await selectProject(select.value);
 }
 async function selectProject(id){
- activeProject=id;assemblyAssets=[];assemblyAccessories=[];renderAssemblyAccessories();refreshAssemblyControls();$("library-import").disabled=!id||!selectedLibraryModel();importedAsset=null;activeCharacter=null;resetProfileEditor();appearanceRecipe={materials:{},morph_targets:{},morph_bindings:{}};$("export-appearance").disabled=true;$("download-appearance").hidden=true;$("material-editor").hidden=true;$("morph-editor").hidden=true;$("save-appearance").disabled=true;$("asset-report").hidden=true;$("profile-status").textContent="";$("save-character").disabled=true;$("refresh-characters").disabled=!id;
+ activeProject=id;assemblyAssets=[];assemblyAccessories=[];renderAssemblyAccessories();refreshAssemblyControls();$("library-import").disabled=!id||!selectedLibraryModel();importedAsset=null;activeCharacter=null;resetProfileEditor();appearanceRecipe={materials:{},morph_targets:{},morph_bindings:{},mesh_transforms:{}};$("export-appearance").disabled=true;$("download-appearance").hidden=true;$("material-editor").hidden=true;$("morph-editor").hidden=true;$("save-appearance").disabled=true;$("asset-report").hidden=true;$("profile-status").textContent="";$("save-character").disabled=true;$("refresh-characters").disabled=!id;
  $("project-status").textContent=id?"Project selected. Import a GLB model to begin.":"Choose a project to begin.";
  $("character-list").replaceChildren();
  if(!id){$("character-list").innerHTML='<div class="empty">Select a project to see its characters.</div>';return}
@@ -209,8 +209,8 @@ async function openCharacterAppearance(characterDoc){
  if(!response.ok)throw new Error("Could not load the saved GLB asset.");
  const buffer=await response.arrayBuffer();
  activeCharacter=characterDoc;
- appearanceRecipe=JSON.parse(JSON.stringify(data.appearance_recipe||{materials:{},morph_targets:{},morph_bindings:{}}));
- appearanceRecipe.materials=appearanceRecipe.materials||{};appearanceRecipe.morph_targets=appearanceRecipe.morph_targets||{};appearanceRecipe.morph_bindings=appearanceRecipe.morph_bindings||{};
+ appearanceRecipe=JSON.parse(JSON.stringify(data.appearance_recipe||{materials:{},morph_targets:{},morph_bindings:{},mesh_transforms:{}}));
+ appearanceRecipe.materials=appearanceRecipe.materials||{};appearanceRecipe.morph_targets=appearanceRecipe.morph_targets||{};appearanceRecipe.morph_bindings=appearanceRecipe.morph_bindings||{};appearanceRecipe.mesh_transforms=appearanceRecipe.mesh_transforms||{};
  const loaded=await showCharacterPreview(buffer,data.name,appearanceRecipe,{playAnimations:false});
  if(!loaded)throw new Error("The browser could not preview this GLB. Check WebGL 2 and model compression.");
  const materials=getCharacterMaterials(),select=$("material-select");
@@ -227,10 +227,11 @@ async function openCharacterAppearance(characterDoc){
  }
  $("material-editor").hidden=false;
  $("morph-editor").hidden=false;
- $("save-appearance").disabled=!materials.length&&!getCharacterMorphTargets().length;
- $("export-appearance").disabled=!(Object.keys(appearanceRecipe.materials).length||Object.keys(appearanceRecipe.morph_targets).length);
- $("download-appearance").hidden=true;
  buildMorphControls();
+ buildMeshTransformControls();
+ $("save-appearance").disabled=!(materials.length||getCharacterMorphTargets().length||getCharacterMeshTransforms().some(mesh=>mesh.canExport));
+ $("export-appearance").disabled=!(Object.keys(appearanceRecipe.materials).length||Object.keys(appearanceRecipe.morph_targets).length||Object.keys(appearanceRecipe.mesh_transforms).length);
+ $("download-appearance").hidden=true;
  $("appearance-status").textContent=materials.length?materials.length+" editable material slot(s). Changes are a saved recipe; the source GLB is unchanged.":"No editable materials were found in this model.";
  if(materials.length)selectMaterial(materials[0].key);
  window.document.querySelector(".preview-panel").scrollIntoView({behavior:"smooth",block:"center"});
@@ -289,6 +290,60 @@ function buildMorphControls(){
  $("reset-expressions").disabled=!total;
  for(const button of document.querySelectorAll("[data-expression-preset]"))button.disabled=!groups.face.length;
 }
+let meshTransformCatalog=[];
+function refreshMeshTransformFields(){
+ const mesh=meshTransformCatalog.find(item=>item.key===$("mesh-transform-select").value);
+ const saved=mesh?appearanceRecipe.mesh_transforms[mesh.key]||{}:{};
+ for(const axis of ["x","y","z"]){
+  const value=Number(saved["scale_"+axis]??1);
+  $("mesh-scale-"+axis).value=String(value);
+  $("mesh-scale-"+axis+"-value").value=value.toFixed(2);
+ }
+ $("mesh-transform-reset").disabled=!mesh||!appearanceRecipe.mesh_transforms[mesh.key];
+}
+function buildMeshTransformControls(){
+ meshTransformCatalog=getCharacterMeshTransforms();
+ const select=$("mesh-transform-select");select.replaceChildren();
+ const usable=meshTransformCatalog.filter(mesh=>mesh.canExport);
+ for(const mesh of usable){
+  const option=document.createElement("option");option.value=mesh.key;
+  option.textContent=mesh.meshName+" · "+mesh.nodePath.split("/").slice(-2).join("/");
+  select.append(option);
+ }
+ select.disabled=!usable.length;
+ for(const axis of ["x","y","z"])$("mesh-scale-"+axis).disabled=!usable.length;
+ $("mesh-transform-status").textContent=usable.length
+  ? usable.length+" uniquely named mesh part(s) available. Scale a selected part independently; source GLB stays unchanged."
+  : "No uniquely named mesh parts were found. Mesh transforms are disabled for ambiguous names.";
+ refreshMeshTransformFields();
+}
+function previewMeshTransform(){
+ const mesh=meshTransformCatalog.find(item=>item.key===$("mesh-transform-select").value);
+ if(!mesh||!mesh.canExport)return;
+ const values={mesh_name:mesh.meshName};
+ for(const axis of ["x","y","z"]){
+  values["scale_"+axis]=Number($("mesh-scale-"+axis).value);
+  $("mesh-scale-"+axis+"-value").value=values["scale_"+axis].toFixed(2);
+ }
+ if(["x","y","z"].every(axis=>Math.abs(values["scale_"+axis]-1)<0.001)){
+  delete appearanceRecipe.mesh_transforms[mesh.key];
+ }else appearanceRecipe.mesh_transforms[mesh.key]=values;
+ applyCharacterMeshTransforms(appearanceRecipe.mesh_transforms);
+ $("export-appearance").disabled=!(Object.keys(appearanceRecipe.materials).length||Object.keys(appearanceRecipe.morph_targets).length||Object.keys(appearanceRecipe.mesh_transforms).length);
+ $("save-appearance").disabled=false;$("download-appearance").hidden=true;
+ $("mesh-transform-reset").disabled=!appearanceRecipe.mesh_transforms[mesh.key];
+ $("appearance-status").textContent="Live mesh-part proportions updated. Save the recipe or export a new GLB to keep the transform.";
+}
+$("mesh-transform-select").addEventListener("change",refreshMeshTransformFields);
+for(const axis of ["x","y","z"])$("mesh-scale-"+axis).addEventListener("input",previewMeshTransform);
+$("mesh-transform-reset").addEventListener("click",()=>{
+ const key=$("mesh-transform-select").value;if(!key)return;
+ delete appearanceRecipe.mesh_transforms[key];
+ applyCharacterMeshTransforms(appearanceRecipe.mesh_transforms);refreshMeshTransformFields();
+ $("export-appearance").disabled=!(Object.keys(appearanceRecipe.materials).length||Object.keys(appearanceRecipe.morph_targets).length||Object.keys(appearanceRecipe.mesh_transforms).length);
+ $("download-appearance").hidden=true;
+ $("appearance-status").textContent="Selected mesh restored to its imported proportions.";
+});
 $("reset-expressions").addEventListener("click",()=>{
  for(const target of getCharacterMorphTargets())appearanceRecipe.morph_targets[target.key]=target.value;
  applyCharacterMorphTargets(appearanceRecipe.morph_targets);buildMorphControls();
@@ -321,19 +376,19 @@ $("save-appearance").addEventListener("click",async()=>{
   activeCharacter=result;$("appearance-status").textContent="Appearance saved · profile revision "+result.revision+".";
   await loadCharacters();
  }catch(error){$("appearance-status").textContent=error.message}
- finally{$("save-appearance").disabled=!(getCharacterMaterials().length||getCharacterMorphTargets().length)}
+ finally{$("save-appearance").disabled=!(getCharacterMaterials().length||getCharacterMorphTargets().length||getCharacterMeshTransforms().some(mesh=>mesh.canExport))}
 });
 $("export-appearance").addEventListener("click",async()=>{
  if(!activeCharacter||!activeProject)return;
  const button=$("export-appearance");button.disabled=true;
- $("appearance-status").textContent="Godot is baking material and facial edits into a new GLB, then re-importing it for verification…";
+ $("appearance-status").textContent="Godot is baking material, morph and mesh-part proportion edits into a new GLB, then re-importing it for verification…";
  try{
   const response=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/characters/"+encodeURIComponent(activeCharacter.id)+"/export",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(appearanceRecipe)});
   const result=await response.json();if(!response.ok)throw new Error(result.detail||"Could not export customized character.");
   const link=$("download-appearance");link.href=result.download_url;link.download=result.original_filename;link.hidden=false;
-  $("appearance-status").textContent="Customized GLB exported and verified · "+result.applied_material_count+" material edit(s), "+result.applied_morph_count+" facial morph(s). The original asset remains unchanged."; 
+  $("appearance-status").textContent="Customized GLB exported and verified · "+result.applied_material_count+" material edit(s), "+result.applied_morph_count+" morph(s), "+(result.applied_mesh_transform_count||0)+" mesh-part transform(s). The original asset remains unchanged.";
  }catch(error){$("appearance-status").textContent=error.message}
- finally{button.disabled=!(Object.keys(appearanceRecipe.materials).length||Object.keys(appearanceRecipe.morph_targets).length)}
+ finally{button.disabled=!(Object.keys(appearanceRecipe.materials).length||Object.keys(appearanceRecipe.morph_targets).length||Object.keys(appearanceRecipe.mesh_transforms).length)}
 });
 $("retarget-source").addEventListener("change",()=>{$("create-retarget").disabled=!$("retarget-source").value||!$("retarget-target").value||$("retarget-source").value===$("retarget-target").value});
 $("retarget-target").addEventListener("change",()=>{$("create-retarget").disabled=!$("retarget-source").value||!$("retarget-target").value||$("retarget-source").value===$("retarget-target").value});

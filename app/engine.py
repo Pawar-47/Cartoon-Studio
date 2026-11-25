@@ -164,7 +164,9 @@ class GodotEngineAdapter:
         self, source_path: Path, materials: list[dict[str, Any]],
         morph_targets: list[dict[str, Any]], output_path: Path, allowed_root: Path,
         timeout_seconds: float | None = None, cancel_event: threading.Event | None = None,
+        mesh_transforms: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
+        mesh_transforms = mesh_transforms or []
         root = Path(allowed_root).resolve(strict=False)
         source = Path(source_path).resolve(strict=True)
         output = Path(output_path).resolve(strict=False)
@@ -180,9 +182,9 @@ class GodotEngineAdapter:
             raise EnginePathError("Appearance export output escapes the allowed project directory.")
         if output.suffix.lower() != ".glb" or output.exists():
             raise EnginePathError("Appearance export output must be a new .glb file.")
-        if len(materials) > 256 or len(morph_targets) > 512:
+        if len(materials) > 256 or len(morph_targets) > 512 or len(mesh_transforms) > 128:
             raise EnginePathError(
-                "Appearance export exceeds the supported material or morph-target limit."
+                "Appearance export exceeds the supported material, morph-target or mesh-transform limit."
             )
         validated_materials: list[dict[str, Any]] = []
         for item in materials:
@@ -229,14 +231,29 @@ class GodotEngineAdapter:
                 "mesh_name": mesh_name, "target_name": target_name,
                 "target_index": target_index, "value": float(value),
             })
-        if not validated_materials and not validated_morphs:
-            raise EnginePathError("There are no material or morph edits to export.")
+        validated_mesh_transforms: list[dict[str, Any]] = []
+        for item in mesh_transforms:
+            mesh_name = str(item.get("mesh_name", "")).strip()
+            if not mesh_name or len(mesh_name) > 256:
+                raise EnginePathError("Every mesh proportion edit requires a valid mesh name.")
+            edit: dict[str, Any] = {"mesh_name": mesh_name}
+            for axis in ("x", "y", "z"):
+                value = item.get(f"scale_{axis}", 1.0)
+                if isinstance(value, bool) or not isinstance(value, (int, float)) or not 0.5 <= value <= 1.5:
+                    raise EnginePathError("Mesh scale factors must be between 0.5 and 1.5.")
+                edit[f"scale_{axis}"] = float(value)
+            if all(abs(edit[f"scale_{axis}"] - 1.0) < 1e-6 for axis in ("x", "y", "z")):
+                raise EnginePathError("A mesh proportion edit must change at least one axis.")
+            validated_mesh_transforms.append(edit)
+        if not validated_materials and not validated_morphs and not validated_mesh_transforms:
+            raise EnginePathError("There are no appearance edits to export.")
         output.parent.mkdir(parents=True, exist_ok=True)
         return self._run(
             "export_character_appearance",
             {"project_root": str(root), "source_path": str(source),
              "output_path": str(output), "materials": validated_materials,
-             "morph_targets": validated_morphs},
+             "morph_targets": validated_morphs,
+             "mesh_transforms": validated_mesh_transforms},
             timeout_seconds=timeout_seconds, cancel_event=cancel_event,
         )
 

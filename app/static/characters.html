@@ -104,6 +104,17 @@
      <div class="editor-heading"><strong>Other shape controls</strong><span>Additional imported blend shapes</span></div>
      <div id="other-morph-controls" class="morph-controls"></div>
     </div>
+    <div class="morph-section mesh-transform-section">
+     <div class="editor-heading"><strong>Mesh-part proportions</strong><span>Live 3D node transforms</span></div>
+     <p id="mesh-transform-status" class="inline-status">Select a saved character to inspect its mesh parts.</p>
+     <label>Mesh part<select id="mesh-transform-select" disabled></select></label>
+     <div class="mesh-scale-grid">
+      <label>Width <output id="mesh-scale-x-value">1.00</output><input id="mesh-scale-x" type="range" min="0.5" max="1.5" step="0.01" value="1" disabled></label>
+      <label>Height <output id="mesh-scale-y-value">1.00</output><input id="mesh-scale-y" type="range" min="0.5" max="1.5" step="0.01" value="1" disabled></label>
+      <label>Depth <output id="mesh-scale-z-value">1.00</output><input id="mesh-scale-z" type="range" min="0.5" max="1.5" step="0.01" value="1" disabled></label>
+     </div>
+     <button id="mesh-transform-reset" class="secondary" type="button" disabled>Reset selected mesh</button>
+    </div>
     <button id="reset-expressions" class="secondary" type="button" disabled>Reset all shape controls</button>
    </section>
    </section>
@@ -151,7 +162,7 @@
   <div id="retarget-list" class="retarget-list"></div>
  </section>
 </div>
-<footer>GLB import and preview are available. Material PBR settings and existing facial morph targets can be saved as non-destructive recipes; mesh editing, rig creation, new blend-shape authoring and animation authoring remain upcoming.</footer>
+<footer>GLB import and preview are available. Character Studio supports saved PBR appearance, imported morph targets and per-mesh proportion transforms with verified GLB export. Vertex sculpting, rig creation, new blend-shape authoring and animation authoring remain upcoming.</footer>
 </main>
 <script type="importmap">
 {"imports":{"three":"/static/vendor/three/build/three.module.js"}}

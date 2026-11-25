@@ -277,6 +277,14 @@ def test_character_appearance_persists_facial_morph_weights(tmp_path, monkeypatc
                 "0:Face/0:Head:Smile": 0.75,
                 "0:Face/0:Head:Blink": -0.25,
             },
+            "mesh_transforms": {
+                "0:Root/0:Body#mesh": {
+                    "mesh_name": "Body",
+                    "scale_x": 1.12,
+                    "scale_y": 0.96,
+                    "scale_z": 1.08,
+                }
+            },
         },
     )
 
@@ -287,6 +295,9 @@ def test_character_appearance_persists_facial_morph_weights(tmp_path, monkeypatc
         "0:Face/0:Head:Smile": 0.75,
         "0:Face/0:Head:Blink": -0.25,
     }
+    assert saved["data"]["appearance_recipe"]["mesh_transforms"]["0:Root/0:Body#mesh"] == {
+        "mesh_name": "Body", "scale_x": 1.12, "scale_y": 0.96, "scale_z": 1.08
+    }
     reopened = client.get(
         f"/api/projects/{project_id}/characters/{character_id}"
     )
@@ -294,12 +305,20 @@ def test_character_appearance_persists_facial_morph_weights(tmp_path, monkeypatc
     assert reopened.json()["data"]["appearance_recipe"]["morph_targets"] == (
         saved["data"]["appearance_recipe"]["morph_targets"]
     )
+    assert reopened.json()["data"]["appearance_recipe"]["mesh_transforms"] == (
+        saved["data"]["appearance_recipe"]["mesh_transforms"]
+    )
 
     invalid = client.put(
         f"/api/projects/{project_id}/characters/{character_id}/appearance",
         json={"morph_targets": {"Smile": 1.5}},
     )
     assert invalid.status_code == 422
+    invalid_transform = client.put(
+        f"/api/projects/{project_id}/characters/{character_id}/appearance",
+        json={"mesh_transforms": {"body": {"mesh_name": "Body", "scale_x": 1.8}}},
+    )
+    assert invalid_transform.status_code == 422
 
 
 def test_character_retarget_api_saves_scene_and_persistent_record(tmp_path, monkeypatch):

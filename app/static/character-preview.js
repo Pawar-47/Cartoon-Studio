@@ -31,6 +31,8 @@ let materialCatalog = [];
 let materialByKey = new Map();
 let morphTargetCatalog = [];
 let morphTargetByKey = new Map();
+let meshTransformCatalog = [];
+let meshTransformByKey = new Map();
 
 function ensureRenderer() {
   if (renderer) return true;
@@ -240,6 +242,45 @@ export function getCharacterMorphTargets() {
   return morphTargetCatalog.map((entry) => ({ ...entry }));
 }
 
+function collectMeshTransforms(root) {
+  meshTransformByKey.clear();
+  const entries = [];
+  const visit = (node, path) => {
+    if (node.isMesh && node.geometry) {
+      entries.push({ key: path + "#mesh", meshName: node.name || "", nodePath: path, baseScale: node.scale.toArray(), node });
+    }
+    node.children.forEach((child, index) => {
+      const childName = child.name || child.type || "Node";
+      visit(child, path + "/" + index + ":" + childName);
+    });
+  };
+  visit(root, "0:" + (root.name || root.type || "Scene"));
+  const nameCounts = new Map();
+  for (const entry of entries) nameCounts.set(entry.meshName, (nameCounts.get(entry.meshName) || 0) + 1);
+  meshTransformCatalog = entries.map((entry) => {
+    const publicEntry = { key: entry.key, meshName: entry.meshName, nodePath: entry.nodePath,
+      baseScale: [...entry.baseScale], canExport: Boolean(entry.meshName) && nameCounts.get(entry.meshName) === 1 };
+    meshTransformByKey.set(entry.key, entry);
+    return publicEntry;
+  });
+}
+
+export function getCharacterMeshTransforms() {
+  return meshTransformCatalog.map((entry) => ({ ...entry }));
+}
+
+export function applyCharacterMeshTransforms(recipe = {}) {
+  for (const entry of meshTransformByKey.values()) entry.node.scale.fromArray(entry.baseScale);
+  for (const [key, values] of Object.entries(recipe)) {
+    const entry = meshTransformByKey.get(key);
+    if (!entry) continue;
+    entry.node.scale.set(entry.baseScale[0] * Number(values.scale_x ?? 1),
+      entry.baseScale[1] * Number(values.scale_y ?? 1),
+      entry.baseScale[2] * Number(values.scale_z ?? 1));
+  }
+  if (currentObject) currentObject.updateMatrixWorld(true);
+}
+
 export function applyCharacterMorphTargets(recipe = {}) {
   for (const [key, value] of Object.entries(recipe)) {
     const target = morphTargetByKey.get(key);
@@ -261,8 +302,10 @@ export async function showCharacterPreview(buffer, label = "Character", appearan
     currentObject.updateMatrixWorld(true);
     collectMaterials(currentObject);
     collectMorphTargets(currentObject);
+    collectMeshTransforms(currentObject);
     applyCharacterAppearance(appearance.materials || appearance);
     applyCharacterMorphTargets(appearance.morph_targets || {});
+    applyCharacterMeshTransforms(appearance.mesh_transforms || {});
 
     const bounds = new THREE.Box3().setFromObject(currentObject);
     if (bounds.isEmpty()) throw new Error("The GLB scene contains no visible geometry.");

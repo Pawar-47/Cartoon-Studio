@@ -197,6 +197,7 @@ func _inspect_glb(payload: Dictionary) -> Dictionary:
         mesh_inventory.append({
             "node_path": str(scene.get_path_to(mesh_instance)),
             "node_name": str(mesh_instance.name),
+            "node_scale": [mesh_instance.scale.x, mesh_instance.scale.y, mesh_instance.scale.z],
             "mesh_resource_name": str(mesh_resource.resource_name),
             "mesh_type": mesh_resource.get_class(),
             "surface_count": mesh_resource.get_surface_count(),
@@ -299,11 +300,14 @@ func _export_character_appearance(payload: Dictionary) -> Dictionary:
         return {"error_code": "invalid_output_path", "error": "Appearance export must create a new GLB file."}
     var materials_value: Variant = payload.get("materials", [])
     var morphs_value: Variant = payload.get("morph_targets", [])
+    var mesh_transforms_value: Variant = payload.get("mesh_transforms", [])
     if typeof(materials_value) != TYPE_ARRAY or materials_value.size() > 256:
         return {"error_code": "invalid_material_edits", "error": "Material edits must be an array of at most 256 entries."}
     if typeof(morphs_value) != TYPE_ARRAY or morphs_value.size() > 512:
         return {"error_code": "invalid_morph_edits", "error": "Morph edits must be an array of at most 512 entries."}
-    if materials_value.is_empty() and morphs_value.is_empty():
+    if typeof(mesh_transforms_value) != TYPE_ARRAY or mesh_transforms_value.size() > 128:
+        return {"error_code": "invalid_mesh_transforms", "error": "Mesh transforms must be an array of at most 128 entries."}
+    if materials_value.is_empty() and morphs_value.is_empty() and mesh_transforms_value.is_empty():
         return {"error_code": "empty_appearance", "error": "There are no appearance edits to export."}
     var document := GLTFDocument.new()
     var state := GLTFState.new()
@@ -385,6 +389,40 @@ func _export_character_appearance(payload: Dictionary) -> Dictionary:
         if not morph_export_meshes.has(morph_mesh):
             morph_export_meshes.append(morph_mesh)
         applied_morphs.append({"mesh_name": mesh_name, "target_index": target_index, "target_name": target_name, "value": weight})
+    var applied_mesh_transforms: Array[Dictionary] = []
+    for transform_value in mesh_transforms_value:
+        if typeof(transform_value) != TYPE_DICTIONARY:
+            scene.queue_free()
+            return {"error_code": "invalid_mesh_transform", "error": "Each mesh proportion edit must be an object."}
+        var transform_edit: Dictionary = transform_value
+        var transform_mesh_name := str(transform_edit.get("mesh_name", ""))
+        var factors := Vector3(
+            float(transform_edit.get("scale_x", 1.0)),
+            float(transform_edit.get("scale_y", 1.0)),
+            float(transform_edit.get("scale_z", 1.0))
+        )
+        if transform_mesh_name.is_empty() or factors.x < 0.5 or factors.x > 1.5 or factors.y < 0.5 or factors.y > 1.5 or factors.z < 0.5 or factors.z > 1.5:
+            scene.queue_free()
+            return {"error_code": "invalid_mesh_transform", "error": "Mesh names and scale factors must be valid; each scale must be between 0.5 and 1.5."}
+        if factors.is_equal_approx(Vector3.ONE):
+            scene.queue_free()
+            return {"error_code": "empty_mesh_transform", "error": "A mesh proportion edit must change at least one axis."}
+        var transform_matches: Array[MeshInstance3D] = []
+        for mesh_node in mesh_nodes:
+            if str(mesh_node.name) == transform_mesh_name:
+                transform_matches.append(mesh_node as MeshInstance3D)
+        if transform_matches.size() != 1:
+            scene.queue_free()
+            return {"error_code": "mesh_transform_ambiguous", "error": "Mesh proportion target must resolve to exactly one mesh: " + transform_mesh_name}
+        var transform_mesh := transform_matches[0]
+        var original_scale := transform_mesh.scale
+        var expected_scale := Vector3(original_scale.x * factors.x, original_scale.y * factors.y, original_scale.z * factors.z)
+        transform_mesh.scale = expected_scale
+        applied_mesh_transforms.append({
+            "mesh_name": transform_mesh_name,
+            "scale_factors": [factors.x, factors.y, factors.z],
+            "expected_scale": [expected_scale.x, expected_scale.y, expected_scale.z]
+        })
     var export_document := GLTFDocument.new()
     var export_state := GLTFState.new()
     var export_error := export_document.append_from_scene(scene, export_state)
@@ -469,11 +507,26 @@ func _export_character_appearance(payload: Dictionary) -> Dictionary:
         if not morph_verified:
             DirAccess.remove_absolute(output_path)
             return {"error_code": "appearance_morph_verification_failed", "error": "A facial morph value did not survive GLB export/re-import."}
+    for edit in applied_mesh_transforms:
+        var transform_verified := false
+        for record in verification.get("mesh_inventory", []):
+            if str(record.get("node_name", "")) != str(edit["mesh_name"]):
+                continue
+            var actual_scale: Array = record.get("node_scale", [])
+            var expected_scale: Array = edit["expected_scale"]
+            if actual_scale.size() >= 3 and absf(float(actual_scale[0]) - float(expected_scale[0])) <= 0.02 and absf(float(actual_scale[1]) - float(expected_scale[1])) <= 0.02 and absf(float(actual_scale[2]) - float(expected_scale[2])) <= 0.02:
+                transform_verified = true
+            break
+        if not transform_verified:
+            DirAccess.remove_absolute(output_path)
+            return {"error_code": "appearance_mesh_transform_verification_failed", "error": "A mesh proportion transform did not survive GLB export/re-import."}
     verification["appearance_verified"] = true
     verification["applied_material_count"] = applied_materials.size()
     verification["applied_morph_count"] = applied_morphs.size()
     verification["applied_materials"] = applied_materials
     verification["applied_morph_targets"] = applied_morphs
+    verification["applied_mesh_transform_count"] = applied_mesh_transforms.size()
+    verification["applied_mesh_transforms"] = applied_mesh_transforms
     return verification
 
 

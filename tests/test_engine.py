@@ -350,6 +350,48 @@ def test_godot_worker_bakes_and_reimports_material_and_facial_edits(tmp_path):
     assert baked_material["metalness"] == pytest.approx(0.08, abs=0.02)
 
 
+@pytest.mark.skipif(not HAS_GODOT, reason="Pinned Godot runtime is supplied by Windows CI.")
+def test_godot_worker_exports_mesh_part_proportion_transforms(tmp_path):
+    project_root = tmp_path / "mesh-proportion-project"
+    project_root.mkdir()
+    cache_root = project_root / "assets" / "character-library"
+    source_path = ensure_model_asset(cache_root, "Male", "Adventurer")
+    adapter = GodotEngineAdapter(data_dir=tmp_path, timeout_seconds=180)
+    before = adapter.inspect_glb(source_path, allowed_root=project_root)
+    name_counts = {}
+    for item in before["mesh_inventory"]:
+        name_counts[item["node_name"]] = name_counts.get(item["node_name"], 0) + 1
+    candidates = [
+        item for item in before["mesh_inventory"]
+        if item["skin_bound"] and item["slot_candidate"] == "body"
+        and name_counts[item["node_name"]] == 1
+    ]
+    assert candidates, "The pinned Quaternius character should expose a unique skinned body mesh."
+    target = candidates[0]
+    original_bytes = source_path.read_bytes()
+    original_scale = target["node_scale"]
+    factors = {"scale_x": 1.12, "scale_y": 0.94, "scale_z": 1.08}
+    output_path = project_root / "assets" / "characters" / "proportioned.glb"
+    result = adapter.export_character_appearance(
+        source_path, [], [], output_path, allowed_root=project_root,
+        mesh_transforms=[{"mesh_name": target["node_name"], **factors}],
+    )
+    assert result["appearance_verified"] is True
+    assert result["applied_mesh_transform_count"] == 1
+    assert source_path.read_bytes() == original_bytes
+    after = adapter.inspect_glb(output_path, allowed_root=project_root)
+    exported = next(
+        item for item in after["mesh_inventory"]
+        if item["node_name"] == target["node_name"]
+    )
+    assert exported["node_scale"] == pytest.approx([
+        original_scale[0] * factors["scale_x"],
+        original_scale[1] * factors["scale_y"],
+        original_scale[2] * factors["scale_z"],
+    ], abs=0.02)
+    assert set(after["animation_names"]) == set(before["animation_names"])
+
+
 def test_appearance_export_rejects_invalid_mesh_and_morph_bindings(tmp_path):
     root = tmp_path / "project"
     root.mkdir()
@@ -367,4 +409,9 @@ def test_appearance_export_rejects_invalid_mesh_and_morph_bindings(tmp_path):
             [],
             [{"mesh_name": "Face", "target_name": "Smile", "target_index": -1, "value": 0.5}],
             root / "out.glb", allowed_root=root,
+        )
+    with pytest.raises(ValueError, match="scale factors"):
+        adapter.export_character_appearance(
+            source, [], [], root / "out.glb", allowed_root=root,
+            mesh_transforms=[{"mesh_name": "Body", "scale_x": 1.8}],
         )

@@ -162,12 +162,20 @@ class MorphBindingInput(BaseModel):
     target_name: str = Field(min_length=1, max_length=256)
 
 
+class MeshTransformInput(BaseModel):
+    mesh_name: str = Field(min_length=1, max_length=256)
+    scale_x: float = Field(default=1.0, ge=0.5, le=1.5)
+    scale_y: float = Field(default=1.0, ge=0.5, le=1.5)
+    scale_z: float = Field(default=1.0, ge=0.5, le=1.5)
+
+
 class CharacterAppearanceInput(BaseModel):
     materials: dict[str, MaterialAppearanceInput] = Field(default_factory=dict, max_length=256)
     morph_targets: dict[str, Annotated[float, Field(ge=-1, le=1)]] = Field(
         default_factory=dict, max_length=512
     )
     morph_bindings: dict[str, MorphBindingInput] = Field(default_factory=dict, max_length=512)
+    mesh_transforms: dict[str, MeshTransformInput] = Field(default_factory=dict, max_length=128)
 
 
 class ProjectRecord(BaseModel):
@@ -1211,7 +1219,7 @@ def create_character(
     data["name"] = payload.name.strip()
     data["description"] = payload.description.strip()
     data["asset"] = manifest["data"]
-    data["appearance_recipe"] = {"materials": {}, "morph_targets": {}, "morph_bindings": {}}
+    data["appearance_recipe"] = {"materials": {}, "morph_targets": {}, "morph_bindings": {}, "mesh_transforms": {}}
     data["rig_status"] = (
         "ready" if manifest["data"].get("rig_ready") else "unrigged"
     )
@@ -1301,9 +1309,10 @@ def update_character_appearance(
     materials = appearance["materials"]
     morph_targets = appearance["morph_targets"]
     morph_bindings = appearance["morph_bindings"]
+    mesh_transforms = appearance["mesh_transforms"]
     if any(
         not key.strip() or len(key) > 512
-        for key in [*materials, *morph_targets, *morph_bindings]
+        for key in [*materials, *morph_targets, *morph_bindings, *mesh_transforms]
     ):
         raise HTTPException(
             status_code=422,
@@ -1315,6 +1324,7 @@ def update_character_appearance(
         "materials": materials,
         "morph_targets": morph_targets,
         "morph_bindings": morph_bindings,
+        "mesh_transforms": mesh_transforms,
     }
     updated = make_envelope(
         "character",
@@ -1383,7 +1393,15 @@ def export_character_appearance(
                 detail="Morph edits must include their imported mesh/target bindings.",
             )
         morph_targets.append({"key": key, **binding, "value": value})
-    if not materials and not morph_targets:
+    mesh_transform_edits: list[dict[str, Any]] = []
+    for key, values in appearance["mesh_transforms"].items():
+        if not values.get("mesh_name"):
+            raise HTTPException(
+                status_code=422,
+                detail="Mesh proportion edits need an imported mesh binding. Reopen the editor.",
+            )
+        mesh_transform_edits.append({"key": key, **values})
+    if not materials and not morph_targets and not mesh_transform_edits:
         raise HTTPException(status_code=422, detail="There are no appearance edits to export.")
     asset_id = str(uuid.uuid4())
     relative_path = f"assets/characters/{asset_id}.glb"
@@ -1391,7 +1409,8 @@ def export_character_appearance(
     destination.parent.mkdir(parents=True, exist_ok=True)
     try:
         inspection = get_engine_adapter().export_character_appearance(
-            source_path, materials, morph_targets, destination, allowed_root=project_root
+            source_path, materials, morph_targets, destination, allowed_root=project_root,
+            mesh_transforms=mesh_transform_edits,
         )
         if not inspection.get("appearance_verified"):
             raise HTTPException(
