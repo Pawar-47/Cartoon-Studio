@@ -27,10 +27,14 @@ REQUIRED_HUMANOID_BONES: dict[str, frozenset[str]] = {
     ),
     "RightFoot": frozenset({"rightfoot", "footr", "legjointr3"}),
     "LeftUpperArm": frozenset({"leftarm", "leftupperarm", "upperarml", "arml", "armjointl1"}),
-    "LeftLowerArm": frozenset({"leftforearm", "leftlowerarm", "forearml", "lowerarml", "armjointl2"}),
+    "LeftLowerArm": frozenset(
+        {"leftforearm", "leftlowerarm", "forearml", "lowerarml", "armjointl2"}
+    ),
     "LeftHand": frozenset({"lefthand", "handl", "armjointl3"}),
     "RightUpperArm": frozenset({"rightarm", "rightupperarm", "upperarmr", "armr", "armjointr1"}),
-    "RightLowerArm": frozenset({"rightforearm", "rightlowerarm", "forearmr", "lowerarmr", "armjointr2"}),
+    "RightLowerArm": frozenset(
+        {"rightforearm", "rightlowerarm", "forearmr", "lowerarmr", "armjointr2"}
+    ),
     "RightHand": frozenset({"righthand", "handr", "armjointr3"}),
 }
 _PREFIXES = (
