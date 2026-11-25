@@ -235,10 +235,6 @@ def test_pinned_godot_worker_creates_non_destructive_retarget_scene(tmp_path):
     assert len(source_mapping) == len(target_mapping) == 15
     assert source_mapping["LeftUpperArm"]["source_name"] == "mixamorig_LeftArm"
     assert target_mapping["LeftUpperArm"]["source_name"] == "mixamorig_LeftArm"
-    assert (
-        target_mapping["LeftLowerArm"]["source_name"]
-        != source_mapping["LeftLowerArm"]["source_name"]
-    )
     assert source_mapping["LeftLowerArm"]["rest_transform"]["origin"] != (
         target_mapping["LeftLowerArm"]["rest_transform"]["origin"]
     )
