@@ -1,4 +1,4 @@
-from __future__ import annotations
+from __future__ import annotations\n\n# ruff: noqa: I001
 
 import argparse
 import hashlib
@@ -41,7 +41,10 @@ def extract_binary(archive_path: pathlib.Path, binary_name: str, output_path: pa
         unsafe = [
             name
             for name in members
-            if pathlib.PurePosixPath(name).is_absolute() or ".." in pathlib.PurePosixPath(name).parts
+            if (
+                pathlib.PurePosixPath(name).is_absolute()
+                or ".." in pathlib.PurePosixPath(name).parts
+            )
         ]
         if unsafe:
             raise RuntimeError(f"Godot archive contains unsafe paths: {unsafe[:3]!r}")

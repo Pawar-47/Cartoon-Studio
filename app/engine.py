@@ -167,7 +167,8 @@ class GodotEngineAdapter:
         timeout = self.timeout_seconds if timeout_seconds is None else timeout_seconds
         if timeout <= 0 or timeout > MAX_TIMEOUT_SECONDS:
             raise ValueError(
-                f"Engine timeout must be greater than zero and at most {MAX_TIMEOUT_SECONDS:g} seconds."
+                "Engine timeout must be greater than zero and at most "
+                f"{MAX_TIMEOUT_SECONDS:g} seconds."
             )
 
         request_root = self.data_dir / "engine" / "requests"
@@ -205,7 +206,10 @@ class GodotEngineAdapter:
             ]
             process: subprocess.Popen | None = None
             try:
-                with stdout_path.open("wb") as stdout_handle, stderr_path.open("wb") as stderr_handle:
+                with (
+                    stdout_path.open("wb") as stdout_handle,
+                    stderr_path.open("wb") as stderr_handle,
+                ):
                     process = subprocess.Popen(
                         command,
                         cwd=self.worker_project,
@@ -220,7 +224,8 @@ class GodotEngineAdapter:
                                 raise EngineCancelledError("Godot worker request was cancelled.")
                             if time.monotonic() - started >= timeout:
                                 raise EngineTimeoutError(
-                                    f"Godot {operation} exceeded its {timeout:g}-second time budget."
+                                    f"Godot {operation} exceeded its {timeout:g}-second "
+                                    "time budget."
                                 )
                             time.sleep(0.05)
                     finally:
