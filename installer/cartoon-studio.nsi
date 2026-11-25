@@ -66,9 +66,21 @@ Section "Cartoon Studio" SEC_MAIN
     WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CartoonStudio" "DisplayVersion" "${APP_VERSION}"
     WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CartoonStudio" "InstallLocation" "$INSTDIR"
     WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CartoonStudio" "UninstallString" '"$INSTDIR\Uninstall.exe"'
+    WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CartoonStudio" "QuietUninstallString" '"$INSTDIR\Uninstall.exe" /S'
     WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CartoonStudio" "NoModify" 1
     WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CartoonStudio" "NoRepair" 1
 SectionEnd
+
+Function un.onInit
+    ; NSIS normally runs a temporary copy of the uninstaller. Restore the real
+    ; application directory from the per-user registry before touching files.
+    SetRegView 64
+    ReadRegStr $INSTDIR HKCU "Software\CartoonStudio" "InstallDir"
+    IfFileExists "$INSTDIR\CartoonStudio.exe" un_install_path_valid
+        SetErrorLevel 2
+        Abort
+    un_install_path_valid:
+FunctionEnd
 
 Section "Uninstall"
     SetShellVarContext current
