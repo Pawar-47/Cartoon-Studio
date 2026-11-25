@@ -13,6 +13,7 @@ const animationSelect = document.getElementById("animation-select");
 const playbackButton = document.getElementById("preview-playback");
 const playbackSpeed = document.getElementById("preview-speed");
 const exportPreviewButton = document.getElementById("export-preview-png");
+const exportTurnaroundButton = document.getElementById("export-turnaround-png");
 const frameButtons = document.querySelectorAll("[data-camera-frame]");
 const loader = new GLTFLoader();
 
@@ -25,6 +26,7 @@ let mixer = null;
 let clips = [];
 let activeAction = null;
 let playbackPaused = false;
+let previewFrozen = false;
 let clock = null;
 let cameraDistance = 3;
 let characterBounds = null;
@@ -89,6 +91,7 @@ function ensureRenderer() {
 
   renderer.setAnimationLoop(() => {
     const delta = clock.getDelta();
+    if (previewFrozen) return;
     if (mixer) mixer.update(delta);
     controls.update();
     renderer.render(scene, camera);
@@ -130,6 +133,7 @@ function updatePlaybackControls() {
   playbackButton.setAttribute("aria-pressed", String(!playbackPaused));
   playbackSpeed.disabled = !activeAction;
   exportPreviewButton.disabled = !currentObject;
+  exportTurnaroundButton.disabled = !currentObject;
   frameButtons.forEach((button) => { button.disabled = !currentObject; });
 }
 
@@ -319,6 +323,93 @@ export async function showCharacterPreview(buffer, label = "Character", appearan
 
 export function resetCharacterPreview() {
   frameCharacter("full");
+}
+
+
+export async function exportCharacterTurnaround({ width = 1024, transparent = true } = {}) {
+  if (!renderer || !currentObject || !camera || !scene || !controls) {
+    throw new Error("Load a character preview before exporting a turnaround sheet.");
+  }
+  const tileSize = Math.max(256, Math.min(1024, Math.round(Number(width) || 1024)));
+  const previousSize = renderer.getSize(new THREE.Vector2());
+  const previousPixelRatio = renderer.getPixelRatio();
+  const previousAspect = camera.aspect;
+  const previousPosition = camera.position.clone();
+  const previousQuaternion = camera.quaternion.clone();
+  const previousTarget = controls.target.clone();
+  const previousControlsEnabled = controls.enabled;
+  const previousBackground = scene.background;
+  const previousClearColor = renderer.getClearColor(new THREE.Color()).clone();
+  const previousClearAlpha = renderer.getClearAlpha();
+  const offset = previousPosition.clone().sub(previousTarget);
+  const horizontalRadius = Math.max(Math.hypot(offset.x, offset.z), 0.01);
+  const baseAngle = Math.atan2(offset.x, offset.z);
+  const labels = ["Current", "Side", "Rear", "Opposite"];
+  const sheet = window.document.createElement("canvas");
+  sheet.width = tileSize * 2;
+  sheet.height = tileSize * 2;
+  const context = sheet.getContext("2d");
+  if (!context) throw new Error("The browser could not create a 2D canvas for the turnaround sheet.");
+  const captureTile = () => new Promise((resolve, reject) => {
+    renderer.domElement.toBlob(
+      (blob) => blob ? resolve(blob) : reject(new Error("The browser could not encode a turnaround view.")),
+      "image/png",
+    );
+  });
+  previewFrozen = true;
+  controls.enabled = false;
+  try {
+    renderer.setPixelRatio(1);
+    renderer.setSize(tileSize, tileSize, false);
+    camera.aspect = 1;
+    camera.updateProjectionMatrix();
+    if (transparent) {
+      scene.background = null;
+      renderer.setClearColor(0x000000, 0);
+    }
+    for (let index = 0; index < 4; index += 1) {
+      const angle = baseAngle + (Math.PI / 2) * index;
+      camera.position.set(
+        previousTarget.x + Math.sin(angle) * horizontalRadius,
+        previousTarget.y + offset.y,
+        previousTarget.z + Math.cos(angle) * horizontalRadius,
+      );
+      camera.lookAt(previousTarget);
+      controls.update();
+      renderer.render(scene, camera);
+      const blob = await captureTile();
+      const bitmap = await createImageBitmap(blob);
+      const x = (index % 2) * tileSize;
+      const y = Math.floor(index / 2) * tileSize;
+      context.drawImage(bitmap, x, y, tileSize, tileSize);
+      bitmap.close?.();
+      context.fillStyle = "rgba(0, 0, 0, 0.55)";
+      context.fillRect(x + 12, y + tileSize - 38, 104, 26);
+      context.fillStyle = "#ffffff";
+      context.font = "600 13px sans-serif";
+      context.fillText(labels[index], x + 22, y + tileSize - 20);
+    }
+    return await new Promise((resolve, reject) => {
+      sheet.toBlob(
+        (blob) => blob ? resolve(blob) : reject(new Error("The browser could not encode the turnaround sheet.")),
+        "image/png",
+      );
+    });
+  } finally {
+    scene.background = previousBackground;
+    renderer.setClearColor(previousClearColor, previousClearAlpha);
+    renderer.setPixelRatio(previousPixelRatio);
+    renderer.setSize(previousSize.x, previousSize.y, false);
+    camera.position.copy(previousPosition);
+    camera.quaternion.copy(previousQuaternion);
+    camera.aspect = previousAspect;
+    camera.updateProjectionMatrix();
+    controls.target.copy(previousTarget);
+    controls.enabled = previousControlsEnabled;
+    controls.update();
+    previewFrozen = false;
+    renderer.render(scene, camera);
+  }
 }
 
 export async function exportCharacterPreview({ width = 1024, transparent = true } = {}) {

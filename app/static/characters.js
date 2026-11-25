@@ -1,5 +1,5 @@
 import { buildExpressionPreset } from "./character-expression-presets.js";
-import { showCharacterPreview, showRetargetPreview, exportCharacterPreview, getCharacterMaterials, applyCharacterAppearance, getCharacterMorphTargets, applyCharacterMorphTargets } from "./character-preview.js";
+import { showCharacterPreview, showRetargetPreview, exportCharacterPreview, exportCharacterTurnaround, getCharacterMaterials, applyCharacterAppearance, getCharacterMorphTargets, applyCharacterMorphTargets } from "./character-preview.js";
 const $=id=>document.getElementById(id);
 let activeProject="", importedAsset=null, activeCharacter=null, editingCharacter=null, appearanceRecipe={materials:{},morph_targets:{},morph_bindings:{}}, retargetCharacters=[], assemblyAssets=[], assemblyAccessories=[];
 const params=new URLSearchParams(window.location.search);
@@ -483,6 +483,20 @@ $("cancel-edit-profile").addEventListener("click",cancelProfileEdit);
 for(const name of proportionFields)$(name.replaceAll("_","-")).addEventListener("input",()=>{updateProportionLabels();updateProportionButton()});
 $("apply-proportions").addEventListener("click",applyBodyProportions);
 $("apply-hair").addEventListener("click",applyHairStyle);
+$("export-turnaround-png").addEventListener("click",async()=>{
+ const button=$("export-turnaround-png");button.disabled=true;
+ try{
+  const size=Math.min(Number($("preview-export-size").value)||1024,1024);
+  const blob=await exportCharacterTurnaround({width:size,transparent:$("preview-transparent").checked});
+  const url=URL.createObjectURL(blob),link=window.document.createElement("a");
+  const sourceName=activeCharacter?.name||importedAsset?.original_filename||"character";
+  const fileStem=String(sourceName).replace(/\.[^.]+$/,"").replace(/[^a-z0-9_-]+/gi,"-").toLowerCase()||"character";
+  link.href=url;link.download=fileStem+"-turnaround.png";link.click();
+  window.setTimeout(()=>URL.revokeObjectURL(url),1000);
+  $("preview-status").textContent="2 × 2 turnaround sheet exported ("+(size*2)+" × "+(size*2)+").";
+ }catch(error){$("preview-status").textContent="Turnaround export failed: "+error.message}
+ finally{button.disabled=false}
+});
 $("export-preview-png").addEventListener("click",async()=>{
  const button=$("export-preview-png");button.disabled=true;
  try{
