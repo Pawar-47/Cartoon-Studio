@@ -1,3 +1,4 @@
+import { buildExpressionPreset } from "./character-expression-presets.js";
 import { showCharacterPreview, showRetargetPreview, getCharacterMaterials, applyCharacterAppearance, getCharacterMorphTargets, applyCharacterMorphTargets } from "./character-preview.js";
 const $=id=>document.getElementById(id);
 let activeProject="", importedAsset=null, activeCharacter=null, editingCharacter=null, appearanceRecipe={materials:{},morph_targets:{}}, retargetCharacters=[], assemblyAssets=[], assemblyAccessories=[];
@@ -268,6 +269,21 @@ $("reset-expressions").addEventListener("click",()=>{
  applyCharacterMorphTargets(appearanceRecipe.morph_targets);buildMorphControls();
  $("appearance-status").textContent="Facial controls restored to imported defaults. Save to keep these values.";
 });
+function applyExpressionPreset(name){
+ const targets=getCharacterMorphTargets();
+ if(!targets.length)return;
+ const result=buildExpressionPreset(name,targets);
+ Object.assign(appearanceRecipe.morph_targets,result.weights);
+ applyCharacterMorphTargets(result.weights);
+ buildMorphControls();
+ const label=name.charAt(0).toUpperCase()+name.slice(1);
+ $("appearance-status").textContent=result.matched.length
+  ? label+" preset previewed: "+result.matched.length+" matching morph(s) changed; "+result.unmatched.length+" remain at imported defaults. Save to keep it."
+  : "No morph targets matched "+name+". Use the individual sliders; no unsupported shape was guessed.";
+}
+for(const button of document.querySelectorAll("[data-expression-preset]")){
+ button.addEventListener("click",()=>applyExpressionPreset(button.dataset.expressionPreset));
+}
 $("material-select").addEventListener("change",event=>selectMaterial(event.target.value));
 for(const id of ["material-color","material-roughness","material-metalness"])$(id).addEventListener("input",previewSelectedMaterial);
 $("save-appearance").addEventListener("click",async()=>{
