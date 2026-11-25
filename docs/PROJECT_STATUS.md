@@ -4,11 +4,11 @@
 
 - Repository: Pawar-47/Cartoon-Studio
 - Branch: main
-- Latest implementation checkpoint: `bdad978422518ce737809bb4e8c0a1b9a878daaf`
+- Latest implementation checkpoint: `570c6f9b2d0fe35b64ec74e84ab8d0e702d7665d`
 - Phase 0: COMPLETE.
 - Phase 1: COMPLETE.
 - Phase 2 — Character Studio: ACTIVE; import, preview, profiles, appearance recipes, rig diagnostics and the first user-facing imported-rig retarget workflow are implemented. Phase 2 is not complete.
-- Windows CI #281: full Windows pipeline PASSED on `dd0354d8c264a5d2449a0b5249b0502e5b9b6be8`; the subsequent rig-compatibility commits are awaiting their own CI run, including lint, compilation, full tests, Godot worker, bootstrap, both self-contained builds, NSIS installer and clean install/upgrade/uninstall/reinstall lifecycle.
+- Windows CI #299: full Windows pipeline PASSED on `570c6f9b2d0fe35b64ec74e84ab8d0e702d7665d`, including lint, Python compilation, full pytest, pinned Godot 4.7.2 worker, bootstrap, both self-contained builds, NSIS installer and clean install/upgrade/uninstall/reinstall lifecycle.
 - Dedicated Godot native-worker proof #18 PASSED.
 - Chat-independent continuation record: `docs/SESSION_CHECKPOINT.md`.
 
@@ -17,19 +17,19 @@
 - Local project-contained GLB 2.0 import, validation, provenance and Godot inspection.
 - Browser GLB preview and imported animation selection.
 - Persistent versioned character profiles.
-- Non-destructive material appearance recipes and existing facial morph-target sliders.
-- Indexed 15-bone humanoid mapping, parent-chain diagnostics and per-bone rest-transform measurements; common 3ds Max Biped, Character Creator, Unreal-style and Blender Rigify naming aliases are now recognized in code, with dedicated tests awaiting CI.
+- Non-destructive material appearance recipes and facial morph-target sliders; Godot inspection reports imported blend-shape names/defaults, controls accept signed weights from -1 to 1, and reset restores each imported default.
+- Indexed 15-bone humanoid mapping, parent-chain diagnostics and per-bone rest-transform measurements; common 3ds Max Biped, Character Creator, Unreal-style, Blender Rigify and Cesium Rigged Figure bone names are recognized. Duplicate/negative hierarchy indices are rejected.
 - Imported-GLB retarget workflow with source/target selection, strict preflight, Godot scene creation, persistent history and scene download.
-- Worker verifies that the reopened source AnimationPlayer starts and that its upper-arm pose reaches the target skeleton after 72 frames. Failed pose verification removes the generated scene.
-- Retarget history displays source/target pose angles and verification state.
+- Worker verifies that the reopened source AnimationPlayer starts, the source pose changes, and the target upper-arm pose matches Godot's model-space rest-corrected retarget transform after 72 frames. This validates different rest axes without incorrectly requiring raw local rotation angles to match. Failed pose verification removes the generated scene.
+- Retarget history displays source/target local pose angles as rest-axis-dependent diagnostics plus the transfer verification state.
 - Saved retargets now expose an in-app browser preview: Three.js retargets the selected source clip onto the saved target GLB using persisted canonical humanoid mappings. The saved Godot scene remains authoritative; browser preview is a separate visual aid, not proof of native-scene rendering.
 - Original source and target GLBs remain byte-identical.
 
 ## Distinct imported fixture coverage
 
-The source fixture is a separate animated GLB with Mixamo-style names; the target is a separate Mixamo-named imported GLB with different arm/leg rest proportions, reordered raw skin joints and recalculated inverse-bind matrices. The worker now remaps source animation track paths before normalizing source bone names. Windows CI #278's full test step passed this actual Godot worker scenario, including source animation playback, pose transfer after scene save/reopen and byte-identical preservation of both source files.
+The synthetic source/target fixture pair still verifies Mixamo-style animation track remapping, different limb proportions, reordered raw skin joints, scene save/reopen and byte-identical source preservation. In addition, `tests/fixtures/third_party/rigged_figure_ccby.glb` is an unchanged Khronos Cesium Rigged Figure asset (CC-BY-4.0) with a different 19-joint hierarchy and naming convention. The worker maps its 15 core humanoid bones and successfully retargets its real animation to the canonical target in Godot after scene save/reopen. Attribution and the upstream license are retained beside the fixture.
 
-Godot may normalize raw skin-joint ordering during import. The application uses the actual bone names and indices returned by the Godot inspection worker, not raw GLB array positions. This is bounded native-worker fixture acceptance, not arbitrary third-party GLB acceptance. New name-normalization tests cover four common DCC naming families; they are committed but not yet CI-validated. Rest-pose axes, scale, bone roll and multi-clip behavior still require fixture-based acceptance.
+Godot may normalize raw skin-joint ordering during import. The application uses the actual bone names and indices returned by the Godot inspection worker, not raw GLB array positions. Windows CI #299 passed the full real third-party Rigged Figure inspection and retarget test. This is one accepted third-party model, not blanket compatibility. Other rig families, extreme rest-pose axes, bone roll, scale variation, multi-clip animation and broader facial morph models still require fixture-based acceptance.
 
 ## Phase status
 

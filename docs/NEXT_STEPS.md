@@ -2,14 +2,14 @@
 
 ## Active batch — Phase 2 Character Studio
 
-The first user-facing non-destructive imported-GLB retarget workflow is implemented. Saved retarget preview API and UI are covered by the successful Windows CI #281 run. It includes source/target selectors, preflight validation, a saved Godot scene, a persistent project record, scene download, and a runtime check that the reopened source animation transfers its pose to the target skeleton.
+The first user-facing non-destructive imported-GLB retarget workflow and saved browser preview are implemented. Windows CI #299 passed the complete pipeline, including a real third-party Khronos Rigged Figure retargeted onto the canonical target after scene save/reopen. It includes source/target selectors, preflight validation, a saved Godot scene, a persistent project record, scene download, and a runtime check that the reopened source animation transfers its pose to the target skeleton.
 
 Saved retarget records now also have a browser preview action. The preview endpoint resolves the project's original source/target GLBs and canonical humanoid mappings; the browser uses the locally vendored Three.js SkeletonUtils retarget pass to animate the target GLB. This is a visual aid, not the authoritative saved-scene renderer. The Godot scene remains the authoritative native artifact.
 
 ## Verification
 
-- Windows CI #281 passed on commit `dd0354d8c264a5d2449a0b5249b0502e5b9b6be8` on 2026-11-25. It passed lint, Python compilation, the full pytest suite including the pinned Godot 4.7.2 worker test, bootstrap package/smoke, both self-contained builds, NSIS installer, install/upgrade/uninstall/reinstall lifecycle and artifact upload.
-- CI #281 also validated the saved retarget-preview API contract. The later commits adding DCC bone-name aliases, malformed-index rejection and four naming-family tests are newer than that run and remain pending CI.
+- Windows CI #299 passed on commit `570c6f9b2d0fe35b64ec74e84ab8d0e702d7665d` on 2026-11-25: Ruff lint, Python compilation, full pytest including pinned Godot 4.7.2 tests, third-party GLB inspection and retarget, morph-target inspection, bootstrap smoke, both self-contained builds, NSIS installer and full install/upgrade/uninstall/reinstall lifecycle.
+- Windows CI #293 also passed the complete pipeline for Godot facial blend-shape inspection, imported default values, signed morph weights and Character Studio reporting.
 - Earlier Windows CI #279 passed on commit 56c61487089097108b6baa862f9ac9125568b9a5: lint, Python compilation, full pytest suite including the pinned Godot 4.7.2 worker scenario, Windows bootstrap packaging/smoke test, both self-contained application builds, NSIS installer compilation, clean install, upgrade, uninstall, reinstall and artifact uploads.
 - CI #279 artifacts: Windows installer (103,861,406 bytes), bootstrap (819,154 bytes), dependency SBOM (32,632 bytes).
 - The worker test covers a Mixamo-named animated source and a distinct differently proportioned target; it checks source animation playback, pose transfer after scene save/reopen and byte-identical source asset preservation.
@@ -17,10 +17,10 @@ Saved retarget records now also have a browser preview action. The preview endpo
 
 ## Next substantial batch
 
-1. Validate the newly committed naming coverage for 3ds Max Biped, Character Creator, Unreal-style and Blender Rigify skeletons in CI; then add real imported GLB fixtures.
-2. Exercise rest-pose axes, bone roll, scale and multi-clip animation behavior; report compatibility limits instead of guessing.
-3. Validate real facial morph controls on blend-shape GLBs, including preview, save/reopen and neutral reset.
-4. Compare browser preview motion against the authoritative Godot scene before expanding deterministic export.
+1. Expand third-party acceptance beyond the single Khronos Rigged Figure model, prioritizing different rest axes, bone roll, proportions and multi-clip animations.
+2. Add a real facial blend-shape model fixture and verify browser preview, save/reopen, signed weights and reset-to-imported-default behavior.
+3. Compare browser retarget preview motion against the authoritative Godot scene across multiple rig families.
+4. Continue deterministic export and animation round-trip after broader compatibility acceptance.
 
 ## Deferred to their specified phases
 

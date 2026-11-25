@@ -69,7 +69,7 @@ async function loadRetargets(){
   const row=document.createElement("div");row.className="retarget-record";
   const title=document.createElement("strong");title.textContent=(item.data.source_character_name||"Source")+" → "+(item.data.target_character_name||"Target");
   const poseLabel=item.data.pose_transferred?"pose transfer verified":"pose transfer unverified";
-  const angles=Number.isFinite(item.data.source_pose_angle_degrees)&&Number.isFinite(item.data.target_pose_angle_degrees)?" · "+Number(item.data.source_pose_angle_degrees).toFixed(1)+"° → "+Number(item.data.target_pose_angle_degrees).toFixed(1)+"°":"";
+  const angles=Number.isFinite(item.data.source_pose_angle_degrees)&&Number.isFinite(item.data.target_pose_angle_degrees)?" · local angles (source/target; rest-axis dependent): "+Number(item.data.source_pose_angle_degrees).toFixed(1)+"° / "+Number(item.data.target_pose_angle_degrees).toFixed(1)+"°":"";
   const detail=document.createElement("span");detail.textContent=(item.data.animation_name||"Imported animation")+" · "+item.data.mapped_bone_count+"/15 bones · "+(item.data.scene_reopened?"scene reopened":"scene saved")+" · "+poseLabel+angles;
   const previewButton=document.createElement("button");previewButton.type="button";previewButton.className="secondary preview-saved";previewButton.textContent="Preview retarget";
   previewButton.addEventListener("click",async()=>{

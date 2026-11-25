@@ -1,5 +1,16 @@
 # Test Report — 2026-11-25
 
+## Phase 2 — third-party humanoid retarget and facial morph inspection — 2026-11-25
+
+- Windows CI #299: [SUCCESS](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45629963495) on commit `570c6f9b2d0fe35b64ec74e84ab8d0e702d7665d`.
+- Full pipeline passed: Ruff, Python compilation, full pytest, pinned Godot 4.7.2 worker, dependency-lock checks, CycloneDX SBOM, Windows bootstrap package/smoke, both self-contained application builds, NSIS installer and clean install/upgrade/uninstall/reinstall lifecycle.
+- Added the unchanged Khronos glTF Sample Assets **Rigged Figure** GLB (Cesium, 2017, CC-BY-4.0) with its upstream license and attribution. The Godot worker imports its distinct 19-joint rig, maps 15 core humanoid bones, and retargets its animated source to the canonical target after saving and reopening the scene. Both source and target files are checked byte-identical after the proof.
+- The first real-model assertion exposed that comparing raw source/target local rotation angles is invalid when rest axes and bone-roll conventions differ. The worker now validates the target pose against Godot's documented model-space rest-correction transform, while separately requiring the source animation to be playing and the source pose to have changed. The full real-model test passes in CI #299.
+- Windows CI #293: [SUCCESS](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45628963188) for Godot facial blend-shape import reporting, the valid two-target GLB fixture, Character Studio blend-shape reporting, signed morph weights and reset-to-imported-default behavior.
+- Windows CI #285: [SUCCESS](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45627949590) for 3ds Max Biped, Character Creator, Unreal-style and Blender Rigify naming tests plus malformed hierarchy rejection.
+- Compatibility remains PARTIAL: one real third-party humanoid model has passed native retarget acceptance. This does not establish universal GLB support, multi-clip support, every rest-pose convention or browser/native visual equivalence. The morph fixture is synthetic; a real facial model remains to be tested.
+
+
 ## Phase 2 retarget-preview and DCC rig compatibility — 2026-11-25
 
 - Windows CI #281: [SUCCESS](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45626571819) on commit `dd0354d8c264a5d2449a0b5249b0502e5b9b6be8`.
