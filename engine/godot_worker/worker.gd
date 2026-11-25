@@ -395,9 +395,17 @@ func _export_character_appearance(payload: Dictionary) -> Dictionary:
     var export_nodes: Array = export_json.get("nodes", [])
     for morph_mesh in morph_export_meshes:
         var gltf_node_index := export_state.get_node_index(morph_mesh)
+        if gltf_node_index < 0:
+            var matching_node_indices: Array[int] = []
+            for candidate_index in range(export_nodes.size()):
+                var candidate_node: Dictionary = export_nodes[candidate_index]
+                if str(candidate_node.get("name", "")) == str(morph_mesh.name) and candidate_node.has("mesh"):
+                    matching_node_indices.append(candidate_index)
+            if matching_node_indices.size() == 1:
+                gltf_node_index = matching_node_indices[0]
         if gltf_node_index < 0 or gltf_node_index >= export_nodes.size():
             scene.queue_free()
-            return {"error_code": "morph_node_export_mapping_failed", "error": "Godot could not map an edited facial mesh to its exported glTF node."}
+            return {"error_code": "morph_node_export_mapping_failed", "error": "Godot could not map edited facial mesh " + str(morph_mesh.name) + " to its exported glTF node."}
         var weights: Array = []
         for shape_index in range(morph_mesh.get_blend_shape_count()):
             weights.append(morph_mesh.get_blend_shape_value(shape_index))
