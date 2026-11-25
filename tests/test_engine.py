@@ -79,6 +79,7 @@ def test_godot_worker_ping_and_glb_inspection(tmp_path):
     assert ping["engine_version"].startswith("4.7.2")
     assert "glb_inspect" in ping["capabilities"]
     assert "skeleton_report" in ping["capabilities"]
+    assert "probe_glb_animation" in ping["capabilities"]
 
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -173,6 +174,19 @@ def test_godot_worker_assembles_four_parts_from_distinct_shared_rig_outfits(tmp_
     assert len(result["added_accessories"]) == 1
     assert result["added_accessories"][0]["mesh_name"].lower().find("backpack") >= 0
     assert result["mesh_count"] >= 5
+    probe = adapter.probe_glb_animation(
+        output_path,
+        "Walk",
+        allowed_root=project_root,
+        sample_ratio=0.37,
+        timeout_seconds=60,
+    )
+    assert probe["ok"] is True
+    assert probe["animation_name"] == "Walk"
+    assert probe["pose_changed"] is True
+    assert probe["changed_bone_count"] > 0
+    assert probe["skinned_mesh_count"] >= 4
+    assert probe["bone_count"] == result["skeletons"][0]["bone_count"]
 
 
 @pytest.mark.skipif(not HAS_GODOT, reason="Pinned Godot runtime is supplied by Windows CI.")
@@ -226,6 +240,22 @@ def test_modular_assembly_rejects_reusing_the_same_source_mesh(tmp_path):
             parts,
             root / "assembled.glb",
             allowed_root=root,
+        )
+
+
+def test_animation_probe_rejects_outside_paths_and_invalid_sample_ratio(tmp_path):
+    root = tmp_path / "project"
+    root.mkdir()
+    outside = tmp_path / "outside.glb"
+    outside.write_bytes(b"fixture")
+    adapter = GodotEngineAdapter(data_dir=tmp_path)
+    with pytest.raises(ValueError, match="escapes"):
+        adapter.probe_glb_animation(outside, "Walk", allowed_root=root)
+    source = root / "character.glb"
+    source.write_bytes(b"fixture")
+    with pytest.raises(ValueError, match="between 0 and 1"):
+        adapter.probe_glb_animation(
+            source, "Walk", allowed_root=root, sample_ratio=1.5
         )
 
 
