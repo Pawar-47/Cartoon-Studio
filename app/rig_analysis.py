@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import re
 from collections.abc import Mapping
 from typing import Any
@@ -85,7 +86,7 @@ def _summarize_rest_pose(
             x, y, z = (float(value) for value in origin)
         except (TypeError, ValueError):
             continue
-        if not all(__import__("math").isfinite(value) for value in (x, y, z)):
+        if not all(math.isfinite(value) for value in (x, y, z)):
             continue
         segment_lengths[profile_bone] = round((x * x + y * y + z * z) ** 0.5, 6)
     return {
