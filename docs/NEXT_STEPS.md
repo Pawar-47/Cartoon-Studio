@@ -26,3 +26,11 @@
 - One substantial batch, one coherent commit, then one CI run; fix failures within the active batch.
 - Never claim installer, rendering, voice, lip-sync or target-hardware support without direct evidence.
 - No mandatory paid services, quota bypass or cloud-render dependency.
+
+## P0.3 — next research work
+
+Sweep 1 is recorded; P0.3 remains open. Continue with source-level comparison of the full local engine/render path, browser editor/preview options, Blender 4.5 target compatibility, procedural world generators, toon material/outline techniques, animation retargeting, Urdu phoneme alignment, FFmpeg codec/licensing and AI-provider integrations. Record exact versions, source paths, upstream CI, dependency/license facts and gaps. Do not copy candidate code or assets.
+
+Then P0.4 must verify the actual HD 5500 driver and run a bounded target-PC compatibility benchmark; test Pakistani Urdu samples and evaluate the Qwen-Audio-TTS Flash cloud option against cost, Pakistan region access, terms and privacy. No paid/cloud option becomes mandatory.
+
+Do not begin production features before P0.7. Preserve the current Story Generator and keep it frozen until Phase 4.

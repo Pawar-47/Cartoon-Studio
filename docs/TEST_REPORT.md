@@ -42,3 +42,15 @@ Ara foundation proof run #6 remains CANCELLED during MP4 export. It is not accep
 ## Evidence policy
 
 A green CI run proves only the checks that actually ran. Source presence, documentation, a schema validator, a mockup or a partial candidate demo is not proof of end-to-end functionality. Do not mark a requirement VERIFIED without direct acceptance evidence.
+
+## P0.2 final batch CI
+- Final P0.2 commit: `d997115db8fab5dbe1f899681fd47f2800222378`.
+- Final workflow run #71: SUCCESS — https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45553395541
+- Intermediate P0.2 identifier/checkpoint corrections triggered runs #69 and #70 before the final corrected commit; both also succeeded. This was more than the intended one CI run for a single batch. The final result is #71; future batches should avoid rewriting pushed commits after CI starts.
+
+## P0.3 research evidence (not app tests)
+- Bene Procgen Maps upstream Actions #18 SUCCESS on `f883ddb59eadcff319d3b28eee59da90d7c8c21f`.
+- Blender Level Architect upstream Actions #87 SUCCESS on `660e2113a2987a172f001a95d305e303b6a2aad9`.
+- sqlite-workqueue upstream Actions #19 SUCCESS on `4f7cf094a77ea44f984de61b39a13594efd5f7c5`.
+- Ekza's inspected GitHub Actions runs #1–#3 were cancelled; Ara/3d-gen's inspected CI run failed and Cartoon Studio's Ara proof #6 remains cancelled. These candidates are not accepted.
+- No candidate was executed on the target PC. Upstream CI is evidence about the upstream repository only; it does not prove Cartoon Studio integration or target compatibility.
