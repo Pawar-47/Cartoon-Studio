@@ -288,3 +288,10 @@ Added API coverage for saving morph-target weights and rejecting values outside 
 - Local targeted run: `python -m pytest -o addopts= -q -rs tests/test_characters.py` — **16 passed**. Node.js was unavailable on the local PATH.
 - Windows GitHub Actions [CI #429](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45691314081) passed on `4945beb7555c55fed2477de405e4e1a1b5b0f9a9`, including Node-backed helper tests, JavaScript syntax checks, Ruff, Python compilation and the full pytest suite. Packaging/installer validation was not part of this quick workflow.
 - PR #21 remains open and separate from PR #20. No fresh visual browser acceptance was performed for this batch; Phase 2 and P2.2 remain active/partial.
+
+## 2026-11-25 — Isolated branch integration validation
+
+- Integrated the live proportion-preview/composable-edit branch, four-view turnaround export, Idle-default preview and geometry-aware hairstyle fit in a separate worktree based on `origin/main` at `4d2a7848b7c123358b868f56eac0704a80f6c58d`. The original checkout, user WIP stash and remote `main` were not changed during validation.
+- `python -m pytest -o addopts= -q -rs tests/test_engine.py`: **14 passed** with the pinned Godot 4.7.2 runtime. Coverage includes short hair and ponytail placement on the real Male Adventurer, retained animation playback and unchanged source bytes.
+- `python -m pytest -o addopts= -q -rs`: **121 passed, 4 skipped**. Three skips require Node.js and one requires symlink support unavailable in this environment. One existing Starlette/httpx deprecation warning was reported.
+- The integrated test run completed locally; the combined commit still requires GitHub Actions validation. No new browser visual acceptance was performed, so P2.2 remains PARTIAL.

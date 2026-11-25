@@ -2,9 +2,15 @@
 
 ## Current checkpoint
 
-Main is `4d2a7848b7c123358b868f56eac0704a80f6c58d`; main CI #426 passed. PR #20, four-view turnaround export, remains open with CI #428 passed. PR #21, character-preview polish, is open from `work/character-preview-polish` with CI #429 passed. It prefers exact Idle clips, then Idle variants, and avoids playing a RESET-only clip. Phase 2 remains active; automated coverage does not count as new interactive visual acceptance.
+The isolated integration branch is based on `origin/main` at `4d2a7848b7c123358b868f56eac0704a80f6c58d` and locally merges the proportion-preview, four-view turnaround, Idle-preview and hairstyle-fit work. GitHub has not yet been updated with this integration. The combined local pytest suite passed 121 tests with four environment-related skips; browser visual acceptance remains outstanding. Phase 2 remains active and P2.2 remains PARTIAL.
 
-The preview-polish branch is based on current main and remains separate from PR #20. P2.2 remains PARTIAL.
+The local integration is being tested before updating GitHub `main`; preserve the source checkout and WIP stash until push and CI are confirmed. P2.2 remains PARTIAL.
+
+## Branch consolidation — locally validated
+
+- The isolated integration includes the proportion-preview/composable-edit work, PR #20 turnaround export, PR #21 Idle-preview behavior and the hairstyle-fit fix.
+- Local validation passed: 14 pinned-Godot engine tests and 121 full-suite tests; four skips require Node.js or symlink support.
+- Next operational gate: publish the tested integration to `main`, verify GitHub Actions, then remove only branches proven redundant. Preserve the WIP stash.
 
 ## Completed continuation batch — Character preview defaults
 

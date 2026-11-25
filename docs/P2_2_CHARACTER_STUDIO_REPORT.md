@@ -158,3 +158,19 @@ The app-side library foundation exposes a catalog and lazy-download model route.
 - Saved the edited character profile, reloaded the page, reopened the profile and confirmed the 1.10 torso value, 24 animation clips and working Walk playback controls. A separate synthetic fixture also passed the same functional edit/save/reopen path; it is not suitable for visual-quality judgment.
 - Browser inspection found and fixed two UI defects: the empty-preview label remained visible because the CSS `display:grid` rule overrode the `hidden` attribute, and the saved-character rendering loop shadowed the global `document`, causing `document.createElement` failures after save. The profile cards and preview placeholder now behave correctly.
 - The pinned Adventurer preview showed an actual rendered character and a visible body-shape change, but its hierarchy warnings and the limited number of inspected models prevent broad visual signoff. Imported face/hair authoring and morph-capable browser acceptance remain open.
+
+## 2026-11-25 — Geometry-aware hairstyle placement regression
+
+- Corrected generated-hair fitting to use the skinned head mesh's bounds transformed into Head-bone rest space instead of whole-skeleton height. Face-feature surface geometry is used to infer which side is the front; rigs without an identifiable head mesh retain the existing fallback.
+- Added a real Male Adventurer regression for short hair and ponytail. It confirms named face-feature surfaces determine the expected front direction; pinned Godot 4.7.2 passed export/re-import placement checks, retained all source animation names, played Walk after export, and left the source GLB byte-identical.
+- `python -m pytest -o addopts= -q -rs tests\test_engine.py`: **14 passed** after fetching the pinned CC0 RobotExpressive fixture using the repository checksum-verifying script. The focused hair-fit test passed independently.
+- Full local `python -m pytest -o addopts= -q -rs`: **121 passed, 4 skipped** in 101.42 seconds; only three Node.js suites and one symlink-capability test were skipped.
+- A fresh browser screenshot could not be captured, so this does not establish visual quality or saved-profile behavior. Broad hairstyle acceptance, PNG review, original face geometry and the P2.2 exit criteria remain open.
+
+
+## 2026-11-25 — Integrated Character Studio feature verification
+
+- The isolated integration combines live proportion preview/composable edits, four-view turnaround export, Idle-first preview behavior and geometry-aware hairstyle placement without changing the original checkout or its WIP stash.
+- With the pinned Godot 4.7.2 runtime, `tests/test_engine.py` passed **14 tests**. The Male Adventurer regression verifies head-bound fitting, face-feature front orientation, short-hair/ponytail placement, retained animation clips and playback, and byte-identical source preservation.
+- The integrated local suite passed **121 tests with 4 environment-related skips** (three Node.js cases and one symlink-capability case). GitHub Actions validation for the combined commit remains pending.
+- No fresh browser visual acceptance was completed. Hair/portrait/turnaround appearance review, saved-profile visual review, original face geometry and broader rig compatibility remain open; P2.2 is still PARTIAL.

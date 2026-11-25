@@ -237,6 +237,58 @@ def test_godot_worker_generates_attached_hair_and_preserves_animation(tmp_path):
 
 
 @pytest.mark.skipif(not HAS_GODOT, reason="Pinned Godot runtime is supplied by Windows CI.")
+def test_godot_worker_fits_hair_to_real_adventurer_head_and_keeps_source_unchanged(tmp_path):
+    adapter = GodotEngineAdapter(data_dir=tmp_path, timeout_seconds=120)
+    project_root = tmp_path / "adventurer-hair-project"
+    project_root.mkdir()
+    source = ensure_model_asset(
+        project_root / "assets" / "character-library", "Male", "Adventurer"
+    )
+    original_bytes = source.read_bytes()
+    before = adapter.inspect_glb(source, allowed_root=project_root)
+    assert before["animation_names"]
+    assert any(
+        mesh["slot_candidate"] == "head" and mesh["skin_bound"]
+        for mesh in before["mesh_inventory"]
+    )
+
+    for style in ("short", "ponytail"):
+        output = project_root / "assets" / f"adventurer-{style}.glb"
+        result = adapter.add_character_hair(
+            source,
+            style,
+            "#2b1b13",
+            output,
+            allowed_root=project_root,
+            timeout_seconds=120,
+        )
+        assert result["hair_verified"] is True
+        assert result["hair_placement_verified"] is True
+        assert result["hair_fit_basis"] == "head_mesh_bounds"
+        assert result["hair_front_direction"] == pytest.approx(1.0)
+        assert result["hair_front_direction_basis"] == "face_feature_surfaces"
+        assert result["hair_cap_clearance_verified"] is True
+        assert result["hair_attachment_verified"] is True
+        assert result["animation_names"] == before["animation_names"]
+        assert result["hair_head_bounds_in_bone_space"]["size"][1] > 0
+        if style == "short":
+            assert result["hair_fringe_front_verified"] is True
+        else:
+            assert result["hair_ponytail_back_verified"] is True
+        assert output.is_file()
+        assert source.read_bytes() == original_bytes
+
+    playback = adapter.probe_glb_animation(
+        project_root / "assets" / "adventurer-ponytail.glb",
+        "Walk",
+        allowed_root=project_root,
+        timeout_seconds=60,
+    )
+    assert playback["pose_changed"] is True
+    assert playback["skinned_mesh_count"] >= 1
+
+
+@pytest.mark.skipif(not HAS_GODOT, reason="Pinned Godot runtime is supplied by Windows CI.")
 def test_godot_worker_bakes_humanoid_body_proportions_and_preserves_animation(tmp_path):
     adapter = GodotEngineAdapter(data_dir=tmp_path, timeout_seconds=120)
     project_root = tmp_path / "proportion-project"

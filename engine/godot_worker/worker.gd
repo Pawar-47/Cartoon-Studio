@@ -503,6 +503,82 @@ func _add_hair_primitive(parent: Node, scene_owner: Node, primitive: Mesh, mesh_
     instance.owner = scene_owner
 
 
+func _transform_aabb(bounds: AABB, transform: Transform3D) -> AABB:
+    var minimum := Vector3(INF, INF, INF)
+    var maximum := Vector3(-INF, -INF, -INF)
+    for x in [bounds.position.x, bounds.end.x]:
+        for y in [bounds.position.y, bounds.end.y]:
+            for z in [bounds.position.z, bounds.end.z]:
+                var point := transform * Vector3(x, y, z)
+                minimum = Vector3(
+                    minf(minimum.x, point.x),
+                    minf(minimum.y, point.y),
+                    minf(minimum.z, point.z)
+                )
+                maximum = Vector3(
+                    maxf(maximum.x, point.x),
+                    maxf(maximum.y, point.y),
+                    maxf(maximum.z, point.z)
+                )
+    return AABB(minimum, maximum - minimum)
+
+
+func _mesh_to_bone_transform(mesh_instance: MeshInstance3D, skeleton: Skeleton3D, bone_index: int) -> Transform3D:
+    var mesh_to_skeleton := skeleton.global_transform.affine_inverse() * mesh_instance.global_transform
+    return skeleton.get_bone_global_rest(bone_index).affine_inverse() * mesh_to_skeleton
+
+
+func _mesh_bounds_in_bone_space(mesh_instance: MeshInstance3D, skeleton: Skeleton3D, bone_index: int) -> AABB:
+    return _transform_aabb(
+        mesh_instance.mesh.get_aabb(),
+        _mesh_to_bone_transform(mesh_instance, skeleton, bone_index)
+    )
+
+
+func _head_front_direction(
+    mesh_instance: MeshInstance3D,
+    skeleton: Skeleton3D,
+    bone_index: int,
+    head_center: Vector3
+) -> Dictionary:
+    var mesh_to_bone := _mesh_to_bone_transform(mesh_instance, skeleton, bone_index)
+    var feature_materials := ["eye", "brow", "mouth", "lip", "face"]
+    var feature_center_z := 0.0
+    var feature_surface_count := 0
+    for surface_index in range(mesh_instance.mesh.get_surface_count()):
+        var material := mesh_instance.get_active_material(surface_index)
+        var surface_label := str(mesh_instance.mesh.surface_get_name(surface_index))
+        if material != null:
+            surface_label += " " + str(material.resource_name)
+        var is_face_feature := false
+        for token in feature_materials:
+            if surface_label.to_lower().contains(token):
+                is_face_feature = true
+                break
+        if not is_face_feature:
+            continue
+        var surface_arrays := mesh_instance.mesh.surface_get_arrays(surface_index)
+        if surface_arrays.size() <= Mesh.ARRAY_VERTEX:
+            continue
+        var vertex_value: Variant = surface_arrays[Mesh.ARRAY_VERTEX]
+        if typeof(vertex_value) != TYPE_PACKED_VECTOR3_ARRAY:
+            continue
+        var vertices: PackedVector3Array = vertex_value
+        if vertices.is_empty():
+            continue
+        var surface_center := Vector3.ZERO
+        for vertex in vertices:
+            surface_center += mesh_to_bone * vertex
+        feature_center_z += surface_center.z / float(vertices.size())
+        feature_surface_count += 1
+    if feature_surface_count == 0:
+        return {"direction": 1.0, "basis": "default_positive_z"}
+    return {
+        "direction": 1.0 if feature_center_z / float(feature_surface_count) >= head_center.z else -1.0,
+        "basis": "face_feature_surfaces"
+    }
+
+
 func _add_character_hair(payload: Dictionary) -> Dictionary:
     var project_root := _normalise_path(str(payload.get("project_root", "")))
     var source_path := _normalise_path(str(payload.get("source_path", "")))
@@ -540,12 +616,14 @@ func _add_character_hair(payload: Dictionary) -> Dictionary:
         return {"error_code": "hair_skeleton_count", "error": "Generated hairstyles require exactly one humanoid Skeleton3D."}
     var skeleton := skeleton_nodes[0] as Skeleton3D
     var head_bone_name := ""
+    var head_bone_index := -1
     for bone_index in range(skeleton.get_bone_count()):
         var bone_name := str(skeleton.get_bone_name(bone_index))
         var parts := bone_name.to_lower().split(":")
         var token := str(parts[parts.size() - 1]).replace("_", "").replace(" ", "")
         if token == "head":
             head_bone_name = bone_name
+            head_bone_index = bone_index
             break
     if head_bone_name.is_empty():
         scene.queue_free()
@@ -566,6 +644,62 @@ func _add_character_hair(payload: Dictionary) -> Dictionary:
         min_y = minf(min_y, bone_position.y)
         max_y = maxf(max_y, bone_position.y)
     var radius := maxf(max_y - min_y, 0.8) * 0.075
+    var head_bounds := AABB()
+    var head_bounds_found := false
+    var head_center := Vector3.ZERO
+    var head_front_z := radius
+    var head_back_z := -radius
+    var head_front_direction := 1.0
+    var head_front_direction_basis := "skeleton_positive_z"
+    var head_mesh_for_orientation: MeshInstance3D = null
+    var head_priority := -1
+    var largest_head_volume := 0.0
+    for mesh_node in scene.find_children("*", "MeshInstance3D", true, false):
+        var mesh_instance := mesh_node as MeshInstance3D
+        if mesh_instance.mesh == null or mesh_instance.skin == null:
+            continue
+        var bound_skeleton := mesh_instance.get_node_or_null(mesh_instance.get_skeleton_path()) as Skeleton3D
+        if bound_skeleton != skeleton:
+            continue
+        var mesh_label := str(mesh_instance.name) + " " + str(mesh_instance.mesh.resource_name) + " " + str(scene.get_path_to(mesh_instance))
+        if _classify_mesh_slot(mesh_label) != "head":
+            continue
+        var candidate_bounds := _mesh_bounds_in_bone_space(mesh_instance, skeleton, head_bone_index)
+        if candidate_bounds.size.x <= 0.01 or candidate_bounds.size.y <= 0.01 or candidate_bounds.size.z <= 0.01:
+            continue
+        var candidate_priority := 2 if mesh_label.to_lower().contains("head") else 1
+        var candidate_volume := candidate_bounds.size.x * candidate_bounds.size.y * candidate_bounds.size.z
+        if candidate_priority < head_priority or (
+            candidate_priority == head_priority and candidate_volume <= largest_head_volume
+        ):
+            continue
+        head_priority = candidate_priority
+        largest_head_volume = candidate_volume
+        head_bounds = candidate_bounds
+        head_bounds_found = true
+        head_mesh_for_orientation = mesh_instance
+    var cap_position := Vector3(0, radius * 0.32, 0)
+    var cap_scale := Vector3(radius * 1.08, radius * 0.76, radius * 1.08)
+    if head_bounds_found:
+        head_center = head_bounds.get_center()
+        radius = maxf(head_bounds.size.x, head_bounds.size.z) * 0.5
+        var front_orientation := _head_front_direction(
+            head_mesh_for_orientation,
+            skeleton,
+            head_bone_index,
+            head_center
+        )
+        head_front_direction = float(front_orientation["direction"])
+        head_front_direction_basis = str(front_orientation["basis"])
+        head_front_z = head_bounds.end.z if head_front_direction > 0 else head_bounds.position.z
+        head_back_z = head_bounds.position.z if head_front_direction > 0 else head_bounds.end.z
+        var cap_half_height := radius * 0.76
+        cap_position = Vector3(head_center.x, head_bounds.end.y - cap_half_height, head_center.z)
+        cap_scale = Vector3(
+            minf(radius * 1.08, head_bounds.size.x * 0.58),
+            cap_half_height,
+            minf(radius * 1.08, head_bounds.size.z * 0.58)
+        )
     var material := StandardMaterial3D.new()
     material.albedo_color = Color.from_string(hair_color, Color(0.12, 0.07, 0.04))
     material.roughness = 0.88
@@ -580,36 +714,71 @@ func _add_character_hair(payload: Dictionary) -> Dictionary:
     cap.height = 2.0
     cap.radial_segments = 20
     cap.rings = 12
-    _add_hair_primitive(attachment, scene, cap, "SiraOS_Hair_Cap", Vector3(0, radius * 0.32, 0), Vector3(radius * 1.08, radius * 0.76, radius * 1.08), Vector3.ZERO, material)
+    _add_hair_primitive(attachment, scene, cap, "SiraOS_Hair_Cap", cap_position, cap_scale, Vector3.ZERO, material)
     mesh_count += 1
     if style == "short":
         var fringe := CapsuleMesh.new()
         fringe.radius = 0.45
         fringe.height = 0.9
-        _add_hair_primitive(attachment, scene, fringe, "SiraOS_Hair_Fringe", Vector3(0, radius * 0.38, -radius * 0.78), Vector3(radius * 0.72, radius * 0.32, radius * 0.35), Vector3.ZERO, material)
+        var fringe_position := Vector3(0, radius * 0.38, -radius * 0.78)
+        if head_bounds_found:
+            fringe_position = Vector3(
+                head_center.x,
+                cap_position.y - radius * 0.60,
+                head_front_z - head_front_direction * radius * 0.15
+            )
+        _add_hair_primitive(attachment, scene, fringe, "SiraOS_Hair_Fringe", fringe_position, Vector3(radius * 0.72, radius * 0.32, radius * 0.35), Vector3.ZERO, material)
         mesh_count += 1
     elif style == "bob" or style == "long":
         for side in [-1.0, 1.0]:
             var lock := CapsuleMesh.new()
             lock.radius = 0.38
             lock.height = 2.0 if style == "bob" else 4.2
-            _add_hair_primitive(attachment, scene, lock, "SiraOS_Hair_Side_" + str(side), Vector3(side * radius * 0.82, -radius * (0.55 if style == "bob" else 1.45), 0), Vector3(radius * 0.48, radius * (0.8 if style == "bob" else 1.55), radius * 0.48), Vector3(0, 0, side * 0.08), material)
+            var lock_position := Vector3(side * radius * 0.82, -radius * (0.55 if style == "bob" else 1.45), 0)
+            if head_bounds_found:
+                lock_position = Vector3(
+                    head_center.x + side * minf(radius * 0.82, head_bounds.size.x * 0.53),
+                    head_center.y - radius * (0.55 if style == "bob" else 1.45),
+                    head_center.z
+                )
+            _add_hair_primitive(attachment, scene, lock, "SiraOS_Hair_Side_" + str(side), lock_position, Vector3(radius * 0.48, radius * (0.8 if style == "bob" else 1.55), radius * 0.48), Vector3(0, 0, side * 0.08), material)
             mesh_count += 1
         if style == "bob":
             var back_bob := SphereMesh.new()
             back_bob.radius = 1.0
             back_bob.height = 2.0
-            _add_hair_primitive(attachment, scene, back_bob, "SiraOS_Hair_Back", Vector3(0, -radius * 0.45, radius * 0.42), Vector3(radius * 0.92, radius * 0.82, radius * 0.65), Vector3.ZERO, material)
+            var back_position := Vector3(0, -radius * 0.45, radius * 0.42)
+            if head_bounds_found:
+                back_position = Vector3(
+                    head_center.x,
+                    head_center.y - radius * 0.45,
+                    head_back_z + head_front_direction * radius * 0.42
+                )
+            _add_hair_primitive(attachment, scene, back_bob, "SiraOS_Hair_Back", back_position, Vector3(radius * 0.92, radius * 0.82, radius * 0.65), Vector3.ZERO, material)
             mesh_count += 1
     elif style == "ponytail":
         var tail := CapsuleMesh.new()
         tail.radius = 0.42
         tail.height = 3.8
-        _add_hair_primitive(attachment, scene, tail, "SiraOS_Hair_Ponytail", Vector3(0, -radius * 0.62, radius * 0.92), Vector3(radius * 0.46, radius * 1.3, radius * 0.46), Vector3(0.18, 0, 0), material)
+        var tail_position := Vector3(0, -radius * 0.62, radius * 0.92)
+        var tie_position := Vector3(0, -radius * 0.05, radius * 0.78)
+        if head_bounds_found:
+            var tie_y := head_bounds.end.y - radius * 0.45
+            tail_position = Vector3(
+                head_center.x,
+                tie_y - radius * 1.5,
+                head_back_z - head_front_direction * radius * 0.35
+            )
+            tie_position = Vector3(
+                head_center.x,
+                tie_y,
+                head_back_z - head_front_direction * radius * 0.10
+            )
+        _add_hair_primitive(attachment, scene, tail, "SiraOS_Hair_Ponytail", tail_position, Vector3(radius * 0.46, radius * 1.3, radius * 0.46), Vector3(0.18, 0, 0), material)
         var tie := SphereMesh.new()
         tie.radius = 1.0
         tie.height = 2.0
-        _add_hair_primitive(attachment, scene, tie, "SiraOS_Hair_Tie", Vector3(0, -radius * 0.05, radius * 0.78), Vector3(radius * 0.38, radius * 0.28, radius * 0.38), Vector3.ZERO, material)
+        _add_hair_primitive(attachment, scene, tie, "SiraOS_Hair_Tie", tie_position, Vector3(radius * 0.38, radius * 0.28, radius * 0.38), Vector3.ZERO, material)
         mesh_count += 2
     elif style == "spiky":
         for spike_index in range(7):
@@ -620,6 +789,12 @@ func _add_character_hair(payload: Dictionary) -> Dictionary:
             spike.radial_segments = 12
             var angle := TAU * float(spike_index) / 7.0
             var spike_position := Vector3(cos(angle) * radius * 0.48, radius * 0.95, sin(angle) * radius * 0.48)
+            if head_bounds_found:
+                spike_position = Vector3(
+                    head_center.x + cos(angle) * radius * 0.48,
+                    cap_position.y + radius * 0.55,
+                    head_center.z + sin(angle) * radius * 0.48
+                )
             _add_hair_primitive(attachment, scene, spike, "SiraOS_Hair_Spike_" + str(spike_index), spike_position, Vector3(radius * 0.28, radius * 0.62, radius * 0.28), Vector3.ZERO, material)
             mesh_count += 1
     elif style == "curly":
@@ -631,13 +806,26 @@ func _add_character_hair(payload: Dictionary) -> Dictionary:
             curl.rings = 8
             var angle := TAU * float(curl_index) / 12.0
             var curl_position := Vector3(cos(angle) * radius * 0.78, radius * 0.78, sin(angle) * radius * 0.78)
+            if head_bounds_found:
+                curl_position = Vector3(
+                    head_center.x + cos(angle) * radius * 0.78,
+                    cap_position.y + radius * 0.35,
+                    head_center.z + sin(angle) * radius * 0.78
+                )
             _add_hair_primitive(attachment, scene, curl, "SiraOS_Hair_Curl_" + str(curl_index), curl_position, Vector3.ONE * radius * 0.38, Vector3.ZERO, material)
             mesh_count += 1
     elif style == "mohawk":
         var ridge := CapsuleMesh.new()
         ridge.radius = 0.35
         ridge.height = 3.2
-        _add_hair_primitive(attachment, scene, ridge, "SiraOS_Hair_Mohawk", Vector3(0, radius * 1.05, 0), Vector3(radius * 0.36, radius * 1.0, radius * 0.42), Vector3.ZERO, material)
+        var ridge_position := Vector3(0, radius * 1.05, 0)
+        var ridge_scale := Vector3(radius * 0.36, radius * 1.0, radius * 0.42)
+        var ridge_rotation := Vector3.ZERO
+        if head_bounds_found:
+            ridge_position = Vector3(head_center.x, cap_position.y + radius * 0.40, head_center.z)
+            ridge_scale = Vector3(radius * 0.36, radius * 0.42, radius * 1.0)
+            ridge_rotation = Vector3(PI * 0.5, 0, 0)
+        _add_hair_primitive(attachment, scene, ridge, "SiraOS_Hair_Mohawk", ridge_position, ridge_scale, ridge_rotation, material)
         mesh_count += 1
     var source_animation_names := _scene_animation_names(scene)
     var export_document := GLTFDocument.new()
@@ -678,11 +866,23 @@ func _add_character_hair(payload: Dictionary) -> Dictionary:
     await process_frame
     var exported_hair_mesh_count := 0
     var attachment_verified := false
+    var exported_cap: MeshInstance3D = null
+    var exported_fringe: MeshInstance3D = null
+    var exported_ponytail: MeshInstance3D = null
+    var exported_tie: MeshInstance3D = null
     for hair_node in verify_scene.find_children("*", "MeshInstance3D", true, false):
         var hair_mesh := hair_node as MeshInstance3D
         if not str(hair_mesh.name).begins_with("SiraOS_Hair_"):
             continue
         exported_hair_mesh_count += 1
+        if str(hair_mesh.name) == "SiraOS_Hair_Cap":
+            exported_cap = hair_mesh
+        elif str(hair_mesh.name) == "SiraOS_Hair_Fringe":
+            exported_fringe = hair_mesh
+        elif str(hair_mesh.name) == "SiraOS_Hair_Ponytail":
+            exported_ponytail = hair_mesh
+        elif str(hair_mesh.name) == "SiraOS_Hair_Tie":
+            exported_tie = hair_mesh
         var parent_node := hair_mesh.get_parent()
         if parent_node is BoneAttachment3D and str((parent_node as BoneAttachment3D).bone_name) == head_bone_name:
             attachment_verified = true
@@ -690,12 +890,64 @@ func _add_character_hair(payload: Dictionary) -> Dictionary:
     if exported_hair_mesh_count < mesh_count or not attachment_verified:
         DirAccess.remove_absolute(output_path)
         return {"error_code": "hair_attachment_verification_failed", "error": "The hairstyle geometry or its head-bone attachment did not survive GLB export and re-import."}
+    if exported_cap == null:
+        DirAccess.remove_absolute(output_path)
+        return {"error_code": "hair_cap_missing", "error": "The generated hairstyle cap did not survive export and re-import."}
+    var cap_clearance_verified := true
+    var fringe_front_verified := true
+    var ponytail_back_verified := true
+    if head_bounds_found:
+        var cap_half_height := exported_cap.mesh.get_aabb().size.y * exported_cap.scale.y * 0.5
+        var cap_floor := exported_cap.position.y - cap_half_height
+        var face_clearance_floor := head_bounds.position.y + head_bounds.size.y * 0.45
+        cap_clearance_verified = (
+            exported_cap.position.y > head_center.y
+            and cap_floor >= face_clearance_floor
+        )
+        if style == "short":
+            fringe_front_verified = exported_fringe != null
+            if exported_fringe != null:
+                fringe_front_verified = (
+                    (exported_fringe.position.z - head_center.z) * head_front_direction > 0
+                    and exported_fringe.position.y >= face_clearance_floor
+                )
+        if style == "ponytail":
+            ponytail_back_verified = exported_ponytail != null and exported_tie != null
+            if ponytail_back_verified:
+                ponytail_back_verified = (
+                    (exported_ponytail.position.z - head_back_z) * head_front_direction < 0
+                    and (exported_tie.position.z - head_center.z) * head_front_direction < 0
+                )
+    var placement_verified := cap_clearance_verified and fringe_front_verified and ponytail_back_verified
+    if not placement_verified:
+        DirAccess.remove_absolute(output_path)
+        return {
+            "error_code": "hair_placement_verification_failed",
+            "error": "The generated hair does not fit the detected head region or requested style orientation."
+        }
     verification["hair_verified"] = true
     verification["hair_style"] = style
     verification["hair_color"] = hair_color
     verification["hair_attachment_bone"] = head_bone_name
     verification["hair_mesh_count"] = exported_hair_mesh_count
     verification["hair_attachment_verified"] = attachment_verified
+    verification["hair_placement_verified"] = placement_verified
+    verification["hair_fit_basis"] = "head_mesh_bounds" if head_bounds_found else "skeleton_fallback"
+    verification["hair_cap_position"] = [
+        exported_cap.position.x,
+        exported_cap.position.y,
+        exported_cap.position.z
+    ]
+    verification["hair_cap_clearance_verified"] = cap_clearance_verified
+    verification["hair_fringe_front_verified"] = fringe_front_verified
+    verification["hair_ponytail_back_verified"] = ponytail_back_verified
+    verification["hair_front_direction"] = head_front_direction
+    verification["hair_front_direction_basis"] = head_front_direction_basis
+    if head_bounds_found:
+        verification["hair_head_bounds_in_bone_space"] = {
+            "position": [head_bounds.position.x, head_bounds.position.y, head_bounds.position.z],
+            "size": [head_bounds.size.x, head_bounds.size.y, head_bounds.size.z]
+        }
     return verification
 
 

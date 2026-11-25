@@ -2,8 +2,8 @@
 
 Updated: 2026-11-25
 Repository: https://github.com/Pawar-47/Cartoon-Studio
-Branch: `work/character-preview-polish` at `4945beb7555c55fed2477de405e4e1a1b5b0f9a9`
-Latest upstream main: `4d2a7848b7c123358b868f56eac0704a80f6c58d` (CI #426 passed; PR #20 turnaround export remains open with CI #428 passed; PR #21 preview polish is open with CI #429 passed).
+Branch: `integration/branch-cleanup` in an isolated worktree; integrated tests passed locally, publication to `main` is pending.
+Last published main: `4d2a7848b7c123358b868f56eac0704a80f6c58d` (CI #426 passed). The local integration contains the proportion-preview, turnaround-export and Idle-preview branches plus the hairstyle-fit fix.
 
 ## Mission and operating rules
 
@@ -147,3 +147,10 @@ Never claim the complete application is finished while Phases 2–7 remain incom
 - Commit `4945beb7555c55fed2477de405e4e1a1b5b0f9a9` adds Idle-first animation selection, Idle-variant fallback, first-playable fallback and safe handling for RESET-only assets. PR #21 is open, separate from PR #20.
 - Local targeted Python tests passed: 16 tests. Windows CI #429 passed Node-backed animation helper tests, JavaScript syntax checks, lint, Python compilation and the full pytest suite.
 - The fresh visual browser check could not be completed in this batch. Character Studio remains PARTIAL; continue with browser acceptance and original face geometry rather than claiming completion.
+
+## 2026-11-25 — Safe branch integration checkpoint
+
+- Built the integration in a separate worktree based on `origin/main`, keeping the original checkout and `stash@{0}: On work/pr-20-turnaround-fix: WIP character preview polish` untouched.
+- Locally merged the approved proportion-preview/composable-edit work, PR #20 turnaround export, PR #21 Idle-preview behavior and commit `1c41a8d` hairstyle-fit fix. The profile-workflow branch was inspected; its older source changes are superseded by the integrated implementations, and its stale documentation was not imported.
+- Pinned Godot engine tests passed **14/14**; the complete local pytest run passed **121 tests with 4 environment-related skips**. Node-backed cases remain for GitHub Actions.
+- The integrated commit is not yet pushed. Recheck remote PR/branch state, push to `main`, verify GitHub Actions, and only then delete branches confirmed redundant. Keep Phase 2 active and P2.2 partial; browser visual acceptance and original face geometry remain open.
