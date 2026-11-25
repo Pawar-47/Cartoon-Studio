@@ -48,7 +48,10 @@ async function loadCharacters(){
   const title=document.createElement("h3");title.textContent=data.name;
   const description=document.createElement("p");description.textContent=data.description||"No description";
   const model=document.createElement("p");const asset=data.asset||{};model.textContent=(asset.original_filename||"GLB model")+" · "+(asset.engine_inspection?.mesh_count??asset.container?.mesh_count??0)+" meshes";
-  const rig=document.createElement("span");rig.className="tag"+(data.rig_status==="ready"?"":" warning");rig.textContent=data.rig_status==="ready"?"Rig detected":"No skeleton detected";
+  const rigAnalysis=asset.rig_analysis||{};const rig=document.createElement("span");rig.className="tag"+(asset.rig_ready?"":" warning");
+  rig.textContent=asset.rig_ready?"Skeleton detected":"No skeleton detected";
+  if(rigAnalysis.required_bone_count)rig.textContent+=" · humanoid names "+rigAnalysis.matched_bone_count+"/"+rigAnalysis.required_bone_count;
+  rig.title=rigAnalysis.retargeting_note||"Skeleton presence alone does not prove humanoid retarget compatibility";
   const animations=document.createElement("span");animations.className="tag";animations.textContent=(asset.engine_inspection?.animation_count??asset.container?.animation_count??0)+" animations";
   const revision=document.createElement("p");revision.textContent="Revision "+document.revision+" · "+new Date(document.updated_at).toLocaleDateString();
   const previewButton=document.createElement("button");previewButton.className="secondary preview-saved";previewButton.type="button";previewButton.textContent="Preview";
@@ -151,9 +154,13 @@ $("import-model").addEventListener("click",async()=>{
   importedAsset=data;await showCharacterPreview(await file.arrayBuffer(),file.name);$("asset-report").hidden=false;$("asset-report").replaceChildren();
   const heading=document.createElement("strong");heading.textContent="Godot import successful · "+data.container.format;
   const metrics=document.createElement("div");metrics.className="asset-metrics";
-  const items=[["Meshes",data.engine_inspection.mesh_count],["Skeletons",data.engine_inspection.skeleton_count],["Animations",data.engine_inspection.animation_count],["Nodes",data.engine_inspection.node_count],["File size",(data.container.size_bytes/1048576).toFixed(2)+" MiB"],["Rig readiness",data.rig_ready?"Skeleton detected":"No skeleton"]];
+  const rigAnalysis=data.rig_analysis||{};
+  const coverage=rigAnalysis.required_bone_count?rigAnalysis.matched_bone_count+"/"+rigAnalysis.required_bone_count:"Unavailable";
+  const missing=Array.isArray(rigAnalysis.missing_bones)?rigAnalysis.missing_bones.join(", "):"Not reported";
+  const items=[["Meshes",data.engine_inspection.mesh_count],["Skeletons",data.engine_inspection.skeleton_count],["Animations",data.engine_inspection.animation_count],["Nodes",data.engine_inspection.node_count],["File size",(data.container.size_bytes/1048576).toFixed(2)+" MiB"],["Humanoid bone-name coverage",coverage],["Missing core humanoid names",missing]];
   for(const [label,value] of items){const span=document.createElement("span");const b=document.createElement("b");b.textContent=String(value);span.append(document.createTextNode(label+": "),b);metrics.append(span)}
-  $("asset-report").append(heading,metrics);$("import-status").textContent="Asset stored inside this project. Complete the profile to save it."; $("save-character").disabled=false;
+  const rigNote=document.createElement("p");rigNote.className="inline-status";rigNote.textContent=rigAnalysis.retargeting_note||"Skeleton presence is not proof of retarget compatibility.";
+  $("asset-report").append(heading,metrics,rigNote);$("import-status").textContent="Asset stored inside this project. Complete the profile to save it."; $("save-character").disabled=false;
  }catch(error){$("import-status").textContent=error.message}
  finally{$("import-model").disabled=!activeProject||!$("model-file").files.length}
 });

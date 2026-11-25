@@ -104,3 +104,12 @@ No candidate code or character assets were copied or bundled by this research-on
 | Candidate | Evidence | License / pin | Decision |
 |---|---|---|---|
 | [mrdoob/three.js](https://github.com/mrdoob/three.js) | Official r187 release and package metadata reviewed. GLTFLoader supports glTF 2.0 scenes, meshes, materials, textures, skins and animation clips; OrbitControls provides interactive camera orbit/zoom. Required utility modules and module dependency imports were inspected. | MIT; version 0.187.0, tag r187, commit `7e89746a687bb88271253698fa108b1dd59825d0`. Exact license retained. | Selected as a locally vendored browser presentation layer. No CDN dependency. Godot remains the native importer/validator. |
+
+
+### V-Sekai Godot-VRM source pin and compatibility caveats — 2026-11-25
+
+- Upstream repository: [V-Sekai/godot-vrm](https://github.com/V-Sekai/godot-vrm), inspected master commit `e15199f980064028bfa4fbee5e70dddb82dd55c3` (2026-07-08; updates import metadata for Godot 4.7).
+- The root GitHub API metadata reports `NOASSERTION`, but the checked-in root `LICENSE`, `addons/vrm/LICENSE` and `addons/Godot-MToon-Shader/LICENSE` each contain MIT notices. The addon subrepo pointers resolve to VRM commit `651205484c35f5cd7ba56475ff636e10db8ad674` and MToon commit `268c0d3b19c0885698b7bd39e21a16c9c2af448f`; pin and retain these notices separately if vendored.
+- Upstream README claims VRM 0.0/1.0 import, VRM 1.0 export, MToon, humanoid `SkeletonProfileHumanoid` mapping, and expression blend-shape/material binds exposed as animation tracks. It also documents known issues: node constraints can be buggy with retargeting, spring bones need optimization, look-at requires application setup, and VRM animation-library import/export is not implemented. Standalone glTF export has a warning about destructive material corruption; do not use that path without an isolated-copy proof.
+- VRM sample avatars have separate licences; no sample model is approved for redistribution by the code licence.
+- Decision: keep VRM optional and do not bundle the addon yet. First inspect the imported GLB skeleton and establish our own explicit retarget preflight contract; a pinned Godot 4.7.2 integration proof must follow before adoption.

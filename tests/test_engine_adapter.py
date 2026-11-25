@@ -125,6 +125,7 @@ def test_pinned_godot_worker_handshake(tmp_path):
     assert response["ok"] is True
     assert response["engine_version"].startswith("4.7.2")
     assert "glb_inspect" in response["capabilities"]
+    assert "skeleton_report" in response["capabilities"]
 
 
 def test_pinned_godot_worker_imports_glb_fixture(tmp_path):
@@ -145,6 +146,7 @@ def test_pinned_godot_worker_imports_glb_fixture(tmp_path):
     response = adapter.inspect_glb(target, allowed_root=tmp_path)
     assert response["ok"] is True
     assert response["mesh_count"] >= 1
+    assert response["skeleton_count"] == len(response["skeletons"])
 
 
 def test_pinned_godot_worker_rejects_invalid_glb(tmp_path):

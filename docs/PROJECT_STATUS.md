@@ -152,3 +152,10 @@ Added GLB morph-target discovery and a slider-based facial control panel. Existi
 - Current next batch: browser-based editing of saved character metadata, preserving the imported GLB and material/morph appearance recipes. This is a focused continuation of P2.2, not phase completion.
 - Not yet implemented: new mesh authoring, rig creation/editing, VRM import/export, new blend-shape authoring, animation retargeting and deterministic GLB export.
 - Phase 3 onward remains in the master-plan order. Physical-PC benchmarks remain deferred to Phase 8.
+
+
+## Character Studio resume checkpoint — 2026-11-25
+
+- Saved profile editor is implemented; the follow-up correction now loads multi-value metadata with real line breaks instead of literal backslash-n text. Windows CI #219 is the acceptance run for this correction.
+- Next code batch adds native Skeleton3D hierarchy reporting and conservative humanoid bone-name coverage. It is not rig creation or retargeting.
+- V-Sekai/godot-vrm remains a researched optional adapter; no upstream code or sample avatars have been bundled.

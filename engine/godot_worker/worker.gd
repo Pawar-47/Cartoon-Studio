@@ -62,7 +62,7 @@ func _handle_request(request_value: Variant) -> Dictionary:
 
     if operation == "ping":
         response["ok"] = true
-        response["capabilities"] = ["ping", "glb_inspect", "scene_metrics"]
+        response["capabilities"] = ["ping", "glb_inspect", "scene_metrics", "skeleton_report"]
         return response
 
     if operation == "inspect_glb":
@@ -122,10 +122,30 @@ func _inspect_glb(payload: Dictionary) -> Dictionary:
     var animation_players := scene.find_children("*", "AnimationPlayer", true, false)
     for player in animation_players:
         animation_count += (player as AnimationPlayer).get_animation_list().size()
+    var skeleton_nodes := scene.find_children("*", "Skeleton3D", true, false)
+    var skeleton_reports: Array[Dictionary] = []
+    for skeleton_node in skeleton_nodes:
+        var skeleton := skeleton_node as Skeleton3D
+        var bones: Array[Dictionary] = []
+        for bone_index in range(skeleton.get_bone_count()):
+            var parent_index := skeleton.get_bone_parent(bone_index)
+            bones.append({
+                "index": bone_index,
+                "name": str(skeleton.get_bone_name(bone_index)),
+                "parent_index": parent_index,
+                "parent_name": str(skeleton.get_bone_name(parent_index)) if parent_index >= 0 else ""
+            })
+        skeleton_reports.append({
+            "node_path": str(scene.get_path_to(skeleton)),
+            "bone_count": skeleton.get_bone_count(),
+            "bones": bones
+        })
+
     var result := {
         "ok": true,
         "mesh_count": scene.find_children("*", "MeshInstance3D", true, false).size(),
-        "skeleton_count": scene.find_children("*", "Skeleton3D", true, false).size(),
+        "skeleton_count": skeleton_nodes.size(),
+        "skeletons": skeleton_reports,
         "animation_player_count": animation_players.size(),
         "animation_count": animation_count,
         "node_count": _count_nodes(scene)

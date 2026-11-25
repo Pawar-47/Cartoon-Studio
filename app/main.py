@@ -16,6 +16,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from app.rig_analysis import analyze_rig
 from app.engine import (
     EngineError,
     EngineTimeoutError,
@@ -555,6 +556,7 @@ async def upload_character_asset(project_id: str, request: Request) -> dict[str,
             "relative_path": relative_path,
             "container": container,
             "engine_inspection": inspection,
+            "rig_analysis": analyze_rig(inspection),
             "rig_ready": int(inspection.get("skeleton_count", 0)) > 0,
             "animation_ready": int(inspection.get("animation_count", 0)) > 0,
         }

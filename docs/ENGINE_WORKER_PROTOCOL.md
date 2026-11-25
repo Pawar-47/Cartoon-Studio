@@ -40,3 +40,8 @@ Every response includes `protocol_version`, the matching `request_id`, `ok`, `en
 - Requests have a 60-second default deadline. Callers can pass a cancellation event; timeout/cancellation terminates and waits for the child, then force-kills if needed.
 - Worker logs are captured for diagnostics; no project contents or provider secrets are written to application logs.
 - This batch implements engine discovery, handshake and GLB inspection only. It does not claim character creation, rigging, preview rendering or animation authoring.
+
+
+## Skeleton hierarchy inspection — protocol extension
+
+The existing `inspect_glb` operation now includes a `skeletons` array. Each entry reports the imported Skeleton3D node path, bone count, and each bone's index, name, parent index and parent name. The top-level `skeleton_count` is derived from the same collected nodes. This is metadata inspection only: it does not create a rig, validate skin weights/rest pose, or claim animation retarget compatibility.

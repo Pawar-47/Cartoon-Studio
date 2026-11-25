@@ -31,6 +31,13 @@ class FakeEngine:
             "engine_version": "4.7.2.stable",
             "mesh_count": 1,
             "skeleton_count": 1,
+            "skeletons": [{"node_path": "Root/Skeleton3D", "bone_count": 15, "bones": [{"name": name} for name in (
+                "mixamorig:Hips", "mixamorig:Spine", "mixamorig:Head",
+                "mixamorig:LeftUpLeg", "mixamorig:LeftLeg", "mixamorig:LeftFoot",
+                "mixamorig:RightUpLeg", "mixamorig:RightLeg", "mixamorig:RightFoot",
+                "mixamorig:LeftArm", "mixamorig:LeftForeArm", "mixamorig:LeftHand",
+                "mixamorig:RightArm", "mixamorig:RightForeArm", "mixamorig:RightHand",
+            )]}],
             "animation_player_count": 1,
             "animation_count": 1,
             "node_count": 1,
@@ -121,6 +128,9 @@ def test_character_glb_import_profile_round_trip_and_project_reference(tmp_path,
     assert imported["container"]["skin_count"] == 1
     assert imported["engine_inspection"]["skeleton_count"] == 1
     assert imported["rig_ready"] is True
+    assert imported["rig_analysis"]["status"] == "humanoid_names_complete"
+    assert imported["rig_analysis"]["matched_bone_count"] == 15
+    assert imported["rig_analysis"]["retargeting_ready"] is False
     assert imported["animation_ready"] is True
 
     payload = profile_payload(imported["relative_path"])

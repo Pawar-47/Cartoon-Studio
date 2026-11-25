@@ -70,3 +70,11 @@
 - Imported facial morph-target controls commit `533d59415df85be799fd4b28161aef860677a501`, followed by lint correction `e58b40d75ae10431051980246b468b736544f464`, passed Windows CI #214. All 49 tests, lint, compilation, both self-contained builds, installer compilation and clean install/upgrade/uninstall/reinstall passed.
 - Remaining visual limitation: no real blend-shape cartoon GLB has yet been used for browser-level visual acceptance. API tests prove recipe persistence and range validation, not that a particular target deforms the intended face region.
 - Next workflow improvement: allow saved profile metadata to be edited from the browser without reimporting or replacing the original GLB; appearance recipes must remain intact.
+
+
+## Skeleton and humanoid-name inspection batch — implementation checkpoint
+
+- The Godot worker now reports each imported Skeleton3D node and its indexed bone hierarchy (name, parent index and parent name).
+- The application computes a conservative 15-bone humanoid-name coverage report, selecting the strongest individual skeleton rather than combining unrelated skeletons.
+- The report explicitly never marks retargeting ready: rest pose, bone axes, scale, skin weights and real motion playback still require validation.
+- This is rig inspection/preflight, not rig creation, skinning repair or retargeting. A real skinned cartoon GLB visual/animation acceptance test remains required.

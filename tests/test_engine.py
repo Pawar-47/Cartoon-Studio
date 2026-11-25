@@ -77,6 +77,7 @@ def test_godot_worker_ping_and_glb_inspection(tmp_path):
     ping = adapter.ping()
     assert ping["engine_version"].startswith("4.7.2")
     assert "glb_inspect" in ping["capabilities"]
+    assert "skeleton_report" in ping["capabilities"]
 
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -84,6 +85,7 @@ def test_godot_worker_ping_and_glb_inspection(tmp_path):
     shutil.copy2(FIXTURE, fixture)
     inspection = adapter.inspect_glb(fixture, allowed_root=project_root)
     assert inspection["mesh_count"] >= 1
+    assert inspection["skeleton_count"] == len(inspection["skeletons"])
     assert inspection["engine_version"].startswith("4.7.2")
 
 
