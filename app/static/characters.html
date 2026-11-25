@@ -71,6 +71,19 @@
      <label>Speed<select id="preview-speed" disabled><option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="2">2×</option></select></label>
     </div>
    </div>
+   <section id="proportion-editor" class="proportion-editor">
+    <div class="editor-heading"><strong>Body shape studio</strong><span>Rig-based geometry editing</span></div>
+    <p class="helper">Adjust the actual humanoid skeleton. Applying creates a new GLB and keeps the original model untouched.</p>
+    <div class="proportion-grid">
+     <label>Torso length <output id="torso-length-value">1.00×</output><input id="torso-length" type="range" min="0.75" max="1.25" step="0.01" value="1"></label>
+     <label>Shoulder width <output id="shoulder-width-value">1.00×</output><input id="shoulder-width" type="range" min="0.75" max="1.25" step="0.01" value="1"></label>
+     <label>Arm length <output id="arm-length-value">1.00×</output><input id="arm-length" type="range" min="0.75" max="1.25" step="0.01" value="1"></label>
+     <label>Leg length <output id="leg-length-value">1.00×</output><input id="leg-length" type="range" min="0.75" max="1.25" step="0.01" value="1"></label>
+     <label>Head size <output id="head-size-value">1.00×</output><input id="head-size" type="range" min="0.75" max="1.25" step="0.01" value="1"></label>
+    </div>
+    <div class="appearance-actions"><button id="apply-proportions" type="button" disabled>Apply body shape</button><button id="reset-proportions" class="secondary" type="button">Reset controls</button></div>
+    <p id="proportion-status" class="inline-status" role="status">Import or assemble a rigged character to edit its proportions.</p>
+   </section>
    <section id="material-editor" class="material-editor" hidden>
     <div class="editor-heading"><strong>Appearance editor</strong><span>Non-destructive material recipe</span></div>
     <label>Model material<select id="material-select"></select></label>
@@ -122,7 +135,7 @@
     <label>Mouth design<textarea id="mouth-design" rows="2" maxlength="200" placeholder="Mouth design"></textarea></label>
    </div>
    <label>Face design<textarea id="face-design" rows="2" maxlength="500" placeholder="Face shape and distinguishing features"></textarea></label>
-   <label>Body proportions (JSON)<textarea id="body-proportions" rows="2" spellcheck="false" placeholder='{"head_to_body": 5.5, "shoulder_width": 1.0}'></textarea></label>
+   <label>Applied body proportions (JSON)<textarea id="body-proportions" rows="2" spellcheck="false" readonly placeholder='{"torso_length": 1, "shoulder_width": 1}'></textarea></label>
    <label>Clothing variants<textarea id="clothing" rows="2" placeholder="One item per line"></textarea></label>
    <label>Accessories<textarea id="accessories" rows="2" placeholder="One item per line"></textarea></label>
    <label>Expressions<textarea id="expressions" rows="2" placeholder="One item per line; metadata only in this batch"></textarea></label>

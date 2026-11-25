@@ -87,6 +87,7 @@ def test_godot_worker_ping_and_glb_inspection(tmp_path):
     assert "skeleton_report" in ping["capabilities"]
     assert "probe_glb_animation" in ping["capabilities"]
     assert "export_character_appearance" in ping["capabilities"]
+    assert "customize_character_proportions" in ping["capabilities"]
 
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -194,6 +195,46 @@ def test_godot_worker_assembles_four_parts_from_distinct_shared_rig_outfits(tmp_
     assert probe["changed_bone_count"] > 0
     assert probe["skinned_mesh_count"] >= 4
     assert probe["bone_count"] == result["skeletons"][0]["bone_count"]
+
+
+
+@pytest.mark.skipif(not HAS_GODOT, reason="Pinned Godot runtime is supplied by Windows CI.")
+def test_godot_worker_bakes_humanoid_body_proportions_and_preserves_animation(tmp_path):
+    adapter = GodotEngineAdapter(data_dir=tmp_path, timeout_seconds=120)
+    project_root = tmp_path / "proportion-project"
+    project_root.mkdir()
+    source = project_root / "source-humanoid.glb"
+    output = project_root / "proportioned-humanoid.glb"
+    shutil.copy2(
+        Path(__file__).resolve().parents[1]
+        / "tools"
+        / "godot_engine_proof"
+        / "fixtures"
+        / "proof_humanoid.glb",
+        source,
+    )
+    original_bytes = source.read_bytes()
+    before = adapter.inspect_glb(source, allowed_root=project_root)
+    result = adapter.customize_character_proportions(
+        source,
+        {"torso_length": 1.12, "shoulder_width": 1.08, "arm_length": 0.94,
+         "leg_length": 1.06, "head_size": 1.1},
+        output,
+        allowed_root=project_root,
+        timeout_seconds=120,
+    )
+    assert result["proportions_verified"] is True
+    assert result["changed_bones"]
+    assert result["skeleton_count"] == 1
+    assert result["animation_count"] == before["animation_count"]
+    assert set(result["animation_names"]) == set(before["animation_names"])
+    assert source.read_bytes() == original_bytes
+    assert output.is_file()
+    playback = adapter.probe_glb_animation(
+        output, before["animation_names"][0], allowed_root=project_root, timeout_seconds=60
+    )
+    assert playback["pose_changed"] is True
+    assert playback["skinned_mesh_count"] >= 1
 
 
 @pytest.mark.skipif(not HAS_GODOT, reason="Pinned Godot runtime is supplied by Windows CI.")
