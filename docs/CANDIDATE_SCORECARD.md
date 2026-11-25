@@ -109,3 +109,8 @@ P0.3 source-level research and provisional scorecard are complete. The scorecard
 
 ## Hardware score interpretation
 The hardware score is an evidence-based compatibility/resource estimate, not measured FPS, render time, memory or driver stability. The target-PC probe is optional before Phase 8. P0.6 proves architecture-critical behavior; Phase 8 measures real performance.
+
+
+## Hardware gate correction — 2026-11-25
+
+The physical target PC is not a gate for candidate ranking, P0.5 architecture, P0.6 functional proofs, P0.7 freeze or feature implementation. Scores continue to describe source/API/resource fit and uncertainty, not measured performance. Godot remains the leading candidate because its documented Compatibility renderer/API and integration boundary are promising; the P0.6 proof is a controlled functional test, not a benchmark on the user's PC. Actual target-PC frame time, RAM, render duration and quality-preset tuning are Phase 8 optimization evidence. A slow result does not invalidate the product or stop development.

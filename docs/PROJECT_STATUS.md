@@ -3,8 +3,8 @@
 ## Live checkpoint before this policy batch
 - Repository: Pawar-47/Cartoon-Studio
 - Branch: main
-- HEAD: 745d557a5f043bca4a1012ec95d79e2fb87dd91d
-- Latest CI: run #90 — SUCCESS on that exact HEAD.
+- HEAD: 5470fab7e9ebaf89b22912e9f15cc17fc234ba8d
+- Latest CI: run #93 — SUCCESS on the previous verified HEAD facb0dd738e227d643d4e85d80bd5d3f620fc6e1; documentation batch commits are awaiting their own CI run.
 - Original 25-part brief remains verbatim at `docs/MASTER_EXECUTION_PROMPT.md`.
 - P0.2 complete: 171 atomic requirement rows, 171 one-to-one traceability rows, 75 legacy IDs retained.
 
@@ -62,3 +62,11 @@ No production Character Studio, persistent World Builder, canonical animation pl
 - Work in substantial coherent batches, one commit per batch.
 - No mandatory paid APIs, subscriptions, cloud inference or cloud rendering.
 - Do not send user content/audio to an external provider without explicit approval.
+
+
+## P0.5 dependency and architecture checkpoint
+- Architecture contracts define portable document shapes, millisecond timeline semantics, storage/index/job-journal layout, migrations and recovery.
+- Added a 171-row architecture crosswalk mapping every registry ID to an architecture home, planned module boundary and delivery phase.
+- Added subsystem dependency/licensing decisions: Python/FastAPI/SQLite/browser core, provisional Godot native worker, optional web viewport, app-owned SQLite queue, FFmpeg adapter with codec/build gate, optional AI/TTS, manual Urdu recording, and PyInstaller/NSIS packaging candidates.
+- No engine is yet accepted, no renderer/queue/codec is integrated, and no candidate functional proof is claimed.
+- Root project LICENSE is absent; no copyleft dependency/model/asset is to be bundled until the project's own distribution/IP position is approved.
