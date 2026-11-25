@@ -3,7 +3,7 @@
 Updated: 2026-11-25
 Repository: https://github.com/Pawar-47/Cartoon-Studio
 Branch: main
-Latest implementation checkpoint: main (GitHub HEAD; see recent commits for the exact revision).
+Latest implementation checkpoint: `8b1771790e6fad373b732472cbc3814dc4e0e838` (CI #349 passed).
 
 ## Mission and operating rules
 
@@ -25,7 +25,7 @@ Phase 2 — Character Studio is ACTIVE. Phase 0 and Phase 1 are complete. Do not
 - Project-contained GLB 2.0 import, validation, SHA-256 provenance and Godot inspection.
 - Browser GLB preview, imported animation selection and camera controls.
 - Persistent editable character profiles.
-- Non-destructive PBR material recipes and facial morph-target controls. Godot reports imported blend-shape names/defaults; signed weights from -1 to 1 persist; reset restores each model's imported defaults. A pinned CC0 RobotExpressive fixture (three facial morph targets on Head_4) is fetched and SHA-256 verified; CI #334 passed its Godot import and multi-clip inspection. The imported clip catalog and source-clip selector are implemented and validated by CI #340. CI #341 and native-worker proof #22 passed third-party retargeting plus bone-roll and non-uniform target-scale acceptance.
+- Non-destructive PBR material recipes and facial morph-target controls. Godot reports imported blend-shape names/defaults; signed weights from -1 to 1 persist; reset restores each model's imported defaults. A pinned CC0 RobotExpressive fixture is fetched and SHA-256 verified; CI #334 passed Godot import, morph-target and multi-clip inspection. The imported clip catalog/source selector passed CI #340. CI #341 and native-worker proof #22 passed bone-roll/non-uniform-scale retarget acceptance. Godot native-worker proof #346 passed RobotExpressive Walking-clip retarget, scene save/reopen and pose-transfer verification; CI #349 passed the source-only IK-foot hierarchy API/UI checks.
 - Conservative indexed 15-bone humanoid mapping, parent-chain validation and imported rest-transform diagnostics.
 - Common 3ds Max Biped, Character Creator, Unreal-style, Blender Rigify and Cesium Rigged Figure bone naming conventions are recognized. Duplicate and negative bone indices are rejected.
 - Character-to-character retarget UI with source/target selectors, imported animation dropdown, strict clip-name preflight, saved Godot scene, persistent JSON record and scene download.
@@ -51,19 +51,21 @@ Phase 2 — Character Studio is ACTIVE. Phase 0 and Phase 1 are complete. Do not
 
 ## Important acceptance boundary
 
-One real third-party humanoid model has passed native Godot import and retarget acceptance. This is not blanket support for arbitrary GLBs. More rigs, unusual rest axes, bone roll, scale variation, multi-clip animations and real facial morph models still need fixture coverage. Phase 2 remains ACTIVE and incomplete.
+Two real third-party assets have passed native Godot acceptance for tested scenarios: Khronos Rigged Figure retargeting and RobotExpressive Walking-clip retargeting with its bilateral IK-foot hierarchy. This is not blanket support for arbitrary GLBs. More rigs, humanoid multi-clip retargeting and interactive browser facial-expression acceptance remain. Phase 2 remains ACTIVE and incomplete.
 
 ## CI execution policy
 
 - Push/PR CI runs lint, Python compilation and the full automated test suite only; no PyInstaller or NSIS builds. Windows CI #334 passed the pinned RobotExpressive fixture acquisition and Godot facial-morph inspection.
 - Full Windows application and installer validation lives in `.github/workflows/release-windows.yml` and is manually dispatched after a phase/release milestone.
+- The dedicated Godot native-worker proof is now manual-only and reserved for phase milestones; routine pushes run one quick CI workflow. Full Windows application and installer validation remains manual in `.github/workflows/release-windows.yml`.
 - Workflow concurrency groups prevent overlapping runs. Avoid duplicate CI runs for minor edits.
 
 ## Current retarget acceptance expansion — 2026-11-25
 
 - The target fixture generator now supports explicit local bone-roll quaternions and non-uniform per-bone scales, and recalculates inverse-bind matrices from full TRS transforms.
 - A new Godot integration test builds a rolled/scaled target at test time, verifies its imported rest rotations/scales differ from the source, then checks animation transfer after scene save/reopen.
-- Acceptance remains pending quick CI; do not claim broader rest-axis/bone-roll/scale support until the test passes.
+- Windows CI #341 PASSED on `57e252c922acae58831da5b966cab8edcd9b4408`; generated bone-roll/non-uniform-scale target transferred pose after native scene save/reopen.
+- RobotExpressive native retarget proof #346 PASSED on `9b1f9f3d8815ebc7f45c8b1aa90673c9a0827f85`; CI #349 validated the source-only IK-foot hierarchy variant through API/UI.
 
 ## Next substantial implementation batch
 

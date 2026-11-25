@@ -1,15 +1,5 @@
 name: Godot native-worker proof
 on:
-  push:
-    branches: [main]
-    paths:
-      - "tools/godot_engine_proof/**"
-      - ".github/workflows/godot-engine-proof.yml"
-  pull_request:
-    branches: [main]
-    paths:
-      - "tools/godot_engine_proof/**"
-      - ".github/workflows/godot-engine-proof.yml"
   workflow_dispatch:
 permissions:
   contents: read

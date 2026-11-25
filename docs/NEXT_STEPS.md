@@ -10,7 +10,7 @@ Saved retarget records now also have a browser preview action. The preview endpo
 
 - Windows CI #334 passed: fixture acquisition/checksum, Ruff, Python compilation and full pytest including Godot 4.7.2 facial morph import and multi-clip inspection. This quick CI intentionally did not build the complete Windows app or installer.
 - Windows CI #340 passed: clip catalog, selected/default clip persistence, legacy metadata compatibility and unknown-clip rejection.
-- Windows CI #341 and native-worker proof #22 passed: third-party retargeting and synthetic bone-roll/non-uniform-scale target compatibility.
+- Windows CI #341 and native-worker proof #22 passed: synthetic bone-roll/non-uniform-scale target compatibility. Native-worker proof #346 passed RobotExpressive Walking-clip retarget; Windows CI #349 passed its source-only IK-foot hierarchy API/UI support.
 - The full packaging/installer workflow is now isolated in `.github/workflows/release-windows.yml` and is manually dispatched at phase/release milestones.
 - Windows CI #326 passed the complete Windows build and installer lifecycle after the appearance-editor playback isolation change.
 - Windows CI #303 passed on commit `0bfce71625d6e3084b4ceda9b64a9825cca95101`: Ruff lint, Python compilation, full pytest including pinned Godot 4.7.2 tests, third-party GLB inspection/retarget, morph-target inspection, bootstrap smoke, both self-contained builds, NSIS installer and full install/upgrade/uninstall/reinstall lifecycle.
@@ -23,9 +23,9 @@ Saved retarget records now also have a browser preview action. The preview endpo
 
 ## Next substantial batch
 
-1. Expand third-party acceptance beyond the single Khronos Rigged Figure model, prioritizing different rest axes, bone roll, proportions and multi-clip animations.
-2. Add a genuinely facial third-party blend-shape model fixture and verify browser preview, save/reopen, signed weights and reset-to-imported-default behavior. A pinned CC0 RobotExpressive third-party GLB is now the facial-morph acceptance fixture: the upstream Three.js example identifies three expression morphs on Head_4. CI fetches the binary from an immutable source commit and verifies its SHA-256. Godot import acceptance is pending the next quick-CI run.
-3. Compare browser retarget preview motion against the authoritative Godot scene across multiple rig families.
+1. Compare browser retarget preview motion against the authoritative Godot scene across the accepted humanoid, bone-roll and RobotExpressive fixtures.
+2. Add more third-party humanoid rig families and a humanoid source with multiple playable clips.
+3. Perform interactive browser acceptance of RobotExpressive facial sliders, reset-to-imported-defaults and save/reopen.
 4. Continue deterministic export and animation round-trip after broader compatibility acceptance.
 
 ## Deferred to their specified phases
@@ -41,6 +41,7 @@ Saved retarget records now also have a browser preview action. The preview endpo
 
 - Normal pushes and pull requests run lint, Python compilation and the full automated test suite with the pinned Godot worker. They do not build PyInstaller application bundles or NSIS installers.
 - `.github/workflows/release-windows.yml` is manually dispatched at phase/release milestones and runs the complete Windows packaging, SBOM, installer and install/upgrade/uninstall lifecycle.
+- `.github/workflows/godot-engine-proof.yml` is manual-only and reserved for phase-level native proof runs; normal pushes should trigger only quick CI.
 - CI concurrency groups prevent overlapping runs within each workflow; do not launch duplicate runs for individual edits.
 
 ## Policy
