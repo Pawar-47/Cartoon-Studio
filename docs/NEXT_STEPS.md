@@ -62,3 +62,10 @@ The Godot runtime/world/character/asset/provider/audio research is now documente
 Then P0.4 tests Godot 4.7.2 Compatibility on the actual HD 5500 PC, measures RAM/render time and verifies Pakistani Urdu/provider availability. No paid/cloud service becomes mandatory. Do not download assets or integrate code until P0.5/P0.7 gates allow it.
 
 Do not begin production features before P0.7. Preserve the current Story Generator and keep it frozen until Phase 4.
+
+## P0.3 — remaining research work
+The current candidate stack includes Godot 4.7.2, native world plugins, CC0 Quaternius assets, VRM/MToon for humanoid faces, eSpeak NG for offline Urdu phonemization, and Godot MovieWriter + FFmpeg for scene-chunk output. Finish the source comparison by checking the VRM add-on in Compatibility mode, validating Urdu eSpeak output, testing Allosaurus inventory/timing, and defining the custom Urdu viseme map. Also finish the end-to-end scene/audio/MP4 pipeline plan and provider/asset provenance matrix.
+
+Then P0.4 tests Godot 4.7.2 Compatibility on the actual HD 5500 PC, measures RAM/render time and verifies Pakistani Urdu voice/provider availability. No paid/cloud service becomes mandatory. No code or assets should be integrated before the required plan gates.
+
+Do not begin production features before P0.7. Preserve the current Story Generator and keep it frozen until Phase 4.

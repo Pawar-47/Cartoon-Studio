@@ -115,3 +115,10 @@ This is the first broad source-level sweep, not P0.3 completion. No production e
 - Allosaurus universal model `uni2005` is about 41.5 MB; CPU-capable, uses approximate CTC phone timestamps, and only English has a language-dependent model listed. Urdu inventory availability must be checked using `list_lang` on the pinned model; no Urdu-specific acoustic model has been confirmed.
 - Parrot Lipsync v1.1.2 uses Allosaurus and an editable phoneme-to-viseme table, supports Blender 4.5, and is GPL-3.0. It is a Blender add-on, not a Godot plugin. If Godot is selected, implement a Godot-owned viseme timeline and use only the general data-flow idea unless the GPL component is explicitly approved.
 - No audio/music assets, model weights or FFmpeg binaries were downloaded; no lip-sync or video render was run.
+
+## 2026-11-25 — VRM face-expression and eSpeak NG Urdu support
+- Inspected V-Sekai/godot-vrm root MIT license, separate MToon MIT license, README, source tree and sample license file. Latest commit `e15199f980064028bfa4fbee5e70dddb82dd55c3` updates Godot 4.7 imports; no Actions workflow. VRM0/1 import, VRM1 export, MToon, humanoid retarget and expression tracks are implemented; several node constraint/spring bone/lookAt/export limitations recorded.
+- Inspected VRM 1.0 expression specification: emotion presets, five vowel visemes, blink/gaze and custom expressions with overrideMouth/overrideBlink/overrideLookAt. The spec does not prescribe facial geometry; models need blendshapes.
+- Inspected eSpeak NG repo, GPL3 COPYING, README and Urdu language data. Latest commit `ee9fa7cc4704d683020526f47a9655f14c8d5f4c`, pushed 2026-11-19. Current source includes `ur`, `ur_rules` and `ur_list`; pronunciation rules credited to Him Prasad Gautam and Ejaz Shah (Pakistan).
+- eSpeak NG is a compact C formant synthesizer with Windows support, WAV output and phoneme output carrying pitch/length information. README warns its voice is less natural than larger recording-based synthesizers. Record as offline Urdu G2P/placeholder TTS only, not main voice.
+- No VRM sample avatar or eSpeak binary was downloaded; no Urdu synthesis or face-animation test was run.

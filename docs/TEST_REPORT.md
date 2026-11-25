@@ -80,3 +80,9 @@ A green CI run proves only the checks that actually ran. Source presence, docume
 - FFmpeg official legal documentation and OpenH264 BSD license inspected; no binary built or bundled.
 - Kenney CC0 audio packs and OpenGameArt CC0 music pages inspected; no audio downloaded or added to the asset library.
 - Allosaurus/Parrot source and model docs inspected; no Urdu audio inference or viseme mapping test performed.
+
+## VRM and Urdu phoneme source evidence (not app tests)
+- V-Sekai Godot VRM README/root MIT license, MToon MIT license and sample-model license file inspected; no upstream Actions workflow found.
+- VRM 1.0 expressions specification inspected for emotions, vowel visemes, blink/gaze, custom expressions and override behavior.
+- eSpeak NG current source and GPL3 license inspected; Urdu `ur` language source and pronunciation files are present. No Windows binary was executed.
+- No VRM import/export, MToon rendering, Urdu phoneme output, eSpeak speech or Allosaurus audio alignment was tested.

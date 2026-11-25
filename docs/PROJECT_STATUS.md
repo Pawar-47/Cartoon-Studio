@@ -81,3 +81,9 @@ P0.3 — continue the comparative source-level research sweep. P0.4 hardware/Urd
 - FFmpeg default LGPL build is compatible with a more permissive distribution path; avoid GPL libx264/libx265 unless the project license decision allows it. OpenH264 BSD is a possible H.264 encoder candidate, not tested.
 - Kenney CC0 packs cover SFX and short jingles; OpenGameArt CC0 loops are available but need per-track license and YouTube Content ID checks.
 - Urdu lip-sync remains unproven: Allosaurus universal model uses approximate phone timestamps and has no Urdu-specific acoustic model confirmed. Manual correction remains required.
+
+## Face-expression and Urdu phoneme research checkpoint
+- VRM 1.0 provides a humanoid expression contract: five vowel visemes, emotion presets, blink/gaze and custom expressions. The MIT Godot VRM add-on imports/exports VRM and includes an MIT MToon shader; several features still need proof.
+- eSpeak NG includes Urdu `ur` language rules and can output phoneme/pitch/length data locally. It is compact but formant TTS is robotic; retain it only as offline G2P/placeholder voice, not the main production voice.
+- Allosaurus remains an unverified audio-to-phone candidate; actual Urdu timing must be measured on native recordings. Manual viseme editing remains required.
+- No VRM avatars, eSpeak binary or voice models have been downloaded or integrated.
