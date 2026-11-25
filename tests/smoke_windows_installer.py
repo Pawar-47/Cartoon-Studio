@@ -225,7 +225,35 @@ def main() -> int:
         # Install v2 over v1. The previous uninstaller removes only program files.
         install(v2_installer)
         executable = install_dir / "CartoonStudio.exe"
-        assert executable.is_file()
+        if not executable.is_file():
+            contents = (
+                sorted(path.name for path in install_dir.iterdir())
+                if install_dir.exists()
+                else []
+            )
+            install_registry = subprocess.run(
+                ["reg", "query", r"HKCU\\Software\\CartoonStudio", "/s", "/reg:64"],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            uninstall_registry = subprocess.run(
+                [
+                    "reg",
+                    "query",
+                    r"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\CartoonStudio",
+                    "/s",
+                    "/reg:64",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            raise AssertionError(
+                f"Upgrade did not place {executable}; remaining files={contents!r}; "
+                f"install registry={install_registry.stdout + install_registry.stderr!r}; "
+                f"uninstall registry={uninstall_registry.stdout + uninstall_registry.stderr!r}"
+            )
         process = start_application(executable, data_dir, port, "0.1.1")
         try:
             status, projects = request(f"http://127.0.0.1:{port}", "/api/projects")
@@ -241,7 +269,7 @@ def main() -> int:
         assert not desktop_shortcut.exists()
 
         # Reinstall after uninstall and confirm the same project remains readable.
-        install(v2_installer, install_dir)
+        install(v2_installer)
         executable = install_dir / "CartoonStudio.exe"
         process = start_application(executable, data_dir, port, "0.1.1")
         try:

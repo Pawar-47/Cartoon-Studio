@@ -3,8 +3,8 @@
 ## Live checkpoint
 - Repository: Pawar-47/Cartoon-Studio
 - Branch: main
-- Implementation checkpoint: d60def463e34575bab26b3a5da6c573b4f2bc4ee; dependency-lock-only follow-up: 6b41eb59631f8e9757ff2fe26513be08d9623151.
-- Latest verified Windows CI: run #136 SUCCESS on d60def463e34575bab26b3a5da6c573b4f2bc4ee.
+- Implementation checkpoint: P1.4 installer hardening is active on main; see latest commit and Actions run.
+- Latest fully verified Windows CI: run #136 SUCCESS for P1.1–P1.3. P1.4 installer build succeeds; the current clean-install/upgrade/uninstall integration test is being corrected.
 - Result: exact uv lock verified; locked environment installed; Ruff, compile and 22 pytest tests passed; runtime requirements and CycloneDX SBOM exported; Windows bootstrap ZIP built; actual start.bat launched from a clean extraction; HTTP dashboard/static/API, project create/open and restart persistence passed; both artifacts uploaded. The old TestClient/httpx warning is resolved through the locked httpx2 test dependency.
 - Godot native-worker proof #3 and FFmpeg MP4 assembly proof: SUCCESS; see docs/P0_6_PROOF_REPORT.md.
 - SQLite queue prototype: Windows CI run #101 SUCCESS; 17 tests passed.
@@ -16,7 +16,7 @@
 | Phase | Status | Evidence / limitation |
 |---|---|---|
 | Phase 0 — Specification/research/architecture | COMPLETE | P0.1–P0.7 closed; see P0_7_PHASE0_EXIT_REVIEW.md |
-| Phase 1 — GitHub and CI/CD foundation | ACTIVE — P1.1–P1.3 COMPLETE; P1.4 REMAINING | Reproducible locked CI and clean Windows bootstrap/launcher smoke test passed; self-contained installer and upgrade/uninstall preservation remain |
+| Phase 1 — GitHub and CI/CD foundation | ACTIVE — P1.1–P1.3 COMPLETE; P1.4 ACTIVE | Reproducible locked CI and clean Windows bootstrap/launcher smoke test passed; self-contained installer and upgrade/uninstall preservation remain |
 | Phase 2 — Character Studio | NOT STARTED | No production character creation/import/rig/face studio |
 | Phase 3 — World Builder | NOT STARTED | No persistent production world/location builder |
 | Phase 4 — Story and Scene Engine | PARTIAL / FROZEN | Early Story Generator and saved story plan preserved; Ara-derived IDs are validation-only and must be normalized in Phase 4 |
@@ -55,10 +55,10 @@
 - Added create/list/open/update project APIs and retained the existing story_plans table as a compatibility/index path.
 - Story plans now persist as portable episode documents and project references stay synchronized; file-to-database recovery is tested.
 - Legacy database migration preserves project UUIDs and story plans; missing portable files are reconstructed without deleting source records.
-- P1.1 report: docs/P1_1_FOUNDATION_REPORT.md.
+- P1.1 report: docs/P1_1_FOUNDATION_REPORT.md.\n\n## P1.4 active batch — self-contained Windows installer\n\n- Built two versioned self-contained PyInstaller application bundles and NSIS installers.\n- Clean Windows bootstrap extraction and actual launcher test pass.\n- Installer build and compilation pass; current remaining issue is the v1-to-v2 upgrade smoke test failing to find the installed executable after upgrade.\n- Upgrade flow is being changed to replace only known program-owned files rather than invoking the previous uninstaller mid-install; project data remains outside the program directory.\n- Do not mark P1.4 complete until clean install, launch, upgrade with project preservation, uninstall, and reinstall all pass on Windows CI.
 - CI #115: 21 passed, Ruff/compile/package passed; one non-blocking Starlette TestClient/httpx deprecation warning remains for P1.2 review.
 
-## P1.2 active batch — reproducible dependencies and CI
+## P1.2 completed batch — reproducible dependencies and CI
 
 - Resolve exact direct/transitive Python dependency lock and supported Python baseline.
 - Address the Starlette TestClient warning using the supported test transport dependency path; do not suppress warnings.

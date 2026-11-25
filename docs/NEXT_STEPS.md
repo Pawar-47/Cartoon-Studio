@@ -33,7 +33,7 @@ The user's physical PC is not a prerequisite for architecture, implementation or
 - P1.1: COMPLETE — project lifecycle, persistence, schema and migration foundation.
 - P1.2: COMPLETE — locked dependencies and reproducible CI.
 - P1.3: COMPLETE — portable Windows bootstrap, actual launcher and clean-runner persistence smoke test.
-- P1.4: ACTIVE — self-contained installer, upgrade/uninstall and data migration tests.
+- P1.4: ACTIVE — installer compilation passes; the upgrade smoke test currently fails to locate the app executable after the v1-to-v2 upgrade. Fixing upgrade sequencing and rerunning the full install lifecycle.
 
 ## Deferred in correct phase
 - Character Studio: Phase 2, after Phase 1 closes.

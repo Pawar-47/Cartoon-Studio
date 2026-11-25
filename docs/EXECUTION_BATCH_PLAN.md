@@ -20,14 +20,14 @@ P0.2 checkpoint: atomic registry and traceability were expanded on 2026-11-25. T
 
 ## Phase 1 — GitHub and CI/CD Foundation
 
-**Phase 1 is active following P0.7 architecture freeze.** P1.1, P1.2 and P1.3 are complete. P1.4 self-contained installer, upgrade and uninstall is the only remaining Phase 1 batch. Do not jump ahead to Character Studio or World Builder.
+**Phase 1 is active following P0.7 architecture freeze.** P1.1, P1.2 and P1.3 are complete. P1.4 self-contained installer, upgrade and uninstall is the only remaining Phase 1 batch. Installer compilation is working; the current integration failure is in the v1-to-v2 upgrade path and must be resolved before closing Phase 1. Do not jump ahead to Character Studio or World Builder.
 
 | Batch | Scope | Deliverables | Exit evidence | State |
 |---|---|---|---|---|
 | P1.1 | Harden existing FastAPI app, project lifecycle, SQLite persistence and versioned local data layout | app/storage.py, project APIs, portable project/episode JSON, numbered migrations and integration tests | Create/list/open/update/save/load/restart, legacy DB backup/migration, portable-file recovery and data-preservation tests | COMPLETE — CI #115 passed 21 tests; the later P1.2 dependency update removed the legacy TestClient warning |
 | P1.2 | Reproducible dependencies, lint/static checks and CI | pyproject.toml, uv.lock, hash-locked requirements.lock, CI and CycloneDX SBOM | Clean Windows runner installs exact lock, checks lock freshness, lints, compiles, tests and packages | COMPLETE — CI #125 and lock workflow #11 passed; Python 3.11 Windows runner; no TestClient deprecation warning |
 | P1.3 | Portable Windows package and simple launcher | Hash-locked bootstrap ZIP, start.bat, configurable port/data path and clean-runner smoke test | Extract into a clean temporary directory, run actual launcher, exercise UI/API, create/open a project, restart and confirm persistence | COMPLETE — Windows CI #136 passed actual start.bat launch, HTTP/static/API checks and project persistence after restart; no user-PC test required |
-| P1.4 | Self-contained installer, upgrade and data migration | Installer and release pipeline | Install/upgrade/uninstall tests; project data survives upgrades | NOT STARTED |
+| P1.4 | Self-contained installer, upgrade and data migration | PyInstaller self-contained bundle, NSIS installer, per-user shortcuts and lifecycle smoke test | Clean install/launch, v1-to-v2 upgrade with project preservation, uninstall, reinstall and data retention | ACTIVE — installer compilation passes; upgrade lifecycle smoke test still failing |
 
 **Phase 1 exit gate:** P1.1–P1.4 must deliver the tested local app, repeatable Windows artifact, self-contained installer, clean install/upgrade/uninstall validation and persistent user data. P1.1–P1.3 are complete; P1.4 remains. Do not require installation on the user's PC or target-PC performance to begin Phase 2 after Phase 1 closes; performance is P8.1.
 
