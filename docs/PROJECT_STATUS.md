@@ -4,8 +4,8 @@
 
 - Repository: Pawar-47/Cartoon-Studio
 - Branch: main
-- Current HEAD at this checkpoint: 46ac1a8e3a1523a0db52c6cc600e8cca82750bdd
-- Latest CI run: #87 — SUCCESS on that exact HEAD.
+- Current HEAD at this checkpoint: 6823cdf8913fc6b645017a6b459c06062d2cc973
+- Latest CI run: #88 — SUCCESS on that exact HEAD.
 - Latest application CI run #67 passed Ruff, Python compile, 12 pytest tests and Windows bootstrap ZIP packaging/upload. The bootstrap ZIP is not a self-contained installer.
 - Commit history confirms P0.3 closeout and P0.4 target-PC probe harness are pushed. No work is discarded or restarted.
 
@@ -31,7 +31,7 @@
 | P0.1 baseline and preservation audit | COMPLETE | Live repo, source, tests, workflows and artifacts inspected |
 | P0.2 atomic requirements/traceability | COMPLETE | 171 atomic rows and 171 traceability rows; legacy IDs retained |
 | P0.3 comparative GitHub research | COMPLETE | Candidate scorecard and source-level evidence; no candidate selected |
-| P0.4 hardware/Urdu/provider feasibility | IN PROGRESS | Windows diagnostic harness committed; Urdu and provider research refreshed; target PC and real-audio proof pending |
+| P0.4 hardware/Urdu/provider feasibility | IN PROGRESS | Windows diagnostic harness committed; Urdu/provider feasibility and acceptance protocol refreshed; target PC and real-audio proof pending |
 | P0.5 architecture freeze | BLOCKED | Wait for P0.4 evidence |
 | P0.6 bounded candidate proofs | BLOCKED | Wait for P0.5; Ara run #6 is not accepted |
 | P0.7 Phase 0 compliance/freeze | BLOCKED | Wait for P0.2–P0.6 |

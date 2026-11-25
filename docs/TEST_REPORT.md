@@ -1,8 +1,8 @@
 # Test Report — 2026-11-25
 
 ## Current repository checkpoint
-- Main HEAD: 46ac1a8e3a1523a0db52c6cc600e8cca82750bdd.
-- GitHub Actions run #87: SUCCESS on that exact commit.
+- Main HEAD: 6823cdf8913fc6b645017a6b459c06062d2cc973.
+- GitHub Actions run #88: SUCCESS on that exact commit.
 - Prior app CI run #67 passed Ruff, Python compileall, 12 pytest tests, Windows bootstrap ZIP packaging and artifact upload.
 - Bootstrap artifact is not a self-contained installer and does not prove a clean target-PC installation.
 

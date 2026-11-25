@@ -153,3 +153,8 @@ This is the first broad source-level sweep, not P0.3 completion. No production e
 - A short, consented native Pakistani Urdu recording plus its verbatim human-corrected transcript, ideally 30–60 seconds covering aspirated/retroflex consonants, nasalization, long/short vowels, common names and code-switching.
 - Human-reviewed eSpeak Urdu IPA/phoneme output and WhisperX forced alignment timings for that sample.
 - Optional Qwen Sahar sample only after the user explicitly authorizes use of an external paid service and reviews the privacy/price terms.
+
+## P0.4 Urdu/provider feasibility batch closeout
+- Documentation batch commit: 6823cdf8913fc6b645017a6b459c06062d2cc973.
+- GitHub Actions run #88 completed SUCCESS on the exact commit: https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45562534763.
+- Updated AI provider region/quota/privacy/pricing evidence, created URDU_VOICE_FEASIBILITY.md, corrected the live status/next-step checkpoint and updated AI-R003 / VOICE-R001 / VOICE-R002 evidence. This remains source-level research only; no real Urdu audio, API key or target-PC benchmark was tested.
