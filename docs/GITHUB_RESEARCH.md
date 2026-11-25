@@ -63,5 +63,80 @@ Urdu fine-tune, 1.6B parameters, model card cites RTX 3090 24GB VRAM. Not suitab
 ### XTTS Urdu fine-tune — https://huggingface.co/suhaibrashid17/XTTS-v2-Urdu-FT
 Approximately 5.65 GB weights; model card says MIT but it is based on XTTS-v2, whose upstream model uses Coqui Public Model License. Resolve derivative/base model rights and resource requirements before use. Too large for the 8 GB target machine as a default local dependency.
 
-## Current research conclusion
-Ara is the best 3D production foundation candidate. No Urdu TTS model has yet passed both licensing and target-hardware/quality checks. The voice architecture must remain modular and provide a manual recording fallback. Do not mark a TTS model selected merely because it supports Urdu on a model card.
+## Current research conclusion (revised)
+No production engine, character generator, world generator, toon renderer, Urdu TTS or lip-sync system is selected. Blender 4.5.17 LTS plus a browser-first UI is a plausible local architecture candidate, but the target PC is below Blender's published CPU minimum and has a documented legacy Intel driver risk. Bene Procgen Maps and Blender Level Architect are strong world-generation candidates but GPL-3.0 and not target-tested. Ara and Ekza remain editor candidates with incomplete/cancelled CI evidence. The next proof work must be bounded and hardware-aware. Keep the system modular, local-first, offline-capable, and preserve a manual voice-recording fallback.
+
+## 2026-11-25 — Source-level research sweep 2
+
+### Local 3D production engine: Blender 4.5 LTS
+- Official release page lists Blender 4.5.17 LTS on 2026-11-24 and support through July 2027: https://www.blender.org/releases/4-5/
+- Windows requirements for Blender 4.5 include Intel Broadwell and newer. Blender 5.0+ raises the supported Intel GPU floor to Kaby Lake, which excludes HD Graphics 5500.
+- Intel's i3-5005U specification confirms Broadwell, 2 CPU cores / 4 threads, SSE4.2, AVX2, HD Graphics 5500 and OpenGL 4.3: https://www.intel.com/content/www/us/en/products/sku/84695/intel-core-i35005u-processor-3m-cache-2-00-ghz/specifications.html
+- Blender's published minimum is 4 CPU cores with SSE4.2 and 8 GB RAM. The target has 2 physical cores and exactly 8 GB; it is below the CPU minimum and at the RAM minimum. HD 5500 is integrated/shared-memory graphics, so the stated dedicated 2 GB GPU requirement is not a guaranteed match.
+- Blender 4.5's Windows Intel troubleshooting page warns that newer Intel drivers can crash on 3rd–5th generation iGPUs. It lists 20.19.15.4835, .4963 and .5063 as known working, and .5126, .5144, .5166 and .5171 as known failing. The exact driver on the user's PC has not been inspected.
+- Candidate operating mode: browser UI + lightweight 3D preview, Blender 4.5.17 as a local background asset/scene/render process, CPU rendering and sequential work as a fallback. This is a hypothesis; startup, viewport, geometry generation, CPU rendering and RAM must be measured on the target PC.
+
+### World/environment generation
+**Bene's Procedural Maps** — https://github.com/Beneking102/bene-proggen-maps
+- Inspected repository source/docs and latest main commit `f883ddb59eadcff319d3b28eee59da90d7c8c21f`; GitHub Actions run #18 succeeded on that commit.
+- GPL-3.0; Blender 4.2+; modular Python/Blender generator. README describes seeded city/countryside/dungeon generation, roads, sidewalks, buildings, parks, river/bridges, terrain, props, signage, lighting and glTF export. No external model/texture files are required for its procedural geometry path.
+- README describes 50 seeds across four city presets and 50 seeds across three dungeon themes. Optimization notes report roughly 4.1–4.3 seconds for a small town and 11 seconds for a metropolis on the author's machine, with high-density examples around 1.1 million vertices and thousands of props. Not a target-PC benchmark.
+- Strong modular urban-world candidate. Risks: GPL-3.0 compatibility, high object/vertex counts, no persistent episode-world data contract or animated vehicle system, and no test on Blender 4.5.17 / HD 5500.
+
+**Blender Level Architect** — https://github.com/dottyboy/BlenderLevelArchitect
+- Inspected README, GPL-3.0 license, headless test launcher and repository tree. Latest inspected main commit `660e2113a2987a172f001a95d305e303b6a2aad9`; Actions run #87 succeeded.
+- Blender 4.2+; README claims 1,400+ automated checks and tests on Blender 4.2.21 and 5.2.1/5.2.2. Features include seeded dungeons, rooms/corridors/stairs, castles, villages, hill cities, floor-plan-to-house generation, terrain/biomes, walkability checks and glTF/GLB export.
+- Principal implementation file is approximately 1.2 MB and the headless test file approximately 386 KB. This is a substantial maintenance/integration risk despite broad features and successful upstream CI. Candidate for isolated add-on evaluation or selective reference, not an automatic merge.
+
+### Character creation and rigging
+**MPFB2** — https://github.com/makehumancommunity/mpfb2
+- Active Blender add-on; latest inspected main commit `650c5c53bd6989a8ac264f31fa1d11d4a0c7bd8a`, pushed 2026-11-22. Code license file states GPL-3.0; separate asset license file states CC0 for supplied MakeHuman assets. Blender 4.2+.
+- Provides procedural human generation and Blender rig/asset workflows. It creates human-like base characters, not the final Cartoon Studio toon style.
+
+**CharacterCreator** — https://github.com/kblood/CharacterCreator
+- GPL-3.0 code, MakeHuman/MPFB-derived human generation, with project notes describing generated outputs as CC0 when built only from included CC0 source assets. It includes a Three.js viewer and GLB workflow.
+- Useful for studying persistent character parameters and GLB export, but human proportions/style do not satisfy the final cartoon look without substantial work. Verify provenance for every output.
+
+### Toon/NPR rendering
+- **Anime-Tools** — https://github.com/Kraxziss/Anime-Tools: README describes Blender 4.5.2 cel shading, outline and Grease Pencil/Line Art workflows. GitHub reports no SPDX license and no standalone LICENSE file was found. Research/reference only; do not copy until licensing is clarified.
+- **blender-add-outline** — https://github.com/azeemba/blender-add-outline: MIT, last pushed 2023-11-30, small inverted-hull/Solidify outline add-on. Narrow technique reference, not a complete toon renderer and not yet validated on Blender 4.5.17.
+- Safe candidate remains a Cartoon Studio-owned material/outline system built on Blender's documented nodes and renderer APIs after engine decision.
+
+### Urdu lip-sync and phoneme analysis
+**Parrot Lipsync** — https://github.com/blackears/parrotLipsync
+- GPL-3.0; uses Allosaurus to convert audio to phonemes, then maps phonemes through an editable JSON phoneme table to mouth poses/keyframes. Requires FFmpeg. Latest inspected commit `b569ee56a427833a9f561f45faec2677fdaff55e`, pushed 2026-07-07.
+- Promising because a custom Urdu phoneme-to-viseme table can be authored. Allosaurus Urdu inventory/accuracy, timing precision, CPU cost and Blender compatibility remain unverified.
+
+**Allosaurus** — https://github.com/xinjli/allosaurus
+- GPL-3.0 universal phoneme recognizer; broad multilingual coverage, latest inspected commit from 2021. Possible research component, not proof of accurate Urdu alignment. Urdu language-code availability and output quality must be tested with native Pakistani Urdu samples.
+
+**Charley3d Blender Lip Sync** — https://github.com/Charley3d/lip-sync
+- Version 1.0.6, GPL-3.0-or-later, Blender 4.4+, Vosk + Phonemizer + eSpeak, shape-key/spritesheet baking and downloadable language models. README says approximately 25/30 languages, but inspected material does not establish Urdu support. Do not infer Urdu from a generic multilingual claim.
+
+### Persistent local render/job queue
+**sqlite-workqueue** — https://github.com/SammyRyuga/sqlite-workqueue
+- MIT, version 0.1.0, Python >=3.11, no runtime dependencies. Inspected queue implementation, pyproject, license and tests. Latest inspected commit `4f7cf094a77ea44f984de61b39a13594efd5f7c5`; Actions run #19 succeeded.
+- Implements SQLite WAL, atomic claims, worker lease tokens, lease renewal, bounded exponential retries, idempotency keys and expired-lease recovery.
+- Explicit limitations: no cancellation, result storage, periodic scheduling, schema-migration system or HTTP service; at-least-once delivery and local-host-only SQLite. Early project, not a production queue to drop in unchanged.
+
+**Huey** — https://github.com/coleifer/huey
+- MIT; supports SqliteHuey, multi-process/thread workers, retries, result storage, scheduling, priority, locks and timeouts.
+- Its guide warns that tasks in progress can be lost if a consumer crashes unless interrupted tasks are explicitly re-enqueued; re-enqueue can repeat side effects. Long renders still need idempotent scene outputs and durable per-scene checkpoints.
+
+### Windows packaging and final media
+- **PyInstaller**: official docs describe Python/dependency bundling into one-folder or one-file executable. GPL-2.0 has a specific exception allowing bundled applications to use their own license, subject to dependency licenses. Prove one-folder mode before one-file mode.
+- **NSIS**: primarily zlib/libpng licensed; bzip2 and LZMA modules have separate licenses.
+- **Tauri 2**: MIT/Apache-2.0, Windows 10+, WebView2 and Rust toolchain; adds another runtime/build system beside Python.
+- **pywebview**: BSD-3-Clause and Windows WebView2 option; runtime/packaging still requires validation.
+- **FFmpeg**: default codebase LGPL-2.1-or-later; enabling GPL components such as libx264 changes the build license to GPL; nonfree builds may be unredistributable. Pin exact binary/configuration and codec rights before bundling.
+
+### Reusable asset libraries
+- **Kenney** — https://kenney.nl/support: official support page says game assets are CC0; verify the license file/page for each downloaded pack.
+- **Poly Haven** — https://polyhaven.com/license: all site assets (HDRIs, textures and 3D models) are CC0.
+- **Quaternius** — https://quaternius.com/faq.html and https://quaternius.com/license.html: each pack's license is specified individually. QAL v1.0 updated 2026-08-28 permits use in products but prohibits redistributing assets themselves as standalone assets. Older pack pages may explicitly state CC0. Inspect the exact pack; no blanket CC0 assumption.
+
+### Updated Urdu TTS findings
+- **Smol Urdu TTS V1** model card says Apache-2.0 and 135M parameters, but linked GitHub inference package has no LICENSE file in its tree. Code requires PyTorch, torchaudio, Transformers, Liger Kernel and separate WavTokenizer checkpoint/config; inference uses BF16. Not a proven lightweight CPU solution.
+- **tiny-urdu** repository README says 1,000 training clips; its Hugging Face model card says 5,000. Treat as unresolved discrepancy. Roman Urdu only, one voice; underlying UrduTTS dataset is CC-BY-NC 4.0 and GitHub code repo has no explicit LICENSE.
+- **URDUTTS** — https://github.com/KAABSHAHID/URDUTTS: dataset research reports about 89 hours / 55,450 utterances and four male speakers; dataset CC-BY-NC 4.0 while code is MIT. Non-commercial research only unless rights clarified.
+- **Qwen-Audio-TTS 3.1 Flash** official Model Studio documentation explicitly lists Urdu and a male Urdu voice named Sahar. The docs do not imply Pakistani accent or offline rights. Qwen3-TTS system voices do not list Urdu. Qwen-Audio-TTS Flash is cloud-only; pricing, Pakistan access, region, terms, privacy and quality remain P0.4 tasks.

@@ -61,3 +61,53 @@ AGPL-3.0-or-later. Rigging and animation editor with third-party motion packs.
 5. Measure browser memory and render time on comparable low-end hardware; later validate on the actual target PC.
 6. Verify model and asset downloads and their licenses.
 7. Only then decide whether Ara or an alternative is accepted.
+
+## Candidate E — Blender 4.5 LTS as local production engine
+Source: https://www.blender.org/releases/4-5/  
+Current inspected release: 4.5.17 LTS (2026-11-24), support until July 2027.
+
+**Advantages:** mature 3D authoring, materials/NPR, rigging, animation, cameras, scene management, Python automation, background mode and CPU Cycles rendering. Blender 4.5 Windows support includes Intel Broadwell; Blender 5.0+ raises the Intel GPU floor to Kaby Lake.
+
+**Critical hardware risk:** i3-5005U is 2 cores / 4 threads, below Blender's published 4-core minimum; 8 GB RAM is only the minimum. Blender's Windows Intel troubleshooting page warns of startup crashes on 3rd–5th gen Intel iGPUs with several newer drivers.
+
+**Decision:** LEADING ENGINE CANDIDATE, NOT SELECTED. Run a controlled Blender 4.5.17 startup/viewport/headless/CPU-render test on the actual target PC before P0.5 architecture freeze.
+
+## Candidate F — Bene Procgen Maps
+Source: https://github.com/Beneking102/bene-proggen-maps  
+Inspected main commit `f883ddb59eadcff319d3b28eee59da90d7c8c21f`; upstream Actions #18 SUCCESS. GPL-3.0, Blender 4.2+.
+
+**Advantages:** modular procedural city/countryside/dungeon generation; roads, buildings, terrain, parks, rivers/bridges, props, lighting and GLB export; deterministic seeds and upstream CI.
+
+**Risks:** GPL-3.0; dense scenes can exceed 1M vertices; upstream timings are not target-PC benchmarks; no Cartoon Studio persistent-world contract or animated vehicle system.
+
+**Decision:** HIGH-PRIORITY WORLD GENERATOR PROOF CANDIDATE; no code copied.
+
+## Candidate G — Blender Level Architect
+Source: https://github.com/dottyboy/BlenderLevelArchitect  
+Inspected main commit `660e2113a2987a172f001a95d305e303b6a2aad9`; upstream Actions #87 SUCCESS. GPL-3.0, Blender 4.2+.
+
+**Advantages:** seeded rooms/corridors/stairs, castles, villages, hill cities, floor-plan-to-house generation, terrain/biomes, walkability checks and GLB export; README claims 1,400+ automated checks.
+
+**Risks:** main implementation is approximately 1.2 MB in one Python file; integration/maintenance risk.
+
+**Decision:** SECOND WORLD/INTERIOR PROOF CANDIDATE; isolated add-on evaluation or selective reference, not wholesale merge.
+
+## Candidate H — MPFB2 / CharacterCreator
+MPFB2 (https://github.com/makehumancommunity/mpfb2): GPL-3.0 code, separate CC0 supplied assets, Blender 4.2+. CharacterCreator (https://github.com/kblood/CharacterCreator): GPL-3.0 code and CC0 output claim only where source assets are CC0. Both create human-like base characters; substantial stylization is still needed.
+
+**Decision:** character-profile/rig/export research, not a final toon character solution.
+
+## Candidate I — NPR/toon rendering
+Anime-Tools describes Blender 4.5.2 cel shading/outline workflows but has no verified license file. blender-add-outline is MIT but old and narrow.
+
+**Decision:** no shader dependency selected; build a Cartoon Studio-owned material/outline system after engine freeze.
+
+## Candidate J — Urdu lip-sync
+Parrot Lipsync + Allosaurus are GPL-3.0; custom phoneme table is promising but Urdu recognition/timing and CPU performance are unverified. Charley3d Lip Sync 1.0.6 is GPL-3.0-or-later, Blender 4.4+, Vosk/Phonemizer/eSpeak; Urdu model is not confirmed.
+
+**Decision:** no lip-sync dependency selected. Native Urdu audio and mouth-timing tests are mandatory.
+
+## Candidate K — local queue and packaging
+sqlite-workqueue is MIT and implements SQLite leases/retries/idempotency, but lacks cancellation/results/migrations. Huey is MIT and richer, but in-flight crash recovery needs explicit handling. PyInstaller + NSIS are plausible packaging; Tauri 2 / pywebview are alternate shells with WebView2/toolchain costs. FFmpeg build configuration and codec licenses must be pinned.
+
+**Decision:** compare queue designs and packaging only after P0.4; no dependency selected.
