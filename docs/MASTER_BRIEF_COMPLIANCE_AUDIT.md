@@ -67,3 +67,8 @@ All 24 numbered sections are represented in source references across the registr
 - `docs/CANDIDATE_SCORECARD.md` records provisional weighted scores and trade-offs. Godot 4.7.2 Compatibility is the leading on-paper runtime candidate, but no engine is selected and no target-PC test has been performed.
 - P0.3 is complete as research only. P0.4 is next and must establish actual target-PC/driver compatibility, Pakistani Urdu quality, provider availability/quotas, privacy and cost. P0.5/P0.6/P0.7 remain gated in order.
 - All previous limitations remain: no complete 3D studio, no finished Character Studio/World Builder/Animation Engine/Urdu TTS/lip-sync/episode pipeline, no installer, and no end-to-end MP4 proof.
+
+## P0.3 closeout commit and CI
+- P0.3 closeout commit: `5bcbf8775014c4b25699a9bdcb5e633c5fa00811`.
+- Workflow run #84 completed SUCCESS: https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45557418338.
+- Latest verified main HEAD at this checkpoint: `5bcbf8775014c4b25699a9bdcb5e633c5fa00811`.

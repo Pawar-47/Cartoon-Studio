@@ -93,4 +93,5 @@ A green CI run proves only the checks that actually ran. Source presence, docume
 - Candidate scorecard published at `docs/CANDIDATE_SCORECARD.md`; all scores are source-based and provisional.
 - Original uploaded master prompt was added verbatim as `docs/MASTER_EXECUTION_PROMPT.md`; a fresh GitHub fetch matched the text exactly. Source metadata: 1,133 lines, 4,642 words, 33,223 bytes, SHA-256 `541098eebd96b98e0153770f0bc37a1031a7242fd9cb97bc5a6b52c35c9ddfde`.
 - Prompt-preservation commit `e51ccdb71a9fe813ffe0ecab2ba78a3b096a11f9` CI run #83 SUCCESS. P0.3 closeout commit CI is pending.
+- P0.3 closeout commit: `5bcbf8775014c4b25699a9bdcb5e633c5fa00811`; GitHub Actions run #84 SUCCESS — https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45557418338.
 - P0.3 is a research gate only. No engine/plugins/assets/providers have been integrated; no target-PC test has been run.

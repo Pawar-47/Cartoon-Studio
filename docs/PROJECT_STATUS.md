@@ -94,5 +94,6 @@ P0.3 — continue the comparative source-level research sweep. P0.4 hardware/Urd
 - **P0.2 atomic requirement registry and traceability:** completed; the exact original brief is now preserved at `docs/MASTER_EXECUTION_PROMPT.md`.
 - **P0.3 source-level research and candidate scorecard:** complete. See `docs/CANDIDATE_SCORECARD.md`. Godot 4.7.2 Compatibility is the leading on-paper runtime candidate, not a frozen selection.
 - **P0.4 target-hardware, Urdu and provider feasibility:** ready to start. No target-PC tests, Pakistani Urdu voice tests or account-specific provider quota checks have been run yet.
+- P0.3 closeout commit: `5bcbf8775014c4b25699a9bdcb5e633c5fa00811`; GitHub Actions run #84 SUCCESS. Latest main HEAD at this checkpoint is the same commit.
 - **P0.5 architecture freeze:** blocked by P0.4. **P0.6 bounded proofs:** blocked by P0.5. **P0.7 plan freeze:** blocked by P0.2–P0.6.
 - Existing FastAPI/SQLite/browser shell and Story Generator remain preserved; no production feature expansion before P0.7.
