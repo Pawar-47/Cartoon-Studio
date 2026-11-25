@@ -62,3 +62,10 @@ The pinned CC0 library, four-slot Godot assembly/export, browser selectors and v
 5. Compare browser retarget preview with the authoritative Godot scene and broaden rig families only where tests prove compatibility.
 
 Phase 2 remains ACTIVE. Do not start Phase 3 until the P2.2 Character Studio exit criteria are met. Physical-PC performance testing and full Windows packaging remain later-stage work, not blockers for this batch.
+
+
+## 2026-11-25 — Modular recipe persistence regression coverage
+
+The next P2.2 acceptance batch now includes a deterministic API-level round-trip test for modular character recipes. It exercises assembly with four parts plus a bone-attached accessory, persists the resulting asset manifest, verifies every source manifest can be reopened, saves and reopens a character profile referencing the assembled asset, and submits a second assembly using only the recovered recipe. This isolates the persistence/replay contract from interactive browser acceptance; the fake engine is used here, while the separate pinned-Godot integration test remains responsible for real skeleton compatibility and animation playback.
+
+After this test passes in CI, continue with the real browser end-to-end workflow and then geometric customization. Do not mark visual acceptance complete from an API test.

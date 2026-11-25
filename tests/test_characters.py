@@ -63,6 +63,32 @@ class FakeEngine:
         }
 
 
+    def assemble_modular_character(
+        self, base_path, parts, destination, allowed_root, accessories=None
+    ):
+        assert base_path.is_relative_to(allowed_root)
+        assert all(Path(part["source_path"]).is_relative_to(allowed_root) for part in parts)
+        assert all(
+            Path(item["source_path"]).is_relative_to(allowed_root)
+            for item in (accessories or [])
+        )
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(make_glb())
+        inspection = self.inspect_glb(destination, allowed_root)
+        return {
+            **inspection,
+            "assembly_verified": True,
+            "animation_preserved": True,
+            "animation_names": ["Idle"],
+            "added_parts": [{"slot": part["slot"]} for part in parts],
+            "base_meshes_removed": ["BaseBody"],
+            "added_accessories": [
+                {"mesh_name": Path(item["mesh_path"]).name}
+                for item in (accessories or [])
+            ],
+        }
+
+
 def setup_project(tmp_path, monkeypatch):
     monkeypatch.setattr(main, "DATA_DIR", tmp_path)
     monkeypatch.setattr(main, "DB_PATH", tmp_path / "characters.sqlite3")
@@ -212,6 +238,95 @@ def test_character_glb_import_profile_round_trip_and_project_reference(tmp_path,
 
     opened = client.get(f"/api/projects/{project_id}")
     assert character_id in opened.json()["document"]["data"]["references"]["characters"]
+
+
+def test_modular_assembly_recipe_survives_profile_reopen_and_reassembly(
+    tmp_path, monkeypatch
+):
+    client, project_id = setup_project(tmp_path, monkeypatch)
+    base = import_asset(client, project_id)
+    head = import_asset(client, project_id)
+    body = import_asset(client, project_id)
+    legs = import_asset(client, project_id)
+    feet = import_asset(client, project_id)
+
+    original_payload = {
+        "base_relative_path": base["relative_path"],
+        "parts": [
+            {"slot": "head", "relative_path": head["relative_path"], "mesh_path": "Head/Mesh"},
+            {"slot": "body", "relative_path": body["relative_path"], "mesh_path": "Body/Mesh"},
+            {"slot": "legs", "relative_path": legs["relative_path"], "mesh_path": "Legs/Mesh"},
+            {"slot": "feet", "relative_path": feet["relative_path"], "mesh_path": "Feet/Mesh"},
+        ],
+        "accessories": [
+            {
+                "relative_path": base["relative_path"],
+                "mesh_path": "Root/Backpack",
+                "attachment_bone": "mixamorig:Spine",
+            }
+        ],
+    }
+    assembled = client.post(
+        f"/api/projects/{project_id}/modular-assemblies", json=original_payload
+    )
+    assert assembled.status_code == 201, assembled.text
+    first = assembled.json()
+    assert first["assembly"]["verified"] is True
+    assert first["assembly"]["animation_preserved"] is True
+
+    saved_manifest = client.get(
+        f"/api/projects/{project_id}/character-assets/{first['asset_id']}/manifest"
+    )
+    assert saved_manifest.status_code == 200
+    recipe = saved_manifest.json()["assembly"]
+    assert recipe["base_relative_path"] == original_payload["base_relative_path"]
+    assert recipe["parts"] == original_payload["parts"]
+    assert recipe["accessories"] == original_payload["accessories"]
+    assert len(recipe["added_parts"]) == 4
+    assert len(recipe["added_accessories"]) == 1
+
+    # Every source needed by the browser's Reopen assembly action must still
+    # have a readable, project-scoped manifest after the character is saved.
+    source_paths = [
+        recipe["base_relative_path"],
+        *(part["relative_path"] for part in recipe["parts"]),
+        *(item["relative_path"] for item in recipe["accessories"]),
+    ]
+    for relative_path in set(source_paths):
+        source_id = relative_path.rsplit("/", 1)[-1].removesuffix(".glb")
+        source_manifest = client.get(
+            f"/api/projects/{project_id}/character-assets/{source_id}/manifest"
+        )
+        assert source_manifest.status_code == 200
+        assert source_manifest.json()["relative_path"] == relative_path
+
+    profile = client.post(
+        f"/api/projects/{project_id}/characters",
+        json=profile_payload(first["relative_path"]),
+    )
+    assert profile.status_code == 201
+    character_id = profile.json()["id"]
+    reopened_profile = client.get(
+        f"/api/projects/{project_id}/characters/{character_id}"
+    )
+    assert reopened_profile.status_code == 200
+    assert reopened_profile.json()["data"]["asset"]["assembly"]["parts"] == recipe["parts"]
+    assert reopened_profile.json()["data"]["asset"]["assembly"]["accessories"] == recipe["accessories"]
+
+    # Reassemble exclusively from the persisted recipe, as the UI does after
+    # restoring source manifests; no original selector state is reused.
+    replay_payload = {
+        "base_relative_path": recipe["base_relative_path"],
+        "parts": recipe["parts"],
+        "accessories": recipe["accessories"],
+    }
+    replayed = client.post(
+        f"/api/projects/{project_id}/modular-assemblies", json=replay_payload
+    )
+    assert replayed.status_code == 201, replayed.text
+    assert replayed.json()["assembly"]["parts"] == recipe["parts"]
+    assert replayed.json()["assembly"]["accessories"] == recipe["accessories"]
+    assert replayed.json()["assembly"]["animation_preserved"] is True
 
 
 def test_material_appearance_recipe_persists_and_survives_profile_updates(tmp_path, monkeypatch):
