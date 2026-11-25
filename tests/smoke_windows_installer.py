@@ -80,35 +80,33 @@ def install(installer: Path, install_dir: Path) -> None:
     )
 
 
-def uninstall(install_dir: Path, log_path: Path) -> None:
+def uninstall(install_dir: Path) -> None:
     uninstaller = install_dir / "Uninstall.exe"
     if not uninstaller.is_file():
         raise AssertionError("Installed uninstaller is missing.")
-    subprocess.run(
-        [str(uninstaller), "/S", f"/LOG={log_path}"],
-        check=True,
-        timeout=180,
-    )
+    debug_path = Path(os.environ["TEMP"]) / "CartoonStudio-uninstall-debug.txt"
+    if debug_path.exists():
+        debug_path.unlink()
+    subprocess.run([str(uninstaller), "/S"], check=True, timeout=180)
     if (install_dir / "CartoonStudio.exe").exists():
         registry = subprocess.run(
-            ["reg", "query", r"HKCU\Software\CartoonStudio", "/v", "InstallDir"],
+            ["reg", "query", r"HKCU\\Software\\CartoonStudio", "/v", "InstallDir"],
             check=False,
             capture_output=True,
             text=True,
         )
-        log_text = (
-            log_path.read_text(encoding="utf-8", errors="replace")
-            if log_path.exists()
-            else "No uninstaller log."
+        debug_text = (
+            debug_path.read_text(encoding="utf-8", errors="replace")
+            if debug_path.exists()
+            else "No uninstaller debug file."
         )
         raise AssertionError(
-            "Uninstaller left the main executable in place.\n"
-            + log_text
-            + "\nRegistry:\n"
+            "Uninstaller left the main executable in place.\\n"
+            + debug_text
+            + "\\nRegistry:\\n"
             + registry.stdout
             + registry.stderr
         )
-
 
 def main() -> int:
     if len(os.sys.argv) != 3:
@@ -178,7 +176,7 @@ def main() -> int:
         finally:
             stop_application(process)
 
-        uninstall(install_dir, root / "uninstall.log")
+        uninstall(install_dir)
         assert not executable.exists()
         assert project_file.is_file(), "Uninstall deleted the user's project data."
         assert not start_menu.exists()
