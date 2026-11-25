@@ -95,3 +95,7 @@ A green CI run proves only the checks that actually ran. Source presence, docume
 - Prompt-preservation commit `e51ccdb71a9fe813ffe0ecab2ba78a3b096a11f9` CI run #83 SUCCESS. P0.3 closeout commit CI is pending.
 - P0.3 closeout commit: `5bcbf8775014c4b25699a9bdcb5e633c5fa00811`; GitHub Actions run #84 SUCCESS — https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45557418338.
 - P0.3 is a research gate only. No engine/plugins/assets/providers have been integrated; no target-PC test has been run.
+
+## Follow-up documentation correction
+- Corrected the P0.3 row in `EXECUTION_BATCH_PLAN.md` to the five-column table structure; no application source changed.
+- Documentation correction commit `fe33993fb8423c412dde55f9a097e2a14298919a`; GitHub Actions run #85 SUCCESS.

@@ -71,4 +71,4 @@ All 24 numbered sections are represented in source references across the registr
 ## P0.3 closeout commit and CI
 - P0.3 closeout commit: `5bcbf8775014c4b25699a9bdcb5e633c5fa00811`.
 - Workflow run #84 completed SUCCESS: https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45557418338.
-- Latest verified main HEAD at this checkpoint: `5bcbf8775014c4b25699a9bdcb5e633c5fa00811`.
+- Latest verified main HEAD at the P0.3 closeout was `5bcbf8775014c4b25699a9bdcb5e633c5fa00811`; follow-up documentation correction commit `fe33993fb8423c412dde55f9a097e2a14298919a` also passed CI run #85.
