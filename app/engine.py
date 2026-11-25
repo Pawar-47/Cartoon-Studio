@@ -59,7 +59,7 @@ def _glb_morph_defaults(path: Path) -> dict[str, dict[str, Any]]:
                 return {}
             json_length = int.from_bytes(header[12:16], "little")
             raw_json = handle.read(json_length)
-        document = json.loads(raw_json.decode("utf-8").rstrip("\\x00 \\t\\r\\n"))
+        document = json.loads(raw_json.decode("utf-8").rstrip(" "))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError):
         return {}
 
