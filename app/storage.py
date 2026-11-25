@@ -451,7 +451,9 @@ def reconcile_project_files(data_dir: Path, db_path: Path) -> None:
                             indexed_episode["relative_path"],
                             _file_digest(episode_path),
                         )
-                        sync_episode_reference(connection, data_dir, project["id"], episode_document)
+                        sync_episode_reference(
+                            connection, data_dir, project["id"], episode_document
+                        )
                 continue
 
             episode_files = sorted(episode_dir.glob("*.json"))
