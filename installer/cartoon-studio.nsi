@@ -21,6 +21,7 @@ ShowUnInstDetails show
 VIProductVersion "${APP_VERSION}.0"
 VIAddVersionKey "ProductName" "Cartoon Studio"
 VIAddVersionKey "ProductVersion" "${APP_VERSION}"
+VIAddVersionKey "FileVersion" "${APP_VERSION}"
 VIAddVersionKey "FileDescription" "Cartoon Studio Installer"
 
 Section "Cartoon Studio" SEC_MAIN
@@ -67,3 +68,12 @@ Section "Uninstall"
 
     ; Deliberately preserve %LOCALAPPDATA%\CartoonStudio and all project data.
 SectionEnd
+
+Function un.onInit
+    SetShellVarContext current
+    ReadRegStr $INSTDIR HKCU "Software\CartoonStudio" "InstallDir"
+    StrCmp $INSTDIR "" set_default_install_dir done_init
+set_default_install_dir:
+    StrCpy $INSTDIR "$LOCALAPPDATA\Programs\Cartoon Studio"
+done_init:
+FunctionEnd
