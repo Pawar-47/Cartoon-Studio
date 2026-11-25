@@ -253,12 +253,9 @@ function previewSelectedMaterial(){
  $("roughness-value").value=values.roughness.toFixed(2);$("metalness-value").value=values.metalness.toFixed(2);
  $("appearance-status").textContent="Preview updated. Save to keep this appearance with the character.";
 }
-function buildMorphControls(){
- const targets=getCharacterMorphTargets(),container=$("morph-controls");
+import { classifyMorphTarget as morphTargetGroup } from "./character-morph-groups.js";
+function appendMorphControls(targets,container,group){
  container.replaceChildren();
- $("morph-status").textContent=targets.length?targets.length+" facial morph target(s) detected. Adjust them to preview expressions.":"This model has no facial morph targets. Import a model with blend shapes to use facial controls.";
- $("reset-expressions").disabled=!targets.length;
- for(const button of document.querySelectorAll("[data-expression-preset]"))button.disabled=!targets.length;
  for(const target of targets){
   appearanceRecipe.morph_bindings[target.key]={mesh_name:target.meshName,target_index:target.targetIndex,target_name:target.name};
   const label=window.document.createElement("label");label.className="morph-control";
@@ -270,10 +267,27 @@ function buildMorphControls(){
    const weight=Number(input.value);appearanceRecipe.morph_targets[target.key]=weight;
    output.value=weight.toFixed(2);applyCharacterMorphTargets({[target.key]:weight});
    $("export-appearance").disabled=false;$("download-appearance").hidden=true;
-   $("appearance-status").textContent="Facial preview updated. Save to keep these expression values.";
+   $("appearance-status").textContent=(group==="body"?"Body shape":"Facial") +" preview updated using the imported mesh morph target. Save or export to keep the geometry change.";
   });
   label.append(title,output,input);container.append(label);
  }
+}
+function buildMorphControls(){
+ const targets=getCharacterMorphTargets();
+ const groups={face:targets.filter(target=>morphTargetGroup(target)==="face"),body:targets.filter(target=>morphTargetGroup(target)==="body"),other:targets.filter(target=>morphTargetGroup(target)==="other")};
+ appendMorphControls(groups.face,$("morph-controls"),"face");
+ appendMorphControls(groups.body,$("body-morph-controls"),"body");
+ appendMorphControls(groups.other,$("other-morph-controls"),"other");
+ const total=targets.length;
+ $("morph-status").textContent=total
+  ? total+" imported mesh morph target(s): "+groups.face.length+" facial, "+groups.body.length+" body, "+groups.other.length+" other. These sliders deform the actual imported mesh."
+  : "This model has no imported morph targets. Body and facial sculpting require a GLB that contains blend shapes.";
+ $("body-morph-status").textContent=groups.body.length
+  ? groups.body.length+" body-shape morph target(s) available in this model."
+  : "No body-specific blend shapes were found in this model. Import a character rigged with body morph targets to enable these controls.";
+ $("other-morph-group").hidden=!groups.other.length;
+ $("reset-expressions").disabled=!total;
+ for(const button of document.querySelectorAll("[data-expression-preset]"))button.disabled=!groups.face.length;
 }
 $("reset-expressions").addEventListener("click",()=>{
  for(const target of getCharacterMorphTargets())appearanceRecipe.morph_targets[target.key]=target.value;
@@ -282,7 +296,7 @@ $("reset-expressions").addEventListener("click",()=>{
  $("appearance-status").textContent="Facial controls restored to imported defaults. Save to keep these values.";
 });
 function applyExpressionPreset(name){
- const targets=getCharacterMorphTargets();
+ const targets=getCharacterMorphTargets().filter(target=>morphTargetGroup(target)==="face");
  if(!targets.length)return;
  const result=buildExpressionPreset(name,targets);
  Object.assign(appearanceRecipe.morph_targets,result.weights);

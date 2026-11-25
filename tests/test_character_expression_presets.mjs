@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { buildExpressionPreset } from "../app/static/character-expression-presets.js";
+import { classifyMorphTarget } from "../app/static/character-morph-groups.js";
 
 const targets = [
   { key: "face:Smile", name: "Smile", meshName: "Face", value: 0 },
@@ -32,4 +33,12 @@ test("unmatched shapes retain imported baseline values", () => {
 });
 test("unknown presets fail explicitly", () => {
   assert.throws(() => buildExpressionPreset("laugh", targets), RangeError);
+});
+
+test("morph classification prioritizes shape name over mesh name", () => {
+  assert.equal(classifyMorphTarget({ name: "Body_Width", meshName: "BodyMesh" }), "body");
+  assert.equal(classifyMorphTarget({ name: "Smile", meshName: "BodyMesh" }), "face");
+  assert.equal(classifyMorphTarget({ name: "JawOpen", meshName: "HeadMesh" }), "face");
+  assert.equal(classifyMorphTarget({ name: "Muscle", meshName: "Character" }), "body");
+  assert.equal(classifyMorphTarget({ name: "UnknownShape", meshName: "Character" }), "other");
 });
