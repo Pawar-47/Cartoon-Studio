@@ -30,7 +30,7 @@
 - Imported-GLB retarget workflow with source/target selection, strict preflight, source-specific clip selection, Godot scene creation, persistent history and scene download. A generated target with altered bone-roll rotations and non-uniform per-bone scale passed native Godot retarget acceptance in CI #341; inverse-bind matrices are recalculated from full TRS transforms.
 - Worker verifies that the reopened source AnimationPlayer starts, seeks to a deterministic 37% point in the selected clip, advances three frames, and checks that the source pose changes and the target upper-arm pose matches Godot's model-space rest-corrected retarget transform. This avoids sampling a looped clip at its rest pose and supports different rest axes without requiring raw local rotation angles to match. Failed pose verification removes the generated scene.
 - Retarget history displays source/target local pose angles as rest-axis-dependent diagnostics plus the transfer verification state.
-- Saved retargets expose an in-app browser preview: Three.js retargets the selected source clip onto the saved target GLB using persisted canonical humanoid mappings. Clip names resolve exactly or by a unique Godot animation-library suffix; unknown or ambiguous saved names now produce an explicit error instead of silently previewing a different clip. The saved Godot scene remains authoritative; browser preview is a separate visual aid, not proof of native-scene rendering.
+- Saved retargets expose an in-app browser preview: Three.js retargets the selected source clip onto the saved target GLB using persisted canonical humanoid mappings. Browser retarget sampling is performed from the full GLTF scene roots (so animation tracks can reach skeleton bones that are siblings of the skinned mesh); the generated clip is played against the target SkinnedMesh skeleton. A Node-based regression suite exercises scene-root source tracks, sibling target skeletons, rest-axis roll, hip translation and invalid mappings. Clip names resolve exactly or by a unique Godot animation-library suffix; unknown or ambiguous saved names now produce an explicit error instead of silently previewing a different clip. The saved Godot scene remains authoritative; browser preview is a separate visual aid, not proof of native-scene rendering.
 - Original source and target GLBs remain byte-identical.
 
 ## Distinct imported fixture coverage
@@ -55,7 +55,7 @@ Godot may normalize raw skin-joint ordering during import. The application uses 
 
 ## Next implementation batch
 
-1. Compare browser retarget preview motion against the authoritative saved Godot scene across the accepted humanoid, bone-roll and RobotExpressive fixtures.
+1. Run interactive browser acceptance of the corrected scene-root retarget preview, then compare its motion against the authoritative saved Godot scene across the accepted humanoid, bone-roll and RobotExpressive fixtures.
 2. Add more third-party humanoid rig families, including varied rest axes and different skeleton hierarchies.
 3. Perform interactive browser acceptance of RobotExpressive facial sliders, reset-to-imported-defaults and save/reopen.
 4. Continue deterministic export and animation round-trip after broader compatibility acceptance.

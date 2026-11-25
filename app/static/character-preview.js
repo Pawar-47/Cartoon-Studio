@@ -2,6 +2,7 @@ import * as THREE from "/static/vendor/three/build/three.module.js";
 import { GLTFLoader } from "/static/vendor/three/examples/jsm/loaders/GLTFLoader.js";
 import { OrbitControls } from "/static/vendor/three/examples/jsm/controls/OrbitControls.js";
 import { retargetClip } from "/static/vendor/three/examples/jsm/utils/SkeletonUtils.js";
+import { prepareRetargetedClip } from "./retarget-preview.mjs";
 import { resolveAnimationClip } from "./animation-clip.mjs";
 
 const canvas = document.getElementById("model-preview");
@@ -277,13 +278,6 @@ export async function showRetargetPreview(sourceBuffer, targetBuffer, sourceMapp
   status.textContent = "Preparing browser retarget preview…";
   try {
     const [sourceGltf, targetGltf] = await Promise.all([loader.parseAsync(sourceBuffer, ""), loader.parseAsync(targetBuffer, "")]);
-    const findSkinnedMesh = (root) => {
-      let result = null;
-      root.traverse((node) => { if (!result && node.isSkinnedMesh && node.skeleton) result = node; });
-      return result;
-    };
-    const sourceMesh = findSkinnedMesh(sourceGltf.scene), targetMesh = findSkinnedMesh(targetGltf.scene);
-    if (!sourceMesh || !targetMesh) throw new Error("Both GLBs must contain a skinned humanoid mesh.");
     const requestedAnimation = String(animationName || "").trim();
     const clip = resolveAnimationClip(sourceGltf.animations, requestedAnimation);
     if (!clip) {
@@ -293,16 +287,14 @@ export async function showRetargetPreview(sourceBuffer, targetBuffer, sourceMapp
           : "The source GLB contains no playable animation clips."
       );
     }
-    const names = {};
-    for (const profileName of Object.keys(sourceMapping || {})) {
-      const sourceName = sourceMapping[profileName], targetName = targetMapping?.[profileName];
-      if (sourceName && targetName) names[targetName] = sourceName;
-    }
-    if (Object.keys(names).length < 15) throw new Error("The saved humanoid mapping is incomplete; browser preview was not started.");
-    const retargetedClip = retargetClip(targetMesh, sourceMesh, clip, {
-      names, hip: sourceMapping?.Hips || "Hips", preserveBoneMatrix: true, preserveBonePositions: true,
-    });
-    if (!retargetedClip || !retargetedClip.tracks.length) throw new Error("Three.js could not produce a retargeted animation clip.");
+    const { targetMesh, retargetedClip } = prepareRetargetedClip(
+      sourceGltf.scene,
+      targetGltf.scene,
+      sourceMapping,
+      targetMapping,
+      clip,
+      retargetClip,
+    );
     disposeCurrentObject();
     currentObject = targetGltf.scene;
     scene.add(currentObject);
@@ -321,7 +313,7 @@ export async function showRetargetPreview(sourceBuffer, targetBuffer, sourceMapp
     controls.target.set(0, 0, 0);
     controls.update();
     clips = [retargetedClip];
-    mixer = new THREE.AnimationMixer(currentObject);
+    mixer = new THREE.AnimationMixer(targetMesh);
     mixer.clipAction(retargetedClip).play();
     animationSelect.replaceChildren();
     const option = document.createElement("option");

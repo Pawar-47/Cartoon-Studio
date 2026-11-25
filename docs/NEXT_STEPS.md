@@ -24,6 +24,8 @@ Saved retarget records now also have a browser preview action. The preview endpo
 
 ## Next substantial batch
 
+The browser retarget path now samples source animation from the full GLTF scene root and plays generated tracks through the target SkinnedMesh skeleton. This handles common GLTF layouts where the mesh and its joint hierarchy are siblings rather than parent/child nodes. The new Node suite exercises the vendored Three.js retarget implementation against a 15-bone pair with different bone names and a rolled target arm, including hip translation and mapping rejection. This batch still needs quick CI and interactive browser acceptance.
+
 1. Compare browser retarget preview motion against the authoritative Godot scene across the accepted humanoid, bone-roll and RobotExpressive fixtures.
 2. Add more third-party humanoid rig families with varied rest axes and hierarchy layouts.
 3. Perform interactive browser acceptance of RobotExpressive facial sliders, reset-to-imported-defaults and save/reopen.

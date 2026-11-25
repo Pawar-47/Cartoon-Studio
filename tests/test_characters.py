@@ -158,6 +158,8 @@ def test_character_studio_page_is_served():
     assert preview.status_code == 200
     assert 'meshName: node.name || "Mesh"' in preview.text
     assert "resolveAnimationClip(sourceGltf.animations, requestedAnimation)" in preview.text
+    assert "prepareRetargetedClip" in preview.text
+    assert "new THREE.AnimationMixer(targetMesh)" in preview.text
     assert "no substitute clip was previewed" in preview.text
     assert "retargetClip(targetMesh, sourceMesh, clip" in preview.text
     assert 'target.meshName?target.meshName+" · ":""' in script.text

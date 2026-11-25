@@ -84,3 +84,13 @@ Two real third-party assets have passed native Godot acceptance for tested scena
 - Phase 8 — Optimization and Reliability: deferred, including physical-PC performance testing.
 
 Never claim the complete application is finished while Phases 2–7 remain incomplete.
+
+
+## 2026-11-25 — Browser retarget scene-root correction batch
+
+- Repository head before this batch: `dcacb5aa7d72ac6cf415321c6b8e7a7132484cfe`; quick CI #357 passed.
+- Found a structural risk in browser retargeting: GLTF animation tracks are resolved from the scene hierarchy, while the prior code passed only the first SkinnedMesh to Three.js. In common GLTF layouts the joint hierarchy is a sibling of that mesh, so source tracks may not reach their bones.
+- The batch introduces a tested helper that attaches each imported skeleton to its GLTF scene root for retarget sampling, validates all 15 canonical mappings and duplicate assignments, and plays the generated clip through the target SkinnedMesh skeleton.
+- Added a Node test using the vendored Three.js SkeletonUtils implementation, a full 15-bone rig pair, different source/target bone names, a rolled target upper arm and hip translation.
+- Added a pytest wrapper so the Node suite runs in normal quick CI.
+- Pending: inspect the complete diff, run quick CI once, and then perform interactive browser acceptance. No full app build or installer run is required.
