@@ -12,10 +12,12 @@ const threeModulePath = new URL(
   import.meta.url
 );
 let skeletonUtilsSource = await readFile(skeletonUtilsPath, "utf8");
-skeletonUtilsSource = skeletonUtilsSource.replace(
-  /from\\s+["']three["']/g,
-  'from "' + threeModulePath.href + '"'
-);
+const localThreeImport = 'from "' + threeModulePath.href + '"';
+skeletonUtilsSource = skeletonUtilsSource
+  .replaceAll("from 'three'", localThreeImport)
+  .replaceAll('from "three"', localThreeImport);
+assert.equal(skeletonUtilsSource.includes("from 'three'"), false);
+assert.equal(skeletonUtilsSource.includes('from "three"'), false);
 const skeletonUtils = await import(
   "data:text/javascript;base64," + Buffer.from(skeletonUtilsSource).toString("base64")
 );
