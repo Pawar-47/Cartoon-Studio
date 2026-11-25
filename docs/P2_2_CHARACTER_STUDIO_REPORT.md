@@ -172,5 +172,5 @@ The app-side library foundation exposes a catalog and lazy-download model route.
 
 - The isolated integration combines live proportion preview/composable edits, four-view turnaround export, Idle-first preview behavior and geometry-aware hairstyle placement without changing the original checkout or its WIP stash.
 - With the pinned Godot 4.7.2 runtime, `tests/test_engine.py` passed **14 tests**. The Male Adventurer regression verifies head-bound fitting, face-feature front orientation, short-hair/ponytail placement, retained animation clips and playback, and byte-identical source preservation.
-- The integrated local suite passed **121 tests with 4 environment-related skips** (three Node.js cases and one symlink-capability case). GitHub Actions validation for the combined commit remains pending.
+- The integrated local suite passed **122 tests with 4 environment-related skips** (three Node.js cases and one symlink-capability case). GitHub Actions run #431 initially flagged Ruff import ordering; the fix is in `7d396e5` and run #432 is in progress.
 - No fresh browser visual acceptance was completed. Hair/portrait/turnaround appearance review, saved-profile visual review, original face geometry and broader rig compatibility remain open; P2.2 is still PARTIAL.

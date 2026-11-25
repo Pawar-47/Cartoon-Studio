@@ -2,8 +2,8 @@
 
 Updated: 2026-11-25
 Repository: https://github.com/Pawar-47/Cartoon-Studio
-Branch: `integration/branch-cleanup` in an isolated worktree; integrated tests passed locally, publication to `main` is pending.
-Last published main: `4d2a7848b7c123358b868f56eac0704a80f6c58d` (CI #426 passed). The local integration contains the proportion-preview, turnaround-export and Idle-preview branches plus the hairstyle-fit fix.
+Branch: `integration/branch-cleanup` in an isolated worktree; its tested integration has been pushed to `main`.
+Latest published main: `7d396e5b9e3b07033240b9f02fb1020003a58a36`; PRs #20 and #21 are merged. CI #431 found an import-order issue; the fix is pushed and CI #432 is in progress.
 
 ## Mission and operating rules
 
@@ -152,5 +152,5 @@ Never claim the complete application is finished while Phases 2–7 remain incom
 
 - Built the integration in a separate worktree based on `origin/main`, keeping the original checkout and `stash@{0}: On work/pr-20-turnaround-fix: WIP character preview polish` untouched.
 - Locally merged the approved proportion-preview/composable-edit work, PR #20 turnaround export, PR #21 Idle-preview behavior and commit `1c41a8d` hairstyle-fit fix. The profile-workflow branch was inspected; its older source changes are superseded by the integrated implementations, and its stale documentation was not imported.
-- Pinned Godot engine tests passed **14/14**; the complete local pytest run passed **121 tests with 4 environment-related skips**. Node-backed cases remain for GitHub Actions.
-- The integrated commit is not yet pushed. Recheck remote PR/branch state, push to `main`, verify GitHub Actions, and only then delete branches confirmed redundant. Keep Phase 2 active and P2.2 partial; browser visual acceptance and original face geometry remain open.
+- The integrated-worktree run passed **122 tests with 4 environment-related skips**; the pinned Godot engine suite passed **14 tests**. Ruff and Python compilation passed locally. Three Node-backed cases and one symlink case are unavailable in this environment.
+- PRs #20 and #21 were merged by the fast-forward push. Verify CI #432, then delete only retired branches and leave the original checkout on `main`; the WIP stash remains preserved. Keep Phase 2 active and P2.2 partial; browser visual acceptance and original face geometry remain open.

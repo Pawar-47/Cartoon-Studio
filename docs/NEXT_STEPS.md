@@ -2,15 +2,15 @@
 
 ## Current checkpoint
 
-The isolated integration branch is based on `origin/main` at `4d2a7848b7c123358b868f56eac0704a80f6c58d` and locally merges the proportion-preview, four-view turnaround, Idle-preview and hairstyle-fit work. GitHub has not yet been updated with this integration. The combined local pytest suite passed 121 tests with four environment-related skips; browser visual acceptance remains outstanding. Phase 2 remains active and P2.2 remains PARTIAL.
+GitHub `main` now contains the proportion-preview/composable-edit work, PR #20 turnaround export, PR #21 Idle-preview behavior and hairstyle-fit fix. The integration's local suite passed 122 tests with four environment-related skips; run #431 found an import-order lint issue, fixed in `7d396e5`. Actions run #432 is still in progress. Browser visual acceptance remains outstanding; Phase 2 remains active and P2.2 remains PARTIAL.
 
-The local integration is being tested before updating GitHub `main`; preserve the source checkout and WIP stash until push and CI are confirmed. P2.2 remains PARTIAL.
+The original checkout remains on `work/character-hair-fit` pending final CI and branch cleanup; the WIP stash is preserved. P2.2 remains PARTIAL.
 
 ## Branch consolidation — locally validated
 
 - The isolated integration includes the proportion-preview/composable-edit work, PR #20 turnaround export, PR #21 Idle-preview behavior and the hairstyle-fit fix.
-- Local validation passed: 14 pinned-Godot engine tests and 121 full-suite tests; four skips require Node.js or symlink support.
-- Next operational gate: publish the tested integration to `main`, verify GitHub Actions, then remove only branches proven redundant. Preserve the WIP stash.
+- Local validation in the isolated integration worktree passed: 14 pinned-Godot engine tests and 122 full-suite tests; four skips require Node.js or symlink support.
+- PRs #20 and #21 are merged. Verify run #432, then remove redundant branches and leave the working checkout on `main`; preserve the WIP stash.
 
 ## Completed continuation batch — Character preview defaults
 
