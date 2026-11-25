@@ -140,23 +140,22 @@ func _inspect_glb(payload: Dictionary) -> Dictionary:
         if array_mesh == null:
             continue
         for shape_index in range(mesh_instance.get_blend_shape_count()):
+            default_info := _glb_morph_default(
+                glb_document,
+                mesh_instance,
+                shape_index,
+                mesh_instance.get_blend_shape_value(shape_index)
+            )
             morph_targets.append({
                 "mesh_path": str(scene.get_path_to(mesh_instance)),
                 "mesh_name": str(mesh_instance.name),
                 "index": shape_index,
                 "name": str(array_mesh.get_blend_shape_name(shape_index)),
-                "default_value": _glb_morph_default(
-                    glb_document,
-                    mesh_instance,
-                    shape_index,
+                "default_value": default_info.get(
+                    "value",
                     mesh_instance.get_blend_shape_value(shape_index)
-                ).get("value", mesh_instance.get_blend_shape_value(shape_index)),
-                "default_value_source": _glb_morph_default(
-                    glb_document,
-                    mesh_instance,
-                    shape_index,
-                    mesh_instance.get_blend_shape_value(shape_index)
-                ).get("source", "godot_runtime")
+                ),
+                "default_value_source": default_info.get("source", "godot_runtime")
             })
     var skeleton_nodes := scene.find_children("*", "Skeleton3D", true, false)
     var skeleton_reports: Array[Dictionary] = []
