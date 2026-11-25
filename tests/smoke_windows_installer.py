@@ -72,12 +72,8 @@ def stop_application(process: subprocess.Popen) -> None:
         process.wait(timeout=5)
 
 
-def install(installer: Path, install_dir: Path) -> None:
-    subprocess.run(
-        [str(installer), "/S", f"/D={install_dir}"],
-        check=True,
-        timeout=180,
-    )
+def install(installer: Path) -> None:
+    subprocess.run([str(installer), "/S"], check=True, timeout=180)
 
 
 def uninstall(install_dir: Path) -> None:
@@ -150,7 +146,7 @@ def main() -> int:
 
     with tempfile.TemporaryDirectory(prefix="cartoon-studio-installer-") as temporary:
         root = Path(temporary)
-        install_dir = root / "CartoonStudio"
+        install_dir = Path(os.environ["LOCALAPPDATA"]) / "Programs" / "Cartoon Studio"
         data_dir = root / "persistent-user-data"
         data_dir.mkdir()
         with socket.socket() as sock:
@@ -170,7 +166,7 @@ def main() -> int:
             Path(os.environ["USERPROFILE"]) / "Desktop" / "Cartoon Studio.lnk"
         )
 
-        install(v1_installer, install_dir)
+        install(v1_installer)
         executable = install_dir / "CartoonStudio.exe"
         assert executable.is_file()
         assert start_menu.is_file()
@@ -196,7 +192,7 @@ def main() -> int:
         assert project_file.is_file()
 
         # Install v2 over v1. The previous uninstaller removes only program files.
-        install(v2_installer, install_dir)
+        install(v2_installer)
         executable = install_dir / "CartoonStudio.exe"
         assert executable.is_file()
         process = start_application(executable, data_dir, port, "0.1.1")
