@@ -3,8 +3,6 @@ import hashlib
 import pathlib
 import urllib.request
 
-
-
 SOURCE_COMMIT = "eba30de865cfbf31ac736f792defd9a60ff28d57"
 SOURCE_URL = (
     "https://raw.githubusercontent.com/mrdoob/three.js/"
