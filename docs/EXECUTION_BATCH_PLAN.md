@@ -20,11 +20,11 @@ P0.2 checkpoint: atomic registry and traceability were expanded on 2026-11-25. T
 
 ## Phase 1 — GitHub and CI/CD Foundation
 
-**Phase 1 is active following P0.7 architecture freeze.** Start with P1.1; do not jump ahead to Character Studio or World Builder.
+**Phase 1 is active following P0.7 architecture freeze.** P1.1 is complete; proceed to P1.2 dependency locking and CI reproducibility. Do not jump ahead to Character Studio or World Builder.
 
 | Batch | Scope | Deliverables | Exit evidence | State |
 |---|---|---|---|---|
-| P1.1 | Harden existing FastAPI app, project lifecycle, SQLite persistence and versioned local data layout | App/storage contract and tests | Create/list/save/load/restart/data-preservation integration tests | ACTIVE — preserve current projects and story plans |
+| P1.1 | Harden existing FastAPI app, project lifecycle, SQLite persistence and versioned local data layout | app/storage.py, project APIs, portable project/episode JSON, numbered migrations and integration tests | Create/list/open/update/save/load/restart, legacy DB backup/migration, portable-file recovery and data-preservation tests | COMPLETE — CI #115 passed 21 tests; one upstream TestClient deprecation warning remains for P1.2 review |
 | P1.2 | Reproducible dependencies, lint/static checks and CI | Pinned/locked dependencies and CI workflow | Clean Windows runner builds/tests with reproducible logs | PARTIAL |
 | P1.3 | Portable Windows package and simple launcher | Bootstrap/portable package | Clean Windows CI/VM install, launch, shutdown and diagnostics test | PARTIAL — bootstrap only; no clean-install evidence; user's PC is not the gate |
 | P1.4 | Self-contained installer, upgrade and data migration | Installer and release pipeline | Install/upgrade/uninstall tests; project data survives upgrades | NOT STARTED |

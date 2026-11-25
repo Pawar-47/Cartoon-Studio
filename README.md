@@ -5,14 +5,15 @@ An original, local-first Urdu 3D cartoon production studio. This repository is t
 ## Current working foundation
 
 - Local FastAPI application served in the browser.
-- SQLite-backed local project creation and listing.
+- SQLite-backed project index with numbered migrations, backup-before-migrate and a portable versioned project.json per project.
+- Project open/update and story-plan save/reload using portable episode JSON documents; SQLite remains the local index and compatibility store.
 - Story Generator prompt builder for use with FreeMilk by Milq and other AI applications.
 - Copyable structured story prompt and JSON Schema.
 - Validation of 5–7 minute episode plans, 5–7 scenes, character references and timed production cues.
 - Save and reload validated episode plans inside a local project.
 - GitHub Actions Windows CI for lint, compile, tests and bootstrap ZIP packaging.
 
-The 3D engine is still under upstream proof-of-concept evaluation. This repository does not yet claim complete 3D cartoon generation, Urdu TTS, lip-sync or final episode rendering.
+Godot 4.7.2 Compatibility has passed a bounded hosted-runner proof and is selected as the native 3D runtime behind a supervised worker adapter. The production engine integration is still pending. This repository does not yet claim complete 3D cartoon generation, Urdu TTS, lip-sync or final episode rendering.
 
 ## Run on Windows
 
@@ -22,7 +23,7 @@ The 3D engine is still under upstream proof-of-concept evaluation. This reposito
 4. The local app opens at http://127.0.0.1:8765.
 5. Open Story Generator from the dashboard to prepare a prompt, paste an AI-generated JSON plan, validate it and save it to a project.
 
-The bootstrap ZIP is not yet a standalone installer. A self-contained Windows installer will be produced after the 3D runtime is integrated and its dependencies are stable.
+The bootstrap ZIP is not yet a standalone installer. Project data defaults to the user's application-data directory (Windows: %LOCALAPPDATA%\\CartoonStudio); set CARTOON_STUDIO_DATA to override it. The self-contained Windows installer is Phase 1.4 work.
 
 ## Development principles
 
@@ -31,7 +32,7 @@ The bootstrap ZIP is not yet a standalone installer. A self-contained Windows in
 - Preserve software, model and asset licenses and provenance.
 - Use GitHub Actions for repeatable validation and Windows packaging.
 - Render actual episodes locally; hosted Actions runners are not treated as a free GPU render farm.
-- Optimize for Intel Core i3-5005U, Intel HD Graphics 5500, 8 GB RAM and SSD.
+- Keep Intel Core i3-5005U, Intel HD Graphics 5500, 8 GB RAM and SSD as design constraints; physical-PC benchmarking is Phase 8, not a development gate.
 - Never claim untested features are complete.
 
 ## Documentation

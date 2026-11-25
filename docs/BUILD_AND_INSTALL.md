@@ -1,5 +1,13 @@
 # Build and Install
 
+## Local data and migration behavior
+- Windows default data root: %LOCALAPPDATA%\\CartoonStudio.
+- Override: set CARTOON_STUDIO_DATA to a custom writable directory before launching start.bat.
+- SQLite index: cartoon_studio.sqlite3; numbered schema_migrations table records database migrations.
+- Existing databases are backed up under backups/ before schema upgrades.
+- Each project has a portable projects/<project-id>/project.json document; saved episode plans are stored under projects/<project-id>/episodes/<episode-id>.json. SQLite indexes these documents and retains the legacy story_plans compatibility table.
+- The project JSON is versioned and uses stable project/episode IDs. Keep the entire project folder when copying or backing up project files.
+
 ## Current Windows bootstrap
 Workflow: .github/workflows/ci.yml  
 Runner: windows-latest  
@@ -21,4 +29,4 @@ Story Generator is available from the dashboard. It creates a prompt for a chose
 GitHub Actions runs Ruff, Python compile checks, pytest, Windows ZIP packaging and artifact upload. A green result must be confirmed by a real workflow run.
 
 ## Planned final installer
-After the 3D runtime is selected and stable, package the application and static production assets into a self-contained Windows installer. Evaluate PyInstaller plus Inno Setup or an equivalent packaging route. The final installer should not require the user to manually install Python or Node.js. Do not bundle large models or assets until their size, license and target-PC compatibility are verified.
+Godot 4.7.2 Compatibility is selected after a bounded hosted-runner proof. Package the application and static production assets into a self-contained Windows installer. Evaluate PyInstaller plus NSIS or an equivalent packaging route. The final installer should not require the user to manually install Python or Node.js. Do not bundle large models or assets until their size and license are verified. Target-PC performance tuning remains Phase 8 and is not an installer prerequisite.
