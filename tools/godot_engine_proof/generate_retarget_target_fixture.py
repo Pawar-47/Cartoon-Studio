@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import struct
 from pathlib import Path
 
@@ -40,6 +41,18 @@ REST_FACTORS = {
     "LeftFoot": 1.10,
     "RightFoot": 1.10,
 }
+REST_ROLL_DEGREES = {
+    "LeftUpperArm": 24.0,
+    "LeftLowerArm": -32.0,
+    "RightUpperArm": -24.0,
+    "RightLowerArm": 32.0,
+}
+REST_SCALES = {
+    "LeftUpperArm": (1.0, 1.08, 0.94),
+    "LeftLowerArm": (1.0, 0.92, 1.06),
+    "RightUpperArm": (1.0, 0.94, 1.08),
+    "RightLowerArm": (1.0, 1.06, 0.92),
+}
 
 
 def _read_glb(data: bytes) -> tuple[dict, bytearray]:
@@ -63,7 +76,41 @@ def _read_glb(data: bytes) -> tuple[dict, bytearray]:
     return document, binary
 
 
-def _global_translations(nodes: list[dict]) -> dict[int, tuple[float, float, float]]:
+def _matrix_multiply(left: list[list[float]], right: list[list[float]]) -> list[list[float]]:
+    return [
+        [
+            sum(left[row][index] * right[index][column] for index in range(3))
+            for column in range(3)
+        ]
+        for row in range(3)
+    ]
+
+
+def _matrix_vector(matrix: list[list[float]], vector: list[float]) -> list[float]:
+    return [
+        sum(matrix[row][column] * vector[column] for column in range(3))
+        for row in range(3)
+    ]
+
+
+def _quaternion_matrix(value: list[float]) -> list[list[float]]:
+    if len(value) != 4:
+        raise ValueError("GLTF node rotation must be an XYZW quaternion.")
+    x, y, z, w = (float(component) for component in value)
+    length = math.sqrt(x * x + y * y + z * z + w * w)
+    if length < 1e-12:
+        raise ValueError("GLTF node rotation quaternion cannot be zero.")
+    x, y, z, w = x / length, y / length, z / length, w / length
+    return [
+        [1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
+        [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
+        [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)],
+    ]
+
+
+def _global_transforms(
+    nodes: list[dict],
+) -> dict[int, tuple[list[list[float]], list[float]]]:
     parents: dict[int, int] = {}
     for parent_index, node in enumerate(nodes):
         for child_index in node.get("children", []):
@@ -71,32 +118,96 @@ def _global_translations(nodes: list[dict]) -> dict[int, tuple[float, float, flo
                 raise ValueError("Fixture contains a node with multiple parents.")
             parents[child_index] = parent_index
 
-    cache: dict[int, tuple[float, float, float]] = {}
+    cache: dict[int, tuple[list[list[float]], list[float]]] = {}
 
-    def visit(index: int) -> tuple[float, float, float]:
+    def visit(index: int) -> tuple[list[list[float]], list[float]]:
         if index in cache:
             return cache[index]
         node = nodes[index]
-        if "matrix" in node or "rotation" in node or "scale" in node:
-            raise ValueError("Fixture generator expects translation-only joint nodes.")
-        local = node.get("translation", [0.0, 0.0, 0.0])
+        if "matrix" in node:
+            raise ValueError("Fixture generator expects decomposed TRS joint nodes.")
+        translation = [float(value) for value in node.get("translation", [0.0, 0.0, 0.0])]
+        scale = [float(value) for value in node.get("scale", [1.0, 1.0, 1.0])]
+        if len(translation) != 3 or len(scale) != 3:
+            raise ValueError("GLTF node translation and scale must be VEC3 values.")
+        local = _quaternion_matrix(node.get("rotation", [0.0, 0.0, 0.0, 1.0]))
+        for row in range(3):
+            for column in range(3):
+                local[row][column] *= scale[column]
         parent = parents.get(index)
         if parent is None:
-            result = tuple(float(value) for value in local)
+            result = (local, translation)
         else:
-            parent_global = visit(parent)
-            result = tuple(
-                parent_global[axis] + float(local[axis]) for axis in range(3)
-            )
+            parent_linear, parent_translation = visit(parent)
+            global_linear = _matrix_multiply(parent_linear, local)
+            transformed_translation = _matrix_vector(parent_linear, translation)
+            global_translation = [
+                parent_translation[axis] + transformed_translation[axis]
+                for axis in range(3)
+            ]
+            result = (global_linear, global_translation)
         cache[index] = result
         return result
 
-    for index in range(len(nodes)):
-        visit(index)
+    for node_index in range(len(nodes)):
+        visit(node_index)
     return cache
 
 
-def generate_target_fixture(source_path: Path, output_path: Path) -> None:
+def _inverse_bind_matrix(
+    transform: tuple[list[list[float]], list[float]],
+) -> list[float]:
+    matrix, translation = transform
+    a, b, c = matrix[0]
+    d, e, f = matrix[1]
+    g, h, i = matrix[2]
+    determinant = (
+        a * (e * i - f * h)
+        - b * (d * i - f * g)
+        + c * (d * h - e * g)
+    )
+    if abs(determinant) < 1e-12:
+        raise ValueError("A target joint has a singular rest transform.")
+    inverse = [
+        [(e * i - f * h) / determinant, (c * h - b * i) / determinant, (b * f - c * e) / determinant],
+        [(f * g - d * i) / determinant, (a * i - c * g) / determinant, (c * d - a * f) / determinant],
+        [(d * h - e * g) / determinant, (b * g - a * h) / determinant, (a * e - b * d) / determinant],
+    ]
+    inverse_translation = [
+        -value for value in _matrix_vector(inverse, translation)
+    ]
+    # glTF MAT4 accessors are stored column-major.
+    return [
+        inverse[0][0], inverse[1][0], inverse[2][0], 0.0,
+        inverse[0][1], inverse[1][1], inverse[2][1], 0.0,
+        inverse[0][2], inverse[1][2], inverse[2][2], 0.0,
+        inverse_translation[0], inverse_translation[1], inverse_translation[2], 1.0,
+    ]
+
+
+def _multiply_quaternions(left: list[float], right: list[float]) -> list[float]:
+    x1, y1, z1, w1 = left
+    x2, y2, z2, w2 = right
+    return [
+        w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2,
+        w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2,
+        w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2,
+        w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2,
+    ]
+
+
+def _roll_quaternion(degrees: float) -> list[float]:
+    half_angle = math.radians(degrees) / 2.0
+    return [math.sin(half_angle), 0.0, 0.0, math.cos(half_angle)]
+
+
+def generate_target_fixture(
+    source_path: Path,
+    output_path: Path,
+    *,
+    rest_roll_degrees: dict[str, float] | None = None,
+    rest_scales: dict[str, tuple[float, float, float]] | None = None,
+) -> None:
     document, binary = _read_glb(source_path.read_bytes())
     nodes = document["nodes"]
     node_by_name = {node.get("name"): index for index, node in enumerate(nodes)}
@@ -108,6 +219,22 @@ def generate_target_fixture(source_path: Path, output_path: Path) -> None:
         axis = 0 if name.endswith("LowerArm") or name.endswith("Hand") else 1
         translation[axis] = float(translation[axis]) * factor
         node["translation"] = translation
+
+    for name, degrees in (rest_roll_degrees or {}).items():
+        if name not in node_by_name:
+            raise ValueError(f"Required fixture bone is missing: {name}")
+        node = nodes[node_by_name[name]]
+        current_rotation = list(node.get("rotation", [0.0, 0.0, 0.0, 1.0]))
+        node["rotation"] = _multiply_quaternions(
+            current_rotation, _roll_quaternion(float(degrees))
+        )
+
+    for name, scale in (rest_scales or {}).items():
+        if name not in node_by_name:
+            raise ValueError(f"Required fixture bone is missing: {name}")
+        if len(scale) != 3 or any(float(value) <= 0 for value in scale):
+            raise ValueError(f"Bone scale must contain three positive values: {name}")
+        nodes[node_by_name[name]]["scale"] = [float(value) for value in scale]
 
     spine_index = node_by_name.get("Spine")
     if spine_index is None:
@@ -147,7 +274,7 @@ def generate_target_fixture(source_path: Path, output_path: Path) -> None:
                 raise ValueError(f"JOINTS_0 contains unknown joint index {old_index}.")
             binary[offset] = old_to_new[old_index]
 
-    global_positions = _global_translations(nodes)
+    global_transforms = _global_transforms(nodes)
     inverse_bind_accessor = document["accessors"][skin["inverseBindMatrices"]]
     if (
         inverse_bind_accessor["componentType"] != 5126
@@ -164,10 +291,7 @@ def generate_target_fixture(source_path: Path, output_path: Path) -> None:
     )
     for new_index, old_index in enumerate(JOINT_ORDER):
         node_index = old_joints[old_index]
-        x, y, z = global_positions[node_index]
-        matrix = [0.0] * 16
-        matrix[0] = matrix[5] = matrix[10] = matrix[15] = 1.0
-        matrix[12], matrix[13], matrix[14] = -x, -y, -z
+        matrix = _inverse_bind_matrix(global_transforms[node_index])
         struct.pack_into("<16f", binary, inverse_bind_offset + new_index * 64, *matrix)
 
     skin["joints"] = [old_joints[index] for index in JOINT_ORDER]

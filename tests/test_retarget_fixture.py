@@ -41,6 +41,41 @@ def test_retarget_target_fixture_is_reproducible(tmp_path):
     )
 
 
+def test_retarget_target_generator_supports_rest_axis_roll_and_scale(tmp_path):
+    fixture_dir = (
+        Path(__file__).resolve().parents[1]
+        / "tools"
+        / "godot_engine_proof"
+        / "fixtures"
+    )
+    source = fixture_dir / "proof_humanoid.glb"
+    generated = tmp_path / "generated-rolled-target.glb"
+
+    generate_target_fixture(
+        source,
+        generated,
+        rest_roll_degrees={
+            "LeftUpperArm": 24.0,
+            "LeftLowerArm": -32.0,
+            "RightUpperArm": -24.0,
+            "RightLowerArm": 32.0,
+        },
+        rest_scales={
+            "LeftUpperArm": (1.0, 1.08, 0.94),
+            "LeftLowerArm": (1.0, 0.92, 1.06),
+            "RightUpperArm": (1.0, 0.94, 1.08),
+            "RightLowerArm": (1.0, 1.06, 0.92),
+        },
+    )
+
+    document, _ = _read_glb(generated.read_bytes())
+    bones = {node.get("name"): node for node in document["nodes"]}
+    assert bones["mixamorig:LeftArm"]["rotation"] != [0.0, 0.0, 0.0, 1.0]
+    assert bones["mixamorig:LeftForeArm"]["rotation"] != [0.0, 0.0, 0.0, 1.0]
+    assert bones["mixamorig:LeftArm"]["scale"] == [1.0, 1.08, 0.94]
+    assert bones["mixamorig:RightForeArm"]["scale"] == [1.0, 1.06, 0.92]
+
+
 def test_mixamo_source_fixture_is_reproducible_and_keeps_animation(tmp_path):
     fixture_dir = (
         Path(__file__).resolve().parents[1]

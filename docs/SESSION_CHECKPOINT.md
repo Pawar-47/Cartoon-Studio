@@ -28,7 +28,7 @@ Phase 2 — Character Studio is ACTIVE. Phase 0 and Phase 1 are complete. Do not
 - Non-destructive PBR material recipes and facial morph-target controls. Godot reports imported blend-shape names/defaults; signed weights from -1 to 1 persist; reset restores each model's imported defaults. A pinned CC0 RobotExpressive fixture (three facial morph targets on Head_4) is fetched and SHA-256 verified in CI; its first Godot import acceptance run is pending.
 - Conservative indexed 15-bone humanoid mapping, parent-chain validation and imported rest-transform diagnostics.
 - Common 3ds Max Biped, Character Creator, Unreal-style, Blender Rigify and Cesium Rigged Figure bone naming conventions are recognized. Duplicate and negative bone indices are rejected.
-- Character-to-character retarget UI with source/target selectors, optional animation name, strict preflight, saved Godot scene, persistent JSON record and scene download.
+- Character-to-character retarget UI with source/target selectors, imported animation dropdown, strict clip-name preflight, saved Godot scene, persistent JSON record and scene download.
 - Worker reopens the saved scene, verifies source animation playback and source-pose change, then compares the target pose against Godot's model-space rest-corrected retarget transform. This supports different rest-axis/bone-roll conventions; raw local source/target angles are diagnostics, not an equality requirement.
 - Saved retarget records expose a separate Three.js browser preview using persisted canonical mappings. The saved Godot scene remains authoritative.
 - Original source and target GLBs remain byte-identical.
@@ -58,6 +58,12 @@ One real third-party humanoid model has passed native Godot import and retarget 
 - Push/PR CI runs lint, Python compilation and the full automated test suite only; no PyInstaller or NSIS builds. Windows CI #334 passed the pinned RobotExpressive fixture acquisition and Godot facial-morph inspection.
 - Full Windows application and installer validation lives in `.github/workflows/release-windows.yml` and is manually dispatched after a phase/release milestone.
 - Workflow concurrency groups prevent overlapping runs. Avoid duplicate CI runs for minor edits.
+
+## Current retarget acceptance expansion — 2026-11-25
+
+- The target fixture generator now supports explicit local bone-roll quaternions and non-uniform per-bone scales, and recalculates inverse-bind matrices from full TRS transforms.
+- A new Godot integration test builds a rolled/scaled target at test time, verifies its imported rest rotations/scales differ from the source, then checks animation transfer after scene save/reopen.
+- Acceptance remains pending quick CI; do not claim broader rest-axis/bone-roll/scale support until the test passes.
 
 ## Next substantial implementation batch
 

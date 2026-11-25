@@ -19,6 +19,9 @@ from app.engine import (
     GodotEngineAdapter,
 )
 from app.rig_analysis import REQUIRED_HUMANOID_BONES, analyze_rig
+from tools.godot_engine_proof.generate_retarget_target_fixture import (
+    generate_target_fixture,
+)
 
 
 class _FakeProcess:
@@ -390,6 +393,71 @@ def test_pinned_godot_worker_retargets_real_third_party_rigged_figure(tmp_path):
     assert output.is_file()
     assert source.read_bytes() == source_fixture.read_bytes()
     assert target.read_bytes() == target_fixture.read_bytes()
+
+
+def test_pinned_godot_worker_retargets_bone_roll_and_scaled_target(tmp_path):
+    adapter = _real_godot_adapter(tmp_path)
+    fixture_dir = (
+        Path(__file__).resolve().parents[1]
+        / "tools"
+        / "godot_engine_proof"
+        / "fixtures"
+    )
+    source_fixture = fixture_dir / "proof_humanoid_retarget_source.glb"
+    base_target_fixture = fixture_dir / "proof_humanoid.glb"
+    assert source_fixture.is_file(), "The animated source humanoid fixture is unavailable."
+    assert base_target_fixture.is_file(), "The base target humanoid fixture is unavailable."
+
+    project_root = tmp_path / "rest-axis-retarget-project"
+    project_root.mkdir()
+    source = project_root / "source.glb"
+    target = project_root / "rolled-scaled-target.glb"
+    shutil.copyfile(source_fixture, source)
+    generate_target_fixture(
+        base_target_fixture,
+        target,
+        rest_roll_degrees={
+            "LeftUpperArm": 24.0,
+            "LeftLowerArm": -32.0,
+            "RightUpperArm": -24.0,
+            "RightLowerArm": 32.0,
+        },
+        rest_scales={
+            "LeftUpperArm": (1.0, 1.08, 0.94),
+            "LeftLowerArm": (1.0, 0.92, 1.06),
+            "RightUpperArm": (1.0, 0.94, 1.08),
+            "RightLowerArm": (1.0, 1.06, 0.92),
+        },
+    )
+
+    source_inspection = adapter.inspect_glb(source, allowed_root=project_root)
+    target_inspection = adapter.inspect_glb(target, allowed_root=project_root)
+    source_rig = analyze_rig(source_inspection)
+    target_rig = analyze_rig(target_inspection)
+    assert source_rig["status"] == target_rig["status"] == "humanoid_names_complete"
+    assert source_rig["hierarchy_validation"]["status"] == "valid"
+    assert target_rig["hierarchy_validation"]["status"] == "valid"
+    source_arm = source_rig["godot_profile_mapping"]["LeftUpperArm"]
+    target_arm = target_rig["godot_profile_mapping"]["LeftUpperArm"]
+    assert source_arm["rest_transform"]["rotation"] != target_arm["rest_transform"]["rotation"]
+    assert target_arm["rest_transform"]["scale"] != source_arm["rest_transform"]["scale"]
+
+    output = project_root / "retargets" / "rolled-scaled-target.tscn"
+    selected_animation = source_inspection["animation_names"][0]
+    response = adapter.retarget_glb_pair(
+        source,
+        target,
+        output,
+        allowed_root=project_root,
+        source_profile_mapping=source_rig["godot_profile_mapping"],
+        target_profile_mapping=target_rig["godot_profile_mapping"],
+        animation_name=selected_animation,
+    )
+    assert response["ok"] is True
+    assert response["animation_name"] == selected_animation
+    assert response["scene_reopened"] is True
+    assert response["pose_transferred"] is True
+    assert source.read_bytes() == source_fixture.read_bytes()
 
 
 def test_pinned_godot_worker_creates_non_destructive_retarget_scene(tmp_path):
