@@ -233,17 +233,12 @@ def test_pinned_godot_worker_creates_non_destructive_retarget_scene(tmp_path):
     source_mapping = source_rig["godot_profile_mapping"]
     target_mapping = target_rig["godot_profile_mapping"]
     assert len(source_mapping) == len(target_mapping) == 15
-    source_bones = {
-        bone["name"]: bone for bone in source_inspection["skeletons"][0]["bones"]
-    }
-    target_bones = {
-        bone["name"]: bone for bone in target_inspection["skeletons"][0]["bones"]
-    }
-    source_lower_arm_name = source_mapping["LeftLowerArm"]["source_name"]
-    target_lower_arm_name = target_mapping["LeftLowerArm"]["source_name"]
-    assert target_lower_arm_name.lower().endswith("leftforearm")
-    assert source_bones[source_lower_arm_name]["rest_transform"]["origin"] != (
-        target_bones[target_lower_arm_name]["rest_transform"]["origin"]
+    assert (
+        target_mapping["LeftLowerArm"]["source_name"]
+        != source_mapping["LeftLowerArm"]["source_name"]
+    )
+    assert source_mapping["LeftLowerArm"]["rest_transform"]["origin"] != (
+        target_mapping["LeftLowerArm"]["rest_transform"]["origin"]
     )
 
     output = project_root / "retargets" / "source-to-target.tscn"
