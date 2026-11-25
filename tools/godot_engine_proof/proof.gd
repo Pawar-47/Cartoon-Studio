@@ -160,7 +160,7 @@ func _build_imported_humanoid_retarget_pair() -> void:
             "LeftUpperArm", "LeftLowerArm", "RightUpperArm", "RightLowerArm",
             "LeftUpperLeg", "LeftLowerLeg", "RightUpperLeg", "RightLowerLeg"
         ]:
-            target_rest.origin *= 1.2
+            target_rest.origin = target_rest.origin * 1.2
         _imported_humanoid_target.set_bone_rest(bone_index, target_rest)
 
     modifier.add_child(_imported_humanoid_target)
