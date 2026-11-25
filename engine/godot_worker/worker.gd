@@ -402,7 +402,8 @@ func _retarget_glb_pair(payload: Dictionary) -> Dictionary:
             source_angle = source_rotation.angle_to(Quaternion.IDENTITY)
             target_angle = target_rotation.angle_to(Quaternion.IDENTITY)
             pose_transferred = (
-                source_angle > deg_to_rad(10.0)
+                source_animation_playing
+                and source_angle > deg_to_rad(10.0)
                 and absf(source_angle - target_angle) < deg_to_rad(3.0)
             )
     var source_bone_count := source_skeleton.get_bone_count()

@@ -2,24 +2,25 @@
 
 ## Active batch — Phase 2 Character Studio
 
-1. Confirm Windows CI #240/#241 and dedicated Godot proof #10.
-2. Implement the user-facing non-destructive retarget operation for imported GLB source and target rigs, using the validated Godot modifier/profile arrangement.
-3. Add target skeleton binding and clear diagnostics for missing/ambiguous bones, invalid hierarchy, rest transforms and incompatible animation tracks.
-4. Validate with more than one real-world humanoid GLB, including different bone naming conventions and body proportions.
-5. Confirm imported target pose playback, scene save/reopen and source-asset integrity.
-6. Test existing facial morph-target controls on real blend-shape models; then complete deterministic export/round-trip.
+The first user-facing non-destructive imported-GLB retarget workflow is implemented. It includes source/target selectors, preflight validation, a saved Godot scene, a persistent project record, scene download, and a runtime check that the reopened source animation actually transfers its pose to the target skeleton.
 
-## Latest implementation and evidence
+## Verification
 
-- Indexed humanoid profile mapping: 1cac9e93adff60bd051c4029df829ebc5fc662f0.
-- Hierarchy diagnostics surfaced in Character Studio: 2b4a88248492833ddd04cd33e9557ebc3a13052b.
-- Hierarchy completeness correction: 49d695a57e66858832ce1f3e033467c8151e83cf.
-- Imported rest-transform reporting: fbfb0724bb1eec480afe55d3e17095dbd1f115df; association correction: 441f22db6cef1acf8b6dc17f7f1187d0dfdefd53.
-- Skinned humanoid fixture and real worker test: c8f7bb3ac83ac46975e385648f773f4e20b951c8.
-- Imported humanoid fixture in native proof: ae63724b12a0f2cf670469ac74613acaee07e15c.
-- Imported-source to differently proportioned target retarget proof: 59a8ab1510078de7167aaf06147aaeb73509d5ad; explicit rest assignment: edd562d816ab9c9045aeba14753a42a7eb38e565.
-- Imported retarget save/reopen assertion: aadce3ed4c8444a3130652f14cc85cdfd4db697b.
-- Windows CI #237 and #238 passed. Godot proof #8 and #9 passed. Latest #241 and proof #10 are pending.
+- Windows CI #250 passed the full pipeline after fixing the 15-bone mapping-key comparison.
+- Windows CI #251 passed the full pipeline with GLB container skin-count preflight.
+- Windows CI #252 passed the full pipeline with exact-one-skeleton preflight and saved-scene download.
+- Windows CI #257 passed the full pipeline, including the real two-imported-GLB worker test. The worker reopens the saved scene, advances 72 frames, verifies the source AnimationPlayer is playing, and checks the target LeftUpperArm pose against the animated source.
+- The worker test currently uses two separate copies of the same humanoid fixture. The original source and target GLBs are verified unchanged.
+- Dedicated Godot native-worker proof #11 passed. Its differently proportioned target skeleton is generated from the imported source hierarchy, not a second imported GLB.
+
+## Next substantial batch
+
+1. Create a second imported humanoid target GLB with different rest proportions and bone ordering, plus a reproducible fixture-generation/validation path.
+2. Verify animation track paths after source/target bone names are normalized to the 15 canonical Godot humanoid profile names. Avoid silently breaking animation tracks.
+3. Extend the imported-pair worker test to the distinct-proportion target fixture and verify pose transfer, mesh binding, scene save/reopen and unchanged source assets.
+4. Exercise representative third-party GLBs with different naming conventions and document supported/unsupported cases.
+5. Add a practical preview/open action for saved retarget scenes in Character Studio.
+6. Validate real facial morph controls on blend-shape GLBs and continue deterministic export/round-trip only after rig/animation behavior is proven.
 
 ## Deferred to their specified phases
 

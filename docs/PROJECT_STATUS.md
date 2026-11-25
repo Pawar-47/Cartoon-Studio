@@ -4,11 +4,11 @@
 
 - Repository: Pawar-47/Cartoon-Studio
 - Branch: main
-- Latest implementation checkpoint: `67e5a36e41eca364ab91aa2c8c58ed8340a5e3a2`
+- Latest implementation checkpoint: `48fdb9cdc7ebd61bdd1b1633e479a6fc541b485c`
 - Phase 0: COMPLETE.
 - Phase 1: COMPLETE.
 - Phase 2 — Character Studio: ACTIVE; GLB import/preview, profiles, appearance recipes, rig diagnostics and the first user-facing imported-rig retarget workflow are implemented. Phase 2 is not complete.
-- Latest full Windows CI: [run #252](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45615829102) PASSED, including tests, Godot worker integration, packaging and installer lifecycle.
+- Latest full Windows CI: [run #257](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45616711222) PASSED, including the two-imported-GLB pose-transfer worker test, Godot integration, packaging and installer lifecycle.
 - Dedicated Godot native-worker proof: [run #11](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45614672455) PASSED.
 - Chat-independent continuation record: `docs/SESSION_CHECKPOINT.md`.
 
@@ -48,12 +48,18 @@ The workflow is not yet accepted for arbitrary imported GLB pairs. Different imp
 | Phase 7 — Episode Generator | NOT STARTED | No complete 5–7 minute production pipeline |
 | Phase 8 — Optimization and Reliability | DEFERRED | Physical-PC benchmarks remain late-stage work |
 
+## Retarget verification status
+
+- The real Godot worker test uses two separately imported copies of the humanoid fixture and verifies that the saved/reopened scene plays the source animation and transfers its LeftUpperArm pose to the target over 72 frames.
+- The worker deletes and rejects a scene if pose transfer is not verified. Both original GLB files remain unchanged.
+- Distinct imported proportions, non-canonical bone names/order and third-party GLB compatibility are not yet accepted. The separate generated-target Godot proof does not replace that work.
+
 ## Next implementation batch
 
-1. Create a second imported humanoid fixture with different proportions and bone ordering.
-2. Verify animation track compatibility and actual target pose transfer for two imported GLBs.
-3. Add tests for source animation autoplay and pose persistence after save/reopen.
-4. Exercise representative user-imported GLBs and document compatibility limits.
+1. Create a second imported humanoid target fixture with different proportions and bone ordering.
+2. Verify animation track paths after canonical humanoid bone-name normalization.
+3. Exercise representative user-imported GLBs and document compatibility limits.
+4. Add a usable preview/open action for saved retarget scenes.
 5. Continue Character Studio authoring and deterministic export after retarget round-trip acceptance.
 
 ## Frozen architecture and constraints
