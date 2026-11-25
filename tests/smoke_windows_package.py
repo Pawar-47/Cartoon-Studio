@@ -27,6 +27,20 @@ def request(base: str, path: str, method: str = "GET", payload: dict | None = No
         return response.status, json.loads(raw) if is_json else raw
 
 
+def stop(process: subprocess.Popen) -> None:
+    subprocess.run(
+        ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+        check=False,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    try:
+        process.wait(timeout=8)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait(timeout=5)
+
+
 def main() -> int:
     if len(sys.argv) != 2:
         raise SystemExit("Usage: smoke_windows_package.py <bootstrap-zip>")
@@ -68,55 +82,43 @@ def main() -> int:
             sock.bind(("127.0.0.1", 0))
             port = sock.getsockname()[1]
         base = f"http://127.0.0.1:{port}"
-        data_dir = root / "persistent-data"
         environment = os.environ.copy()
-        environment["CARTOON_STUDIO_DATA"] = str(data_dir)
+        environment["CARTOON_STUDIO_DATA"] = str(root / "persistent-data")
         environment["CARTOON_STUDIO_PORT"] = str(port)
         environment["CARTOON_STUDIO_NO_BROWSER"] = "1"
         log_path = root / "launcher.log"
 
-        def launch():
-            log_handle = log_path.open("ab")
-            return subprocess.Popen(
-                ["cmd.exe", "/c", "start.bat"],
-                cwd=extracted,
-                env=environment,
-                stdout=log_handle,
-                stderr=subprocess.STDOUT,
-            )
+        def launch() -> subprocess.Popen:
+            with log_path.open("ab") as log_handle:
+                return subprocess.Popen(
+                    ["cmd.exe", "/c", "start.bat"],
+                    cwd=extracted,
+                    env=environment,
+                    stdout=log_handle,
+                    stderr=subprocess.STDOUT,
+                )
 
-        def stop(process):
-            subprocess.run(
-                ["taskkill", "/PID", str(process.pid), "/T", "/F"],
-                check=False,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-            try:
-                process.wait(timeout=8)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                process.wait(timeout=5)
-
-        process = launch()
-        try:
-            for attempt in range(40):
+        def wait_until_healthy(process: subprocess.Popen, label: str) -> None:
+            for _ in range(80):
                 if process.poll() is not None:
                     raise AssertionError(
-                    "Packaged start.bat exited early. Launcher log: "
-                    + log_path.read_text(encoding="utf-8", errors="replace")
-                )
+                        f"{label}. Launcher log: "
+                        + log_path.read_text(encoding="utf-8", errors="replace")
+                    )
                 try:
                     status, health = request(base, "/api/health")
                     if status == 200 and health.get("status") == "ok":
-                        break
+                        return
                 except (OSError, urllib.error.URLError):
                     time.sleep(0.25)
-            else:
-                raise AssertionError(
-                    "Packaged application did not become healthy within 10 seconds"
-                )
+            raise AssertionError(
+                f"{label}: application did not become healthy within 20 seconds. "
+                + log_path.read_text(encoding="utf-8", errors="replace")
+            )
 
+        process = launch()
+        try:
+            wait_until_healthy(process, "Packaged start.bat exited before health check")
             status, dashboard = request(base, "/")
             assert status == 200 and b"Cartoon Studio" in dashboard
             status, static = request(base, "/static/styles.css")
@@ -137,36 +139,18 @@ def main() -> int:
 
         process = launch()
         try:
-            for _ in range(40):
-                if process.poll() is not None:
-                    raise AssertionError(
-                    "Packaged start.bat failed on restart. Launcher log: "
-                    + log_path.read_text(encoding="utf-8", errors="replace")
-                )
-                try:
-                    status, health = request(base, "/api/health")
-                    if status == 200 and health.get("status") == "ok":
-                        break
-                except (OSError, urllib.error.URLError):
-                    time.sleep(0.25)
-            else:
-                raise AssertionError("Packaged application did not recover after restart")
-
+            wait_until_healthy(process, "Packaged start.bat failed during restart")
             status, projects = request(base, "/api/projects")
             assert status == 200
             assert any(project["id"] == project_id for project in projects)
             status, reopened = request(base, f"/api/projects/{project_id}")
-            assert status == 200 and reopened["project"]["name"] == "Clean Package Smoke Test"
+            assert status == 200
+            assert reopened["project"]["name"] == "Clean Package Smoke Test"
         finally:
-            process.terminate()
-            try:
-                process.wait(timeout=8)
-            except subprocess.TimeoutExpired:
-                process.kill()
-                process.wait(timeout=5)
+            stop(process)
 
     print(
-        "Windows bootstrap smoke test passed: archive integrity, extracted launch, "
+        "Windows bootstrap smoke test passed: archive integrity, actual start.bat launch, "
         "HTTP UI/API, project save/open and restart persistence."
     )
     return 0
