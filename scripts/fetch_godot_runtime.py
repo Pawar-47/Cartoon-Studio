@@ -15,7 +15,7 @@ DEFAULT_MANIFEST = ROOT / "engine" / "godot_runtime.json"
 
 def download_and_verify(url: str, expected_sha256: str, destination: pathlib.Path) -> None:
     digest = hashlib.sha256()
-    with urllib.request.urlopen(url, timeout=180) as response, destination.open("wb") as output:
+    with request.urlopen(url, timeout=180) as response, destination.open("wb") as output:
         while chunk := response.read(1024 * 1024):
             digest.update(chunk)
             output.write(chunk)
