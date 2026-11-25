@@ -123,6 +123,24 @@ async function loadRetargets(){
  }
  if(!documents.length){const empty=document.createElement("p");empty.className="inline-status";empty.textContent="No retarget scenes saved in this project yet.";container.append(empty)}
 }
+function assemblyAssetId(relativePath){
+ return (relativePath||"").split("/").pop().replace(/\\.glb$/i,"");
+}
+async function loadAssemblyAssetManifest(relativePath){
+ const assetId=assemblyAssetId(relativePath);
+ if(!assetId)throw new Error("An assembly source asset path is missing.");
+ const existing=assemblyAssets.find(asset=>asset.asset_id===assetId);
+ if(existing)return existing;
+ const response=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(assetId)+"/manifest");
+ if(!response.ok)throw new Error("Could not restore source asset "+assetId.slice(0,8)+".");
+ const asset=await response.json();
+ rememberAssemblyAsset(asset,asset.original_filename||"Saved source asset");
+ return asset;
+}
+async function loadAssemblySources(recipe){
+ const paths=[recipe.base_relative_path,...(recipe.parts||[]).map(part=>part.relative_path)].filter(Boolean);
+ return Promise.all([...new Set(paths)].map(loadAssemblyAssetManifest));
+}
 async function loadCharacters(){
  const response=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/characters");
  if(!response.ok)throw new Error("Could not load saved characters.");
@@ -133,6 +151,11 @@ async function loadCharacters(){
   const title=document.createElement("h3");title.textContent=data.name;
   const description=document.createElement("p");description.textContent=data.description||"No description";
   const model=document.createElement("p");const asset=data.asset||{};model.textContent=(asset.original_filename||"GLB model")+" · "+(asset.engine_inspection?.mesh_count??asset.container?.mesh_count??0)+" meshes";
+  if(asset.assembly){
+   const savedAssetId=assemblyAssetId(asset.relative_path);
+   rememberAssemblyAsset({asset_id:savedAssetId,...asset},data.name);
+   try{await loadAssemblySources(asset.assembly)}catch(error){$("assembly-status").textContent="Some saved assembly sources could not be restored: "+error.message}
+  }
   const rigAnalysis=asset.rig_analysis||{};const rig=document.createElement("span");rig.className="tag"+(asset.rig_ready?"":" warning");
   rig.textContent=asset.rig_ready?"Skeleton detected":"No skeleton detected";
   if(rigAnalysis.required_bone_count)rig.textContent+=" · humanoid names "+rigAnalysis.matched_bone_count+"/"+rigAnalysis.required_bone_count;
@@ -145,6 +168,23 @@ async function loadCharacters(){
   editButton.addEventListener("click",()=>editCharacterProfile(document));
   const customizeButton=document.createElement("button");customizeButton.className="secondary preview-saved";customizeButton.type="button";customizeButton.textContent="Customize appearance";
   customizeButton.addEventListener("click",()=>openCharacterAppearance(document).catch(error=>$("project-status").textContent=error.message));
+  if(asset.assembly){
+   const reopenAssemblyButton=document.createElement("button");reopenAssemblyButton.className="secondary preview-saved";reopenAssemblyButton.type="button";reopenAssemblyButton.textContent="Reopen assembly";
+   reopenAssemblyButton.addEventListener("click",async()=>{
+    try{
+     await loadAssemblySources(asset.assembly);
+     $("assembly-base").value=assemblyAssetId(asset.assembly.base_relative_path);
+     for(const part of asset.assembly.parts||[]){
+      const select=$("assembly-"+part.slot),sourceId=assemblyAssetId(part.relative_path);
+      select.value=sourceId+"|"+part.mesh_path;
+     }
+     refreshAssemblyControls();
+     document.querySelector(".assembly-panel").scrollIntoView({behavior:"smooth",block:"start"});
+     $("assembly-status").textContent="Saved assembly recipe restored. Adjust any part and assemble again to create a new asset.";
+    }catch(error){$("assembly-status").textContent=error.message}
+   });
+   card.append(reopenAssemblyButton);
+  }
   card.append(title,description,model,rig,animations,revision,previewButton,editButton,customizeButton);list.append(card);
  }
 }
