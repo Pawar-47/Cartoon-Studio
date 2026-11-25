@@ -114,6 +114,11 @@ def uninstall(install_dir: Path) -> None:
 
     if install_dir.exists():
         remaining = sorted(path.name for path in install_dir.iterdir())
+        remaining_files = [
+            str(path.relative_to(install_dir))
+            for path in install_dir.rglob("*")
+            if path.is_file()
+        ]
         registry = [
             subprocess.run(
                 ["reg", "query", key, "/s", view],
@@ -129,6 +134,7 @@ def uninstall(install_dir: Path) -> None:
         ]
         raise AssertionError(
             f"Uninstaller did not remove {install_dir}; remaining={remaining!r}; "
+            f"remaining_files={remaining_files!r}; "
             f"registry={[item.stdout + item.stderr for item in registry]!r}"
         )
 

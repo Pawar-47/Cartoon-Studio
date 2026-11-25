@@ -28,6 +28,9 @@ VIAddVersionKey "FileVersion" "${APP_VERSION}"
 VIAddVersionKey "FileDescription" "Cartoon Studio Installer"
 
 !macro RemoveInstalledFiles
+    ; Stop the app and its pinned native worker before removing program files.
+    ExecWait '"$SYSDIR\taskkill.exe" /F /IM CartoonStudio.exe'
+    ExecWait '"$SYSDIR\taskkill.exe" /F /IM Godot_v4.7.2-stable_win64.exe'
     ; Remove only known application-owned paths. Never touch the user's data directory.
     SetOutPath "$TEMP"
     SetFileAttributes "$INSTDIR\CartoonStudio.exe" NORMAL
