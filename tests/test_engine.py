@@ -85,6 +85,14 @@ def test_godot_worker_ping_and_glb_inspection(tmp_path):
     shutil.copy2(FIXTURE, fixture)
     inspection = adapter.inspect_glb(fixture, allowed_root=project_root)
     assert inspection["mesh_count"] >= 1
+    assert len(inspection["mesh_inventory"]) == inspection["mesh_count"]
+    mesh_record = inspection["mesh_inventory"][0]
+    assert mesh_record["node_path"]
+    assert mesh_record["mesh_type"]
+    assert isinstance(mesh_record["surface_count"], int)
+    assert isinstance(mesh_record["skin_bound"], bool)
+    assert set(mesh_record["bounds"]) == {"position", "size"}
+    assert mesh_record["slot_candidate"] in {"", "head", "body", "legs", "feet"}
     assert inspection["skeleton_count"] == len(inspection["skeletons"])
     assert inspection["engine_version"].startswith("4.7.2")
 

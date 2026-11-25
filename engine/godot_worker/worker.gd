@@ -140,6 +140,45 @@ func _inspect_glb(payload: Dictionary) -> Dictionary:
             if animation_label.get_file().to_upper() != "RESET" and not animation_names.has(animation_label):
                 animation_names.append(animation_label)
     var mesh_nodes := scene.find_children("*", "MeshInstance3D", true, false)
+    var mesh_inventory: Array[Dictionary] = []
+    for mesh_node in mesh_nodes:
+        var mesh_instance := mesh_node as MeshInstance3D
+        var mesh_resource := mesh_instance.mesh
+        if mesh_resource == null:
+            continue
+        var surface_names: Array[String] = []
+        var material_names: Array[String] = []
+        for surface_index in range(mesh_resource.get_surface_count()):
+            surface_names.append(str(mesh_resource.surface_get_name(surface_index)))
+            var surface_material := mesh_instance.get_active_material(surface_index)
+            material_names.append(str(surface_material.resource_name) if surface_material != null else "")
+        var blend_shape_names: Array[String] = []
+        for shape_index in range(mesh_instance.get_blend_shape_count()):
+            blend_shape_names.append(str(mesh_resource.get_blend_shape_name(shape_index)))
+        var skeleton_path := str(mesh_instance.get_skeleton_path())
+        var bound_skeleton := scene.get_node_or_null(NodePath(skeleton_path)) as Skeleton3D if not skeleton_path.is_empty() else null
+        var bounds := mesh_resource.get_aabb()
+        var slot_candidate := _classify_mesh_slot(
+            str(mesh_instance.name) + " " + str(mesh_resource.resource_name) + " " + str(scene.get_path_to(mesh_instance))
+        )
+        mesh_inventory.append({
+            "node_path": str(scene.get_path_to(mesh_instance)),
+            "node_name": str(mesh_instance.name),
+            "mesh_resource_name": str(mesh_resource.resource_name),
+            "mesh_type": mesh_resource.get_class(),
+            "surface_count": mesh_resource.get_surface_count(),
+            "surface_names": surface_names,
+            "material_names": material_names,
+            "blend_shape_names": blend_shape_names,
+            "skin_bound": mesh_instance.skin != null,
+            "skeleton_path": skeleton_path,
+            "skeleton_bone_count": bound_skeleton.get_bone_count() if bound_skeleton != null else 0,
+            "bounds": {
+                "position": [bounds.position.x, bounds.position.y, bounds.position.z],
+                "size": [bounds.size.x, bounds.size.y, bounds.size.z]
+            },
+            "slot_candidate": slot_candidate
+        })
     var morph_targets: Array[Dictionary] = []
     for mesh_node in mesh_nodes:
         var mesh_instance := mesh_node as MeshInstance3D
@@ -195,6 +234,7 @@ func _inspect_glb(payload: Dictionary) -> Dictionary:
     var result := {
         "ok": true,
         "mesh_count": mesh_nodes.size(),
+        "mesh_inventory": mesh_inventory,
         "morph_target_count": morph_targets.size(),
         "morph_targets": morph_targets,
         "skeleton_count": skeleton_nodes.size(),
@@ -206,6 +246,22 @@ func _inspect_glb(payload: Dictionary) -> Dictionary:
     }
     scene.free()
     return result
+
+
+func _classify_mesh_slot(source_name: String) -> String:
+    var normalized := source_name.to_lower().replace("-", "_").replace(" ", "_")
+    var searchable := normalized
+    var slot_tokens := {
+        "head": ["head", "hair", "face", "skull"],
+        "body": ["body", "torso", "chest", "shirt", "jacket", "coat"],
+        "legs": ["legs", "leg", "pants", "trousers", "shorts"],
+        "feet": ["feet", "foot", "shoes", "shoe", "boots", "boot"]
+    }
+    for slot_name in ["head", "body", "legs", "feet"]:
+        for token in slot_tokens[slot_name]:
+            if searchable.contains(token):
+                return slot_name
+    return ""
 
 
 func _read_glb_json(path: String) -> Dictionary:
