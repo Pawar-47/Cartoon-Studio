@@ -876,8 +876,19 @@ def customize_character_asset_proportions(
             DATA_DIR, project_id, f"assets/characters/{safe_asset_id}.json"
         )
         source_manifest = read_json(source_manifest_path)
+        if source_manifest.get("document_type") != "character_asset" or source_manifest.get("id") != safe_asset_id:
+            raise ValueError("The source character asset manifest is invalid.")
         source_data = source_manifest.get("data", {})
-        source_relative_path = str(source_data.get("relative_path", ""))
+        current_relative_path = str(source_data.get("relative_path", ""))
+        previous_geometry_edit = source_data.get("geometry_edit") or {}
+        source_relative_path = str(previous_geometry_edit.get("source_relative_path") or current_relative_path)
+        rig_analysis = source_data.get("rig_analysis") or {}
+        bone_mapping = rig_analysis.get("bone_mapping", {})
+        if rig_analysis.get("status") != "humanoid_names_complete" or not isinstance(bone_mapping, dict):
+            raise HTTPException(
+                status_code=422,
+                detail="Body-proportion editing requires a complete, unambiguous humanoid bone mapping.",
+            )
         project_root = project_directory(DATA_DIR, project_id)
         source_path = resolve_project_relative(DATA_DIR, project_id, source_relative_path)
     except (ValueError, OSError) as error:
@@ -904,7 +915,8 @@ def customize_character_asset_proportions(
     destination.parent.mkdir(parents=True, exist_ok=True)
     try:
         inspection = get_engine_adapter().customize_character_proportions(
-            source_path, proportions, destination, allowed_root=project_root
+            source_path, proportions, destination, allowed_root=project_root,
+            bone_mapping=bone_mapping,
         )
         if not inspection.get("proportions_verified"):
             raise HTTPException(
@@ -934,8 +946,8 @@ def customize_character_asset_proportions(
         }
         if source_data.get("assembly"):
             asset_data["assembly"] = source_data["assembly"]
-        if source_data.get("geometry_edit"):
-            asset_data["previous_geometry_edit"] = source_data["geometry_edit"]
+        if previous_geometry_edit:
+            asset_data["previous_geometry_edit"] = previous_geometry_edit
         manifest = make_envelope("character_asset", new_asset_id, asset_data, now, now, 1)
         manifest_path = resolve_project_relative(
             DATA_DIR, project_id, f"assets/characters/{new_asset_id}.json"

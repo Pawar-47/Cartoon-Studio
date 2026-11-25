@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 from app import main
 from app.character_builder import ensure_model_asset
 from app.engine import EngineTimeoutError, EngineUnavailableError, GodotEngineAdapter
+from app.rig_analysis import analyze_rig
 from app.storage import project_directory
 
 
@@ -215,6 +216,8 @@ def test_godot_worker_bakes_humanoid_body_proportions_and_preserves_animation(tm
     )
     original_bytes = source.read_bytes()
     before = adapter.inspect_glb(source, allowed_root=project_root)
+    rig = analyze_rig(before)
+    assert rig["status"] == "humanoid_names_complete"
     result = adapter.customize_character_proportions(
         source,
         {"torso_length": 1.12, "shoulder_width": 1.08, "arm_length": 0.94,
@@ -222,6 +225,7 @@ def test_godot_worker_bakes_humanoid_body_proportions_and_preserves_animation(tm
         output,
         allowed_root=project_root,
         timeout_seconds=120,
+        bone_mapping=rig["bone_mapping"],
     )
     assert result["proportions_verified"] is True
     assert result["changed_bones"]

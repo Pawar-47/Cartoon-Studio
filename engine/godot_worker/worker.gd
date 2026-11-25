@@ -542,26 +542,43 @@ func _customize_character_proportions(payload: Dictionary) -> Dictionary:
     for bone_index in range(skeleton.get_bone_count()):
         original_bone_rests[str(skeleton.get_bone_name(bone_index))] = skeleton.get_bone_rest(bone_index)
     var changed_bones: Array[String] = []
+    var mapping_value: Variant = payload.get("bone_mapping", {})
+    var bone_mapping: Dictionary = mapping_value if typeof(mapping_value) == TYPE_DICTIONARY else {}
     var groups := [
-        {"name": "torso_length", "aliases": ["spine", "spine1", "spine2", "neck", "head"], "mode": "vertical", "minimum": 2},
-        {"name": "shoulder_width", "aliases": ["leftshoulder", "rightshoulder", "leftarm", "rightarm", "leftupperarm", "rightupperarm"], "mode": "horizontal", "minimum": 2},
-        {"name": "arm_length", "aliases": ["leftforearm", "rightforearm", "lefthand", "righthand"], "mode": "vector", "minimum": 2},
-        {"name": "leg_length", "aliases": ["leftleg", "rightleg", "leftfoot", "rightfoot"], "mode": "vector", "minimum": 2},
-        {"name": "head_size", "aliases": ["head"], "mode": "basis", "minimum": 1}
+        {"name": "torso_length", "canonical": ["Spine", "Head"], "aliases": ["spine", "neck", "head"], "mode": "vertical", "minimum": 2},
+        {"name": "shoulder_width", "canonical": ["LeftUpperArm", "RightUpperArm"], "aliases": ["shoulder", "upperarm", "leftarm", "rightarm"], "mode": "horizontal", "minimum": 2},
+        {"name": "arm_length", "canonical": ["LeftUpperArm", "LeftLowerArm", "LeftHand", "RightUpperArm", "RightLowerArm", "RightHand"], "aliases": ["upperarm", "forearm", "lowerarm", "hand", "leftarm", "rightarm"], "mode": "vector", "minimum": 2},
+        {"name": "leg_length", "canonical": ["LeftUpperLeg", "LeftLowerLeg", "LeftFoot", "RightUpperLeg", "RightLowerLeg", "RightFoot"], "aliases": ["upleg", "upperleg", "thigh", "lowerleg", "calf", "shin", "foot", "leftleg", "rightleg"], "mode": "vector", "minimum": 2},
+        {"name": "head_size", "canonical": ["Head"], "aliases": ["head"], "mode": "basis", "minimum": 1}
     ]
     for group_value in groups:
         var group: Dictionary = group_value
         var factor := float(changed_values[group["name"]])
         if absf(factor - 1.0) < 0.0001:
             continue
-        var aliases: Array = group["aliases"]
+        var selected_bones: Array[int] = []
+        if not bone_mapping.is_empty():
+            for canonical_name in group["canonical"]:
+                var mapped_name := str(bone_mapping.get(canonical_name, ""))
+                var mapped_index := skeleton.find_bone(mapped_name) if not mapped_name.is_empty() else -1
+                if mapped_index >= 0 and not selected_bones.has(mapped_index):
+                    selected_bones.append(mapped_index)
+        else:
+            var aliases: Array = group["aliases"]
+            for candidate_index in range(skeleton.get_bone_count()):
+                var candidate_name := str(skeleton.get_bone_name(candidate_index))
+                var token_parts := candidate_name.to_lower().split(":")
+                var token := str(token_parts[token_parts.size() - 1]).replace("_", "").replace(" ", "").replace(".", "").replace("-", "")
+                var matches_alias := false
+                for alias_value in aliases:
+                    if token.contains(str(alias_value)):
+                        matches_alias = true
+                        break
+                if matches_alias:
+                    selected_bones.append(candidate_index)
         var matched := 0
-        for bone_index in range(skeleton.get_bone_count()):
+        for bone_index in selected_bones:
             var bone_name := str(skeleton.get_bone_name(bone_index))
-            var token_parts := bone_name.to_lower().split(":")
-            var token := str(token_parts[token_parts.size() - 1]).replace("_", "").replace(" ", "")
-            if not aliases.has(token):
-                continue
             var rest := skeleton.get_bone_rest(bone_index)
             if group["mode"] == "vertical":
                 rest.origin.y *= factor

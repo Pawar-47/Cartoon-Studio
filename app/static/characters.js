@@ -1,5 +1,5 @@
 import { buildExpressionPreset } from "./character-expression-presets.js";
-import { showCharacterPreview, showRetargetPreview, getCharacterMaterials, applyCharacterAppearance, getCharacterMorphTargets, applyCharacterMorphTargets } from "./character-preview.js";
+import { showCharacterPreview, showRetargetPreview, getCharacterMaterials, applyCharacterAppearance, getCharacterMorphTargets, applyCharacterMorphTargets, applyCharacterBodyProportions as previewCharacterBodyProportions } from "./character-preview.js";
 const $=id=>document.getElementById(id);
 let activeProject="", importedAsset=null, activeCharacter=null, editingCharacter=null, appearanceRecipe={materials:{},morph_targets:{},morph_bindings:{}}, retargetCharacters=[], assemblyAssets=[], assemblyAccessories=[];
 const params=new URLSearchParams(window.location.search);
@@ -16,7 +16,7 @@ function resetProportionControls(){
 function updateProportionButton(){
  const hasSingleRig=Number(importedAsset?.engine_inspection?.skeleton_count)===1;
  const unchanged=proportionFields.every(name=>Math.abs(Number($(name.replaceAll("_","-")).value)-1)<0.0001);
- $("apply-proportions").disabled=!activeProject||!importedAsset?.asset_id||!hasSingleRig||unchanged;
+ $("apply-proportions").disabled=!activeProject||!importedAsset?.asset_id||!hasSingleRig||importedAsset?.rig_analysis?.status!=="humanoid_names_complete"||unchanged;
 }
 async function applyBodyProportions(){
  if(!activeProject||!importedAsset?.asset_id)return;
@@ -27,11 +27,14 @@ async function applyBodyProportions(){
  try{
   const response=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(importedAsset.asset_id)+"/proportions",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(proportions)});
   const result=await response.json();if(!response.ok)throw new Error(result.detail||"Body-proportion editing failed.");
-  const assetResponse=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(result.asset_id));
-  if(!assetResponse.ok)throw new Error("The new character was created, but its preview could not be loaded.");
-  const loaded=await showCharacterPreview(await assetResponse.arrayBuffer(),"Proportioned character");
-  if(!loaded)throw new Error("The new GLB was exported, but the browser preview could not be created.");
   importedAsset=result;rememberAssemblyAsset(result,"Proportioned character");
+  const previewPath=result.geometry_edit.source_relative_path;
+  const previewId=previewPath.split("/").pop().replace(/\.glb$/i,"");
+  const assetResponse=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(previewId));
+  if(!assetResponse.ok)throw new Error("The proportioned asset was created, but its source preview could not be loaded.");
+  const loaded=await showCharacterPreview(await assetResponse.arrayBuffer(),"Proportioned character preview");
+  if(!loaded)throw new Error("The source GLB could not be previewed.");
+  previewCharacterBodyProportions(proportions,importedAsset.rig_analysis?.bone_mapping||{});
   $("body-proportions").value=JSON.stringify(proportions,null,2);
   $("save-character").disabled=false;
   $("proportion-status").textContent="Body geometry updated on "+result.geometry_edit.changed_bones.length+" rig bones. Animation clips and skin binding survived export. Original GLB preserved.";
@@ -39,7 +42,7 @@ async function applyBodyProportions(){
   updateProportionButton();
  }catch(error){$("proportion-status").textContent=error.message;updateProportionButton()}
 }
-function resetProfileEditor(){editingCharacter=null;$("character-form").reset();$("profile-heading").textContent="Save reusable profile";$("save-character").textContent="Save character profile";$("cancel-edit-profile").hidden=true;$("save-character").disabled=!importedAsset}
+function resetProfileEditor(){editingCharacter=null;$("character-form").reset();$("profile-heading").textContent="Save reusable profile";$("save-character").textContent="Save character profile";$("cancel-edit-profile").hidden=true;$("save-character").disabled=!importedAsset;resetProportionControls();previewCharacterBodyProportions(readProportionControls(),importedAsset?.rig_analysis?.bone_mapping||{});updateProportionButton()}
 function cancelProfileEdit(){resetProfileEditor();$("profile-status").textContent="Profile editing cancelled. The saved character was not changed."}
 async function editCharacterProfile(document){
  const data=document.data||{};editingCharacter=document;
@@ -48,8 +51,10 @@ async function editCharacterProfile(document){
  if(savedAssetId&&activeProject){
   const manifestResponse=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(savedAssetId)+"/manifest");
   if(manifestResponse.ok){const manifest=await manifestResponse.json();importedAsset={asset_id:savedAssetId,...(manifest.data||savedAsset)}}
-  const modelResponse=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(savedAssetId));
-  if(modelResponse.ok)await showCharacterPreview(await modelResponse.arrayBuffer(),data.name||"Saved character");
+  const previewPath=importedAsset?.geometry_edit?.source_relative_path||savedAsset.relative_path||"";
+  const previewAssetId=previewPath.split("/").pop().replace(/\.glb$/i,"");
+  const modelResponse=previewAssetId?await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(previewAssetId)):null;
+  if(modelResponse?.ok)await showCharacterPreview(await modelResponse.arrayBuffer(),data.name||"Saved character");
  }
  $("character-name").value=data.name||"";$("character-description").value=data.description||"";
  $("face-design").value=data.face_design||"";$("body-proportions").value=JSON.stringify(data.body_proportions||{},null,2);
@@ -62,6 +67,7 @@ async function editCharacterProfile(document){
  const savedProportions=data.body_proportions||{};
  for(const name of proportionFields){const value=Number(savedProportions[name]??1);$(name.replaceAll("_","-")).value=Number.isFinite(value)&&value>=0.75&&value<=1.25?String(value):"1"}
  updateProportionLabels();updateProportionButton();
+ previewCharacterBodyProportions(readProportionControls(),importedAsset?.rig_analysis?.bone_mapping||{});
  $("profile-heading").textContent="Edit character profile";$("save-character").textContent="Save profile changes";
  $("save-character").disabled=false;$("cancel-edit-profile").hidden=false;
  $("profile-status").textContent="Editing "+(data.name||"character")+". The original GLB and saved appearance recipe will be preserved.";
@@ -454,8 +460,18 @@ $("character-form").addEventListener("submit",async event=>{
 });
 $("cancel-edit-profile").addEventListener("click",cancelProfileEdit);
 for(const name of proportionFields)$(name.replaceAll("_","-")).addEventListener("input",()=>{updateProportionLabels();updateProportionButton()});
+for(const name of proportionFields){
+ const input=$(name.replaceAll("_","-"));
+ input.addEventListener("input",()=>{
+  updateProportionLabels();updateProportionButton();
+  previewCharacterBodyProportions(readProportionControls(),importedAsset?.rig_analysis?.bone_mapping||{});
+ });
+}
 $("apply-proportions").addEventListener("click",applyBodyProportions);
-$("reset-proportions").addEventListener("click",()=>{resetProportionControls();updateProportionButton()});
+$("reset-proportions").addEventListener("click",()=>{
+ resetProportionControls();updateProportionButton();
+ previewCharacterBodyProportions(readProportionControls(),importedAsset?.rig_analysis?.bone_mapping||{});
+});
 $("refresh-characters").addEventListener("click",()=>loadCharacters().catch(error=>$("project-status").textContent=error.message));
 
 const assemblySlots=["head","body","legs","feet"];

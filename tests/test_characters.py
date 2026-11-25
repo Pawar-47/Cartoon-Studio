@@ -26,6 +26,9 @@ def make_glb() -> bytes:
 
 
 class FakeEngine:
+    def __init__(self):
+        self.proportion_source_paths = []
+
     def inspect_glb(self, source_path, allowed_root):
         assert source_path.is_relative_to(allowed_root)
         return {
@@ -79,9 +82,11 @@ class FakeEngine:
 
 
     def customize_character_proportions(
-        self, source_path, proportions, destination, allowed_root
+        self, source_path, proportions, destination, allowed_root, bone_mapping=None
     ):
         assert source_path.is_relative_to(allowed_root)
+        self.proportion_source_paths.append(source_path)
+        assert bone_mapping and bone_mapping.get("Spine") == "mixamorig:Spine"
         assert any(abs(value - 1.0) > 0.0001 for value in proportions.values())
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(make_glb())
@@ -374,6 +379,8 @@ def test_modular_assembly_recipe_survives_profile_reopen_and_reassembly(
 
 def test_body_proportion_edit_creates_verified_asset_without_mutating_source(tmp_path, monkeypatch):
     client, project_id = setup_project(tmp_path, monkeypatch)
+    engine = FakeEngine()
+    monkeypatch.setattr(main, "get_engine_adapter", lambda: engine)
     source = import_asset(client, project_id)
     source_path = tmp_path / "projects" / project_id / source["relative_path"]
     original_bytes = source_path.read_bytes()
@@ -389,6 +396,16 @@ def test_body_proportion_edit_creates_verified_asset_without_mutating_source(tmp
     assert result["geometry_edit"]["changed_bones"]
     assert result["geometry_edit"]["source_relative_path"] == source["relative_path"]
     assert source_path.read_bytes() == original_bytes
+    second_response = client.post(
+        f"/api/projects/{project_id}/character-assets/{result['asset_id']}/proportions",
+        json={"torso_length": 1.12, "shoulder_width": 1.08, "arm_length": 0.94,
+              "leg_length": 1.06, "head_size": 1.1},
+    )
+    assert second_response.status_code == 201, second_response.text
+    second_result = second_response.json()
+    assert engine.proportion_source_paths == [source_path, source_path]
+    assert second_result["geometry_edit"]["source_relative_path"] == source["relative_path"]
+    assert second_result["previous_geometry_edit"]["source_relative_path"] == source["relative_path"]
     manifest = client.get(
         f"/api/projects/{project_id}/character-assets/{result['asset_id']}/manifest"
     )
