@@ -14,6 +14,7 @@ func _initialize() -> void:
 
     var request_text := FileAccess.get_file_as_string(request_path)
     var request_value: Variant = JSON.parse_string(request_text)
+    await process_frame
     var response: Dictionary = await _handle_request(request_value)
     var response_file := FileAccess.open(response_path, FileAccess.WRITE)
     if response_file == null:
