@@ -28,7 +28,10 @@ def main() -> int:
         "name": manifest["component"],
         "version": manifest["version"],
         "purl": purl,
-        "description": "Official Godot Standard Windows x86_64 runtime bundled as the Cartoon Studio native worker.",
+        "description": (
+            "Official Godot Standard Windows x86_64 runtime bundled "
+            "as the Cartoon Studio native worker."
+        ),
         "licenses": [{"license": {"id": manifest["license"]}}],
         "hashes": [
             {

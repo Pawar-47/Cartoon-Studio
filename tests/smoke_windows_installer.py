@@ -98,20 +98,6 @@ def assert_registry_key_absent(key: str) -> None:
             )
 
 
-def assert_registry_key_absent(key: str) -> None:
-    for view in ("/reg:32", "/reg:64"):
-        result = subprocess.run(
-            ["reg", "query", key, view],
-            check=False,
-            capture_output=True,
-            text=True,
-        )
-        if result.returncode == 0:
-            raise AssertionError(
-                f"Uninstall left registry key {key} in {view}: {result.stdout}"
-            )
-
-
 def uninstall(install_dir: Path) -> None:
     uninstaller = install_dir / "Uninstall.exe"
     if not uninstaller.is_file():

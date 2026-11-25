@@ -4,9 +4,9 @@ import argparse
 import hashlib
 import json
 import subprocess
+from pathlib import Path, PurePosixPath
 import urllib.request
 import zipfile
-from pathlib import Path, PurePosixPath
 
 
 ROOT = Path(__file__).resolve().parents[1]
