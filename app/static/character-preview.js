@@ -269,9 +269,6 @@ export async function showCharacterPreview(buffer, label = "Character", appearan
     const center = bounds.getCenter(new THREE.Vector3());
     const size = bounds.getSize(new THREE.Vector3());
     currentObject.position.sub(center);
-    characterBounds = bounds.clone();
-    characterBounds.min.sub(center);
-    characterBounds.max.sub(center);
 
     cameraDistance = Math.max(size.x, size.y, size.z, 0.1) * 2.1;
     characterBounds = bounds.clone();
