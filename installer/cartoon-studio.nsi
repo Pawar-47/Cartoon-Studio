@@ -49,6 +49,8 @@ VIAddVersionKey "FileDescription" "Cartoon Studio Installer"
 
 Section "Cartoon Studio" SEC_MAIN
     SectionIn RO
+    WriteRegStr HKCU "Software\CartoonStudioDebug" "InstallSectionEntered" "yes"
+    WriteRegStr HKCU "Software\CartoonStudioDebug" "InstallSectionPath" "$INSTDIR"
     SetShellVarContext current
 
     ; Stop an existing process before replacing its program files.

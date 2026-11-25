@@ -166,9 +166,40 @@ def main() -> int:
             Path(os.environ["USERPROFILE"]) / "Desktop" / "Cartoon Studio.lnk"
         )
 
+        for view in ("/reg:32", "/reg:64"):
+            subprocess.run(
+                ["reg", "delete", r"HKCU\Software\CartoonStudioDebug", "/f", view],
+                check=False,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
         install(v1_installer)
         executable = install_dir / "CartoonStudio.exe"
-        assert executable.is_file()
+        if not executable.is_file():
+            debug = [
+                subprocess.run(
+                    ["reg", "query", r"HKCU\Software\CartoonStudioDebug", "/s", view],
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                )
+                for view in ("/reg:32", "/reg:64")
+            ]
+            registry = [
+                subprocess.run(
+                    ["reg", "query", r"HKCU\Software\CartoonStudio", "/s", view],
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                )
+                for view in ("/reg:32", "/reg:64")
+            ]
+            raise AssertionError(
+                f"Installer did not place the app at {executable}; "
+                f"LOCALAPPDATA={os.environ.get('LOCALAPPDATA')!r}; "
+                f"debug={[item.stdout + item.stderr for item in debug]!r}; "
+                f"registry={[item.stdout + item.stderr for item in registry]!r}"
+            )
         assert start_menu.is_file()
         assert desktop_shortcut.is_file()
 
