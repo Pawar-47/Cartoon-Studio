@@ -13,6 +13,10 @@ var _checks := {
     "imported_humanoid_skin_bound": false,
     "imported_humanoid_animation_found": false,
     "imported_humanoid_rest_transforms_finite": false,
+    "imported_retarget_modifier_created": false,
+    "imported_retarget_animation_playing": false,
+    "imported_retarget_different_rest_lengths": false,
+    "imported_retarget_pose_transferred": false,
     "animation_created": false,
     "animation_playing": false,
     "scene_saved": false,
@@ -26,12 +30,15 @@ var _checks := {
 var _saved_scene_path := "user://cartoon_studio_engine_proof_saved.tscn"
 var _retarget_source: Skeleton3D
 var _retarget_target: Skeleton3D
+var _imported_humanoid_source: Skeleton3D
+var _imported_humanoid_target: Skeleton3D
 
 
 func _ready() -> void:
     _read_arguments()
     _build_camera_and_light()
     _import_glb_fixture()
+    _build_imported_humanoid_retarget_pair()
     _build_animated_character_proxy()
     _build_humanoid_retarget_pair()
     _save_and_reopen_scene()
@@ -120,6 +127,64 @@ func _import_glb_fixture() -> void:
         if imported_player.get_animation_list().size() > 0:
             _checks["imported_humanoid_animation_found"] = true
             break
+
+
+func _build_imported_humanoid_retarget_pair() -> void:
+    var humanoid := get_node_or_null("ImportedHumanoid")
+    if humanoid == null:
+        _errors.append("Imported humanoid instance is unavailable for retarget proof.")
+        return
+    var skeletons := humanoid.find_children("*", "Skeleton3D", true, false)
+    var players := humanoid.find_children("*", "AnimationPlayer", true, false)
+    if skeletons.size() != 1 or players.is_empty():
+        _errors.append("Imported humanoid needs one Skeleton3D and an AnimationPlayer.")
+        return
+
+    _imported_humanoid_source = skeletons[0] as Skeleton3D
+    var source_player := players[0] as AnimationPlayer
+    var modifier := RetargetModifier3D.new()
+    modifier.name = "ImportedRetargetModifier"
+    _imported_humanoid_source.add_child(modifier)
+
+    _imported_humanoid_target = Skeleton3D.new()
+    _imported_humanoid_target.name = "ImportedRetargetTarget"
+    for bone_index in range(_imported_humanoid_source.get_bone_count()):
+        var bone_name := str(_imported_humanoid_source.get_bone_name(bone_index))
+        _imported_humanoid_target.add_bone(bone_name)
+        _imported_humanoid_target.set_bone_parent(
+            bone_index,
+            _imported_humanoid_source.get_bone_parent(bone_index)
+        )
+        var target_rest := _imported_humanoid_source.get_bone_rest(bone_index)
+        if bone_name in [
+            "LeftUpperArm", "LeftLowerArm", "RightUpperArm", "RightLowerArm",
+            "LeftUpperLeg", "LeftLowerLeg", "RightUpperLeg", "RightLowerLeg"
+        ]:
+            target_rest.origin *= 1.2
+        _imported_humanoid_target.set_bone_rest(bone_index, target_rest)
+
+    modifier.add_child(_imported_humanoid_target)
+    modifier.profile = SkeletonProfileHumanoid.new()
+    _checks["imported_retarget_modifier_created"] = (
+        modifier.profile is SkeletonProfileHumanoid
+        and _imported_humanoid_target.get_bone_count()
+        == _imported_humanoid_source.get_bone_count()
+    )
+
+    var left_arm_source := _imported_humanoid_source.find_bone("LeftUpperArm")
+    var left_arm_target := _imported_humanoid_target.find_bone("LeftUpperArm")
+    if left_arm_source >= 0 and left_arm_target >= 0:
+        _checks["imported_retarget_different_rest_lengths"] = not is_equal_approx(
+            _imported_humanoid_source.get_bone_rest(left_arm_source).origin.length(),
+            _imported_humanoid_target.get_bone_rest(left_arm_target).origin.length()
+        )
+
+    for animation_name in source_player.get_animation_list():
+        if str(animation_name).to_upper() == "RESET":
+            continue
+        source_player.play(animation_name)
+        _checks["imported_retarget_animation_playing"] = source_player.is_playing()
+        break
 
 
 func _build_animated_character_proxy() -> void:
@@ -284,6 +349,22 @@ func _save_and_reopen_scene() -> void:
 
 func _finish() -> void:
     set_process(false)
+    if _imported_humanoid_source != null and _imported_humanoid_target != null:
+        var imported_source_arm := _imported_humanoid_source.find_bone("LeftUpperArm")
+        var imported_target_arm := _imported_humanoid_target.find_bone("LeftUpperArm")
+        if imported_source_arm >= 0 and imported_target_arm >= 0:
+            var imported_source_rotation := (
+                _imported_humanoid_source.get_bone_pose_rotation(imported_source_arm)
+            )
+            var imported_target_rotation := (
+                _imported_humanoid_target.get_bone_pose_rotation(imported_target_arm)
+            )
+            var imported_source_angle := imported_source_rotation.angle_to(Quaternion.IDENTITY)
+            var imported_target_angle := imported_target_rotation.angle_to(Quaternion.IDENTITY)
+            _checks["imported_retarget_pose_transferred"] = (
+                imported_source_angle > deg_to_rad(10.0)
+                and absf(imported_source_angle - imported_target_angle) < deg_to_rad(3.0)
+            )
     if _retarget_source != null and _retarget_target != null:
         var source_arm := _retarget_source.find_bone("LeftUpperArm")
         var target_arm := _retarget_target.find_bone("LeftUpperArm")
