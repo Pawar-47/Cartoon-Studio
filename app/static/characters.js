@@ -435,9 +435,10 @@ $("randomize-assembly").addEventListener("click",()=>{
  const selectedMeshKeys=new Set();
  for(const slot of assemblySlots){
   const select=$("assembly-"+slot),options=[...select.options].filter(option=>option.value);
-  const distinct=options.filter(option=>!usedAssetIds.has(option.value.split("|")[0]));
-  const pool=distinct.length?distinct:options;
-  if(!pool.length){$("assembly-status").textContent="Import source meshes for all four slots before shuffling.";return}
+  const unused=options.filter(option=>!selectedMeshKeys.has(option.value));
+  const distinct=unused.filter(option=>!usedAssetIds.has(option.value.split("|")[0]));
+  const pool=distinct.length?distinct:unused;
+  if(!pool.length){$("assembly-status").textContent="Not enough unique source meshes are loaded for all four slots.";return}
   const choice=pool[Math.floor(Math.random()*pool.length)],[assetId,meshPath]=choice.value.split("|");
   select.value=choice.value;usedAssetIds.add(assetId);selectedMeshKeys.add(choice.value);
  }
