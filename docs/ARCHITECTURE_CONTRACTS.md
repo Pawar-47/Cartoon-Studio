@@ -65,3 +65,122 @@ Bind local IPC to loopback, authenticate each worker process, validate project-r
 
 ## 10. Current implementation gap
 Current source implements only project metadata in SQLite, one saved story plan per project, FastAPI routes and static dashboard/story UI. It does not yet implement document envelopes, asset registry, migrations, durable render queue, engine adapter, provider adapters, scene renderer or recovery. The current story schema uses Ara-derived location/action catalogs; these are prototype validation lists only and must be migrated to stable Cartoon Studio-owned IDs in Phase 4. This document defines the target contract, not current functionality.
+
+
+## 11. Concrete document shapes
+
+### Project document
+```json
+{
+  "schema_version": "1.0.0",
+  "document_type": "project",
+  "id": "project-uuid",
+  "revision": 1,
+  "created_at": "2026-11-25T00:00:00Z",
+  "updated_at": "2026-11-25T00:00:00Z",
+  "data": {
+    "name": "My Cartoon Series",
+    "description": "",
+    "settings": {
+      "default_language": "ur",
+      "frame_rate": { "numerator": 24, "denominator": 1 },
+      "resolution": { "width": 1280, "height": 720 },
+      "quality_preset": "preview"
+    },
+    "references": {
+      "characters": [],
+      "worlds": [],
+      "episodes": []
+    }
+  }
+}
+```
+
+### Character document
+The `data` object contains `identity` (display name, personality, relationships), `appearance` (model asset ref, rig compatibility key, body/face/outfit recipe, material overrides), `expressions` (supported expression and viseme keys), and `voice_profile_ref`. Store voice settings and voice asset refs, not API credentials. Each imported model must have a rig/face capability manifest; missing morph targets are explicit capabilities, not silently assumed.
+
+### Episode and scene documents
+Episode `data`: title, synopsis, language, target_duration_ms (300000–420000), subtitle_mode, ordered scene_ids, character_ids, approval_state and revision notes.
+
+Scene `data`: title, duration_ms, location_id, character_ids, prop_asset_ids, environment/lighting settings, transition, and typed tracks:
+- camera: shot, movement, target_id, start_ms, duration_ms;
+- actions: character_id, action_id, target_id, start_ms, duration_ms, parameters;
+- dialogue: character_id/narrator, text, language, emotion, delivery, audio_asset_ref, start_ms, duration_ms;
+- audio: cue_type, asset_ref, start_ms, duration_ms, gain, fades and loop points;
+- facial: expression/viseme keys with start_ms and duration_ms.
+
+Canonical timing uses integer milliseconds. Engine adapters convert to frames using the project's rational frame rate. This avoids float drift while retaining a lossless conversion path for the current prototype's seconds-based schema. All cue intervals are half-open `[start_ms, start_ms + duration_ms)` and must fit inside their scene.
+
+### Render job document
+```json
+{
+  "schema_version": "1.0.0",
+  "document_type": "render_job",
+  "id": "job-uuid",
+  "revision": 1,
+  "created_at": "2026-11-25T00:00:00Z",
+  "updated_at": "2026-11-25T00:00:00Z",
+  "data": {
+    "project_id": "project-uuid",
+    "episode_id": "episode-uuid",
+    "episode_revision": 1,
+    "quality_preset": "low_hardware",
+    "status": "queued",
+    "stage": "preparing",
+    "progress": 0.0,
+    "attempt": 0,
+    "cancel_requested": false,
+    "scene_tasks": [],
+    "output_refs": [],
+    "last_error": null
+  }
+}
+```
+Allowed job states are queued, preparing, rendering, assembling, completed, failed and cancelled. State changes and stage events are persisted before progress is reported to the UI.
+
+## 12. Portable project layout and database index
+
+```text
+<CartoonStudioData>/
+  app.sqlite3
+  migrations/
+  projects/<project-id>/
+    project.json
+    characters/<character-id>.json
+    worlds/<world-id>.json
+    locations/<location-id>.json
+    episodes/<episode-id>.json
+    assets/original/
+    assets/derived/
+    cache/
+    jobs/<job-id>/job.json
+    jobs/<job-id>/scenes/<scene-id>/
+    exports/
+    backups/
+    logs/
+```
+
+- `project.json` and its referenced documents/assets are the portable project source. Relative paths are resolved from the project root.
+- `app.sqlite3` is the rebuildable global index and durable scheduler journal, not the only copy of project content.
+- Minimum indexed tables: projects, documents, assets, render_jobs, job_events and schema_migrations. Keep the existing projects/story_plans tables during the first migration; add new tables and compatibility readers before retiring any old path.
+- Enable SQLite foreign keys on every connection, WAL where supported, a bounded busy timeout and explicit transactions. Initial worker concurrency is one render job.
+- Write JSON/media to a same-volume temporary path, validate and hash it, then atomically rename; update the SQLite index in a transaction. A startup reconciliation pass detects files written before a crash and stale index rows.
+- Back up the database and affected project documents before schema migrations. Never overwrite the previous document revision during migration.
+
+## 13. Versioning and compatibility
+- Document schema versions use semantic major.minor.patch. Patch versions are backward-compatible metadata/validation clarifications; minor versions add optional fields; major versions require a migration.
+- Application/database migrations are numbered and run once using schema_migrations. Each migration has an idempotence test and a backup/restore test.
+- Existing project UUIDs and saved story plans remain readable. The Phase 4 story migration maps legacy character/scene/location/action values to canonical IDs using an explicit alias/mapping document; unmapped values are reported for repair, never dropped.
+- API v1 is additive. Existing routes remain supported until callers have migrated and compatibility tests pass.
+
+## 14. P0.5 architecture acceptance checklist
+- [x] Preserve FastAPI/browser/SQLite as the current control plane.
+- [x] Define stable, versioned, engine-neutral document families and timeline invariants.
+- [x] Define the preferred native-worker / optional web-viewport adapter boundary without claiming it is proven.
+- [x] Define portable project layout, rebuildable index, durable job journal and recovery behavior.
+- [x] Define provider secret isolation and local IPC security.
+- [ ] Complete per-subsystem dependency/version/license decisions.
+- [ ] Map every Phase 0/1 requirement to the architecture and planned module.
+- [ ] Review and reconcile all 171 registry/traceability rows against this architecture.
+- [ ] Freeze the architecture and P0.6 proof plan after the dependency/licensing pass.
+
