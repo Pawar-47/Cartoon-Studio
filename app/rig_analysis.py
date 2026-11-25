@@ -68,6 +68,33 @@ def _empty_result(status: str, skeleton_count: int, note: str) -> dict[str, Any]
 
 
 
+
+def _summarize_rest_pose(
+    profile_mapping: Mapping[str, Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Expose measured local rest offsets without inferring retarget compatibility."""
+    segment_lengths: dict[str, float] = {}
+    for profile_bone, entry in profile_mapping.items():
+        transform = entry.get("rest_transform")
+        if not isinstance(transform, Mapping):
+            continue
+        origin = transform.get("origin")
+        if not isinstance(origin, (list, tuple)) or len(origin) != 3:
+            continue
+        try:
+            x, y, z = (float(value) for value in origin)
+        except (TypeError, ValueError):
+            continue
+        if not all(__import__("math").isfinite(value) for value in (x, y, z)):
+            continue
+        segment_lengths[profile_bone] = round((x * x + y * y + z * z) ** 0.5, 6)
+    return {
+        "status": "available" if segment_lengths else "not_available",
+        "measured_bone_count": len(segment_lengths),
+        "local_offset_lengths": segment_lengths,
+        "units_note": "Lengths use imported Godot scene units and are local rest offsets, not world-space limb measurements.",
+    }
+
 def _validate_humanoid_hierarchy(
     profile_mapping: Mapping[str, Mapping[str, Any]],
     bones: list[Any],
@@ -235,6 +262,8 @@ def analyze_rig(inspection: Mapping[str, Any]) -> dict[str, Any]:
                 continue
             entry = entries[0]
             mapping[canonical] = entry["source_name"]
+            if isinstance(bone, Mapping) and isinstance(bone.get("rest_transform"), Mapping):
+                entry["rest_transform"] = dict(bone["rest_transform"])
             profile_mapping[canonical] = entry
 
         missing = [name for name in REQUIRED_HUMANOID_BONES if name not in profile_mapping]
@@ -296,6 +325,7 @@ def analyze_rig(inspection: Mapping[str, Any]) -> dict[str, Any]:
         "ambiguous_bones": best["ambiguous_bones"],
         "unmapped_bones": best["unmapped_bones"],
         "hierarchy_validation": best["hierarchy_validation"],
+        "rest_pose_summary": _summarize_rest_pose(best["godot_profile_mapping"]),
         "retargeting_ready": False,
         "retargeting_note": (
             "This indexed mapping is a name-based preflight only. Validate hierarchy, "

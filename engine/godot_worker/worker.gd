@@ -129,11 +129,19 @@ func _inspect_glb(payload: Dictionary) -> Dictionary:
         var bones: Array[Dictionary] = []
         for bone_index in range(skeleton.get_bone_count()):
             var parent_index := skeleton.get_bone_parent(bone_index)
+            var rest := skeleton.get_bone_rest(bone_index)
+            var rest_rotation := rest.basis.get_rotation_quaternion()
+            var rest_scale := rest.basis.get_scale()
             bones.append({
                 "index": bone_index,
                 "name": str(skeleton.get_bone_name(bone_index)),
                 "parent_index": parent_index,
-                "parent_name": str(skeleton.get_bone_name(parent_index)) if parent_index >= 0 else ""
+                "parent_name": str(skeleton.get_bone_name(parent_index)) if parent_index >= 0 else "",
+                "rest_transform": {
+                    "origin": [rest.origin.x, rest.origin.y, rest.origin.z],
+                    "rotation": [rest_rotation.x, rest_rotation.y, rest_rotation.z, rest_rotation.w],
+                    "scale": [rest_scale.x, rest_scale.y, rest_scale.z]
+                }
             })
         skeleton_reports.append({
             "node_path": str(scene.get_path_to(skeleton)),
