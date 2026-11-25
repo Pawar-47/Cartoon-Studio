@@ -136,12 +136,29 @@ def test_godot_worker_assembles_four_parts_from_distinct_shared_rig_outfits(tmp_
             }
         )
 
+    accessory_candidates = [
+        mesh
+        for mesh in base_inspection["mesh_inventory"]
+        if "backpack" in (
+            mesh["node_name"] + " " + mesh["mesh_resource_name"] + " " + mesh["node_path"]
+        ).lower()
+        and (mesh["skin_bound"] or mesh["attachment_bone"])
+    ]
+    assert accessory_candidates, "Adventurer should expose its Backpack accessory"
+    backpack = accessory_candidates[0]
     output_path = project_root / "assets" / "assembled" / "mixed-character.glb"
     result = adapter.assemble_modular_character(
         base_path,
         parts,
         output_path,
         allowed_root=project_root,
+        accessories=[
+            {
+                "source_path": str(base_path),
+                "mesh_path": backpack["node_path"],
+                "attachment_bone": backpack["attachment_bone"],
+            }
+        ],
         timeout_seconds=180,
     )
     assert result["assembly_verified"] is True
@@ -152,8 +169,10 @@ def test_godot_worker_assembles_four_parts_from_distinct_shared_rig_outfits(tmp_
     assert {part["slot"] for part in result["added_parts"]} == {
         "head", "body", "legs", "feet"
     }
-    assert len(result["base_skinned_meshes_removed"]) >= 1
-    assert result["mesh_count"] >= 4
+    assert len(result["base_meshes_removed"]) >= 1
+    assert len(result["added_accessories"]) == 1
+    assert result["added_accessories"][0]["mesh_name"].lower().find("backpack") >= 0
+    assert result["mesh_count"] >= 5
 
 
 @pytest.mark.skipif(not HAS_GODOT, reason="Pinned Godot runtime is supplied by Windows CI.")

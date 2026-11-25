@@ -36,6 +36,11 @@
    <label>Legs mesh<select id="assembly-legs"><option value="">Import a skinned mesh first…</option></select></label>
    <label>Feet mesh<select id="assembly-feet"><option value="">Import a skinned mesh first…</option></select></label>
   </div>
+  <div class="accessory-builder">
+   <label>Optional accessory<select id="assembly-accessory"><option value="">Choose optional accessory…</option></select></label>
+   <button id="add-assembly-accessory" type="button" disabled>Add accessory</button>
+  </div>
+  <div id="assembly-accessory-list" class="accessory-list" aria-live="polite"></div>
   <button id="assemble-character" type="button" disabled>Assemble and verify character</button>
   <p id="assembly-status" class="inline-status" role="status">Import source GLBs into the active project to populate the part selectors.</p>
  </section>

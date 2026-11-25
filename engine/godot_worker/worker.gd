@@ -167,6 +167,10 @@ func _inspect_glb(payload: Dictionary) -> Dictionary:
         var slot_candidate := _classify_mesh_slot(
             str(mesh_instance.name) + " " + str(mesh_resource.resource_name) + " " + str(scene.get_path_to(mesh_instance))
         )
+        var attachment_bone := ""
+        var parent_node := mesh_instance.get_parent()
+        if parent_node is BoneAttachment3D:
+            attachment_bone = str((parent_node as BoneAttachment3D).bone_name)
         mesh_inventory.append({
             "node_path": str(scene.get_path_to(mesh_instance)),
             "node_name": str(mesh_instance.name),
@@ -179,6 +183,7 @@ func _inspect_glb(payload: Dictionary) -> Dictionary:
             "skin_bound": mesh_instance.skin != null,
             "skeleton_path": skeleton_path,
             "skeleton_bone_count": bound_skeleton.get_bone_count() if bound_skeleton != null else 0,
+            "attachment_bone": attachment_bone,
             "bounds": {
                 "position": [bounds.position.x, bounds.position.y, bounds.position.z],
                 "size": [bounds.size.x, bounds.size.y, bounds.size.z]
@@ -297,6 +302,24 @@ func _assemble_modular_character(payload: Dictionary) -> Dictionary:
         if not selected_slots.has(slot):
             return {"error_code": "missing_slot", "error": "Missing required modular slot: " + slot}
 
+    var accessories_value: Variant = payload.get("accessories", [])
+    if typeof(accessories_value) != TYPE_ARRAY or accessories_value.size() > 8:
+        return {"error_code": "invalid_accessories", "error": "A character can include at most eight accessories."}
+    for accessory_value in accessories_value:
+        if typeof(accessory_value) != TYPE_DICTIONARY:
+            return {"error_code": "invalid_accessory", "error": "Each accessory must be an object."}
+        var accessory: Dictionary = accessory_value
+        var accessory_path := _normalise_path(str(accessory.get("source_path", "")))
+        var accessory_mesh_path := str(accessory.get("mesh_path", ""))
+        if not accessory_path.to_lower().begins_with(root_prefix.to_lower()) or not accessory_path.to_lower().ends_with(".glb") or not FileAccess.file_exists(accessory_path):
+            return {"error_code": "invalid_accessory_path", "error": "An accessory GLB is missing or outside the project."}
+        if accessory_mesh_path.is_empty() or accessory_mesh_path.length() > 1024:
+            return {"error_code": "invalid_accessory_mesh", "error": "An accessory mesh path is invalid."}
+        var accessory_key := accessory_path + "|" + accessory_mesh_path
+        if selected_mesh_keys.has(accessory_key):
+            return {"error_code": "duplicate_accessory", "error": "A source mesh cannot be used as both a body part and an accessory."}
+        selected_mesh_keys.append(accessory_key)
+
     var base_document := GLTFDocument.new()
     var base_state := GLTFState.new()
     var import_error := base_document.append_from_file(base_path, base_state)
@@ -316,8 +339,6 @@ func _assemble_modular_character(payload: Dictionary) -> Dictionary:
     var removed_base_meshes: Array[String] = []
     for base_mesh_node in base_scene.find_children("*", "MeshInstance3D", true, false):
         var base_mesh := base_mesh_node as MeshInstance3D
-        if base_mesh.skin == null:
-            continue
         removed_base_meshes.append(str(base_scene.get_path_to(base_mesh)))
         base_mesh.queue_free()
     await process_frame
@@ -399,6 +420,93 @@ func _assemble_modular_character(payload: Dictionary) -> Dictionary:
         source_scene.queue_free()
         await process_frame
 
+    var added_accessories: Array[Dictionary] = []
+    for accessory_index in range(accessories_value.size()):
+        var accessory: Dictionary = accessories_value[accessory_index]
+        var accessory_path := _normalise_path(str(accessory["source_path"]))
+        var accessory_document := GLTFDocument.new()
+        var accessory_state := GLTFState.new()
+        var accessory_error := accessory_document.append_from_file(accessory_path, accessory_state)
+        if accessory_error != OK:
+            base_scene.queue_free()
+            return {"error_code": "accessory_import_failed", "error": "Godot could not import accessory " + str(accessory_index + 1) + ".", "godot_error": accessory_error}
+        var accessory_scene := accessory_document.generate_scene(accessory_state)
+        if accessory_scene == null:
+            base_scene.queue_free()
+            return {"error_code": "accessory_scene_failed", "error": "Godot could not create accessory " + str(accessory_index + 1) + "."}
+        root.add_child(accessory_scene)
+        await process_frame
+        var accessory_mesh := accessory_scene.get_node_or_null(NodePath(str(accessory["mesh_path"]))) as MeshInstance3D
+        if accessory_mesh == null or accessory_mesh.mesh == null:
+            accessory_scene.queue_free()
+            base_scene.queue_free()
+            return {"error_code": "accessory_mesh_missing", "error": "The selected accessory mesh was not found."}
+        var accessory_name := "ModularAccessory_" + str(accessory_index + 1)
+        var accessory_bone := str(accessory.get("attachment_bone", ""))
+        if accessory_mesh.skin != null:
+            var accessory_skeleton := accessory_mesh.get_node_or_null(accessory_mesh.get_skeleton_path()) as Skeleton3D
+            if accessory_skeleton == null or not _skeletons_compatible(accessory_skeleton, target_skeleton):
+                accessory_scene.queue_free()
+                base_scene.queue_free()
+                return {"error_code": "accessory_skeleton_incompatible", "error": "A skinned accessory must use the same compatible skeleton as the base character."}
+            if not _transforms_compatible(accessory_skeleton.global_transform, target_skeleton.global_transform):
+                accessory_scene.queue_free()
+                base_scene.queue_free()
+                return {"error_code": "accessory_transform_incompatible", "error": "A skinned accessory has a different rig transform and cannot be safely attached."}
+            var accessory_skin := accessory_mesh.skin
+            for bind_index in range(accessory_skin.get_bind_count()):
+                var bind_name := str(accessory_skin.get_bind_name(bind_index))
+                if not bind_name.is_empty():
+                    if accessory_skeleton.find_bone(bind_name) < 0:
+                        accessory_scene.queue_free()
+                        base_scene.queue_free()
+                        return {"error_code": "accessory_skin_bind_invalid", "error": "The accessory skin references a missing bone: " + bind_name}
+                else:
+                    var bind_bone := accessory_skin.get_bind_bone(bind_index)
+                    if bind_bone < 0 or bind_bone >= accessory_skeleton.get_bone_count():
+                        accessory_scene.queue_free()
+                        base_scene.queue_free()
+                        return {"error_code": "accessory_skin_bind_invalid", "error": "The accessory skin contains an invalid bone index."}
+            var skinned_clone := accessory_mesh.duplicate() as MeshInstance3D
+            var accessory_global_transform := accessory_mesh.global_transform
+            base_scene.add_child(skinned_clone)
+            skinned_clone.owner = base_scene
+            skinned_clone.name = accessory_name
+            skinned_clone.transform = base_scene.global_transform.affine_inverse() * accessory_global_transform
+            skinned_clone.set_skeleton_path(NodePath(str(skinned_clone.get_path_to(target_skeleton))))
+        else:
+            var source_attachment := accessory_mesh.get_parent() as BoneAttachment3D
+            if accessory_bone.is_empty() and source_attachment != null:
+                accessory_bone = str(source_attachment.bone_name)
+            if source_attachment == null or accessory_bone.is_empty() or target_skeleton.find_bone(accessory_bone) < 0:
+                accessory_scene.queue_free()
+                base_scene.queue_free()
+                return {"error_code": "accessory_attachment_missing", "error": "An unskinned accessory must be parented to a valid BoneAttachment3D on the source rig."}
+            if str(source_attachment.bone_name) != accessory_bone:
+                accessory_scene.queue_free()
+                base_scene.queue_free()
+                return {"error_code": "accessory_attachment_mismatch", "error": "The selected accessory attachment bone does not match its source node."}
+            var target_attachment := BoneAttachment3D.new()
+            target_attachment.name = "ModularAccessoryAttachment_" + str(accessory_index + 1)
+            target_attachment.bone_name = accessory_bone
+            target_skeleton.add_child(target_attachment)
+            target_attachment.owner = base_scene
+            target_attachment.transform = source_attachment.transform
+            var static_clone := accessory_mesh.duplicate() as MeshInstance3D
+            target_attachment.add_child(static_clone)
+            static_clone.owner = base_scene
+            static_clone.name = accessory_name
+            static_clone.transform = accessory_mesh.transform
+        added_accessories.append({
+            "mesh_name": str(accessory_mesh.name),
+            "output_name": accessory_name,
+            "source_path": accessory_path,
+            "mesh_path": str(accessory["mesh_path"]),
+            "attachment_bone": accessory_bone
+        })
+        accessory_scene.queue_free()
+        await process_frame
+
     var export_document := GLTFDocument.new()
     var export_state := GLTFState.new()
     var export_error := export_document.append_from_scene(base_scene, export_state)
@@ -429,9 +537,14 @@ func _assemble_modular_character(payload: Dictionary) -> Dictionary:
         if not verified_mesh_names.has(expected_mesh_name):
             DirAccess.remove_absolute(output_path)
             return {"error_code": "mesh_verification_failed", "error": "The exported GLB did not retain the selected " + str(part_entry["slot"]) + " mesh."}
+    for accessory_entry in added_accessories:
+        if not verified_mesh_names.has(str(accessory_entry["output_name"])):
+            DirAccess.remove_absolute(output_path)
+            return {"error_code": "accessory_verification_failed", "error": "The exported GLB did not retain a selected accessory."}
     verification["added_parts"] = added_parts
+    verification["added_accessories"] = added_accessories
     verification["base_animation_names"] = base_animation_names
-    verification["base_skinned_meshes_removed"] = removed_base_meshes
+    verification["base_meshes_removed"] = removed_base_meshes
     verification["animation_preserved"] = true
     verification["assembly_verified"] = true
     return verification

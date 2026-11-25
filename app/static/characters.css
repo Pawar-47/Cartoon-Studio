@@ -52,3 +52,10 @@
 .assembly-panel .form-grid{margin:14px 0}
 .assembly-panel select{display:block;width:100%;margin-top:7px;padding:10px;border:1px solid #3a4b60;border-radius:8px;background:#101822;color:#fff}
 .assembly-panel button{margin-top:4px}
+
+.accessory-builder{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end;margin:12px 0}
+.accessory-builder select{display:block;width:100%;margin-top:7px;padding:10px;border:1px solid #3a4b60;border-radius:8px;background:#101822;color:#fff}
+.accessory-list{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.accessory-chip{display:flex;align-items:center;gap:8px;padding:7px 9px;border:1px solid var(--line);border-radius:9px;font-size:12px}
+.accessory-chip button{padding:5px 8px;margin:0}
+@media(max-width:520px){.accessory-builder{grid-template-columns:1fr}}

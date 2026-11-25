@@ -37,7 +37,9 @@ class _FakeEngineAdapter:
 
 
 class _FakeAssemblyAdapter(_FakeEngineAdapter):
-    def assemble_modular_character(self, base_path, parts, output_path, allowed_root):
+    def assemble_modular_character(
+        self, base_path, parts, output_path, allowed_root, accessories=None
+    ):
         output_path.parent.mkdir(parents=True, exist_ok=True)
         json_chunk = json.dumps({"asset": {"version": "2.0"}}).encode("utf-8")
         json_chunk += b" " * ((-len(json_chunk)) % 4)
@@ -53,6 +55,7 @@ class _FakeAssemblyAdapter(_FakeEngineAdapter):
             "assembly_verified": True,
             "animation_preserved": True,
             "added_parts": [{"slot": part["slot"]} for part in parts],
+            "added_accessories": [{"mesh_name": "Backpack"} for _ in accessories or []],
             "mesh_count": 4,
             "mesh_inventory": [],
             "skeleton_count": 1,
@@ -121,7 +124,17 @@ def test_modular_assembly_api_validates_slots_and_persists_verified_asset(
     ]
     response = client.post(
         f"/api/projects/{project_id}/modular-assemblies",
-        json={"base_relative_path": "assets/source.glb", "parts": parts},
+        json={
+            "base_relative_path": "assets/source.glb",
+            "parts": parts,
+            "accessories": [
+                {
+                    "relative_path": "assets/source.glb",
+                    "mesh_path": "Character/Backpack",
+                    "attachment_bone": "Spine",
+                }
+            ],
+        },
     )
     assert response.status_code == 201
     result = response.json()
@@ -144,6 +157,8 @@ def test_modular_assembly_api_validates_slots_and_persists_verified_asset(
     assert manifest.json()["assembly"]["parts"][0]["slot"] in {
         "head", "body", "legs", "feet"
     }
+    assert manifest.json()["assembly"]["accessories"][0]["attachment_bone"] == "Spine"
+    assert manifest.json()["assembly"]["added_accessories"][0]["mesh_name"] == "Backpack"
 
 
 def test_modular_assembly_api_rejects_duplicate_or_missing_slots(tmp_path, monkeypatch):
