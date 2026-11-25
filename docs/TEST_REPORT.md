@@ -36,3 +36,14 @@ Every new test result must record exact commit/version, environment, command, ex
 ## P0.4 follow-up model audit
 - Inspected WhisperX Urdu aligner model card/file size, Urdu Whisper Turbo ASR model card/file size and Smol Urdu TTS source tree. Evidence is documented in URDU_VOICE_FEASIBILITY.md and CANDIDATE_SCORECARD.md.
 - This was source/model-card inspection only. No model weights were downloaded, no inference was run, and no Pakistani audio was processed.
+
+
+## P0.6 bounded functional proofs — 2026-11-25
+
+See P0_6_PROOF_REPORT.md for exact run IDs, acceptance checks and limitations.
+
+- Godot native-worker proof run #2: SUCCESS on b05024110e76b684a5f8cee35eb57fa0428b2c11. Godot 4.7.2-stable official, Compatibility renderer, GLB imported with MeshInstance3D, animation created/playing, scene saved/reopened, 72 frames at 24 FPS; AVI is 640x360, MJPEG/PCM, 3.0 seconds. All six JSON checks true. Runner adapter was Mesa llvmpipe, not the user's GPU.
+- Godot + FFmpeg proof run #3: SUCCESS on ae9bad178c9999d5f5b7017a6409c7ee9c490786. Same scene checks passed; FFmpeg converted AVI to 640x360, 24 FPS, 3.0-second MP4 with MPEG-4 Part 2 video and AAC audio. This proves container/assembly path only, not final distribution codec choice.
+- SQLite queue proof: Windows CI run #101 SUCCESS on b05024110e76b684a5f8cee35eb57fa0428b2c11; 17 tests passed, including five isolated queue-prototype tests for serial claims, lease-expiry retry, completed-scene preservation, cancellation and stale-worker rejection.
+- First Godot attempt #1 failed: dynamically created nodes lacked PackedScene ownership and the MovieWriter output directory was not created inside the Godot project. Both were corrected; runs #2 and #3 passed. The failed attempt is retained as diagnostic history, not hidden.
+- These are bounded hosted-runner proofs, not production app integration, full episode rendering, or user-PC benchmarks. Actual target-PC measurements remain Phase 8.
