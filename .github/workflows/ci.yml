@@ -7,65 +7,8 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
-  actions: write
 jobs:
-  cleanup-actions-history:
-    if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[actions-cleanup]') }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - name: Cancel other runs and delete all repository Actions artifacts and run history
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPOSITORY: ${{ github.repository }}
-          CURRENT_RUN_ID: ${{ github.run_id }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "Current cleanup run: $CURRENT_RUN_ID"
-          echo "Cancelling all other queued or running workflow runs..."
-          cancel_ids="$(gh api --paginate "repos/$REPOSITORY/actions/runs?per_page=100" --jq '.workflow_runs[] | select(.status == "in_progress" or .status == "queued" or .status == "requested" or .status == "waiting" or .status == "pending") | .id')"
-          for run_id in $cancel_ids; do
-            if [[ "$run_id" != "$CURRENT_RUN_ID" ]]; then
-              echo "Cancelling run $run_id"
-              gh api -X POST "repos/$REPOSITORY/actions/runs/$run_id/cancel" >/dev/null || true
-            fi
-          done
-
-          echo "Waiting for all other runs to stop..."
-          stopped=false
-          for attempt in $(seq 1 120); do
-            active_ids="$(gh api --paginate "repos/$REPOSITORY/actions/runs?per_page=100" --jq '.workflow_runs[] | select(.status == "in_progress" or .status == "queued" or .status == "requested" or .status == "waiting" or .status == "pending") | .id' | grep -vx "$CURRENT_RUN_ID" || true)"
-            if [[ -z "$active_ids" ]]; then
-              stopped=true
-              break
-            fi
-            sleep 5
-          done
-          if [[ "$stopped" != true ]]; then
-            echo "Some workflow runs remained active after cancellation: $active_ids"
-            exit 1
-          fi
-
-          echo "Deleting every Actions artifact..."
-          artifact_ids="$(gh api --paginate "repos/$REPOSITORY/actions/artifacts?per_page=100" --jq '.artifacts[].id')"
-          for artifact_id in $artifact_ids; do
-            gh api -X DELETE "repos/$REPOSITORY/actions/artifacts/$artifact_id" >/dev/null
-            echo "Deleted artifact $artifact_id"
-          done
-
-          echo "Deleting all workflow-run records except this cleanup run..."
-          run_ids="$(gh api --paginate "repos/$REPOSITORY/actions/runs?per_page=100" --jq '.workflow_runs[].id')"
-          for run_id in $run_ids; do
-            if [[ "$run_id" != "$CURRENT_RUN_ID" ]]; then
-              gh api -X DELETE "repos/$REPOSITORY/actions/runs/$run_id" >/dev/null
-              echo "Deleted workflow run $run_id"
-            fi
-          done
-          echo "Cleanup complete. Workflow definitions and repository source files were preserved."
-
   test-and-package-windows:
-    if: ${{ github.event_name != 'push' || !contains(github.event.head_commit.message, '[actions-cleanup]') }}
     runs-on: windows-latest
     timeout-minutes: 45
     steps:
