@@ -45,75 +45,6 @@ class EnginePathError(EngineError, ValueError):
     """Raised when a GLB path is outside the allowed project directory."""
 
 
-def _glb_morph_defaults(path: Path) -> dict[str, dict[str, Any]]:
-    """Read authored glTF morph weights before Godot normalizes the imported scene."""
-    try:
-        with path.open("rb") as handle:
-            header = handle.read(20)
-            if (
-                len(header) != 20
-                or header[:4] != b"glTF"
-                or int.from_bytes(header[4:8], "little") != 2
-                or int.from_bytes(header[16:20], "little") != 0x4E4F534A
-            ):
-                return {}
-            json_length = int.from_bytes(header[12:16], "little")
-            raw_json = handle.read(json_length)
-        document = json.loads(raw_json.decode("utf-8").rstrip(" "))
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError):
-        return {}
-
-    meshes = document.get("meshes", [])
-    nodes = document.get("nodes", [])
-    if not isinstance(meshes, list) or not isinstance(nodes, list):
-        return {}
-
-    defaults: dict[str, dict[str, Any]] = {}
-    for node_index, node in enumerate(nodes):
-        if not isinstance(node, dict):
-            continue
-        mesh_index = node.get("mesh")
-        if not isinstance(mesh_index, int) or not 0 <= mesh_index < len(meshes):
-            continue
-        mesh = meshes[mesh_index]
-        if not isinstance(mesh, dict):
-            continue
-        primitives = mesh.get("primitives", [])
-        target_count = max(
-            (
-                len(primitive.get("targets", []))
-                for primitive in primitives
-                if isinstance(primitive, dict)
-                and isinstance(primitive.get("targets", []), list)
-            ),
-            default=0,
-        )
-        if target_count == 0:
-            continue
-        node_weights = node.get("weights")
-        mesh_weights = mesh.get("weights")
-        if isinstance(node_weights, list):
-            weights = node_weights
-            source = "node"
-        elif isinstance(mesh_weights, list):
-            weights = mesh_weights
-            source = "mesh"
-        else:
-            weights = []
-            source = "implicit_zero"
-        values = [
-            float(weights[index]) if index < len(weights) else 0.0
-            for index in range(target_count)
-        ]
-        entry = {"weights": values, "source": source}
-        node_name = str(node.get("name") or f"Node{node_index}")
-        mesh_name = str(mesh.get("name") or "")
-        defaults[f"node:{node_name}"] = entry
-        if mesh_name:
-            defaults.setdefault(f"mesh:{mesh_name}", entry)
-    return defaults
-
-
 class GodotEngineAdapter:
     """Supervise one bounded Godot worker process per engine request."""
 
@@ -183,30 +114,12 @@ class GodotEngineAdapter:
             raise FileNotFoundError(source)
         if source.stat().st_size > MAX_GLB_BYTES:
             raise EnginePathError("The GLB exceeds the 512 MiB inspection limit.")
-        response = self._run(
+        return self._run(
             "inspect_glb",
             {"source_path": str(source), "project_root": str(root)},
             timeout_seconds=timeout_seconds,
             cancel_event=cancel_event,
         )
-        defaults = _glb_morph_defaults(source)
-        morph_targets = response.get("morph_targets", [])
-        if isinstance(morph_targets, list):
-            for target in morph_targets:
-                if not isinstance(target, dict):
-                    continue
-                imported_defaults = defaults.get(
-                    f"node:{target.get('mesh_name', '')}"
-                ) or defaults.get(
-                    f"mesh:{target.get('mesh_resource_name', '')}"
-                )
-                if imported_defaults is None:
-                    continue
-                index = target.get("index")
-                if isinstance(index, int) and 0 <= index < len(imported_defaults["weights"]):
-                    target["default_value"] = imported_defaults["weights"][index]
-                    target["default_value_source"] = imported_defaults["source"]
-        return response
 
 
     def retarget_glb_pair(
