@@ -318,10 +318,7 @@ export async function showCharacterPreview(buffer, label = "Character", appearan
 }
 
 export function resetCharacterPreview() {
-  if (!camera || !controls) return;
-  camera.position.set(cameraDistance * 0.9, cameraDistance * 0.65, cameraDistance * 1.15);
-  controls.target.set(0, 0, 0);
-  controls.update();
+  frameCharacter("full");
 }
 
 resetButton.addEventListener("click", resetCharacterPreview);
