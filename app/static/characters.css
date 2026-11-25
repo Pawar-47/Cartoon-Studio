@@ -59,3 +59,5 @@
 .accessory-chip{display:flex;align-items:center;gap:8px;padding:7px 9px;border:1px solid var(--line);border-radius:9px;font-size:12px}
 .accessory-chip button{padding:5px 8px;margin:0}
 @media(max-width:520px){.accessory-builder{grid-template-columns:1fr}}
+
+.expression-presets{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0}.expression-presets button{padding:7px 11px;font-size:11px}

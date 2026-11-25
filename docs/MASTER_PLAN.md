@@ -291,3 +291,12 @@ The next P2.2 sub-phase is the **Modular Character Builder**:
 - The assembled asset manifest stores the base/part recipe and supports restoring its source GLBs into the builder. The profile remains versioned and project-scoped.
 - Evidence: [feature integration CI](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45653413604) and [main merge CI](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45653650908), both SUCCESS.
 - Phase 2 remains ACTIVE and P2.2 remains PARTIAL. This is not arbitrary-rig retargeting, mesh sculpting, new rig authoring, texture painting or final visual acceptance. The next batch must validate the browser builder and improve real geometric customization before P2.2 can exit.
+
+
+## 2026-11-25 — P2.2 semantic facial expression presets
+
+- Added Smile, Frown, Surprise and Angry presets for imported morph targets.
+- Presets only affect targets whose imported names contain supported semantic tokens; unmatched targets remain at imported default values. No facial geometry or morph targets are fabricated.
+- Presets update the live preview, individual sliders and the existing versioned appearance save endpoint. Manual slider fine-tuning and reset remain available.
+- Added Node unit coverage for matching, baseline restoration, unmatched-target safety and invalid preset names, wired into pytest.
+- Semantic mapping is best-effort for compatible imported assets, not a universal guarantee across arbitrary GLBs.
