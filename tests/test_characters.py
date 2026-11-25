@@ -159,7 +159,11 @@ def test_browser_preview_modules_are_served_from_local_static_assets():
     preview = client.get("/static/character-preview.js")
     assert preview.status_code == 200
     assert "options.playAnimations !== false" in preview.text
-    assert "if (playAnimations) mixer.clipAction(clips[0]).play();" in preview.text
+    assert "activeAction = mixer.clipAction(clips[0]);" in preview.text
+    assert "activeAction.paused = playbackPaused;" in preview.text
+    assert "function frameCharacter" in preview.text
+    assert 'data-camera-frame="head"' in page.text
+    assert 'id="preview-speed"' in page.text
     assert "morphTargetByKey.clear();" in preview.text
     clip_helper = client.get("/static/animation-clip.mjs")
     assert clip_helper.status_code == 200

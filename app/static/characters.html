@@ -58,7 +58,19 @@
   <div class="preview-panel">
    <div class="preview-heading"><strong>Live 3D preview</strong><span id="preview-status">Import a model to preview it.</span></div>
    <div class="preview-stage"><canvas id="model-preview" aria-label="Interactive 3D character preview"></canvas><div id="preview-empty">Your imported character will appear here.</div></div>
-   <div class="preview-controls"><button id="reset-view" class="secondary" type="button" disabled>Reset view</button><label>Animation<select id="animation-select" disabled><option value="">No animation loaded</option></select></label></div>
+   <div class="preview-controls">
+    <button id="reset-view" class="secondary" type="button" disabled>Full view</button>
+    <div class="camera-presets" role="group" aria-label="Camera framing">
+     <button class="secondary" type="button" data-camera-frame="full" disabled>Full body</button>
+     <button class="secondary" type="button" data-camera-frame="upper" disabled>Upper body</button>
+     <button class="secondary" type="button" data-camera-frame="head" disabled>Face</button>
+    </div>
+    <label>Animation<select id="animation-select" disabled><option value="">No animation loaded</option></select></label>
+    <div class="playback-controls">
+     <button id="preview-playback" class="secondary" type="button" disabled>Pause</button>
+     <label>Speed<select id="preview-speed" disabled><option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="2">2×</option></select></label>
+    </div>
+   </div>
    <section id="material-editor" class="material-editor" hidden>
     <div class="editor-heading"><strong>Appearance editor</strong><span>Non-destructive material recipe</span></div>
     <label>Model material<select id="material-select"></select></label>
