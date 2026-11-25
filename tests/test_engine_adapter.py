@@ -59,9 +59,11 @@ def _fake_adapter(tmp_path, timeout=1):
 def test_engine_adapter_rejects_parent_traversal(tmp_path):
     root = tmp_path / "project"
     root.mkdir()
+    outside = tmp_path / "outside.glb"
+    outside.write_bytes(b"glTF")
     adapter = _fake_adapter(tmp_path)
     with pytest.raises(EnginePathError, match="escapes"):
-        adapter.inspect_glb(root / ".." / "outside.glb", allowed_root=root)
+        adapter.inspect_glb(outside, allowed_root=root)
 
 
 def test_engine_adapter_rejects_symlink_escape(tmp_path):
