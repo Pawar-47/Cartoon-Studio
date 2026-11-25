@@ -96,7 +96,11 @@ def uninstall(install_dir: Path, log_path: Path) -> None:
             capture_output=True,
             text=True,
         )
-        log_text = log_path.read_text(encoding="utf-8", errors="replace") if log_path.exists() else "No uninstaller log."
+        log_text = (
+            log_path.read_text(encoding="utf-8", errors="replace")
+            if log_path.exists()
+            else "No uninstaller log."
+        )
         raise AssertionError(
             "Uninstaller left the main executable in place.\n"
             + log_text
