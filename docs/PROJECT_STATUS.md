@@ -10,7 +10,7 @@
 - Latest successful Windows CI: [run #176 — SUCCESS](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45585584886), validating commit `815cc32a1cb56c3357c37310745e900a8a197c7f`.
 - Run #176 passed exact dependency locking, Ruff, Python compilation, 22 pytest tests, bootstrap packaging/launch, two self-contained app builds, NSIS installer compilation, clean install, app launch, v1-to-v2 upgrade, project-data preservation, uninstall, reinstall and artifact uploads.
 - Artifacts from run #176: Windows installer (15008168874), bootstrap ZIP (15007954336), CycloneDX SBOM (15008014096).
-- P1.4 detailed evidence: `docs/P1_4_INSTALLER_REPORT.md`.
+- P1.4 detailed evidence: `docs/P1_4_INSTALLER_REPORT.md`.\n- P2.1 runtime pin: `docs/ENGINE_RUNTIME_MANIFEST.json`; worker protocol: `docs/ENGINE_WORKER_PROTOCOL.md`.
 - Godot 4.7.2 native-worker functional proof, FFmpeg assembly proof and SQLite queue prototype: `docs/P0_6_PROOF_REPORT.md`.
 - Original 25-part brief is preserved verbatim at `docs/MASTER_EXECUTION_PROMPT.md`.
 - Requirements registry, requirement traceability and architecture crosswalk each contain 171 corresponding IDs.
@@ -61,13 +61,13 @@
 
 ## Phase 2 active batch — P2.1 Godot worker integration
 
-- Download the official Godot 4.7.2-stable Windows x86_64 release using its published SHA-256 digest.
+- Pinned official Godot 4.7.2-stable Windows x86_64 release archive to SHA-256 `731980f9608d61333e5baf54a2ef17210acc7a538446c0cb9969f002aca1e953`; CI download verification and packaging are being added.
 - Include Godot's MIT license/copyright notice and record the exact runtime binary in the dependency inventory.
 - Implement a supervised Python engine adapter with executable discovery, version/capability handshake, bounded requests, timeouts, cancellation, structured logs and safe project-relative paths.
-- Implement a minimal Godot worker protocol and verify GLB import/inspection plus structured JSON request/response in Windows CI.
+- Implemented a versioned one-shot JSON worker protocol, GLB inspection, project-path validation, timeout/cancellation and process cleanup; Windows CI verification is pending.
 - Package the Godot runtime with the self-contained application; do not require a separate user installation.
 - Keep the browser/FastAPI control plane. Do not replace the existing app shell or expand the frozen Story Generator.
-- P2.1 is complete only when the worker launches from the packaged app, reports the pinned version/capabilities, imports the fixture and passes path/error/restart tests.
+- P2.1 remains IN PROGRESS until CI verifies worker startup, version/capability handshake, GLB fixture import, unsafe-path rejection, timeout/cancellation cleanup and packaged runtime presence.
 
 ## Explicit risks and deferred decisions
 

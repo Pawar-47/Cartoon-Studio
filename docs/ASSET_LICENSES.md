@@ -148,3 +148,9 @@ No alignment model weights were downloaded or bundled.
 - FFmpeg converted the proof AVI to a 3-second 640x360/24 FPS MP4 with MPEG-4 Part 2 video and AAC audio. This is a functional assembly proof only; the production codec and redistributable build are not selected.
 - The SQLite queue prototype passed five queue-specific reliability tests in Windows CI.
 - See docs/P0_6_PROOF_REPORT.md for run IDs, logs and explicit limitations.
+
+## Godot native runtime — P2.1
+
+| Component | Source/version | License and provenance | Use / verification |
+|---|---|---|---|
+| Godot Engine Windows x86_64 | https://github.com/godotengine/godot/releases/tag/4.7.2-stable; archive `Godot_v4.7.2-stable_win64.exe.zip` | MIT; exact upstream `LICENSE.txt` and `COPYRIGHT.txt` retained under `third_party/godot-4.7.2/` | SHA-256 `731980f9608d61333e5baf54a2ef17210acc7a538446c0cb9969f002aca1e953`; bundled as a headless native worker and included in the CycloneDX inventory |

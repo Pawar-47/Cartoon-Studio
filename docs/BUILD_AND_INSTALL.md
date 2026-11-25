@@ -52,3 +52,8 @@ The project has no root `LICENSE` file yet. CI artifacts validate the build and 
 ## Next integration milestone
 
 Phase 2 P2.1 adds the pinned Godot 4.7.2 Windows runtime as a bundled native worker behind the FastAPI/browser control plane. The Godot executable must be SHA-256 verified and its MIT license/copyright notice included. The worker must not require a separate user installation.
+
+
+## P2.1 Godot runtime packaging
+
+The self-contained installer now includes the pinned Godot 4.7.2-stable Windows x86_64 runtime under `_internal/engine/`, the worker project and upstream MIT/COPYRIGHT notices. CI verifies the official archive SHA-256 before extraction and records Godot as a CycloneDX component. The browser/FastAPI app remains the control plane; the native worker runs headlessly and is not a separate user prerequisite. The bootstrap ZIP remains Python-dependent and does not bundle the 86 MB compressed Godot runtime.

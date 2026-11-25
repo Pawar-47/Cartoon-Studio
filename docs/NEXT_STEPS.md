@@ -22,15 +22,15 @@
 
 ## Active batch — P2.1 Godot native-worker integration
 
-1. Pin the official Godot 4.7.2-stable Windows x86_64 binary and verify its published SHA-256 digest.
-2. Include the Godot MIT copyright/license notice and record the binary in the dependency/SBOM inventory.
-3. Implement the Python engine adapter: executable discovery, version/capability handshake, request/response protocol, timeouts, cancellation, structured logs and path safety.
-4. Implement a minimal Godot worker that validates requests, imports/inspects a GLB fixture and returns structured JSON.
-5. Add Windows CI tests for worker startup, version reporting, GLB import, invalid paths, failures and process cleanup.
+1. Pin the official Godot 4.7.2-stable Windows x86_64 binary; archive SHA-256 is `731980f9608d61333e5baf54a2ef17210acc7a538446c0cb9969f002aca1e953`.
+2. Include the upstream MIT `LICENSE.txt` and exhaustive `COPYRIGHT.txt`; record the exact binary archive hash in the CycloneDX inventory.
+3. Implemented the Python adapter and one-shot JSON request/response worker: executable discovery, version/capability handshake, timeout/cancellation, structured logs and project-contained GLB path validation.
+4. Implemented the minimal Godot worker for handshake and GLB inspection; Windows CI is being extended to run the real pinned binary.
+5. Add/execute Windows CI tests for worker startup, version reporting, GLB import, invalid paths, malformed files, timeout/cancellation and process cleanup.
 6. Bundle the engine runtime with the self-contained Windows installer. The user must not need to install Godot separately.
 7. Preserve the FastAPI/browser UI and the frozen Story Generator. Do not start World Builder or later phases early.
 
-**P2.1 exit evidence:** clean Windows CI launches the bundled Godot worker, confirms the pinned engine version, imports the GLB fixture, returns a valid response, rejects unsafe paths and cleans up correctly.
+**P2.1 exit evidence:** pending clean Windows CI run for the bundled worker and the complete handshake/GLB/path/error/timeout/cancellation/cleanup suite.
 
 ## Phase 2 sequence
 

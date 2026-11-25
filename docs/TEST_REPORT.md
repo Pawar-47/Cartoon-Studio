@@ -96,3 +96,12 @@ See P0_6_PROOF_REPORT.md for exact run IDs, acceptance checks and limitations.
 - Artifacts from run #176: Cartoon-Studio-Windows-Installer (15008168874), Cartoon-Studio-Windows-Bootstrap (15007954336), Cartoon-Studio-Dependency-SBOM (15008014096).
 - Full acceptance detail: docs/P1_4_INSTALLER_REPORT.md.
 - No target-PC performance benchmark or user-PC installation was performed or required. Public redistribution remains subject to the project owner's license decision.
+
+
+## P2.1 Godot native-worker integration — implementation in progress
+
+- Pinned official Godot 4.7.2-stable Windows x86_64 release archive: `Godot_v4.7.2-stable_win64.exe.zip`, 86,013,866 bytes, SHA-256 `731980f9608d61333e5baf54a2ef17210acc7a538446c0cb9969f002aca1e953`.
+- Added the Python adapter, one-shot JSON worker protocol, handshake and GLB inspection, project-root/symlink/path validation, timeout, cancellation and child-process cleanup.
+- Added FastAPI engine status and project-relative GLB inspection endpoints.
+- CI is being extended to download and hash-verify the official binary, execute real worker integration tests, add the runtime to CycloneDX and bundle it with both installer builds.
+- Status: implementation committed; Windows CI result pending. No character creation, rigging, animation authoring or production rendering is claimed by this batch.
