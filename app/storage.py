@@ -440,6 +440,44 @@ def reconcile_project_files(data_dir: Path, db_path: Path) -> None:
                 connection, project["id"], project_document, "project.json", digest
             )
 
+            # Recover character profiles from portable project documents.
+            character_dir = root / "characters"
+            character_dir.mkdir(parents=True, exist_ok=True)
+            for character_path in sorted(character_dir.glob("*.json")):
+                character_document = read_json(character_path)
+                if (
+                    character_document.get("document_type") != "character"
+                    or not isinstance(character_document.get("data"), dict)
+                ):
+                    continue
+                if character_document.get("id") != character_path.stem:
+                    raise ValueError(f"Character document identity mismatch: {character_path}")
+                relative_path = character_path.relative_to(root).as_posix()
+                upsert_document_index(
+                    connection,
+                    project["id"],
+                    character_document,
+                    relative_path,
+                    _file_digest(character_path),
+                )
+                references = project_document.setdefault("data", {}).setdefault("references", {})
+                character_ids = references.setdefault("characters", [])
+                if character_document["id"] not in character_ids:
+                    character_ids.append(character_document["id"])
+                    project_document["revision"] = int(project_document.get("revision", 1)) + 1
+                    project_document["updated_at"] = max(
+                        project_document.get("updated_at", ""),
+                        character_document.get("updated_at", ""),
+                    )
+                    project_digest = write_json_atomic(project_path, project_document)
+                    upsert_document_index(
+                        connection, project["id"], project_document, "project.json", project_digest
+                    )
+                    connection.execute(
+                        "UPDATE projects SET updated_at = ? WHERE id = ?",
+                        (project_document["updated_at"], project["id"]),
+                    )
+
             episode_dir = root / "episodes"
             episode_dir.mkdir(parents=True, exist_ok=True)
             story_row = connection.execute(

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#10151d"><title>Character Studio · Cartoon Studio</title>
+<link rel="stylesheet" href="/static/styles.css"><link rel="stylesheet" href="/static/characters.css">
+</head>
+<body>
+<main class="character-page">
+<header class="character-header">
+ <div><a class="back-link" href="/">← Dashboard</a><span class="eyebrow">PHASE 2 · CHARACTER WORKSHOP</span><h1>Character Studio</h1><p>Import a GLB character, inspect its geometry and rig readiness with Godot, then save a reusable character identity to your project.</p></div>
+ <span class="pill">Local assets · No cloud upload</span>
+</header>
+<section class="panel project-bar">
+ <label>Active project<select id="project-select"><option value="">Loading projects…</option></select></label>
+ <span id="project-status" class="inline-status">Choose a project to begin.</span>
+</section>
+<div class="character-grid">
+ <section class="panel">
+  <span class="eyebrow">01 / MODEL IMPORT</span><h2>Import a 3D character</h2>
+  <p class="helper">Supported in this batch: binary glTF (.glb). The file is stored inside this project's local assets folder and inspected by the bundled Godot worker.</p>
+  <label class="file-picker">Character model (.glb)<input id="model-file" type="file" accept=".glb,model/gltf-binary"></label>
+  <button id="import-model" disabled>Import and inspect model</button>
+  <p id="import-status" class="inline-status" role="status"></p>
+  <div id="asset-report" class="asset-report" hidden></div>
+ </section>
+ <section class="panel" id="profile-panel">
+  <span class="eyebrow">02 / CHARACTER IDENTITY</span><h2>Save reusable profile</h2>
+  <p class="helper">Define the identity and continuity notes. The imported GLB remains the source model; metadata does not pretend to edit its mesh.</p>
+  <form id="character-form">
+   <label>Character name<input id="character-name" maxlength="80" required placeholder="e.g. Ali"></label>
+   <label>Short description<textarea id="character-description" rows="2" maxlength="1000" placeholder="Role and visual identity"></textarea></label>
+   <div class="form-grid">
+    <label>Height (cm)<input id="height-cm" type="number" min="1" max="300" step="0.1" placeholder="Optional"></label>
+    <label>Hair<textarea id="hair" rows="2" maxlength="200" placeholder="Hair style and colour"></textarea></label>
+    <label>Eye design<textarea id="eye-design" rows="2" maxlength="200" placeholder="Eye shape and colour"></textarea></label>
+    <label>Mouth design<textarea id="mouth-design" rows="2" maxlength="200" placeholder="Mouth design"></textarea></label>
+   </div>
+   <label>Face design<textarea id="face-design" rows="2" maxlength="500" placeholder="Face shape and distinguishing features"></textarea></label>
+   <label>Body proportions (JSON)<textarea id="body-proportions" rows="2" spellcheck="false" placeholder='{"head_to_body": 5.5, "shoulder_width": 1.0}'></textarea></label>
+   <label>Clothing variants<textarea id="clothing" rows="2" placeholder="One item per line"></textarea></label>
+   <label>Accessories<textarea id="accessories" rows="2" placeholder="One item per line"></textarea></label>
+   <label>Expressions<textarea id="expressions" rows="2" placeholder="One item per line; metadata only in this batch"></textarea></label>
+   <label>Personality<textarea id="personality" rows="2" maxlength="1000" placeholder="Personality and behaviour"></textarea></label>
+   <label>Relationships<textarea id="relationships" rows="2" placeholder="One relationship per line"></textarea></label>
+   <label>Voice profile<textarea id="voice-profile" rows="2" maxlength="500" placeholder="Voice characteristics; audio generation is a later phase"></textarea></label>
+   <label>Dialogue style<textarea id="dialogue-style" rows="2" maxlength="500" placeholder="Vocabulary, pacing and speech style"></textarea></label>
+   <p id="profile-status" class="inline-status" role="status"></p>
+   <button id="save-character" type="submit" disabled>Save character profile</button>
+  </form>
+ </section>
+ <section class="panel saved-panel">
+  <div class="panel-head"><div><span class="eyebrow">03 / PROJECT LIBRARY</span><h2>Saved characters</h2></div><button id="refresh-characters" class="secondary" disabled>Refresh</button></div>
+  <div id="character-list" class="character-list"><div class="empty">Select a project to see its characters.</div></div>
+ </section>
+</div>
+<footer>GLB geometry and rig inspection are real Godot operations. Mesh editing, live 3D viewport, rig creation, facial controls and animation authoring are separate upcoming implementation batches.</footer>
+</main>
+<script src="/static/characters.js"></script>
+</body></html>

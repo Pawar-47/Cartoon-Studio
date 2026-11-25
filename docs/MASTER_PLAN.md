@@ -240,3 +240,10 @@ The older baseline and phase checkpoint text above records the state before the 
 - Phase 2 remains active. Proceed to P2.2 Character Studio foundation; do not repeat P2.1 or restart earlier phases.
 - P2.2 must deliver real character import/creation, rig-readiness inspection, supported modular appearance and preview; P2.3 then expands persistent identity and character metadata.
 - Keep later phases in order and preserve all existing work. PC performance testing remains Phase 8 only.
+
+
+## P2.2 implementation checkpoint — 2026-11-25
+
+A first working Character Studio vertical slice is now in the repository (pending Windows CI acceptance): project-scoped GLB 2.0 upload, strict container validation and SHA-256 inventory, Godot 4.7.2 import inspection, skeleton/animation readiness reporting, versioned character profile creation/update/list/reopen, and canonical references from project.json. Portable character documents are re-indexed when the SQLite index is rebuilt.
+
+This is deliberately not the P2.2 exit gate. Live 3D viewport/thumbnail preview, actual rig editing/creation, mesh/material/blend-shape authoring, GLB export round-trip and rendered consistency comparisons remain open. The current importer supports GLB 2.0 only; VRM support is not yet integrated.

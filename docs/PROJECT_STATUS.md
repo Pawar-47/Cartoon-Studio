@@ -98,3 +98,15 @@
 - **Phase 2 remains ACTIVE. Next batch: P2.2 — Character Studio foundation:** original character creation/import, modular appearance workflow, rig readiness/rigging integration and real preview. P2.3 will add persistent identity, expressions, clothing variants, relationships and voice profiles.
 - Phase 0 and Phase 1 remain complete. World Builder (Phase 3), Story/Scene expansion (Phase 4), Animation (Phase 5), Urdu voice/lip-sync (Phase 6), episode generation (Phase 7) and target-PC optimization (Phase 8) remain in their planned order.
 - No physical-PC performance test is required before P2.2. Keep the Intel i3-5005U / HD 5500 / 8 GB / SSD profile as a design constraint; actual measurement stays in Phase 8.
+
+
+## P2.2 implementation update — 2026-11-25 (Windows CI acceptance pending)
+
+- Character Studio is now a real route at `/characters`, linked from the dashboard.
+- Added project-scoped binary GLB 2.0 upload (512 MiB cap), strict header/JSON-chunk validation, SHA-256 provenance, and safe generated asset paths.
+- Imported assets are inspected by the bundled Godot worker; mesh, skeleton, animation-player, animation and node counts are surfaced. Rig/animation readiness is derived from actual inspection, not assumed.
+- Added versioned character profile create/list/get/update APIs and a browser workflow. Profiles persist face/body identity, height, hair, clothing, accessories, eye/mouth design, expression labels, personality, relationships, voice profile and dialogue style.
+- Character documents live under each project and are linked from `project.json`; recovery rebuilds their index from portable files.
+- Added focused API/UI/import/profile/recovery tests in `tests/test_characters.py`.
+- **Not claimed complete:** original mesh authoring, live 3D viewport/thumbnail, rig editing/creation, material/blend-shape editing, export round-trip, VRM support, animation authoring or cross-scene rendered consistency.
+- P2.2 remains active. This vertical slice is pending the Windows CI result and further viewport/authoring work.

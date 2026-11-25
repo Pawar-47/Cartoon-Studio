@@ -117,3 +117,19 @@ See P0_6_PROOF_REPORT.md for exact run IDs, acceptance checks and limitations.
 - Ruff and Python compilation passed. Godot archive SHA-256 verification passed. CycloneDX inventory includes the Godot runtime. Both self-contained application builds include the runtime, worker project and upstream license/copyright/author notices.
 - Installer smoke test passed clean install, first launch, project creation, v1-to-v2 upgrade, project preservation, uninstall cleanup and reinstall. The follow-up commits fixed worker-file removal and stop the app/worker before uninstaller cleanup; CI #204 confirms the final state.
 - Limitations: this validates the native worker integration and GLB inspection only. It is not proof of character creation, rigging, modular appearance, rendered character preview, animation authoring or final episode rendering. Hosted runner renderer is not the user's Intel GPU; target-PC benchmarking remains Phase 8.
+
+
+## P2.2 Character Studio import/profile vertical slice — 2026-11-25
+
+New test module: `tests/test_characters.py`.
+
+Coverage added:
+- Character Studio page route.
+- GLB 2.0 binary container validation and rejection of malformed files/unsafe filenames.
+- Project-scoped upload and Godot worker inspection contract.
+- Skeleton and animation readiness derived from engine inspection.
+- Character profile create/list/get/update and revision increments.
+- Canonical character IDs stored in project.json.
+- Recovery of character profiles and document index from portable JSON after SQLite index loss.
+
+The tests use a deterministic fake adapter for API contract tests; the existing Windows CI continues to exercise the real Godot worker with the pinned runtime. The combined suite has not yet been accepted by CI at the time this report was authored. No target-PC benchmark is required.

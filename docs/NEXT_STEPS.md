@@ -74,3 +74,16 @@ P2.1 is no longer pending. It was completed and accepted by Windows CI #204 on t
 6. Update registry, traceability, architecture, source-reuse evaluation, test evidence, project status and next steps in the same coherent batch.
 
 P2.3 remains the next Character Studio batch after P2.2: persistent identity refinement, expressions, clothing variants, relationships and voice profiles. Do not start World Builder or later phases early.
+
+
+## P2.2 working batch — Character Studio import and persistent profiles
+
+Implemented in the current working commit (CI pending):
+- GLB 2.0 upload with a 512 MiB bound, safe project-local storage, container validation and SHA-256 provenance.
+- Godot worker inspection and evidence-based mesh/skeleton/animation readiness.
+- Character profile create/list/get/update endpoints and browser Character Studio workflow.
+- Versioned character identity and appearance/voice/personality metadata saved as portable project documents.
+- Project-level canonical character references and recovery from portable character JSON files.
+- Focused tests for import, validation, profile round-trip, updates, references and database-loss recovery.
+
+Continue the P2.2 batch: implement a real model preview/thumbnail through Godot, then support rig/appearance authoring and export. Do not mark P2.2 complete until the full phase exit gate is satisfied. GLB is the only integrated import format at this checkpoint; VRM remains a researched candidate, not an implemented feature.

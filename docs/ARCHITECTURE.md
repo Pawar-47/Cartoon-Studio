@@ -155,3 +155,17 @@ Architecture direction is now concrete:
 Godot 4.7.2-stable with the Compatibility renderer is selected as the production 3D runtime, behind the native worker adapter controlled by FastAPI. The bounded proof imported a self-generated GLB, created/played an AnimationPlayer track, saved/reopened the PackedScene, and recorded a 3-second 640×360/24 FPS MJPEG AVI. FFmpeg then assembled a 640×360/24 FPS MP4 with MPEG-4 Part 2 video and AAC audio. Exact CI evidence and limitations are in P0_6_PROOF_REPORT.md.
 
 The optional Godot Web viewport is deferred; it is not a prerequisite for the browser control plane or production rendering. The browser remains the primary UI. A separate native preview window or a future browser viewport can be implemented behind the same engine-neutral adapter without changing project documents. Target-PC performance remains Phase 8.
+
+## P2.2 Character Studio import/profile implementation — 2026-11-25
+
+The first production slice keeps the project format engine-neutral and uses the existing Godot worker only as a supervised importer/inspector.
+
+- Browser route: `/characters`; project selection scopes every operation.
+- Upload: raw binary GLB 2.0 request body, maximum 512 MiB, generated UUID storage name under `projects/<id>/assets/characters/`, original filename retained only as metadata.
+- Validation: GLB magic, version, declared total length, first JSON chunk, glTF asset version and array shape are checked before Godot import. SHA-256 is recorded for provenance.
+- Inspection: the pinned Godot worker reports mesh, Skeleton3D, AnimationPlayer, animation and node counts. Rig-ready and animation-ready flags are based on those reports.
+- Identity: each character is a versioned `characters/<uuid>.json` document with stable ID, canonical imported asset reference and fields for face/body, height, hair, clothing, accessories, eyes/mouth, expression labels, personality, relationships, voice profile and dialogue style.
+- Project integration: `project.json.data.references.characters` stores stable character IDs. The SQLite document index can be reconstructed from the portable character JSON files.
+- No imported character assets are bundled with the application; uploaded user assets remain local to their project.
+
+Limitations are explicit: this slice does not create or edit meshes, rig a skeleton, edit materials/blend shapes, provide a live 3D viewport/thumbnail, export modified GLB, or import VRM. Those are still required work for the full Character Studio phase.

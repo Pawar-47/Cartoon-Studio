@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shutil
@@ -10,7 +11,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -29,6 +30,7 @@ from app.storage import (
     read_json,
     reconcile_project_files,
     resolve_project_relative,
+    sync_character_reference,
     sync_episode_reference,
     upsert_document_index,
     write_json_atomic,
@@ -92,6 +94,26 @@ class GlbInspectRequest(BaseModel):
     relative_path: str = Field(min_length=1, max_length=512)
 
 
+
+class CharacterProfileInput(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    description: str = Field(default="", max_length=1000)
+    face_design: str = Field(default="", max_length=500)
+    body_proportions: dict[str, float] = Field(default_factory=dict)
+    height_cm: float | None = Field(default=None, gt=0, le=300)
+    hair: str = Field(default="", max_length=200)
+    clothing: list[str] = Field(default_factory=list, max_length=30)
+    accessories: list[str] = Field(default_factory=list, max_length=30)
+    eye_design: str = Field(default="", max_length=200)
+    mouth_design: str = Field(default="", max_length=200)
+    expressions: list[str] = Field(default_factory=list, max_length=30)
+    personality: str = Field(default="", max_length=1000)
+    relationships: list[str] = Field(default_factory=list, max_length=30)
+    voice_profile: str = Field(default="", max_length=500)
+    dialogue_style: str = Field(default="", max_length=500)
+    asset_path: str = Field(min_length=1, max_length=512)
+
+
 class ProjectRecord(BaseModel):
     id: str
     name: str
@@ -137,6 +159,77 @@ def _new_project_document(
         now,
         1,
     )
+
+
+
+MAX_CHARACTER_ASSET_BYTES = 512 * 1024 * 1024
+
+
+def _validate_glb_container(path: Path) -> dict[str, Any]:
+    size = path.stat().st_size
+    if size < 20 or size > MAX_CHARACTER_ASSET_BYTES:
+        raise ValueError("GLB file size is outside the supported range.")
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        header = handle.read(12)
+        if len(header) != 12:
+            raise ValueError("GLB header is incomplete.")
+        magic = header[:4]
+        version = int.from_bytes(header[4:8], "little")
+        declared_length = int.from_bytes(header[8:12], "little")
+        if magic != b"glTF" or version != 2 or declared_length != size:
+            raise ValueError("File is not a valid GLB 2.0 container.")
+        chunk_header = handle.read(8)
+        if len(chunk_header) != 8:
+            raise ValueError("GLB JSON chunk is missing.")
+        chunk_length = int.from_bytes(chunk_header[:4], "little")
+        chunk_type = int.from_bytes(chunk_header[4:8], "little")
+        if chunk_type != 0x4E4F534A or chunk_length > size - 20:
+            raise ValueError("GLB JSON chunk is invalid.")
+        raw_json = handle.read(chunk_length)
+        if len(raw_json) != chunk_length:
+            raise ValueError("GLB JSON chunk is truncated.")
+        try:
+            document = json.loads(raw_json.decode("utf-8").rstrip("\x00 \t\r\n"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as error:
+            raise ValueError("GLB JSON document is invalid.") from error
+        if not isinstance(document, dict) or not isinstance(document.get("asset"), dict):
+            raise ValueError("GLB asset metadata is missing.")
+        if str(document["asset"].get("version", "")) != "2.0":
+            raise ValueError("Only glTF 2.0 binary assets are supported.")
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    meshes = document.get("meshes", [])
+    nodes = document.get("nodes", [])
+    skins = document.get("skins", [])
+    animations = document.get("animations", [])
+    if not all(isinstance(value, list) for value in (meshes, nodes, skins, animations)):
+        raise ValueError("GLB mesh, node, skin and animation collections must be arrays.")
+    return {
+        "format": "glTF Binary 2.0",
+        "size_bytes": size,
+        "sha256": digest.hexdigest(),
+        "mesh_count": len(meshes),
+        "node_count": len(nodes),
+        "skin_count": len(skins),
+        "animation_count": len(animations),
+    }
+
+
+def _character_document(data_dir: Path, project_id: str, character_id: str) -> dict[str, Any]:
+    relative_path = f"characters/{character_id}.json"
+    path = resolve_project_relative(data_dir, project_id, relative_path)
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="Character not found.")
+    document = read_json(path)
+    if (
+        document.get("document_type") != "character"
+        or document.get("id") != character_id
+        or not isinstance(document.get("data"), dict)
+    ):
+        raise HTTPException(status_code=409, detail="Character document identity is invalid.")
+    return document
 
 
 @app.get("/", include_in_schema=False)
@@ -368,6 +461,236 @@ def get_story_plan(project_id: str) -> dict[str, Any]:
         "updated_at": row["updated_at"],
         "plan": json.loads(row["plan_json"]),
     }
+
+
+
+@app.get("/characters", include_in_schema=False)
+def character_studio() -> FileResponse:
+    return FileResponse(STATIC_DIR / "characters.html")
+
+
+@app.post("/api/projects/{project_id}/character-assets", status_code=201)
+async def upload_character_asset(project_id: str, request: Request) -> dict[str, Any]:
+    initialize_database()
+    with connect_db() as connection:
+        project = connection.execute(
+            "SELECT id, created_at FROM projects WHERE id = ?", (project_id,)
+        ).fetchone()
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    filename = request.headers.get("x-asset-filename", "character.glb").strip()
+    if (
+        not filename
+        or len(filename) > 120
+        or Path(filename).name != filename
+        or "/" in filename
+        or "\\" in filename
+        or not filename.lower().endswith(".glb")
+    ):
+        raise HTTPException(status_code=422, detail="Choose a valid .glb filename.")
+    content_length = request.headers.get("content-length")
+    if content_length:
+        try:
+            if int(content_length) > MAX_CHARACTER_ASSET_BYTES:
+                raise HTTPException(status_code=413, detail="GLB exceeds the 512 MiB limit.")
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail="Invalid Content-Length header.") from error
+
+    asset_id = str(uuid.uuid4())
+    relative_path = f"assets/characters/{asset_id}.glb"
+    try:
+        destination = resolve_project_relative(DATA_DIR, project_id, relative_path)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = destination.with_name(f".{asset_id}.upload")
+    total = 0
+    try:
+        with temporary.open("wb") as handle:
+            async for chunk in request.stream():
+                total += len(chunk)
+                if total > MAX_CHARACTER_ASSET_BYTES:
+                    raise HTTPException(status_code=413, detail="GLB exceeds the 512 MiB limit.")
+                handle.write(chunk)
+            handle.flush()
+            os.fsync(handle.fileno())
+        if total == 0:
+            raise HTTPException(status_code=422, detail="Uploaded GLB is empty.")
+        temporary.replace(destination)
+        try:
+            container = _validate_glb_container(destination)
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+        try:
+            inspection = get_engine_adapter().inspect_glb(
+                destination,
+                allowed_root=project_directory(DATA_DIR, project_id),
+            )
+        except EngineUnavailableError as error:
+            raise HTTPException(status_code=503, detail=str(error)) from error
+        except EngineTimeoutError as error:
+            raise HTTPException(status_code=504, detail=str(error)) from error
+        except EngineError as error:
+            raise HTTPException(status_code=422, detail=f"Godot could not import this GLB: {error}") from error
+
+        now = datetime.now(UTC).isoformat()
+        asset_data = {
+            "original_filename": filename,
+            "relative_path": relative_path,
+            "container": container,
+            "engine_inspection": inspection,
+            "rig_ready": int(inspection.get("skeleton_count", 0)) > 0,
+            "animation_ready": int(inspection.get("animation_count", 0)) > 0,
+        }
+        manifest = make_envelope("character_asset", asset_id, asset_data, now, now, 1)
+        manifest_path = resolve_project_relative(
+            DATA_DIR, project_id, f"assets/characters/{asset_id}.json"
+        )
+        digest = write_json_atomic(manifest_path, manifest)
+        with connect_db() as connection:
+            upsert_document_index(
+                connection,
+                project_id,
+                manifest,
+                f"assets/characters/{asset_id}.json",
+                digest,
+            )
+        return {"asset_id": asset_id, **asset_data}
+    except BaseException:
+        temporary.unlink(missing_ok=True)
+        if destination.exists():
+            destination.unlink(missing_ok=True)
+        raise
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+@app.get("/api/projects/{project_id}/characters")
+def list_characters(project_id: str) -> list[dict[str, Any]]:
+    initialize_database()
+    with connect_db() as connection:
+        exists = connection.execute(
+            "SELECT 1 FROM projects WHERE id = ?", (project_id,)
+        ).fetchone()
+        if exists is None:
+            raise HTTPException(status_code=404, detail="Project not found.")
+        rows = connection.execute(
+            """
+            SELECT relative_path FROM project_documents
+            WHERE project_id = ? AND document_type = 'character'
+            ORDER BY updated_at DESC
+            """,
+            (project_id,),
+        ).fetchall()
+    characters = []
+    for row in rows:
+        path = resolve_project_relative(DATA_DIR, project_id, row["relative_path"])
+        if path.is_file():
+            document = read_json(path)
+            if document.get("document_type") == "character":
+                characters.append(document)
+    return characters
+
+
+@app.post("/api/projects/{project_id}/characters", status_code=201)
+def create_character(
+    project_id: str, payload: CharacterProfileInput
+) -> dict[str, Any]:
+    initialize_database()
+    with connect_db() as connection:
+        project = connection.execute(
+            "SELECT id, created_at FROM projects WHERE id = ?", (project_id,)
+        ).fetchone()
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    try:
+        asset_path = resolve_project_relative(DATA_DIR, project_id, payload.asset_path)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    if not asset_path.is_file() or asset_path.suffix.lower() != ".glb":
+        raise HTTPException(status_code=422, detail="Import a validated GLB asset first.")
+    asset_id = asset_path.stem
+    try:
+        manifest_path = resolve_project_relative(
+            DATA_DIR, project_id, f"assets/characters/{asset_id}.json"
+        )
+        manifest = read_json(manifest_path)
+    except (ValueError, FileNotFoundError) as error:
+        raise HTTPException(status_code=422, detail="GLB asset has not passed import inspection.") from error
+    if manifest.get("document_type") != "character_asset" or manifest.get("data", {}).get("relative_path") != payload.asset_path:
+        raise HTTPException(status_code=422, detail="Character asset manifest does not match the imported file.")
+
+    now = datetime.now(UTC).isoformat()
+    character_id = str(uuid.uuid4())
+    data = payload.model_dump(exclude={"asset_path"}, mode="json")
+    data["name"] = payload.name.strip()
+    data["description"] = payload.description.strip()
+    data["asset"] = manifest["data"]
+    data["rig_status"] = (
+        "ready" if manifest["data"].get("rig_ready") else "unrigged"
+    )
+    document = make_envelope(
+        "character", character_id, data, now, now, 1
+    )
+    relative_path = f"characters/{character_id}.json"
+    path = resolve_project_relative(DATA_DIR, project_id, relative_path)
+    digest = write_json_atomic(path, document)
+    with connect_db() as connection:
+        upsert_document_index(connection, project_id, document, relative_path, digest)
+        sync_character_reference(connection, DATA_DIR, project_id, document)
+    return document
+
+
+@app.get("/api/projects/{project_id}/characters/{character_id}")
+def get_character(project_id: str, character_id: str) -> dict[str, Any]:
+    initialize_database()
+    with connect_db() as connection:
+        exists = connection.execute(
+            "SELECT 1 FROM projects WHERE id = ?", (project_id,)
+        ).fetchone()
+    if exists is None:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    try:
+        return _character_document(DATA_DIR, project_id, character_id)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@app.put("/api/projects/{project_id}/characters/{character_id}")
+def update_character(
+    project_id: str, character_id: str, payload: CharacterProfileInput
+) -> dict[str, Any]:
+    initialize_database()
+    with connect_db() as connection:
+        project = connection.execute(
+            "SELECT id FROM projects WHERE id = ?", (project_id,)
+        ).fetchone()
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    existing = _character_document(DATA_DIR, project_id, character_id)
+    if payload.asset_path != existing.get("data", {}).get("asset", {}).get("relative_path"):
+        raise HTTPException(status_code=422, detail="Changing a character's source asset requires a new import.")
+    now = datetime.now(UTC).isoformat()
+    data = payload.model_dump(exclude={"asset_path"}, mode="json")
+    data["name"] = payload.name.strip()
+    data["description"] = payload.description.strip()
+    data["asset"] = existing["data"]["asset"]
+    data["rig_status"] = existing["data"].get("rig_status", "unrigged")
+    document = make_envelope(
+        "character",
+        character_id,
+        data,
+        existing["created_at"],
+        now,
+        int(existing.get("revision", 1)) + 1,
+    )
+    relative_path = f"characters/{character_id}.json"
+    path = resolve_project_relative(DATA_DIR, project_id, relative_path)
+    digest = write_json_atomic(path, document)
+    with connect_db() as connection:
+        upsert_document_index(connection, project_id, document, relative_path, digest)
+        sync_character_reference(connection, DATA_DIR, project_id, document)
+    return document
 
 
 @app.get("/story", include_in_schema=False)
