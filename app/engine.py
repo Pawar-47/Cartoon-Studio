@@ -101,12 +101,14 @@ class GodotEngineAdapter:
         timeout_seconds: float | None = None,
         cancel_event: threading.Event | None = None,
     ) -> dict[str, Any]:
-        root = Path(allowed_root).resolve(strict=True)
+        root = Path(allowed_root).resolve(strict=False)
         source = Path(source_path).resolve(strict=True)
-        if source.suffix.lower() != ".glb":
-            raise EnginePathError("Only .glb files can be inspected by this endpoint.")
         if source == root or root not in source.parents:
             raise EnginePathError("GLB path escapes the allowed project directory.")
+        if not root.is_dir():
+            raise EnginePathError("The allowed project root does not exist.")
+        if source.suffix.lower() != ".glb":
+            raise EnginePathError("Only .glb files can be inspected by this endpoint.")
         if not source.is_file():
             raise FileNotFoundError(source)
         if source.stat().st_size > MAX_GLB_BYTES:
