@@ -313,6 +313,14 @@ func _assemble_modular_character(payload: Dictionary) -> Dictionary:
         return {"error_code": "base_skeleton_count", "error": "The base character must contain exactly one Skeleton3D."}
     var target_skeleton := target_skeletons[0] as Skeleton3D
     var base_animation_names := _scene_animation_names(base_scene)
+    var removed_base_meshes: Array[String] = []
+    for base_mesh_node in base_scene.find_children("*", "MeshInstance3D", true, false):
+        var base_mesh := base_mesh_node as MeshInstance3D
+        if base_mesh.skin == null:
+            continue
+        removed_base_meshes.append(str(base_scene.get_path_to(base_mesh)))
+        base_mesh.queue_free()
+    await process_frame
     var added_parts: Array[Dictionary] = []
     var total_added := 0
 
@@ -354,6 +362,20 @@ func _assemble_modular_character(payload: Dictionary) -> Dictionary:
             source_scene.queue_free()
             base_scene.queue_free()
             return {"error_code": "incompatible_skeleton_transform", "error": "The " + slot + " part rig has a different world transform; automatic alignment is not safe."}
+        var skin_resource := mesh_node.skin
+        for bind_index in range(skin_resource.get_bind_count()):
+            var bind_name := str(skin_resource.get_bind_name(bind_index))
+            if not bind_name.is_empty():
+                if source_skeleton.find_bone(bind_name) < 0:
+                    source_scene.queue_free()
+                    base_scene.queue_free()
+                    return {"error_code": "invalid_skin_bind", "error": "The " + slot + " skin references a bone name missing from its skeleton: " + bind_name}
+            else:
+                var bind_bone := skin_resource.get_bind_bone(bind_index)
+                if bind_bone < 0 or bind_bone >= source_skeleton.get_bone_count():
+                    source_scene.queue_free()
+                    base_scene.queue_free()
+                    return {"error_code": "invalid_skin_bind", "error": "The " + slot + " skin contains an out-of-range bone index."}
         var cloned_mesh := mesh_node.duplicate() as MeshInstance3D
         if cloned_mesh == null:
             source_scene.queue_free()
@@ -371,7 +393,8 @@ func _assemble_modular_character(payload: Dictionary) -> Dictionary:
             "source_path": source_path,
             "mesh_path": str(part["mesh_path"]),
             "mesh_name": str(mesh_node.name),
-            "bone_count": source_skeleton.get_bone_count()
+            "bone_count": source_skeleton.get_bone_count(),
+            "skin_bind_count": skin_resource.get_bind_count()
         })
         source_scene.queue_free()
         await process_frame
@@ -408,6 +431,7 @@ func _assemble_modular_character(payload: Dictionary) -> Dictionary:
             return {"error_code": "mesh_verification_failed", "error": "The exported GLB did not retain the selected " + str(part_entry["slot"]) + " mesh."}
     verification["added_parts"] = added_parts
     verification["base_animation_names"] = base_animation_names
+    verification["base_skinned_meshes_removed"] = removed_base_meshes
     verification["animation_preserved"] = true
     verification["assembly_verified"] = true
     return verification

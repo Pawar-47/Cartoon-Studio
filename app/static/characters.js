@@ -364,6 +364,7 @@ function refreshAssemblyControls(){
    const meshes=Array.isArray(asset.engine_inspection?.mesh_inventory)?asset.engine_inspection.mesh_inventory:[];
    for(const mesh of meshes){
     if(!mesh.skin_bound||!mesh.skeleton_path||Number(mesh.skeleton_bone_count)<=0||!mesh.node_path)continue;
+    if(mesh.slot_candidate&&mesh.slot_candidate!==slot)continue;
     const option=document.createElement("option");option.value=asset.asset_id+"|"+mesh.node_path;
     option.textContent=asset.assembly_label+" / "+(mesh.node_name||mesh.mesh_resource_name||"Mesh")+" ["+(mesh.slot_candidate||"unclassified")+"]";
     select.append(option);

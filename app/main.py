@@ -427,6 +427,9 @@ def create_modular_assembly(
                     for part in payload.parts
                 ],
                 "added_parts": assembly.get("added_parts", []),
+                "base_skinned_meshes_removed": assembly.get(
+                    "base_skinned_meshes_removed", []
+                ),
                 "animation_preserved": True,
                 "verified": True,
             },

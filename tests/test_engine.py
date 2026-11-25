@@ -9,6 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app import main
+from app.character_builder import ensure_model_asset
 from app.engine import EngineTimeoutError, EngineUnavailableError, GodotEngineAdapter
 from app.storage import project_directory
 
@@ -95,6 +96,64 @@ def test_godot_worker_ping_and_glb_inspection(tmp_path):
     assert mesh_record["slot_candidate"] in {"", "head", "body", "legs", "feet"}
     assert inspection["skeleton_count"] == len(inspection["skeletons"])
     assert inspection["engine_version"].startswith("4.7.2")
+
+
+
+@pytest.mark.skipif(not HAS_GODOT, reason="Pinned Godot runtime is supplied by Windows CI.")
+def test_godot_worker_assembles_four_parts_from_distinct_shared_rig_outfits(tmp_path):
+    adapter = GodotEngineAdapter(data_dir=tmp_path, timeout_seconds=180)
+    project_root = tmp_path / "modular-project"
+    project_root.mkdir()
+    cache_root = project_root / "assets" / "character-library"
+
+    base_path = ensure_model_asset(cache_root, "Male", "Adventurer")
+    base_inspection = adapter.inspect_glb(base_path, allowed_root=project_root)
+    assert base_inspection["skeleton_count"] == 1
+    assert len(base_inspection["animation_names"]) == 24
+
+    source_outfits = {
+        "head": "Beach",
+        "body": "Casual_2",
+        "legs": "Farmer",
+        "feet": "King",
+    }
+    parts = []
+    for slot, outfit in source_outfits.items():
+        source_path = ensure_model_asset(cache_root, "Male", outfit)
+        inspection = adapter.inspect_glb(source_path, allowed_root=project_root)
+        assert inspection["skeleton_count"] == 1
+        candidates = [
+            mesh
+            for mesh in inspection["mesh_inventory"]
+            if mesh["slot_candidate"] == slot and mesh["skin_bound"]
+        ]
+        assert candidates, f"{outfit} did not expose a skinned {slot} mesh"
+        parts.append(
+            {
+                "slot": slot,
+                "source_path": str(source_path),
+                "mesh_path": candidates[0]["node_path"],
+            }
+        )
+
+    output_path = project_root / "assets" / "assembled" / "mixed-character.glb"
+    result = adapter.assemble_modular_character(
+        base_path,
+        parts,
+        output_path,
+        allowed_root=project_root,
+        timeout_seconds=180,
+    )
+    assert result["assembly_verified"] is True
+    assert result["animation_preserved"] is True
+    assert result["skeleton_count"] == 1
+    assert result["animation_count"] == base_inspection["animation_count"]
+    assert set(result["animation_names"]) == set(base_inspection["animation_names"])
+    assert {part["slot"] for part in result["added_parts"]} == {
+        "head", "body", "legs", "feet"
+    }
+    assert len(result["base_skinned_meshes_removed"]) >= 1
+    assert result["mesh_count"] >= 4
 
 
 @pytest.mark.skipif(not HAS_GODOT, reason="Pinned Godot runtime is supplied by Windows CI.")
