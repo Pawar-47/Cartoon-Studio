@@ -1,5 +1,14 @@
 # Test Report — 2026-11-25
 
+## Phase 2 retarget-preview and DCC rig compatibility — 2026-11-25
+
+- Windows CI #281: [SUCCESS](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45626571819) on commit `dd0354d8c264a5d2449a0b5249b0502e5b9b6be8`.
+- CI passed Ruff lint, Python compilation, the complete pytest suite (including the pinned Godot 4.7.2 native-worker fixture), runtime-lock verification, CycloneDX SBOM generation, bootstrap package/smoke test, both self-contained builds, NSIS installer compilation and clean install/upgrade/uninstall/reinstall lifecycle.
+- The run validates the retarget-preview API contract and the existing native imported-pair retarget proof. It does not establish browser visual fidelity or arbitrary third-party GLB compatibility.
+- After CI #281, code commits `e17ed5d`, `3e2e6e0`, `08f2392` and `bdad978` expanded bone-name normalization for 3ds Max Biped, Character Creator, Unreal-style and Blender Rigify naming conventions, rejected malformed duplicate/negative hierarchy indices, and added focused regression tests. These commits are newer than CI #281; their tests have not yet run in CI at this checkpoint.
+- No real third-party GLB files with differing bone axes/rest poses or multiple animation clips have yet been accepted. No real facial blend-shape fixture has yet been validated. Do not mark those requirements VERIFIED.
+
+
 ## Current repository checkpoint
 - Latest verified Windows CI: [run #176 — SUCCESS](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45585584886), commit 815cc32a1cb56c3357c37310745e900a8a197c7f.
 - Run #176 passed exact dependency locking, Ruff, compilation, 22 pytest tests, bootstrap launcher smoke, self-contained PyInstaller builds, NSIS installer compilation, clean install, launch, upgrade, project-data preservation, uninstall, reinstall and artifact upload.
