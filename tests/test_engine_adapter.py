@@ -369,7 +369,15 @@ def test_pinned_godot_worker_retargets_robot_expressive_selected_clip(tmp_path):
     target_inspection = adapter.inspect_glb(target, allowed_root=project_root)
     source_rig = analyze_rig(source_inspection)
     target_rig = analyze_rig(target_inspection)
-    assert source_rig["status"] == "humanoid_names_complete", source_rig
+    source_bone_names = [
+        bone.get("name", "") for bone in source_inspection["skeletons"][0]["bones"]
+    ]
+    assert source_rig["status"] == "humanoid_names_complete", (
+        f"RobotExpressive bones={source_bone_names}; "
+        f"missing={source_rig['missing_bones']}; "
+        f"ambiguous={source_rig['ambiguous_bones']}; "
+        f"unmapped={source_rig['unmapped_bones']}"
+    )
     assert source_rig["hierarchy_validation"]["status"] == "valid"
     assert source_rig["godot_profile_mapping"]["Spine"]["source_name"] == "Abdomen"
     assert source_rig["godot_profile_mapping"]["LeftHand"]["source_name"] == "Palm2L"
