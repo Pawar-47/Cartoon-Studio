@@ -58,8 +58,14 @@ def main() -> None:
     # Reuse the shared file-size constant in the Studio import path.
     replace_once(
         "src/studio/main.ts",
-        "import { MAX_SCENES, filmDuration, filmJson, historyEntry, parseFilm, readHistoryEntry, sceneLabel, shareFilmSettings, fadeLevel } from './film';",
-        "import { MAX_FILM_SIZE, MAX_SCENES, filmDuration, filmJson, historyEntry, parseFilm, readHistoryEntry, sceneLabel, shareFilmSettings, fadeLevel } from './film';",
+        (
+            "import { MAX_SCENES, filmDuration, filmJson, historyEntry, parseFilm, "
+            "readHistoryEntry, sceneLabel, shareFilmSettings, fadeLevel } from './film';"
+        ),
+        (
+            "import { MAX_FILM_SIZE, MAX_SCENES, filmDuration, filmJson, historyEntry, "
+            "parseFilm, readHistoryEntry, sceneLabel, shareFilmSettings, fadeLevel } from './film';"
+        ),
     )
     replace_once("src/studio/main.ts", "source.size>500_000", "source.size>MAX_FILM_SIZE")
     replace_all(
@@ -73,8 +79,16 @@ def main() -> None:
     # Update the upstream film parser tests to assert the expanded limits.
     replace_once(
         "scripts/studio-film-check.ts",
-        "import { FADE, MAX_SCENES, fadeLevel, filmDuration, filmJson, historyEntry, parseFilm, readHistoryEntry, sceneAt, sceneLabel, sceneStarts, shareFilmSettings } from '../src/studio/film';",
-        "import { FADE, MAX_FILM_SIZE, MAX_SCENES, fadeLevel, filmDuration, filmJson, historyEntry, parseFilm, readHistoryEntry, sceneAt, sceneLabel, sceneStarts, shareFilmSettings } from '../src/studio/film';",
+        (
+            "import { FADE, MAX_SCENES, fadeLevel, filmDuration, filmJson, historyEntry, "
+            "parseFilm, readHistoryEntry, sceneAt, sceneLabel, sceneStarts, shareFilmSettings } "
+            "from '../src/studio/film';"
+        ),
+        (
+            "import { FADE, MAX_FILM_SIZE, MAX_SCENES, fadeLevel, filmDuration, filmJson, "
+            "historyEntry, parseFilm, readHistoryEntry, sceneAt, sceneLabel, sceneStarts, "
+            "shareFilmSettings } from '../src/studio/film';"
+        ),
     )
     replace_all("scripts/studio-film-check.ts", "one to 5 scenes", "one to 7 scenes")
     replace_once(
@@ -131,7 +145,8 @@ def main() -> None:
         "src/studio/style.css",
         "Cartoon Studio compact inspector patch",
         """
-/* Cartoon Studio compact inspector patch: keep the format and title-card controls visible on short desktop screens. */
+/* Cartoon Studio compact inspector patch: keep the format and title-card controls
+   visible on short desktop screens. */
 @media (min-width: 1101px) and (max-height: 800px) {
   .inspector-section { padding: 4px 0; }
   .inspector .section-heading { margin-bottom: 4px; }
@@ -152,7 +167,10 @@ def main() -> None:
 }
 """,
     )
-    print("Applied Cartoon Studio Ara foundation patches: seven-scene films, 700 KB project JSON, compact 1366x768 inspector.")
+    print(
+        "Applied Cartoon Studio Ara foundation patches: seven-scene films, 700 KB project JSON, "
+        "compact 1366x768 inspector."
+    )
 
 
 if __name__ == "__main__":
