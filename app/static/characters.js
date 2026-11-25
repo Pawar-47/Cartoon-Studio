@@ -60,6 +60,7 @@ function updateRetargetAnimationOptions(){
   const option=document.createElement("option");option.value=name;option.textContent=name;select.append(option);
  }
  if(names.includes(previous))select.value=previous;
+ select.disabled=!names.length;
 }
 function updateRetargetCharacterOptions(characters){
  retargetCharacters=characters;

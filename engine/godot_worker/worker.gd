@@ -137,7 +137,7 @@ func _inspect_glb(payload: Dictionary) -> Dictionary:
         animation_count += player_animation_names.size()
         for animation_value in player_animation_names:
             var animation_label := str(animation_value)
-            if not animation_names.has(animation_label):
+            if animation_label.get_file().to_upper() != "RESET" and not animation_names.has(animation_label):
                 animation_names.append(animation_label)
     var mesh_nodes := scene.find_children("*", "MeshInstance3D", true, false)
     var morph_targets: Array[Dictionary] = []

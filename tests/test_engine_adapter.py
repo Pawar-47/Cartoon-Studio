@@ -332,6 +332,7 @@ def test_pinned_godot_worker_inspects_real_cc0_robot_expressive_facial_morphs(tm
     assert len(animation_names) >= 10
     assert len(set(animation_names)) == len(animation_names)
     assert all(animation_names)
+    assert all(name.upper() != "RESET" for name in animation_names)
     morph_targets = inspection["morph_targets"]
     assert inspection["morph_target_count"] >= 3
     assert len(morph_targets) == inspection["morph_target_count"]
