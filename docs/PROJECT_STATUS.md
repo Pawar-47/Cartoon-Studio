@@ -3,11 +3,12 @@
 ## Live checkpoint
 - Repository: Pawar-47/Cartoon-Studio
 - Branch: main
-- HEAD at this status update: 21f51d4689f5398dde855915c0810e3920416608
-- Latest verified main CI: run #102 SUCCESS on ae9bad178c9999d5f5b7017a6409c7ee9c490786.
-- Godot native-worker proof #3: SUCCESS on ae9bad178c9999d5f5b7017a6409c7ee9c490786.
-- SQLite queue prototype: Windows CI run #101 SUCCESS on b05024110e76b684a5f8cee35eb57fa0428b2c11; 17 tests passed.
-- Original 25-part prompt is preserved verbatim at docs/MASTER_EXECUTION_PROMPT.md.
+- HEAD before this status batch: 5031917f7715b3997f91b2b2840dd934216e494a
+- Latest verified Windows CI: run #115 SUCCESS on 565d211ce3009c081e60d48778d3ba89acd4a4f7.
+- Result: Ruff passed, Python compile passed, 21 pytest tests passed, Windows bootstrap ZIP packaged and uploaded. One non-blocking Starlette TestClient/httpx deprecation warning remains for P1.2 review.
+- Godot native-worker proof #3 and FFmpeg MP4 assembly proof: SUCCESS; see docs/P0_6_PROOF_REPORT.md.
+- SQLite queue prototype: Windows CI run #101 SUCCESS; 17 tests passed.
+- Original 25-part prompt preserved verbatim at docs/MASTER_EXECUTION_PROMPT.md.
 - Requirements registry: 171 atomic rows; traceability: 171 rows; architecture crosswalk: 171 rows.
 
 ## Phase status
@@ -15,7 +16,7 @@
 | Phase | Status | Evidence / limitation |
 |---|---|---|
 | Phase 0 — Specification/research/architecture | COMPLETE | P0.1–P0.7 closed; see P0_7_PHASE0_EXIT_REVIEW.md |
-| Phase 1 — GitHub and CI/CD foundation | ACTIVE | Existing FastAPI/SQLite/browser shell and CI preserved; project lifecycle, migrations, reproducible lock and installer still need completion |
+| Phase 1 — GitHub and CI/CD foundation | ACTIVE | P1.1 complete; P1.2 dependency lock/reproducible CI is next; P1.3 bootstrap package partial; P1.4 installer not started |
 | Phase 2 — Character Studio | NOT STARTED | No production character creation/import/rig/face studio |
 | Phase 3 — World Builder | NOT STARTED | No persistent production world/location builder |
 | Phase 4 — Story and Scene Engine | PARTIAL / FROZEN | Early Story Generator and saved story plan preserved; Ara-derived IDs are validation-only and must be normalized in Phase 4 |
@@ -46,26 +47,24 @@
 - Optional Godot Web viewport deferred.
 - Physical-PC performance tests are Phase 8 only.
 
-## P0.6 evidence and limits
+## P1.1 completed — project lifecycle and portable data foundation
 
-See docs/P0_6_PROOF_REPORT.md:
-- Godot 4.7.2 Compatibility imported a self-generated GLB, found a MeshInstance3D, created/played an animation, saved/reopened the PackedScene and recorded 72 frames at 24 FPS.
-- MovieWriter AVI: 640x360, 3 seconds, MJPEG/PCM.
-- FFmpeg MP4: 640x360, 24 FPS, 3 seconds, MPEG-4 Part 2/AAC. This is not final codec approval.
-- Queue prototype tests: serial claims, lease expiry, checkpoint retention, cancellation and stale-worker rejection.
-- All proofs ran on hosted CI (llvmpipe for Godot), not the user's PC. They are candidate/function proofs, not production app integration.
+- Added app/storage.py with per-user data directory selection and CARTOON_STUDIO_DATA override.
+- Added schema_migrations versions 1 and 2, SQLite foreign keys/busy timeout/WAL, and online database backup before legacy schema upgrades.
+- Added portable project.json documents, versioned episode JSON files, SHA-256 document index, atomic writes and startup reconciliation.
+- Added create/list/open/update project APIs and retained the existing story_plans table as a compatibility/index path.
+- Story plans now persist as portable episode documents and project references stay synchronized; file-to-database recovery is tested.
+- Legacy database migration preserves project UUIDs and story plans; missing portable files are reconstructed without deleting source records.
+- P1.1 report: docs/P1_1_FOUNDATION_REPORT.md.
+- CI #115: 21 passed, Ruff/compile/package passed; one non-blocking Starlette TestClient/httpx deprecation warning remains for P1.2 review.
 
-## Phase 1 active batch
+## P1.2 active batch — reproducible dependencies and CI
 
-**P1.1 — Harden app/project lifecycle and persistent local data.**
-- Audit current FastAPI routes, SQLite schema, project/story save/load paths and environment override.
-- Implement a versioned project data root and portable JSON document repository without breaking existing projects/story plans.
-- Add numbered SQLite migrations and backup-before-migrate behavior.
-- Add create/list/open/save/load/restart/data-preservation tests.
-- Keep CARTOON_STUDIO_DATA override; packaged default will move to user application data.
-- Do not implement Character Studio, World Builder or other later-phase features yet.
-
-After P1.1, continue P1.2 dependency lock/CI reproducibility, P1.3 portable Windows package, and P1.4 self-contained installer/upgrade tests.
+- Resolve exact direct/transitive Python dependency lock and supported Python baseline.
+- Address the Starlette TestClient warning using the supported test transport dependency path; do not suppress warnings.
+- Make CI install from the lock, validate lock consistency, run lint/compile/tests, and package the same locked environment.
+- Record build metadata and produce a dependency/SBOM notice inventory.
+- Preserve Windows CI and keep P1.3/P1.4 packaging work in sequence.
 
 ## Explicit risks and deferred decisions
 

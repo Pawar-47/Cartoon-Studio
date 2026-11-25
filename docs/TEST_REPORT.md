@@ -20,6 +20,14 @@
 - No actual FPS, frame-time, memory, driver, AVI or full episode render measurement exists.
 - This is not a gate for P0.5/P0.6/P0.7 or Phases 1–7. Representative performance and quality-preset tuning are Phase 8.
 
+## P1.1 project lifecycle and portable storage — 2026-11-25
+- Implemented app/storage.py with per-user data directory, CARTOON_STUDIO_DATA override, connection PRAGMAs, numbered schema migrations (v1 legacy tables, v2 portable document index), and online SQLite backup before legacy upgrades.
+- Added atomic JSON writes, SHA-256 document indexing, safe project-relative path resolution and startup reconciliation.
+- Added project open/update APIs; project creation writes a versioned project.json. Story plans write versioned episode JSON under each project while retaining the legacy story_plans row for compatibility.
+- Startup recovery rebuilds missing project/episode files from legacy SQLite rows and restores SQLite story_plans/index rows from portable episode files.
+- CI run #115 on 565d211ce3009c081e60d48778d3ba89acd4a4f7: Ruff passed, compile passed, 21 pytest tests passed, Windows bootstrap ZIP packaged/uploaded. One Starlette TestClient/httpx deprecation warning remains; it is a P1.2 dependency/test-client follow-up, not a functional failure.
+- Current artifact remains a bootstrap ZIP, not a self-contained installer.
+
 ## P0.4 Urdu/provider research
 - Source-level inspection only: eSpeak NG Urdu rules/CLI, WhisperX Urdu alignment model, Qwen Urdu voice/regions/pricing, and official provider free-tier/region docs.
 - No Pakistani Urdu audio sample was processed. No voice quality, WER, forced-alignment accuracy or phoneme timing has been tested.

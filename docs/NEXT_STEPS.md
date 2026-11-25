@@ -3,33 +3,32 @@
 ## Live checkpoint
 - Repository: Pawar-47/Cartoon-Studio
 - Branch: main
-- Phase 0 is CLOSED; Phase 1 is ACTIVE.
-- Latest verified CI before the P0.7 documentation batch: run #102 SUCCESS on ae9bad178c9999d5f5b7017a6409c7ee9c490786.
-- Godot native-worker proof #3: SUCCESS on the same commit.
-- SQLite queue proof: run #101 SUCCESS; 17 total tests passed.
-- Full proof record: docs/P0_6_PROOF_REPORT.md.
-- Phase 0 freeze record: docs/P0_7_PHASE0_EXIT_REVIEW.md.
+- Phase 0 CLOSED; Phase 1 ACTIVE.
+- P1.1 complete: portable project documents, SQLite migrations/backups, project CRUD/open/update and story-plan persistence/recovery.
+- Latest verified CI: run #115 SUCCESS on 565d211ce3009c081e60d48778d3ba89acd4a4f7; 21 tests passed, Ruff/compile/Windows bootstrap package passed.
+- P1.1 report: docs/P1_1_FOUNDATION_REPORT.md.
+- P0.6 proofs: docs/P0_6_PROOF_REPORT.md.
+- P0.7 freeze: docs/P0_7_PHASE0_EXIT_REVIEW.md.
 
 ## Hardware gate
 The user's physical PC is not a prerequisite for architecture, implementation or phase progression. Keep i3-5005U / Intel HD 5500 / 8 GB / SSD as design constraints, allow slow rendering, serialize work and retain quality profiles. Actual frame-time, RAM, disk and quality-preset measurements are Phase 8 only.
 
 ## Completed
 - P0.1–P0.7: specification preservation, 171-row requirements/traceability, source research, source-based feasibility, architecture/dependency decisions, Godot/FFmpeg/SQLite proofs and architecture freeze.
-- Godot 4.7.2 Compatibility selected as native 3D runtime behind a supervised worker adapter.
-- FastAPI/browser remains primary UI/control plane; SQLite is local index and queue; FFmpeg process adapter is the media boundary.
-- Optional Godot Web viewport is deferred; it does not block native rendering.
+- P1.1: user data directory, migration framework, pre-migration backup, portable project/episode JSON, project lifecycle APIs, story-plan compatibility and file/database recovery.
 
-## Active batch — P1.1 app and project foundation
-1. Re-audit current app routes, database schema, story-plan persistence and data-path handling against the frozen architecture.
-2. Implement project lifecycle and versioned portable project/document storage while preserving existing project UUIDs and story plans.
-3. Add numbered SQLite migrations, backup-before-migrate and startup reconciliation.
-4. Add integration tests for create/list/open/save/load/restart and data preservation.
-5. Keep CARTOON_STUDIO_DATA override; use user application data as packaged default.
-6. Commit the complete coherent batch and run CI once.
+## Active batch — P1.2 reproducible dependencies and CI
+
+1. Audit pyproject.toml, requirements.txt and the exact environment resolved by CI.
+2. Select a lock strategy suitable for Python 3.11 and Windows (uv lock or a fully pinned requirements lock with hashes); do not rely on floating ranges in release builds.
+3. Address the Starlette TestClient/httpx deprecation using the upstream-supported httpx2 test transport or an explicitly pinned compatible stack. Do not hide/suppress the warning.
+4. Make CI install from the lock and fail if the lock is stale; keep Ruff, compile, tests and Windows artifact packaging.
+5. Record exact Python/framework versions and build metadata; generate dependency/license inventory for the release.
+6. Run CI against the complete lock-based batch before moving to P1.3.
 
 ## Phase 1 sequence
-- P1.1: app/project lifecycle, persistence, schema and migration foundation.
-- P1.2: exact dependency lock, reproducible CI, lint/compile/test and build metadata.
+- P1.1: COMPLETE — project lifecycle, persistence, schema and migration foundation.
+- P1.2: ACTIVE — exact dependency lock, reproducible CI, lint/compile/test and build metadata.
 - P1.3: portable Windows package and launcher; validate on clean Windows CI/VM.
 - P1.4: self-contained installer, upgrade/uninstall and project-data migration tests.
 
