@@ -11,19 +11,20 @@ An original, local-first Urdu 3D cartoon production studio. This repository is t
 - Copyable structured story prompt and JSON Schema.
 - Validation of 5–7 minute episode plans, 5–7 scenes, character references and timed production cues.
 - Save and reload validated episode plans inside a local project.
-- GitHub Actions Windows CI for lint, compile, tests and bootstrap ZIP packaging.
+- GitHub Actions Windows CI installs exact uv-locked dependencies, runs lint/compile/tests and packages a hash-locked bootstrap ZIP.
 
 Godot 4.7.2 Compatibility has passed a bounded hosted-runner proof and is selected as the native 3D runtime behind a supervised worker adapter. The production engine integration is still pending. This repository does not yet claim complete 3D cartoon generation, Urdu TTS, lip-sync or final episode rendering.
 
 ## Run on Windows
 
 1. Install Python 3.11 or newer.
-2. Download/extract the latest Windows bootstrap artifact from [GitHub Actions](https://github.com/Pawar-47/Cartoon-Studio/actions).
-3. Run start.bat.
-4. The local app opens at http://127.0.0.1:8765.
-5. Open Story Generator from the dashboard to prepare a prompt, paste an AI-generated JSON plan, validate it and save it to a project.
+2. Download/extract the latest Windows bootstrap artifact from the GitHub Actions page.
+3. Keep requirements.lock beside start.bat.
+4. Run start.bat; dependencies are installed with pip hash verification.
+5. The local app opens at http://127.0.0.1:8765.
+6. Open Story Generator from the dashboard to prepare a prompt, paste an AI-generated JSON plan, validate it and save it to a project.
 
-The bootstrap ZIP is not yet a standalone installer. Project data defaults to the user's application-data directory (Windows: %LOCALAPPDATA%\\CartoonStudio); set CARTOON_STUDIO_DATA to override it. The self-contained Windows installer is Phase 1.4 work.
+The bootstrap ZIP is not yet a standalone installer. Project data defaults to the user's application-data directory (Windows: %LOCALAPPDATA%\CartoonStudio); set CARTOON_STUDIO_DATA to override it. The self-contained Windows installer is Phase 1.4 work.
 
 ## Development principles
 

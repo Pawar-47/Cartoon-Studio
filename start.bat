@@ -13,9 +13,9 @@ if not exist ".venv\Scripts\python.exe" (
 
 call ".venv\Scripts\activate.bat"
 python -m pip install --upgrade pip
-pip install -r requirements.txt
+pip install --require-hashes -r requirements.lock
 if errorlevel 1 (
-    echo Dependency installation failed. Check your internet connection and try again.
+    echo Locked dependency installation failed. Check your internet connection and try again.
     pause
     exit /b 1
 )
