@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import json
-import struct
 from pathlib import Path
+import struct
 
 from fastapi.testclient import TestClient
 
@@ -312,7 +312,8 @@ def test_modular_assembly_recipe_survives_profile_reopen_and_reassembly(
     )
     assert reopened_profile.status_code == 200
     assert reopened_profile.json()["data"]["asset"]["assembly"]["parts"] == recipe["parts"]
-    assert reopened_profile.json()["data"]["asset"]["assembly"]["accessories"] == recipe["accessories"]
+    reopened_recipe = reopened_profile.json()["data"]["asset"]["assembly"]
+    assert reopened_recipe["accessories"] == recipe["accessories"]
 
     # Reassemble exclusively from the persisted recipe, as the UI does after
     # restoring source manifests; no original selector state is reused.
