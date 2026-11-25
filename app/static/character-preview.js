@@ -341,10 +341,12 @@ export async function exportCharacterTurnaround({ width = 1024, transparent = tr
   const previousBackground = scene.background;
   const previousClearColor = renderer.getClearColor(new THREE.Color()).clone();
   const previousClearAlpha = renderer.getClearAlpha();
-  const offset = previousPosition.clone().sub(previousTarget);
+  frameCharacter("full");
+  const turnaroundTarget = controls.target.clone();
+  const offset = camera.position.clone().sub(turnaroundTarget);
   const horizontalRadius = Math.max(Math.hypot(offset.x, offset.z), 0.01);
   const baseAngle = Math.atan2(offset.x, offset.z);
-  const labels = ["Current", "Side", "Rear", "Opposite"];
+  const labels = ["3/4", "Side", "Back", "Opposite"];
   const sheet = window.document.createElement("canvas");
   sheet.width = tileSize * 2;
   sheet.height = tileSize * 2;
@@ -370,11 +372,11 @@ export async function exportCharacterTurnaround({ width = 1024, transparent = tr
     for (let index = 0; index < 4; index += 1) {
       const angle = baseAngle + (Math.PI / 2) * index;
       camera.position.set(
-        previousTarget.x + Math.sin(angle) * horizontalRadius,
-        previousTarget.y + offset.y,
-        previousTarget.z + Math.cos(angle) * horizontalRadius,
+        turnaroundTarget.x + Math.sin(angle) * horizontalRadius,
+        turnaroundTarget.y + offset.y,
+        turnaroundTarget.z + Math.cos(angle) * horizontalRadius,
       );
-      camera.lookAt(previousTarget);
+      camera.lookAt(turnaroundTarget);
       controls.update();
       renderer.render(scene, camera);
       const blob = await captureTile();
