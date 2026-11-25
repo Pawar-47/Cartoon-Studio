@@ -1,50 +1,61 @@
-# P1.4 — Self-contained Windows Installer and Lifecycle Verification
+# P1.4 Installer Validation Report
 
 **Date:** 2026-11-25  
 **Repository:** Pawar-47/Cartoon-Studio  
 **Branch:** main  
-**Verified implementation commit:** `24f1617cff4d592e981908c7ceea641225c05ac0`  
-**Windows CI:** [Run #175 — SUCCESS](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45585234644)
+**Status:** COMPLETE
 
-## Delivered
+## Build
 
-- PyInstaller onedir bundles for Cartoon Studio 0.1.0 and 0.1.1.
-- NSIS 3.13.0 per-user installers; the installed app does not require a separately installed Python runtime.
-- Default program directory: `%LOCALAPPDATA%\\Programs\\Cartoon Studio`.
-- Start Menu and desktop shortcuts, per-user install metadata and an uninstaller.
-- User data remains separate under `%LOCALAPPDATA%\\CartoonStudio`, with `CARTOON_STUDIO_DATA` available for explicit override.
-- Upgrade replaces only known application-owned files and does not invoke the previous uninstaller during the new install.
-- Uninstaller restores the real install directory from the per-user registry before deleting program files. User project data is intentionally outside the install directory.
+- Self-contained Python application built with PyInstaller one-folder.
+- Version 0.1.0 and 0.1.1 bundles built from the same locked Python environment.
+- NSIS 3.13.0 generated versioned per-user Windows installers.
+- Installer does not require a separately installed Python or Node.js runtime.
+- Start Menu and desktop shortcuts are created.
+- Program files are installed under `%LOCALAPPDATA%\Programs\Cartoon Studio`.
+- Project data remains separate from program files.
 
-## Windows CI acceptance evidence
+## Windows CI evidence
 
-The smoke test uses the actual versioned installers on a clean Windows runner:
+- [Run #175 — SUCCESS](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45585234644), commit `24f1617cff4d592e981908c7ceea641225c05ac0`.
+- [Run #176 — SUCCESS](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45585584886), commit `815cc32a1cb56c3357c37310745e900a8a197c7f`.
+- Both runs passed the full installer lifecycle. Run #176 additionally included temporary uninstaller lifecycle diagnostics; those diagnostics are not retained in the production installer script.
 
-1. Install version 0.1.0 silently.
-2. Launch the installed executable and wait for the real health endpoint.
-3. Create a project and verify its portable project document exists.
-4. Install version 0.1.1 over version 0.1.0.
-5. Launch version 0.1.1 and verify the project created before upgrade remains available.
-6. Uninstall and verify program files, install directory, Start Menu shortcut, desktop shortcut and per-user registry keys are removed.
-7. Verify the project document remains intact.
-8. Reinstall version 0.1.1, launch it and verify the same project remains readable.
-9. Uninstall again and verify project data still exists.
+## Acceptance sequence
 
-**CI #175 passed every step**, including lint, Python compilation, the 22-test application suite, bootstrap extraction/launcher smoke, both PyInstaller builds, NSIS compilation, installer lifecycle and artifact uploads.
+1. Build application version 0.1.0 and compile its NSIS installer.
+2. Build application version 0.1.1 and compile its NSIS installer.
+3. Install version 0.1.0 silently into the per-user program directory.
+4. Launch the installed application and verify its health endpoint and UI.
+5. Create a project and save it to an isolated persistent data directory.
+6. Install version 0.1.1 over version 0.1.0.
+7. Launch version 0.1.1 and confirm the original project remains available.
+8. Uninstall and wait for NSIS's temporary uninstaller process to complete.
+9. Confirm program files and shortcuts are removed while project data remains.
+10. Reinstall version 0.1.1 and confirm the same project can still be opened.
+11. Uninstall again and confirm project data remains intact.
 
-## Uploaded artifacts from run #175
+## Artifacts from run #176
 
-| Artifact | Size | Artifact ID |
-|---|---:|---:|
-| Cartoon-Studio-Windows-Installer | 17,543,577 bytes | 15009070345 |
-| Cartoon-Studio-Windows-Bootstrap | 259,634 bytes | 15008472421 |
-| Cartoon-Studio-Dependency-SBOM | 31,634 bytes | 15008008481 |
+| Artifact | GitHub artifact ID |
+|---|---:|
+| Cartoon-Studio-Windows-Installer | 15008168874 |
+| Cartoon-Studio-Windows-Bootstrap | 15007954336 |
+| Cartoon-Studio-Dependency-SBOM | 15008014096 |
 
-Download the installer from the [run #175 Actions artifacts](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45585234644).
+Open the [run #176 page](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45585584886) to download the artifacts.
 
-## Boundaries
+## Technical notes
 
-- The installer lifecycle is verified on GitHub's clean Windows runner; no installation on the user's personal PC was required.
-- Actual target-PC frame-time, memory and rendering benchmarks remain Phase 8 and do not block Phase 2.
-- No code signing, automatic update service, production 3D character creation, Urdu TTS, lip-sync or final episode rendering is claimed complete.
-- The bootstrap ZIP remains available as a separate Python-dependent development/portable route.
+- NSIS silently starts a temporary copy of its uninstaller. The smoke test waits for the temporary process to finish before inspecting removed files.
+- The uninstaller restores the real installation directory from the per-user registry in `un.onInit`; it removes known application-owned files and shortcuts only.
+- User project data is intentionally stored outside the installation directory and is not deleted by upgrade or uninstall.
+- The test uses an isolated `CARTOON_STUDIO_DATA` directory to avoid contaminating the GitHub runner account.
+- The application default data path is `%LOCALAPPDATA%\CartoonStudio`.
+
+## Limitations and release caveat
+
+- No installation was performed on the user's personal PC; this is not required for phase progression.
+- No target-PC rendering/performance benchmark was performed; those measurements belong to Phase 8.
+- The repository still has no root project `LICENSE`. The artifacts are CI validation outputs, not authorization for public redistribution. The project owner must approve the project license and final dependency notices before a public release.
+- Godot is not yet included in the installer; that is P2.1 work.

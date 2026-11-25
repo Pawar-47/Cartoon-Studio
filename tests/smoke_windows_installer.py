@@ -96,39 +96,56 @@ def uninstall(install_dir: Path) -> None:
         raise AssertionError("Installed uninstaller is missing.")
     subprocess.run([str(uninstaller), "/S"], check=True, timeout=180)
 
-    # NSIS runs a temporary copy of the uninstaller. Wait for that copy to
-    # finish deleting the original installation directory.
+    # NSIS starts a temporary copy of the uninstaller and exits the original
+    # process first. Wait for that child process to finish its cleanup.
     deadline = time.monotonic() + 45
-    while install_dir.exists():
+    executable = install_dir / "CartoonStudio.exe"
+    while uninstaller.exists() or executable.exists():
         if time.monotonic() >= deadline:
             break
         time.sleep(0.25)
 
-    if install_dir.exists():
-        remaining = sorted(path.name for path in install_dir.iterdir())
-        registry = [
-            subprocess.run(
+    if executable.exists() or uninstaller.exists():
+        registry32 = subprocess.run(
+            ["reg", "query", r"HKCU\Software\CartoonStudio", "/s", "/reg:32"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        registry64 = subprocess.run(
+            ["reg", "query", r"HKCU\Software\CartoonStudio", "/s", "/reg:64"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        remaining = (
+            sorted(path.name for path in install_dir.iterdir())
+            if install_dir.exists()
+            else []
+        )
+        raise AssertionError(
+            f"Uninstaller did not finish cleanup; remaining files={remaining!r}; "
+            f"registry32={registry32.stdout + registry32.stderr!r}; "
+            f"registry64={registry64.stdout + registry64.stderr!r}"
+        )
+
+    registry_keys = (
+        r"HKCU\Software\CartoonStudio",
+        r"HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\CartoonStudio",
+    )
+    for key in registry_keys:
+        for view in ("/reg:32", "/reg:64"):
+            result = subprocess.run(
                 ["reg", "query", key, "/s", view],
                 check=False,
                 capture_output=True,
                 text=True,
             )
-            for key in (
-                r"HKCU\\Software\\CartoonStudio",
-                r"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\CartoonStudio",
-            )
-            for view in ("/reg:32", "/reg:64")
-        ]
-        raise AssertionError(
-            f"Uninstaller left program directory {install_dir}; files={remaining!r}; "
-            f"registry={[item.stdout + item.stderr for item in registry]!r}"
-        )
-
-    assert_registry_key_absent(r"HKCU\\Software\\CartoonStudio")
-    assert_registry_key_absent(
-        r"HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\CartoonStudio"
-    )
-
+            if result.returncode == 0:
+                raise AssertionError(
+                    f"Uninstaller left registry key {key} ({view}): "
+                    f"{result.stdout + result.stderr}"
+                )
 
 def main() -> int:
     if len(os.sys.argv) != 3:
@@ -161,13 +178,6 @@ def main() -> int:
             Path(os.environ["USERPROFILE"]) / "Desktop" / "Cartoon Studio.lnk"
         )
 
-        for view in ("/reg:32", "/reg:64"):
-            subprocess.run(
-                ["reg", "delete", r"HKCU\Software\CartoonStudioDebug", "/f", view],
-                check=False,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
         install(v1_installer)
         executable = install_dir / "CartoonStudio.exe"
         if not executable.is_file():

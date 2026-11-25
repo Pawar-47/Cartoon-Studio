@@ -1,29 +1,45 @@
 # Project Status — 2026-11-25
 
 ## Live checkpoint
+
 - Repository: Pawar-47/Cartoon-Studio
 - Branch: main
-- Implementation checkpoint: Phase 1 closed after P1.4 clean-install/upgrade/uninstall/reinstall verification; P2.1 is next.
-- Latest fully verified Windows CI: [run #175 — SUCCESS](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45585234644), commit `24f1617cff4d592e981908c7ceea641225c05ac0`. All P1.4 lifecycle checks passed.
-- Result: exact uv lock verified; locked environment installed; Ruff, compile and 22 pytest tests passed; runtime requirements and CycloneDX SBOM exported; Windows bootstrap ZIP built; actual start.bat launched from a clean extraction; HTTP dashboard/static/API, project create/open and restart persistence passed; both artifacts uploaded. The old TestClient/httpx warning is resolved through the locked httpx2 test dependency.
-- Godot native-worker proof #3 and FFmpeg MP4 assembly proof: SUCCESS; see docs/P0_6_PROOF_REPORT.md.
-- SQLite queue prototype: Windows CI run #101 SUCCESS; 17 tests passed.
-- Original 25-part prompt preserved verbatim at docs/MASTER_EXECUTION_PROMPT.md.
-- Requirements registry: 171 atomic rows; traceability: 171 rows; architecture crosswalk: 171 rows.
+- Phase 0: COMPLETE.
+- Phase 1: COMPLETE — P1.1 through P1.4 passed their implementation and Windows CI acceptance checks.
+- Phase 2: ACTIVE — next batch is P2.1, the Godot native-worker integration required by Character Studio.
+- Latest successful Windows CI: [run #176 — SUCCESS](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45585584886), validating commit `815cc32a1cb56c3357c37310745e900a8a197c7f`.
+- Run #176 passed exact dependency locking, Ruff, Python compilation, 22 pytest tests, bootstrap packaging/launch, two self-contained app builds, NSIS installer compilation, clean install, app launch, v1-to-v2 upgrade, project-data preservation, uninstall, reinstall and artifact uploads.
+- Artifacts from run #176: Windows installer (15008168874), bootstrap ZIP (15007954336), CycloneDX SBOM (15008014096).
+- P1.4 detailed evidence: `docs/P1_4_INSTALLER_REPORT.md`.
+- Godot 4.7.2 native-worker functional proof, FFmpeg assembly proof and SQLite queue prototype: `docs/P0_6_PROOF_REPORT.md`.
+- Original 25-part brief is preserved verbatim at `docs/MASTER_EXECUTION_PROMPT.md`.
+- Requirements registry, requirement traceability and architecture crosswalk each contain 171 corresponding IDs.
 
 ## Phase status
 
 | Phase | Status | Evidence / limitation |
 |---|---|---|
-| Phase 0 — Specification/research/architecture | COMPLETE | P0.1–P0.7 closed; see P0_7_PHASE0_EXIT_REVIEW.md |
-| Phase 1 — GitHub and CI/CD foundation | COMPLETE | P1.1–P1.4 verified in Windows CI; self-contained installer lifecycle passed on a clean runner. User-PC performance testing remains Phase 8, not a gate. |
-| Phase 2 — Character Studio | READY — P2.1 next | No production character creation/import/rig/face studio |
+| Phase 0 — Specification/research/architecture | COMPLETE | P0.1–P0.7 closed; architecture freeze and bounded proofs recorded |
+| Phase 1 — GitHub and CI/CD foundation | COMPLETE | P1.1–P1.4; clean Windows bootstrap and self-contained installer lifecycle passed |
+| Phase 2 — Character Studio | ACTIVE — P2.1 | Godot worker integration is next; no production character editor is claimed complete yet |
 | Phase 3 — World Builder | NOT STARTED | No persistent production world/location builder |
-| Phase 4 — Story and Scene Engine | PARTIAL / FROZEN | Early Story Generator and saved story plan preserved; Ara-derived IDs are validation-only and must be normalized in Phase 4 |
-| Phase 5 — Animation Engine | NOT STARTED | No canonical action library, retargeting or production timeline |
+| Phase 4 — Story and Scene Engine | PARTIAL / FROZEN | Existing Story Generator and saved story plan preserved; Ara-derived IDs remain validation-only until Phase 4 normalization |
+| Phase 5 — Animation Engine | NOT STARTED | No canonical production action library, retargeting or timeline |
 | Phase 6 — Urdu Voice and Lip-Sync | RESEARCH COMPLETE; IMPLEMENTATION NOT STARTED | Human recording fallback planned; no production TTS/lip-sync model approved |
 | Phase 7 — Episode Generator | NOT STARTED | No complete scene renderer, audio mix or end-to-end 5–7 minute MP4 |
 | Phase 8 — Optimization and Reliability | DEFERRED | Actual target-PC measurements and four quality profiles belong here |
+
+## Frozen architecture
+
+- Python 3.11+ / FastAPI / Uvicorn / Pydantic / stdlib SQLite.
+- Existing browser UI remains the primary control plane.
+- Godot 4.7.2-stable Compatibility is selected as the native 3D runtime behind a supervised worker and versioned engine adapter.
+- Engine-neutral versioned JSON documents and stable Cartoon Studio IDs; portable project files; SQLite local index/job journal.
+- App-owned sequential SQLite queue with per-scene checkpoints, leases, retries, cancellation and recovery.
+- FFmpeg process adapter; final production codec/build remains a release decision.
+- AI/cloud TTS optional; manual handoff and human-recorded Pakistani Urdu remain supported.
+- Optional Godot Web viewport deferred.
+- Physical-PC performance tests are Phase 8 only.
 
 ## Phase 0 closeout
 
@@ -35,51 +51,37 @@
 - P0.6: Godot 4.7.2 GLB/animation/save/reopen/MovieWriter proof, FFmpeg MP4 assembly proof and SQLite queue semantics proof passed in hosted CI.
 - P0.7: architecture freeze and Phase 0 exit review complete.
 
-## Frozen architecture
+## Phase 1 closeout
 
-- Python 3.11+ / FastAPI / Uvicorn / Pydantic / stdlib SQLite.
-- Existing browser UI remains primary control plane.
-- Godot 4.7.2-stable Compatibility is selected as native 3D runtime behind a supervised worker/engine adapter.
-- Engine-neutral versioned JSON documents and stable Cartoon Studio IDs; portable project files; SQLite local index/job journal.
-- App-owned sequential SQLite queue with per-scene checkpoints, leases, retries, cancellation and recovery.
-- FFmpeg process adapter; final production codec/build remains a release decision.
-- AI/cloud TTS optional; manual handoff and human-recorded Pakistani Urdu remain supported.
-- Optional Godot Web viewport deferred.
-- Physical-PC performance tests are Phase 8 only.
+- P1.1: project lifecycle, SQLite migrations, portable project/episode JSON, atomic writes and recovery.
+- P1.2: exact uv lock, hash-locked runtime requirements, lock consistency, Ruff, compile, 22 tests and CycloneDX SBOM.
+- P1.3: portable Windows bootstrap; clean extraction, actual `start.bat` launch, HTTP/UI/API, project create/open and restart persistence.
+- P1.4: self-contained PyInstaller application and NSIS installer; clean install, launch, upgrade, data preservation, uninstall and reinstall passed in Windows CI #176.
+- Full evidence: `docs/P1_4_INSTALLER_REPORT.md`.
 
-## P1.1 completed — project lifecycle and portable data foundation
+## Phase 2 active batch — P2.1 Godot worker integration
 
-- Added app/storage.py with per-user data directory selection and CARTOON_STUDIO_DATA override.
-- Added schema_migrations versions 1 and 2, SQLite foreign keys/busy timeout/WAL, and online database backup before legacy schema upgrades.
-- Added portable project.json documents, versioned episode JSON files, SHA-256 document index, atomic writes and startup reconciliation.
-- Added create/list/open/update project APIs and retained the existing story_plans table as a compatibility/index path.
-- Story plans now persist as portable episode documents and project references stay synchronized; file-to-database recovery is tested.
-- Legacy database migration preserves project UUIDs and story plans; missing portable files are reconstructed without deleting source records.
-- P1.1 report: docs/P1_1_FOUNDATION_REPORT.md.\n\n## P1.4 active batch — self-contained Windows installer\n\n- Built two versioned self-contained PyInstaller application bundles and NSIS installers.\n- Clean Windows bootstrap extraction and actual launcher test pass.\n- Installer build and compilation pass; current remaining issue is the v1-to-v2 upgrade smoke test failing to find the installed executable after upgrade.\n- Upgrade flow is being changed to replace only known program-owned files rather than invoking the previous uninstaller mid-install; project data remains outside the program directory.\n- Do not mark P1.4 complete until clean install, launch, upgrade with project preservation, uninstall, and reinstall all pass on Windows CI.
-- CI #115: 21 passed, Ruff/compile/package passed; one non-blocking Starlette TestClient/httpx deprecation warning remains for P1.2 review.
-
-## P1.2 completed batch — reproducible dependencies and CI
-
-- Resolve exact direct/transitive Python dependency lock and supported Python baseline.
-- Address the Starlette TestClient warning using the supported test transport dependency path; do not suppress warnings.
-- Make CI install from the lock, validate lock consistency, run lint/compile/tests, and package the same locked environment.
-- Record build metadata and produce a dependency/SBOM notice inventory.
-- Preserve Windows CI and keep P1.3/P1.4 packaging work in sequence.
+- Download the official Godot 4.7.2-stable Windows x86_64 release using its published SHA-256 digest.
+- Include Godot's MIT license/copyright notice and record the exact runtime binary in the dependency inventory.
+- Implement a supervised Python engine adapter with executable discovery, version/capability handshake, bounded requests, timeouts, cancellation, structured logs and safe project-relative paths.
+- Implement a minimal Godot worker protocol and verify GLB import/inspection plus structured JSON request/response in Windows CI.
+- Package the Godot runtime with the self-contained application; do not require a separate user installation.
+- Keep the browser/FastAPI control plane. Do not replace the existing app shell or expand the frozen Story Generator.
+- P2.1 is complete only when the worker launches from the packaged app, reports the pinned version/capabilities, imports the fixture and passes path/error/restart tests.
 
 ## Explicit risks and deferred decisions
 
-- No root LICENSE file exists; project distribution license must be approved before public redistribution or copyleft bundling.
+- No root LICENSE file exists; project distribution license must be approved before public redistribution or copyleft bundling. Current GitHub artifacts are CI validation outputs, not authorization for a public release.
 - Urdu TTS and lip-sync quality remain unproven; Phase 6 sample evaluation and manual fallbacks.
 - Final MP4 codec and redistributable FFmpeg build remain unresolved.
 - No actual target-PC benchmark exists or is required before Phase 8.
-- The bootstrap ZIP remains a separate Python-dependent development/portable route; the self-contained NSIS installer is now available as a CI artifact.
 - No production character/world/animation/rendering/audio/episode pipeline is claimed complete.
 
 ## Operating rules
 
 - GitHub main is the only source of truth; preserve existing work.
 - Execute substantial coherent batches and commit once per completed batch.
-- Run CI after the batch; report exact evidence.
+- Run CI after the batch; report what was implemented, tested and verified separately.
 - No mandatory paid API, cloud rendering or online activation.
 - Never send user audio/content to external providers without explicit approval.
 - Never claim code presence or a candidate proof as production functionality.

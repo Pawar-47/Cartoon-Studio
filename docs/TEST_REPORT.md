@@ -1,10 +1,10 @@
 # Test Report — 2026-11-25
 
 ## Current repository checkpoint
-- Latest tested implementation commit: d60def463e34575bab26b3a5da6c573b4f2bc4ee.
-- GitHub Actions run #136: SUCCESS on Windows 2022 / Python 3.11; workflow: https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45571086576.
-- Dependency resolver run #11: SUCCESS; workflow: https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45571086600.
-- Current bootstrap remains a Python-dependent portable ZIP, not a self-contained installer. The clean-runner test proves the packaged launcher and local persistence, not target-PC performance.
+- Latest verified Windows CI: [run #176 — SUCCESS](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45585584886), commit 815cc32a1cb56c3357c37310745e900a8a197c7f.
+- Run #176 passed exact dependency locking, Ruff, compilation, 22 pytest tests, bootstrap launcher smoke, self-contained PyInstaller builds, NSIS installer compilation, clean install, launch, upgrade, project-data preservation, uninstall, reinstall and artifact upload.
+- Artifacts: installer 15008168874, bootstrap 15007954336, SBOM 15008014096.
+- The self-contained installer no longer requires a user-installed Python/Node runtime. The separate bootstrap ZIP still requires Python 3.11.
 
 ## P0.5 architecture and dependency documentation
 - Registry and traceability were parsed from live GitHub: 171 unique requirement IDs in each; exact ID-set equality; no missing or extra IDs.
@@ -84,3 +84,15 @@ See P0_6_PROOF_REPORT.md for exact run IDs, acceptance checks and limitations.
 - Exact verified commit: `24f1617cff4d592e981908c7ceea641225c05ac0`.
 - Artifacts: installer 17,543,577 bytes (ID `15009070345`); bootstrap 259,634 bytes (ID `15008472421`); CycloneDX SBOM 31,634 bytes (ID `15008008481`).
 - Limitations: no code signing or automatic updater is claimed; no installation on the user's personal PC or target-PC performance benchmark was performed or required. Target-PC optimization remains Phase 8.
+
+
+## P1.4 self-contained Windows installer — 2026-11-25
+
+- Windows CI run #175: SUCCESS on commit 24f1617cff4d592e981908c7ceea641225c05ac0.
+- Windows CI run #176: SUCCESS on commit 815cc32a1cb56c3357c37310745e900a8a197c7f.
+- Both runs built application versions 0.1.0 and 0.1.1, compiled NSIS installers, installed v1, launched the app, created a project, upgraded to v2, confirmed project preservation, uninstalled, reinstalled v2 and confirmed the same project remained available.
+- Uninstall removed program files and Start Menu/desktop shortcuts while preserving the isolated project-data directory.
+- NSIS uninstaller path restoration is handled in un.onInit; the smoke test waits for the temporary uninstaller process to finish before checking cleanup.
+- Artifacts from run #176: Cartoon-Studio-Windows-Installer (15008168874), Cartoon-Studio-Windows-Bootstrap (15007954336), Cartoon-Studio-Dependency-SBOM (15008014096).
+- Full acceptance detail: docs/P1_4_INSTALLER_REPORT.md.
+- No target-PC performance benchmark or user-PC installation was performed or required. Public redistribution remains subject to the project owner's license decision.

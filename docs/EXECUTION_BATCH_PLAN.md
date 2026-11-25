@@ -20,24 +20,24 @@ P0.2 checkpoint: atomic registry and traceability were expanded on 2026-11-25. T
 
 ## Phase 1 — GitHub and CI/CD Foundation
 
-**Phase 1 is COMPLETE.** P1.1–P1.3 passed their Windows CI acceptance tests. P1.4 passed clean install, launch, v1-to-v2 upgrade with project preservation, uninstall, reinstall and final data-retention checks in [CI run #175](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45585234644) on commit `24f1617cff4d592e981908c7ceea641225c05ac0`. Phase 2 is now ready; do not treat user-PC performance testing as a gate.
+**Phase 1 is COMPLETE.** P1.1–P1.4 passed the required implementation and Windows CI acceptance checks. Windows CI #176 validated the self-contained installer lifecycle and uploaded the installer, bootstrap and SBOM. Phase 2 is now active; P2.1 is the Godot worker/runtime integration required by Character Studio.
 
 | Batch | Scope | Deliverables | Exit evidence | State |
 |---|---|---|---|---|
 | P1.1 | Harden existing FastAPI app, project lifecycle, SQLite persistence and versioned local data layout | app/storage.py, project APIs, portable project/episode JSON, numbered migrations and integration tests | Create/list/open/update/save/load/restart, legacy DB backup/migration, portable-file recovery and data-preservation tests | COMPLETE — CI #115 passed 21 tests; the later P1.2 dependency update removed the legacy TestClient warning |
 | P1.2 | Reproducible dependencies, lint/static checks and CI | pyproject.toml, uv.lock, hash-locked requirements.lock, CI and CycloneDX SBOM | Clean Windows runner installs exact lock, checks lock freshness, lints, compiles, tests and packages | COMPLETE — CI #125 and lock workflow #11 passed; Python 3.11 Windows runner; no TestClient deprecation warning |
 | P1.3 | Portable Windows package and simple launcher | Hash-locked bootstrap ZIP, start.bat, configurable port/data path and clean-runner smoke test | Extract into a clean temporary directory, run actual launcher, exercise UI/API, create/open a project, restart and confirm persistence | COMPLETE — Windows CI #136 passed actual start.bat launch, HTTP/static/API checks and project persistence after restart; no user-PC test required |
-| P1.4 | Self-contained installer, upgrade and data migration | PyInstaller self-contained bundle, NSIS installer, per-user shortcuts and lifecycle smoke test | Clean install/launch, v1-to-v2 upgrade with project preservation, uninstall, reinstall and data retention | COMPLETE — Windows CI #175 passed the complete lifecycle; installer, bootstrap and SBOM artifacts uploaded |
+| P1.4 | Self-contained installer, upgrade and data migration | PyInstaller self-contained bundle, NSIS installer, per-user shortcuts and lifecycle smoke test | Clean install/launch, v1-to-v2 upgrade with project preservation, uninstall, reinstall and data retention | COMPLETE — Windows CI #176 passed the full lifecycle and uploaded installer artifacts |
 
-**Phase 1 exit gate: PASSED.** P1.1–P1.4 deliver the tested local app, repeatable Windows artifacts, self-contained installer, clean install/upgrade/uninstall/reinstall validation and persistent user data. User-PC installation and target-PC performance are not prerequisites for Phase 2; performance is P8.1.
+**Phase 1 exit gate: PASSED.** P1.1–P1.4 delivered the tested local app, repeatable Windows artifacts, self-contained installer, clean install/upgrade/uninstall validation and persistent user data. No installation on the user's PC or target-PC performance measurement is required to begin Phase 2; performance remains P8.1.
 
 ## Phase 2 — Character Studio
 
 | Batch | Scope | Deliverables | Exit evidence | State |
 |---|---|---|---|---|
-| P2.1 | Integrate the Phase 0-selected engine adapter as required by Character Studio | Pinned Godot component, adapter, notices and reproducible character workflow | Build, import, adapter, license and character save/reopen tests | READY — Phase 0 and Phase 1 exit gates passed; start with source/license audit |
-| P2.2 | Original toon character creation/import, rigging and skinning | Character create/import/rig workflow | Create/import, preview, save/reopen and animate test | NOT STARTED |
-| P2.3 | Character identity, expressions, clothing, relationships and persistence | Persistent character library | Cross-scene and cross-episode identity tests | NOT STARTED |
+| P2.1 | Integrate Godot 4.7.2 as the supervised native worker behind FastAPI for Character Studio | SHA-256-pinned Windows runtime, MIT notices, Python engine adapter, JSON worker protocol, package integration and Windows CI tests | Bundled worker launches; version/capability handshake passes; GLB fixture imports; unsafe paths are rejected; timeout, failure and process cleanup tests pass | ACTIVE |
+| P2.2 | Original toon character creation/import, rigging and skinning | Recipe-based character creator, modular appearance, face/rig adapter and preview workflow | Create/import original toon character, inspect preview, save/reopen and animate | NOT STARTED |
+| P2.3 | Character identity, expressions, clothing, relationships and persistence | Versioned character profiles and persistent library | Edit/save/reopen and reuse the same character across scenes and episodes without identity drift | NOT STARTED |
 
 ## Phase 3 — World Builder
 

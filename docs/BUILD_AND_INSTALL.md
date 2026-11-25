@@ -1,33 +1,54 @@
 # Build and Install
 
 ## Local data and migration behavior
-- Windows default data root: %LOCALAPPDATA%\\CartoonStudio.
-- Override: set CARTOON_STUDIO_DATA to a custom writable directory before launching start.bat.
-- SQLite index: cartoon_studio.sqlite3; numbered schema_migrations table records database migrations.
-- Existing databases are backed up under backups/ before schema upgrades.
-- Each project has a portable projects/<project-id>/project.json document; saved episode plans are stored under projects/<project-id>/episodes/<episode-id>.json. SQLite indexes these documents and retains the legacy story_plans compatibility table.
-- The project JSON is versioned and uses stable project/episode IDs. Keep the entire project folder when copying or backing up project files.
 
-## Windows delivery artifacts
-Workflow: .github/workflows/ci.yml  
-Runner: windows-latest  
-Python: 3.11  
-Artifact: Cartoon-Studio-Windows-Bootstrap.zip
+- Windows default data root: `%LOCALAPPDATA%\CartoonStudio`.
+- Override: set `CARTOON_STUDIO_DATA` to a custom writable directory before launching the app.
+- SQLite index: `cartoon_studio.sqlite3`; numbered `schema_migrations` records database migrations.
+- Existing databases are backed up under `backups/` before schema upgrades.
+- Each project has a portable `projects/<project-id>/project.json` document; saved episode plans are stored under `projects/<project-id>/episodes/<episode-id>.json`.
+- User data is separate from program files. Upgrades and uninstall must preserve project data.
 
-The bootstrap ZIP is a Python-dependent source/runtime route. CI #136 extracted it into a clean Windows temporary directory and executed the actual launcher successfully.\n\nThe self-contained installer is built with PyInstaller onedir and NSIS 3.13.0. CI #175 built version 0.1.1 and passed clean install, launch, upgrade from 0.1.0, project-data preservation, uninstall and reinstall. Installer default path: `%LOCALAPPDATA%\\Programs\\Cartoon Studio`. User data remains under `%LOCALAPPDATA%\\CartoonStudio` (or `CARTOON_STUDIO_DATA` override). The installer creates Start Menu and desktop shortcuts and registers a per-user uninstaller.
+## Windows artifacts
 
-## Run on Windows
-1. Install Python 3.11 or newer.
-2. Extract the ZIP.
-3. Double-click start.bat (Python 3.11 must be installed and available through the Windows Python launcher).
-4. The script creates a virtual environment and installs the exact hash-locked runtime dependencies.
-5. The local server listens on http://127.0.0.1:8765. The browser opens automatically; if it does not, open that address manually.
-6. Optional automation settings: CARTOON_STUDIO_PORT changes the loopback port; CARTOON_STUDIO_DATA changes the user-data directory; CARTOON_STUDIO_NO_BROWSER=1 suppresses automatic browser opening.
+Latest successful workflow: [Windows CI run #176](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45585584886).
 
-Story Generator is available from the dashboard. It creates a prompt for a chosen AI provider; the user manually sends it to that provider, pastes the JSON response, validates it and saves the plan to a local project.
+| Artifact | Purpose | Availability |
+|---|---|---|
+| `Cartoon-Studio-Windows-Installer` | Self-contained per-user Windows installer; Python runtime bundled | CI artifact, 30-day retention |
+| `Cartoon-Studio-Windows-Bootstrap` | Portable source/runtime bootstrap ZIP; requires Python 3.11 | CI artifact, 14-day retention |
+| `Cartoon-Studio-Dependency-SBOM` | CycloneDX dependency inventory | CI artifact, 30-day retention |
+
+The installer is built with PyInstaller one-folder and NSIS 3.13.0. It installs under `%LOCALAPPDATA%\Programs\Cartoon Studio`, creates Start Menu and desktop shortcuts, and does not require a separately installed Python or Node.js runtime. The application stores project data separately under the per-user data directory.
+
+## Installer validation
+
+Windows CI #176 verifies:
+
+1. Clean per-user installation of version 0.1.0.
+2. First launch and health/API response.
+3. Project creation and save.
+4. Upgrade to version 0.1.1 without deleting the project.
+5. Uninstall removes program files and shortcuts while preserving project data.
+6. Reinstall of version 0.1.1 and recovery of the same project.
+7. Final uninstall again preserves user project data.
+
+The NSIS uninstaller runs a temporary copy; the application directory is restored from the per-user registry before file cleanup. The test waits for the temporary uninstaller to finish before inspecting the result.
+
+Detailed evidence: `docs/P1_4_INSTALLER_REPORT.md`.
+
+## Portable bootstrap
+
+The bootstrap ZIP includes `start.bat`, application source, docs and hash-locked runtime requirements. It requires Python 3.11 through the Windows Python launcher. CI extracts it into a clean temporary directory, executes the actual launcher, checks dashboard/static/API, creates/opens a project, restarts the application and verifies persistence.
 
 ## CI pipeline
-GitHub Actions verifies uv.lock, installs the exact locked environment, runs Ruff, Python compile checks and pytest, exports and drift-checks requirements.lock, generates a CycloneDX SBOM, packages the Windows ZIP, extracts it in a clean temporary directory, runs the real start.bat, tests HTTP/UI/API and project persistence across restart, then uploads the ZIP and SBOM. CI #136 passed this full sequence (22 pytest tests).
 
-## Planned final installer
-Godot 4.7.2 Compatibility is selected after a bounded hosted-runner proof. Package the application and static production assets into a self-contained Windows installer. Evaluate PyInstaller plus NSIS or an equivalent packaging route. The final installer should not require the user to manually install Python or Node.js. Do not bundle large models or assets until their size and license are verified. Target-PC performance tuning remains Phase 8 and is not an installer prerequisite.
+`.github/workflows/ci.yml` verifies `uv.lock`, installs the exact locked environment, runs Ruff, Python compile checks and pytest, exports and drift-checks `requirements.lock`, generates a CycloneDX SBOM, packages the bootstrap, builds both self-contained application versions, compiles the NSIS installers, exercises the complete installer lifecycle and uploads all artifacts.
+
+## Release and licensing caveat
+
+The project has no root `LICENSE` file yet. CI artifacts validate the build and installer; they are not authorization for a public software release. The project owner must approve the project's own distribution license and any remaining bundled dependency notices before public redistribution.
+
+## Next integration milestone
+
+Phase 2 P2.1 adds the pinned Godot 4.7.2 Windows runtime as a bundled native worker behind the FastAPI/browser control plane. The Godot executable must be SHA-256 verified and its MIT license/copyright notice included. The worker must not require a separate user installation.
