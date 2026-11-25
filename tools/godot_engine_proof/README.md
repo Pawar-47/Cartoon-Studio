@@ -226,3 +226,8 @@ def test_character_retarget_api_rejects_invalid_hierarchy_before_engine_call(
 `fixtures/proof_humanoid_retarget_target.glb` is generated from the source humanoid fixture by `generate_retarget_target_fixture.py`. The generator changes arm and leg rest lengths, reorders the 15 skin joints, remaps the mesh JOINTS_0 indices, recalculates inverse-bind matrices and applies Mixamo-style bone names. The target has no animation clips. The source fixture is not modified.
 
 The pinned Godot worker test imports the source and target as separate GLBs, checks their complete indexed humanoid mappings and changed rest offsets, creates and reopens the retarget scene, verifies source animation playback and target upper-arm pose transfer, and checks both original files remain byte-identical. The raw glTF skin-joint and child order differ; Godot may normalize the imported Skeleton3D bone indices, so the app always uses the indices reported by its actual Godot inspection rather than assuming the raw GLB order. This is still a controlled fixture proof, not broad acceptance of arbitrary third-party GLBs.
+
+
+### Non-canonical animated source fixture
+
+`fixtures/proof_humanoid_retarget_source.glb` preserves the source fixture's animation and skin data while renaming its 15 humanoid nodes to Mixamo-style names. `generate_retarget_source_fixture.py` recreates it. The worker must remap the animation's bone-track paths when it normalizes imported Skeleton3D bone names to the Godot humanoid profile, then prove that the source animation still plays and transfers to the differently ordered target rig.

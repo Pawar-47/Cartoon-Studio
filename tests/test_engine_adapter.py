@@ -208,7 +208,7 @@ def test_pinned_godot_worker_creates_non_destructive_retarget_scene(tmp_path):
         / "godot_engine_proof"
         / "fixtures"
     )
-    source_fixture = fixture_dir / "proof_humanoid.glb"
+    source_fixture = fixture_dir / "proof_humanoid_retarget_source.glb"
     target_fixture = fixture_dir / "proof_humanoid_retarget_target.glb"
     assert source_fixture.is_file(), "The source humanoid fixture is unavailable."
     assert target_fixture.is_file(), "The retarget target fixture is unavailable."
@@ -233,6 +233,9 @@ def test_pinned_godot_worker_creates_non_destructive_retarget_scene(tmp_path):
     source_mapping = source_rig["godot_profile_mapping"]
     target_mapping = target_rig["godot_profile_mapping"]
     assert len(source_mapping) == len(target_mapping) == 15
+    assert source_mapping["LeftUpperArm"]["source_name"] == "mixamorig:LeftArm"
+    assert target_mapping["LeftUpperArm"]["source_name"] == "mixamorig:LeftArm"
+    assert source_mapping["LeftUpperArm"]["bone_index"] != target_mapping["LeftUpperArm"]["bone_index"]
     assert (
         target_mapping["LeftLowerArm"]["source_name"]
         != source_mapping["LeftLowerArm"]["source_name"]
