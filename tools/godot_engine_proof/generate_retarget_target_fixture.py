@@ -68,7 +68,9 @@ def _global_translations(nodes: list[dict]) -> dict[int, tuple[float, float, flo
             result = tuple(float(value) for value in local)
         else:
             parent_global = visit(parent)
-            result = tuple(parent_global[axis] + float(local[axis]) for axis in range(3))
+            result = tuple(
+                parent_global[axis] + float(local[axis]) for axis in range(3)
+            )
         cache[index] = result
         return result
 
@@ -92,16 +94,24 @@ def generate_target_fixture(source_path: Path, output_path: Path) -> None:
 
     skin = document["skins"][0]
     old_joints = list(skin["joints"])
-    if len(old_joints) != len(JOINT_ORDER) or sorted(JOINT_ORDER) != list(range(len(old_joints))):
-        raise ValueError("Fixture joint order does not match the generator permutation.")
-    old_to_new = {old_index: new_index for new_index, old_index in enumerate(JOINT_ORDER)}
+    if len(old_joints) != len(JOINT_ORDER) or sorted(JOINT_ORDER) != list(
+        range(len(old_joints))
+    ):
+        raise ValueError(
+            "Fixture joint order does not match the generator permutation."
+        )
+    old_to_new = {
+        old_index: new_index for new_index, old_index in enumerate(JOINT_ORDER)
+    }
 
     primitive = document["meshes"][0]["primitives"][0]
     joints_accessor = document["accessors"][primitive["attributes"]["JOINTS_0"]]
     if joints_accessor["componentType"] != 5121 or joints_accessor["type"] != "VEC4":
         raise ValueError("Fixture JOINTS_0 must use unsigned-byte VEC4 data.")
     joints_view = document["bufferViews"][joints_accessor["bufferView"]]
-    joints_offset = joints_view.get("byteOffset", 0) + joints_accessor.get("byteOffset", 0)
+    joints_offset = joints_view.get("byteOffset", 0) + joints_accessor.get(
+        "byteOffset", 0
+    )
     joints_stride = joints_view.get("byteStride", 4)
     for row in range(joints_accessor["count"]):
         for column in range(4):
@@ -118,7 +128,9 @@ def generate_target_fixture(source_path: Path, output_path: Path) -> None:
         or inverse_bind_accessor["type"] != "MAT4"
         or inverse_bind_accessor["count"] != len(old_joints)
     ):
-        raise ValueError("Fixture inverse-bind accessor is not a 15-matrix FLOAT MAT4 array.")
+        raise ValueError(
+            "Fixture inverse-bind accessor is not a 15-matrix FLOAT MAT4 array."
+        )
     inverse_bind_view = document["bufferViews"][inverse_bind_accessor["bufferView"]]
     inverse_bind_offset = (
         inverse_bind_view.get("byteOffset", 0)
