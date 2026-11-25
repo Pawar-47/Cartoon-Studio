@@ -85,7 +85,7 @@ def uninstall(install_dir: Path) -> None:
     if not uninstaller.is_file():
         raise AssertionError("Installed uninstaller is missing.")
     subprocess.run(
-        ["reg", "delete", r"HKCU\\Software\\CartoonStudioDebug", "/f"],
+        ["reg", "delete", r"HKCU\Software\CartoonStudioDebug", "/f"],
         check=False,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
@@ -110,7 +110,11 @@ def uninstall(install_dir: Path) -> None:
             capture_output=True,
             text=True,
         )
-        remaining = sorted(path.name for path in install_dir.iterdir()) if install_dir.exists() else []
+        remaining = (
+            sorted(path.name for path in install_dir.iterdir())
+            if install_dir.exists()
+            else []
+        )
         raise AssertionError(
             "Uninstaller left the main executable in place.\n"
             + "Uninstaller debug registry:\n"
