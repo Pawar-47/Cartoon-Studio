@@ -393,6 +393,7 @@ func _export_character_appearance(payload: Dictionary) -> Dictionary:
         return {"error_code": "appearance_export_prepare_failed", "error": "Godot could not prepare the edited character for GLB export.", "godot_error": export_error}
     var export_json: Dictionary = export_state.json
     var export_nodes: Array = export_json.get("nodes", [])
+    var morph_weights_by_node: Dictionary = {}
     for morph_mesh in morph_export_meshes:
         var gltf_node_index := export_state.get_node_index(morph_mesh)
         if gltf_node_index < 0:
@@ -412,6 +413,7 @@ func _export_character_appearance(payload: Dictionary) -> Dictionary:
         var node_data: Dictionary = export_nodes[gltf_node_index]
         node_data["weights"] = weights
         export_nodes[gltf_node_index] = node_data
+        morph_weights_by_node[gltf_node_index] = weights
     export_json["nodes"] = export_nodes
     export_state.json = export_json
     var output_error := export_document.write_to_filesystem(export_state, output_path)
@@ -420,6 +422,9 @@ func _export_character_appearance(payload: Dictionary) -> Dictionary:
         if FileAccess.file_exists(output_path):
             DirAccess.remove_absolute(output_path)
         return {"error_code": "appearance_export_failed", "error": "Godot could not write the customized GLB.", "godot_error": output_error}
+    if not morph_weights_by_node.is_empty() and not _patch_glb_node_weights(output_path, morph_weights_by_node):
+        DirAccess.remove_absolute(output_path)
+        return {"error_code": "morph_weights_patch_failed", "error": "Godot could not persist facial morph defaults in the exported GLB JSON."}
     var verification := _inspect_glb({"project_root": project_root, "source_path": output_path})
     if not bool(verification.get("ok", false)):
         DirAccess.remove_absolute(output_path)
@@ -429,6 +434,8 @@ func _export_character_appearance(payload: Dictionary) -> Dictionary:
         var material_verified := false
         var index := int(edit["surface_index"])
         for mesh_record in verification.get("mesh_inventory", []):
+            if str(mesh_record.get("node_name", "")) != str(edit["mesh_name"]):
+                continue
             var properties: Array = mesh_record.get("material_properties", [])
             if index >= properties.size() or properties[index].is_empty():
                 continue
@@ -932,6 +939,58 @@ func _read_glb_json(path: String) -> Dictionary:
     if typeof(parsed) == TYPE_DICTIONARY:
         return parsed
     return {}
+
+
+func _patch_glb_node_weights(path: String, weights_by_node: Dictionary) -> bool:
+    var bytes := FileAccess.get_file_as_bytes(path)
+    if bytes.size() < 20:
+        return false
+    if bytes.decode_u32(0) != 0x46546C67 or bytes.decode_u32(4) != 2:
+        return false
+    var declared_length := int(bytes.decode_u32(8))
+    var json_length := int(bytes.decode_u32(12))
+    if declared_length != bytes.size() or bytes.decode_u32(16) != 0x4E4F534A:
+        return false
+    if json_length <= 0 or json_length > bytes.size() - 20:
+        return false
+    var parsed: Variant = JSON.parse_string(
+        bytes.slice(20, 20 + json_length).get_string_from_utf8()
+    )
+    if typeof(parsed) != TYPE_DICTIONARY:
+        return false
+    var document: Dictionary = parsed
+    var nodes: Array = document.get("nodes", [])
+    for key in weights_by_node.keys():
+        var node_index := int(key)
+        if node_index < 0 or node_index >= nodes.size():
+            return false
+        if typeof(nodes[node_index]) != TYPE_DICTIONARY:
+            return false
+        var node: Dictionary = nodes[node_index]
+        node["weights"] = weights_by_node[key]
+        nodes[node_index] = node
+    document["nodes"] = nodes
+    var json_bytes := JSON.stringify(document).to_utf8_buffer()
+    while json_bytes.size() % 4 != 0:
+        json_bytes.append(0x20)
+    var trailing_chunks := bytes.slice(20 + json_length, bytes.size())
+    var header := bytes.slice(0, 12)
+    header.encode_u32(8, 12 + 8 + json_bytes.size() + trailing_chunks.size())
+    var json_chunk_header := PackedByteArray()
+    json_chunk_header.resize(8)
+    json_chunk_header.encode_u32(0, json_bytes.size())
+    json_chunk_header.encode_u32(4, 0x4E4F534A)
+    var patched := PackedByteArray()
+    patched.append_array(header)
+    patched.append_array(json_chunk_header)
+    patched.append_array(json_bytes)
+    patched.append_array(trailing_chunks)
+    var output := FileAccess.open(path, FileAccess.WRITE)
+    if output == null:
+        return false
+    output.store_buffer(patched)
+    output.close()
+    return FileAccess.get_file_as_bytes(path).size() == patched.size()
 
 
 func _glb_morph_default(
