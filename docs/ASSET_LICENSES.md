@@ -129,3 +129,15 @@ No VRM sample model, eSpeak binary or model has been downloaded or included in C
 | Multilingual eSpeak CTC model | https://huggingface.co/facebook/wav2vec2-lv-60-espeak-cv-ft | Apache-2.0 | Language list does not include Urdu; not selected for Urdu alignment |
 
 No alignment model weights were downloaded or bundled.
+
+
+## Additional engine and distribution-license evidence — 2026-11-25
+
+| Dependency | Official evidence | Decision |
+|---|---|---|
+| Godot Engine 4.7.2 | MIT license and third-party notice requirements: https://godotengine.org/license/ ; https://docs.godotengine.org/en/latest/about/complying_with_licenses.html | Leading native worker candidate; if distributed, include Godot license and third-party copyright notices. |
+| FFmpeg | Default LGPL-2.1+; optional GPL components and external libraries change obligations: https://ffmpeg.org/legal.html ; https://github.com/FFmpeg/FFmpeg/blob/master/LICENSE.md | Adapter boundary approved; no binary/codec selected. Do not enable GPL/nonfree or libx264 in an LGPL distribution build. |
+| PyInstaller | GPL-2.0 with bundling exception; generated bundles can be distributed under the application's license subject to dependency licenses: https://pyinstaller.org/en/stable/license.html | Phase 1 packaging candidate; pin release and audit dependencies. |
+| SQLite | Public domain: https://www.sqlite.org/copyright.html | Existing stdlib SQLite remains the local data/index layer. |
+
+**Project-level IP note:** no root LICENSE file is present in the repository tree at this checkpoint. This is not permission to assume any license for Cartoon Studio. Before redistribution, the project owner must decide the project license and approve any copyleft dependencies. Until then, avoid bundling GPL/AGPL code/models/assets and prefer permissive dependencies.

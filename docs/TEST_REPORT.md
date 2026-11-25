@@ -1,15 +1,24 @@
 # Test Report — 2026-11-25
 
 ## Current repository checkpoint
-- Main HEAD: 6823cdf8913fc6b645017a6b459c06062d2cc973.
-- GitHub Actions run #88: SUCCESS on that exact commit.
+- Main HEAD before this documentation batch: bbca69d5ff9933dd04233a1fd757d86c7e60e83d.
+- GitHub Actions run #93: SUCCESS on the last verified implementation/documentation baseline facb0dd738e227d643d4e85d80bd5d3f620fc6e1.
 - Prior app CI run #67 passed Ruff, Python compileall, 12 pytest tests, Windows bootstrap ZIP packaging and artifact upload.
 - Bootstrap artifact is not a self-contained installer and does not prove a clean target-PC installation.
 
-## P0.4 target-PC harness
-- Added scripts/run_target_pc_probe.ps1 and tools/godot_target_probe/.
-- Static source review only. No PowerShell execution or Godot renderer launch on the user's PC has occurred.
+## P0.5 architecture and dependency documentation
+- Registry and traceability were parsed from live GitHub: 171 unique requirement IDs in each; exact ID-set equality; no missing or extra IDs.
+- Added a 171-row architecture crosswalk. Planned module paths are ownership targets, not implemented-code claims.
+- Reviewed current source: FastAPI/Uvicorn/Pydantic/stdlib SQLite, static HTML/CSS/JS, project metadata and saved story plan. No renderer, durable queue, asset registry, migration framework, provider registry or installer is implemented.
+- Reviewed current requirements: range constraints only; no fully resolved runtime lock file.
+- Confirmed no root LICENSE file in the current repository tree. Copyleft adoption/bundling remains excluded until the project distribution-license decision is made.
+- P0.5 is documentation-complete; P0.6 proofs have not yet run.
+
+## Target-PC benchmark policy
+- scripts/run_target_pc_probe.ps1 and tools/godot_target_probe/ remain optional diagnostics.
+- No PowerShell execution or Godot renderer launch on the user's PC has occurred.
 - No actual FPS, frame-time, memory, driver, AVI or full episode render measurement exists.
+- This is not a gate for P0.5/P0.6/P0.7 or Phases 1–7. Representative performance and quality-preset tuning are Phase 8.
 
 ## P0.4 Urdu/provider research
 - Source-level inspection only: eSpeak NG Urdu rules/CLI, WhisperX Urdu alignment model, Qwen Urdu voice/regions/pricing, and official provider free-tier/region docs.
