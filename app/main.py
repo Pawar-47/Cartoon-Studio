@@ -29,6 +29,7 @@ from app.storage import (
 )
 from app.storage import initialize_database as migrate_database
 from app.story import EpisodePlan, StoryPromptRequest, build_story_prompt
+from app.version import APP_VERSION
 
 ROOT = Path(__file__).resolve().parent.parent
 _ENV_DATA_DIR = os.environ.get("CARTOON_STUDIO_DATA", "").strip()
@@ -61,7 +62,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 app = FastAPI(
     title="Cartoon Studio",
     description="Local-first original Urdu 3D cartoon studio",
-    version="0.1.0",
+    version=APP_VERSION,
     lifespan=lifespan,
 )
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
