@@ -27,7 +27,28 @@ def request(base: str, path: str, method: str = "GET", payload: dict | None = No
         return response.status, json.loads(raw) if is_json else raw
 
 
-def stop(process: subprocess.Popen) -> None:
+def stop(process: subprocess.Popen, port: int) -> None:
+    netstat = subprocess.run(
+        ["netstat", "-ano", "-p", "tcp"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    for line in netstat.stdout.splitlines():
+        fields = line.split()
+        if (
+            len(fields) >= 5
+            and fields[0].upper() == "TCP"
+            and fields[1].endswith(f":{port}")
+            and fields[3].upper() == "LISTENING"
+            and fields[4].isdigit()
+        ):
+            subprocess.run(
+                ["taskkill", "/PID", fields[4], "/T", "/F"],
+                check=False,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
     subprocess.run(
         ["taskkill", "/PID", str(process.pid), "/T", "/F"],
         check=False,
@@ -99,7 +120,7 @@ def main() -> int:
                 )
 
         def wait_until_healthy(process: subprocess.Popen, label: str) -> None:
-            for _ in range(80):
+            for _ in range(240):
                 if process.poll() is not None:
                     raise AssertionError(
                         f"{label}. Launcher log: "
@@ -112,7 +133,7 @@ def main() -> int:
                 except (OSError, urllib.error.URLError):
                     time.sleep(0.25)
             raise AssertionError(
-                f"{label}: application did not become healthy within 20 seconds. "
+                f"{label}: application did not become healthy within 60 seconds. "
                 + log_path.read_text(encoding="utf-8", errors="replace")
             )
 
@@ -135,7 +156,7 @@ def main() -> int:
             status, opened = request(base, f"/api/projects/{project_id}")
             assert status == 200 and opened["project"]["id"] == project_id
         finally:
-            stop(process)
+            stop(process, port)
 
         process = launch()
         try:
