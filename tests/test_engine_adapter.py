@@ -234,7 +234,7 @@ def test_pinned_godot_worker_creates_non_destructive_retarget_scene(tmp_path):
     target_mapping = target_rig["godot_profile_mapping"]
     assert len(source_mapping) == len(target_mapping) == 15
     assert source_mapping["LeftUpperArm"]["source_name"] == "mixamorig_LeftArm"
-    assert target_mapping["LeftUpperArm"]["source_name"] == "mixamorig:LeftArm"
+    assert target_mapping["LeftUpperArm"]["source_name"] == "mixamorig_LeftArm"
     assert source_mapping["LeftUpperArm"]["bone_index"] != (
         target_mapping["LeftUpperArm"]["bone_index"]
     )
