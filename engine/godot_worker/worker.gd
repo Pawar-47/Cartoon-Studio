@@ -613,8 +613,9 @@ func _add_character_hair(payload: Dictionary) -> Dictionary:
         mesh_count += 2
     elif style == "spiky":
         for spike_index in range(7):
-            var spike := ConeMesh.new()
-            spike.radius = 1.0
+            var spike := CylinderMesh.new()
+            spike.top_radius = 0.0
+            spike.bottom_radius = 1.0
             spike.height = 2.0
             spike.radial_segments = 12
             var angle := TAU * float(spike_index) / 7.0
