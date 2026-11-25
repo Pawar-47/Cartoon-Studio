@@ -160,6 +160,36 @@ def _seed_retarget_character(tmp_path, project_id, name):
     return character_id
 
 
+def test_character_appearance_persists_facial_morph_weights(tmp_path, monkeypatch):
+    project_id = _new_project(tmp_path, monkeypatch)
+    character_id = _seed_retarget_character(tmp_path, project_id, "Facial rig")
+
+    response = client.put(
+        f"/api/projects/{project_id}/characters/{character_id}/appearance",
+        json={
+            "materials": {},
+            "morph_targets": {
+                "0:Face/0:Head:Smile": 0.75,
+                "0:Face/0:Head:Blink": -0.25,
+            },
+        },
+    )
+
+    assert response.status_code == 200
+    saved = response.json()
+    assert saved["revision"] == 2
+    assert saved["data"]["appearance_recipe"]["morph_targets"] == {
+        "0:Face/0:Head:Smile": 0.75,
+        "0:Face/0:Head:Blink": -0.25,
+    }
+
+    invalid = client.put(
+        f"/api/projects/{project_id}/characters/{character_id}/appearance",
+        json={"morph_targets": {"Smile": 1.5}},
+    )
+    assert invalid.status_code == 422
+
+
 def test_character_retarget_api_saves_scene_and_persistent_record(tmp_path, monkeypatch):
     project_id = _new_project(tmp_path, monkeypatch)
     source_id = _seed_retarget_character(tmp_path, project_id, "Source")
