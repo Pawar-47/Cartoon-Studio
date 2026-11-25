@@ -202,7 +202,10 @@ def test_material_appearance_rejects_invalid_values_and_missing_character(tmp_pa
     client, project_id = setup_project(tmp_path, monkeypatch)
     invalid = client.put(
         f"/api/projects/{project_id}/characters/{'a' * 36}/appearance",
-        json={"materials": {"body": {"color": "red", "roughness": 1.5}}, "morph_targets": {"smile": 1.5}},
+        json={
+            "materials": {"body": {"color": "red", "roughness": 1.5}},
+            "morph_targets": {"smile": 1.5},
+        },
     )
     assert invalid.status_code == 422
     missing = client.put(
