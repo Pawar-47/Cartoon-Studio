@@ -2,7 +2,7 @@
 
 ## Current checkpoint
 
-GitHub `main` now contains the proportion-preview/composable-edit work, PR #20 turnaround export, PR #21 Idle-preview behavior and hairstyle-fit fix. The integration's local suite passed 122 tests with four environment-related skips; run #431 found an import-order lint issue, fixed in `7d396e5`. Actions run #432 is still in progress. Browser visual acceptance remains outstanding; Phase 2 remains active and P2.2 remains PARTIAL.
+GitHub `main` now contains the proportion-preview/composable-edit work, PR #20 turnaround export, PR #21 Idle-preview behavior and hairstyle-fit fix. The integration's local suite passed 122 tests with four environment-related skips; run #431 found an import-order lint issue, fixed in `7d396e5`, and Actions run #432 passed. Browser visual acceptance remains outstanding; Phase 2 remains active and P2.2 remains PARTIAL.
 
 The original checkout remains on `work/character-hair-fit` pending final CI and branch cleanup; the WIP stash is preserved. P2.2 remains PARTIAL.
 
@@ -10,7 +10,7 @@ The original checkout remains on `work/character-hair-fit` pending final CI and 
 
 - The isolated integration includes the proportion-preview/composable-edit work, PR #20 turnaround export, PR #21 Idle-preview behavior and the hairstyle-fit fix.
 - Local validation in the isolated integration worktree passed: 14 pinned-Godot engine tests and 122 full-suite tests; four skips require Node.js or symlink support.
-- PRs #20 and #21 are merged. Verify run #432, then remove redundant branches and leave the working checkout on `main`; preserve the WIP stash.
+- PRs #20 and #21 are merged and run #432 passed. Push the final documentation sync, verify its CI, then remove redundant branches and leave the working checkout on `main`; preserve the WIP stash.
 
 ## Completed continuation batch — Character preview defaults
 

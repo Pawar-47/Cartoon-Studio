@@ -3,9 +3,9 @@
 ## Live checkpoint
 
 - Repository: Pawar-47/Cartoon-Studio
-- Source-of-truth branch: `main`; latest published checkpoint: `7d396e5b9e3b07033240b9f02fb1020003a58a36`. PRs #20 and #21 are merged.
+- Source-of-truth branch: `main`; integrated code commit: `7d396e5b9e3b07033240b9f02fb1020003a58a36`. PRs #20 and #21 are merged.
 - The integration was built in an isolated worktree and pushed via fast-forward. Local validation in that worktree: full pytest **122 passed, 4 skipped**; pinned Godot engine suite **14 passed**; Ruff and Python compilation passed.
-- GitHub Actions run [#432](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45703715915) is validating the lint fix. Initial run #431 exposed import ordering in `tests/test_characters.py`; the issue was corrected in the pushed follow-up commit.
+- GitHub Actions run [#432](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45703715915) passed. Initial run #431 exposed import ordering in `tests/test_characters.py`; the issue was corrected in the pushed follow-up commit.
 - Phase 0: COMPLETE.
 - Phase 1: COMPLETE.
 - Phase 2 — Character Studio: ACTIVE; import, preview, profiles, appearance recipes, rig-based body-proportion export, procedural Head-attached hairstyles, transparent PNG portrait export, rig diagnostics and retargeting are implemented. Preview defaults now prefer an Idle clip and safely handle RESET-only assets. CI validates this behavior; P2.2 remains PARTIAL, with broader visual acceptance and original face geometry still open.
@@ -80,7 +80,7 @@ Godot may normalize raw skin-joint ordering during import. The application uses 
 
 ## Active P2.2 direction — modular character creator (2026-11-25)
 
-- Published main at `7d396e5` includes the live proportion-preview/composable-edit feature, PR #20 turnaround export, PR #21 Idle-preview behavior and geometry-aware hairstyle fitting. Combined GitHub Actions run #432 is in progress; P2.2 remains PARTIAL.
+- Published main at `7d396e5` includes the live proportion-preview/composable-edit feature, PR #20 turnaround export, PR #21 Idle-preview behavior and geometry-aware hairstyle fitting. Combined GitHub Actions run #432 passed; P2.2 remains PARTIAL.
 - The pinned Quaternius Ultimate Modular Men/Women CC0 library contains 21 outfit GLBs (34.92 MiB) with four candidate slots and 24 animation clips per model. Downloads are lazy, cached and verified against the pinned source commit, byte size and Git blob SHA-1.
 - Character Studio now offers head/body/legs/feet selectors, filtered by skinned mesh slot candidates. Godot performs exact shared-skeleton, hierarchy, rest-pose, rig-transform and skin-bind checks; it removes base skinned outfit meshes, attaches the selected meshes to the base skeleton, exports and re-imports the GLB, then verifies the four selected meshes and base animation names.
 - A real CI integration test combines Beach head, Casual_2 body, Farmer legs and King feet on the Male Adventurer base and verifies all 24 base animation clips survive. Assembly manifests persist the base/part recipe and allow source restoration.

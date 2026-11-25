@@ -3,7 +3,7 @@
 Updated: 2026-11-25
 Repository: https://github.com/Pawar-47/Cartoon-Studio
 Branch: `integration/branch-cleanup` in an isolated worktree; its tested integration has been pushed to `main`.
-Latest published main: `7d396e5b9e3b07033240b9f02fb1020003a58a36`; PRs #20 and #21 are merged. CI #431 found an import-order issue; the fix is pushed and CI #432 is in progress.
+Integrated source/test commit on `main`: `7d396e5b9e3b07033240b9f02fb1020003a58a36`; PRs #20 and #21 are merged. CI #431 found an import-order issue; the fix is pushed and CI #432 passed.
 
 ## Mission and operating rules
 
@@ -153,4 +153,4 @@ Never claim the complete application is finished while Phases 2–7 remain incom
 - Built the integration in a separate worktree based on `origin/main`, keeping the original checkout and `stash@{0}: On work/pr-20-turnaround-fix: WIP character preview polish` untouched.
 - Locally merged the approved proportion-preview/composable-edit work, PR #20 turnaround export, PR #21 Idle-preview behavior and commit `1c41a8d` hairstyle-fit fix. The profile-workflow branch was inspected; its older source changes are superseded by the integrated implementations, and its stale documentation was not imported.
 - The integrated-worktree run passed **122 tests with 4 environment-related skips**; the pinned Godot engine suite passed **14 tests**. Ruff and Python compilation passed locally. Three Node-backed cases and one symlink case are unavailable in this environment.
-- PRs #20 and #21 were merged by the fast-forward push. Verify CI #432, then delete only retired branches and leave the original checkout on `main`; the WIP stash remains preserved. Keep Phase 2 active and P2.2 partial; browser visual acceptance and original face geometry remain open.
+- PRs #20 and #21 were merged by the fast-forward push, and CI #432 passed. Push the final documentation sync and verify its CI, then delete only retired branches and leave the original checkout on `main`; the WIP stash remains preserved. Keep Phase 2 active and P2.2 partial; browser visual acceptance and original face geometry remain open.
