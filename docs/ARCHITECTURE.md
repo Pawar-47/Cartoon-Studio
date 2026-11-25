@@ -96,3 +96,43 @@ Godot VRM/MToon is a candidate import/export and shading path. Keep non-humanoid
 - Keep Preview, Low Hardware, Balanced and High Quality modes. Quality changes may reduce resolution, samples, effects, concurrency or render speed, but must not silently remove required features.
 - Design for sequential/chunked rendering, asset reuse, scene caching, resumable jobs and memory/disk monitoring.
 - Run representative-scene benchmarks and tune modes in Phase 8 / P8.1. Until then, publish no FPS or episode render-time promises.
+
+
+## P0.5 architecture direction — draft for review and P0.6 proof
+
+### Control plane and rendering boundary
+Preserve the existing FastAPI + browser UI as the application control plane. FastAPI owns project lifecycle, validation, local persistence, job scheduling, provider adapters and status reporting. The browser remains the main workflow UI. 3D functionality is isolated behind a versioned engine adapter; engine-specific files and IDs never become canonical project data.
+
+**Preferred integration pattern:** a hybrid Godot adapter. An optional Godot Web export may provide an embedded interactive viewport in the browser using WebAssembly/WebGL 2 and a narrow JavaScriptBridge contract. A pinned native Godot build is the candidate scene-import/render worker, supervised by the local backend with versioned file inputs/outputs and bounded local IPC. Both targets consume the same engine-neutral manifests. Exact worker lifecycle, viewport transport and MovieWriter behavior remain subject to P0.6; do not assume headless mode provides GPU rendering or native viewport embedding works automatically.
+
+### Integration-path comparison
+| Path | Benefits | Costs / constraints | Current decision |
+|---|---|---|---|
+| Godot replaces the UI as a native application shell | Direct native rendering and one executable experience | Rebuilds existing browser workflow; duplicates project/API logic; risks discarding working FastAPI/SQLite foundation | Reject as primary path |
+| Native Godot sidecar controlled by FastAPI/browser | Preserves current UI/backend; native engine can own scene import and local rendering; clean adapter boundary | Process supervision, IPC, packaging and viewport/window integration need proof | Preferred production-render boundary |
+| Godot Web export embedded as viewport | Browser-integrated interactive 3D; JavaScriptBridge can exchange data with host page | WebAssembly/WebGL 2, browser memory/threading/header constraints and browser lifecycle/filesystem limits | Optional viewport target, not sole production renderer |
+
+Godot Web export requires WebAssembly and WebGL 2; JavaScriptBridge is available in Web exports. Threaded web builds have cross-origin-isolation/header constraints. The Godot Web editor is preliminary and is not our product editor. Native command-line export/import supports reproducible build operations but does not prove GPU rendering behavior. References: https://docs.godotengine.org/en/4.7/tutorials/export/exporting_for_web.html ; https://docs.godotengine.org/en/4.7/classes/class_javascriptbridge.html ; https://docs.godotengine.org/en/4.7/tutorials/editor/using_the_web_editor.html ; https://docs.godotengine.org/en/4.7/tutorials/editor/command_line_tutorial.html
+
+### Service boundaries
+1. Application/API: FastAPI routes, validation, project commands and status.
+2. Project repository: SQLite index plus versioned JSON documents and file assets.
+3. Character: identity, appearance recipe, rig/face/expression refs and persistent voice profile.
+4. World: locations, reusable sets, props, environment and placement data.
+5. Story/scene: prompt requests, canonical episode/scene documents, continuity and approval.
+6. Asset registry: stable IDs, file hashes, origin, license, attribution, format and version.
+7. Engine adapter: maps canonical IDs to engine resources; validate/import/preview/render/cancel/status.
+8. Animation: stable action/clip IDs, rig compatibility, timing, transitions and manual overrides.
+9. Voice/audio: recorded/provider speech, alignment, visemes, tracks, mixing and subtitles.
+10. Job orchestrator: durable queue, bounded render workload, checkpoints, retries, cancellation and recovery.
+11. Media assembler: pinned FFmpeg adapter for scene chunks, audio, subtitles and final MP4.
+12. Provider adapters: story/research/TTS/alignment capabilities; secrets never enter project docs.
+
+### Canonical envelope and entities
+Persistent documents use UTF-8 JSON, explicit schema version, stable opaque IDs and UTC timestamps. Envelope fields: schema_version, document_type, id, revision, created_at, updated_at, data. IDs are Cartoon Studio-owned; labels may change, IDs do not. Canonical entities are Project, Character, World, Location, Episode, Scene, AnimationClip, AudioCue, Asset and RenderJob. Required fields and invariants are specified in ARCHITECTURE_CONTRACTS.md.
+
+### Storage, recovery, API and security
+SQLite is the transactional index for project IDs, document revisions, asset metadata, jobs/events and migration versions. Portable JSON documents and binary media remain ordinary project files; large media is not stored as SQLite blobs. Use a migration ledger, backups before migrations, one render job at a time initially, scene-level checkpoints, idempotent stage retries and startup reconciliation. Keep CARTOON_STUDIO_DATA; packaged default moves to user application data in Phase 1. Preserve existing endpoints while introducing /api/v1. Engine IPC binds to loopback with per-process random authentication. Validate project-relative paths/archive extraction; keep provider secrets outside project files, SQLite metadata and Git.
+
+### Honest implementation boundary
+This is a target architecture, not a claim about current code. Current implementation remains project metadata + one saved story plan per project, FastAPI routes and static UI. Asset registry, migrations, render queue, engine/provider adapters, scene renderer and recovery are not implemented. Existing Ara-derived catalogs are prototype validation only and will be replaced with stable Cartoon Studio IDs in Phase 4.
