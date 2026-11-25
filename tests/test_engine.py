@@ -130,6 +130,27 @@ def test_project_glb_inspection_api(tmp_path, monkeypatch):
     assert rejected.status_code == 422
 
 
+def test_modular_assembly_rejects_reusing_the_same_source_mesh(tmp_path):
+    root = tmp_path / "project"
+    root.mkdir()
+    base = root / "base.glb"
+    source = root / "parts.glb"
+    base.write_bytes(b"fixture")
+    source.write_bytes(b"fixture")
+    adapter = GodotEngineAdapter(data_dir=tmp_path)
+    parts = [
+        {"slot": slot, "source_path": str(source), "mesh_path": "Character/Mesh"}
+        for slot in ("head", "body", "legs", "feet")
+    ]
+    with pytest.raises(ValueError, match="same source mesh"):
+        adapter.assemble_modular_character(
+            base,
+            parts,
+            root / "assembled.glb",
+            allowed_root=root,
+        )
+
+
 def test_adapter_timeout_is_logged_and_raised(tmp_path, monkeypatch):
     executable = tmp_path / "godot.exe"
     executable.write_bytes(b"test-runtime")

@@ -153,6 +153,7 @@ class GodotEngineAdapter:
                 "Choose exactly one mesh for each slot: head, body, legs and feet."
             )
         validated_parts: list[dict[str, str]] = []
+        selected_meshes: set[tuple[str, str]] = set()
         for part in parts:
             source = Path(part.get("source_path", "")).resolve(strict=True)
             if source == root or root not in source.parents:
@@ -164,6 +165,10 @@ class GodotEngineAdapter:
             mesh_path = str(part.get("mesh_path", "")).strip()
             if not mesh_path or len(mesh_path) > 1024:
                 raise EnginePathError("Every modular part requires a valid mesh node path.")
+            mesh_key = (str(source), mesh_path)
+            if mesh_key in selected_meshes:
+                raise EnginePathError("The same source mesh cannot fill multiple modular slots.")
+            selected_meshes.add(mesh_key)
             validated_parts.append({
                 "slot": str(part["slot"]),
                 "source_path": str(source),

@@ -292,7 +292,7 @@ $("import-model").addEventListener("click",async()=>{
  try{
   const response=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/character-assets",{method:"POST",headers:{"Content-Type":"application/octet-stream","X-Asset-Filename":file.name},body:file});
   const data=await response.json();if(!response.ok)throw new Error(data.detail||"Model import failed.");
-  importedAsset=data;await showCharacterPreview(await file.arrayBuffer(),file.name);$("asset-report").hidden=false;$("asset-report").replaceChildren();
+  importedAsset=data;rememberAssemblyAsset(data,file.name);await showCharacterPreview(await file.arrayBuffer(),file.name);$("asset-report").hidden=false;$("asset-report").replaceChildren();
   const heading=document.createElement("strong");heading.textContent="Godot import successful · "+data.container.format;
   const metrics=document.createElement("div");metrics.className="asset-metrics";
   const rigAnalysis=data.rig_analysis||{};

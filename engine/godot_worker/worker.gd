@@ -274,6 +274,7 @@ func _assemble_modular_character(payload: Dictionary) -> Dictionary:
         return {"error_code": "invalid_parts", "error": "Exactly four modular parts are required."}
     var required_slots := ["head", "body", "legs", "feet"]
     var selected_slots: Array[String] = []
+    var selected_mesh_keys: Array[String] = []
     for part_value in parts_value:
         if typeof(part_value) != TYPE_DICTIONARY:
             return {"error_code": "invalid_part", "error": "Each modular part must be an object."}
@@ -287,6 +288,10 @@ func _assemble_modular_character(payload: Dictionary) -> Dictionary:
             return {"error_code": "invalid_part_path", "error": "A modular part GLB is missing or outside the project."}
         if mesh_path.is_empty() or mesh_path.length() > 1024:
             return {"error_code": "invalid_mesh_path", "error": "A modular part mesh path is invalid."}
+        var mesh_key := source_path + "|" + mesh_path
+        if selected_mesh_keys.has(mesh_key):
+            return {"error_code": "duplicate_mesh", "error": "The same source mesh cannot fill multiple modular slots."}
+        selected_mesh_keys.append(mesh_key)
         selected_slots.append(slot)
     for slot in required_slots:
         if not selected_slots.has(slot):
@@ -359,7 +364,7 @@ func _assemble_modular_character(payload: Dictionary) -> Dictionary:
         cloned_mesh.owner = base_scene
         cloned_mesh.name = "Modular_" + slot.capitalize()
         cloned_mesh.transform = base_scene.global_transform.affine_inverse() * source_global_transform
-        cloned_mesh.set_skeleton_path(NodePath(str(base_scene.get_path_to(target_skeleton))))
+        cloned_mesh.set_skeleton_path(NodePath(str(cloned_mesh.get_path_to(target_skeleton))))
         total_added += 1
         added_parts.append({
             "slot": slot,
@@ -393,9 +398,14 @@ func _assemble_modular_character(payload: Dictionary) -> Dictionary:
         if not verified_animations.has(animation_name):
             DirAccess.remove_absolute(output_path)
             return {"error_code": "animation_preservation_failed", "error": "The assembled GLB did not preserve base animation clip: " + str(animation_name)}
-    if int(verification.get("mesh_count", 0)) < total_added:
-        DirAccess.remove_absolute(output_path)
-        return {"error_code": "mesh_verification_failed", "error": "The assembled GLB did not retain all selected modular meshes."}
+    var verified_mesh_names: Array[String] = []
+    for mesh_entry in verification.get("mesh_inventory", []):
+        verified_mesh_names.append(str(mesh_entry.get("node_name", "")))
+    for part_entry in added_parts:
+        var expected_mesh_name := "Modular_" + str(part_entry["slot"]).capitalize()
+        if not verified_mesh_names.has(expected_mesh_name):
+            DirAccess.remove_absolute(output_path)
+            return {"error_code": "mesh_verification_failed", "error": "The exported GLB did not retain the selected " + str(part_entry["slot"]) + " mesh."}
     verification["added_parts"] = added_parts
     verification["base_animation_names"] = base_animation_names
     verification["animation_preserved"] = true
