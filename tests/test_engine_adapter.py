@@ -152,6 +152,8 @@ def test_worker_rechecks_path_boundary_independently(tmp_path):
     with pytest.raises(EngineWorkerError, match="outside"):
         adapter._invoke(
             "inspect_glb",
-            project_root=str(project.resolve()),
-            asset_path=str(outside.resolve()),
+            payload={
+                "project_root": str(project.resolve()),
+                "source_path": str(outside.resolve()),
+            },
         )

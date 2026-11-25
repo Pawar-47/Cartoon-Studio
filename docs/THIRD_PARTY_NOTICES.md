@@ -20,7 +20,7 @@ Cartoon Studio's own distribution license has not yet been selected by the proje
 
 - Godot Engine contributors; MIT license. The exact standard Windows x86_64 release archive is SHA-256 verified in CI before packaging.
 - Runtime binary is installed inside the application's private `_internal/engine/godot.exe` directory and invoked in `--headless` mode. It is not a separate user prerequisite.
-- The redistributed runtime includes the exact upstream `LICENSE.txt` and exhaustive `COPYRIGHT.txt` from the `4.7.2-stable` tag under `_internal/engine/notices/`. The copyright inventory includes Godot's bundled third-party component notices and license identifiers.
+- The redistributed runtime includes the exact upstream `LICENSE.txt` and exhaustive `COPYRIGHT.txt` from the `4.7.2-stable` tag under `engine/notices/`. The copyright inventory includes Godot's bundled third-party component notices and license identifiers.
 - Source: https://github.com/godotengine/godot/tree/4.7.2-stable
 - Release archive: https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_win64.exe.zip
 - SHA-256: `731980f9608d61333e5baf54a2ef17210acc7a538446c0cb9969f002aca1e953`

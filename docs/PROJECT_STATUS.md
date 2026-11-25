@@ -10,7 +10,7 @@
 - Latest successful Windows CI: [run #176 — SUCCESS](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45585584886), validating commit `815cc32a1cb56c3357c37310745e900a8a197c7f`.
 - Run #176 passed exact dependency locking, Ruff, Python compilation, 22 pytest tests, bootstrap packaging/launch, two self-contained app builds, NSIS installer compilation, clean install, app launch, v1-to-v2 upgrade, project-data preservation, uninstall, reinstall and artifact uploads.
 - Artifacts from run #176: Windows installer (15008168874), bootstrap ZIP (15007954336), CycloneDX SBOM (15008014096).
-- P1.4 detailed evidence: `docs/P1_4_INSTALLER_REPORT.md`.\n- P2.1 runtime pin: `docs/ENGINE_RUNTIME_MANIFEST.json`; worker protocol: `docs/ENGINE_WORKER_PROTOCOL.md`.
+- P1.4 detailed evidence: `docs/P1_4_INSTALLER_REPORT.md`.\n- P2.1 runtime pin: `engine/godot_runtime.json`; worker protocol: `docs/ENGINE_WORKER_PROTOCOL.md`.
 - Godot 4.7.2 native-worker functional proof, FFmpeg assembly proof and SQLite queue prototype: `docs/P0_6_PROOF_REPORT.md`.
 - Original 25-part brief is preserved verbatim at `docs/MASTER_EXECUTION_PROMPT.md`.
 - Requirements registry, requirement traceability and architecture crosswalk each contain 171 corresponding IDs.

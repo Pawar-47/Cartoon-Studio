@@ -44,6 +44,7 @@ func _handle_request(request_value: Variant) -> Dictionary:
         "protocol_version": PROTOCOL_VERSION,
         "request_id": request_id,
         "engine_version": Engine.get_version_info().get("string", "unknown"),
+        "renderer": RenderingServer.get_current_rendering_method(),
         "ok": false
     }
 
@@ -61,7 +62,7 @@ func _handle_request(request_value: Variant) -> Dictionary:
 
     if operation == "ping":
         response["ok"] = true
-        response["capabilities"] = ["ping", "glb_inspect"]
+        response["capabilities"] = ["ping", "glb_inspect", "scene_metrics"]
         return response
 
     if operation == "inspect_glb":
@@ -76,7 +77,19 @@ func _handle_request(request_value: Variant) -> Dictionary:
 
 
 func _inspect_glb(payload: Dictionary) -> Dictionary:
-    var source_path := str(payload.get("source_path", ""))
+    var project_root := _normalise_path(str(payload.get("project_root", "")))
+    var source_path := _normalise_path(str(payload.get("source_path", "")))
+    if project_root.is_empty() or not DirAccess.dir_exists_absolute(project_root):
+        return {
+            "error_code": "invalid_project_root",
+            "error": "A valid project root is required."
+        }
+    var root_prefix := project_root.trim_suffix("/") + "/"
+    if not source_path.to_lower().begins_with(root_prefix.to_lower()):
+        return {
+            "error_code": "path_outside_project",
+            "error": "The GLB path resolves outside the supplied project directory."
+        }
     if source_path.is_empty() or not source_path.to_lower().ends_with(".glb"):
         return {
             "error_code": "invalid_glb_path",
@@ -105,15 +118,24 @@ func _inspect_glb(payload: Dictionary) -> Dictionary:
             "error": "Godot imported the GLB but did not generate a scene."
         }
 
+    var animation_count := 0
+    var animation_players := scene.find_children("*", "AnimationPlayer", true, false)
+    for player in animation_players:
+        animation_count += (player as AnimationPlayer).get_animation_list().size()
     var result := {
         "ok": true,
         "mesh_count": scene.find_children("*", "MeshInstance3D", true, false).size(),
         "skeleton_count": scene.find_children("*", "Skeleton3D", true, false).size(),
-        "animation_player_count": scene.find_children("*", "AnimationPlayer", true, false).size(),
+        "animation_player_count": animation_players.size(),
+        "animation_count": animation_count,
         "node_count": _count_nodes(scene)
     }
     scene.free()
     return result
+
+
+func _normalise_path(value: String) -> String:
+    return value.replace("\\", "/").simplify_path()
 
 
 func _count_nodes(node: Node) -> int:
@@ -128,6 +150,7 @@ func _error_response(request_id: String, code: String, message: String) -> Dicti
         "protocol_version": PROTOCOL_VERSION,
         "request_id": request_id,
         "engine_version": Engine.get_version_info().get("string", "unknown"),
+        "renderer": RenderingServer.get_current_rendering_method(),
         "ok": false,
         "error_code": code,
         "error": message

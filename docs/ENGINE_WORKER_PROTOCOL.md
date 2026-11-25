@@ -9,7 +9,7 @@
 The Python adapter launches the bundled executable with:
 
 ```text
-godot.exe --headless --path <worker-project> --script res://worker.gd -- --request <request.json> --response <response.json>
+Godot_v4.7.2-stable_win64.exe --headless --path <worker-project> --script res://worker.gd -- --request-file=<request.json> --response-file=<response.json>
 ```
 
 The adapter uses argument arrays (never a shell), a bounded timeout, optional cancellation, a dedicated log file and guaranteed terminate/kill cleanup. The temporary request, response and log directory is removed when the call ends.
@@ -20,15 +20,15 @@ The adapter uses argument arrays (never a shell), a bounded timeout, optional ca
 {
   "protocol_version": 1,
   "request_id": "UUID",
-  "action": "handshake"
+  "operation": "ping",\n  "payload": {}
 }
 ```
 
-The second supported action is `inspect_glb`, with `project_root` and an absolute `asset_path`. Both Python and the worker independently verify that the asset resolves beneath the project root. Only GLB files are accepted; the API accepts a project-relative path, never a client-supplied absolute path.
+The second supported operation is `inspect_glb`, with `payload.project_root` and an absolute `payload.source_path`. Both Python and the worker independently verify that the asset resolves beneath the project root. Only GLB files are accepted; the API accepts a project-relative path, never a client-supplied absolute path.
 
 ## Response
 
-Every response includes `protocol_version`, the matching `request_id`, `status` and engine metadata. A successful handshake returns the Godot version, renderer and capability list. A successful GLB inspection returns the file name/size and mesh, skeleton and animation counts. Errors return a stable `error_code` and human-readable message; nonzero process exit codes are treated as failures.
+Every response includes `protocol_version`, the matching `request_id`, `ok`, `engine_version` and renderer metadata. A successful `ping` returns the capability list. A successful GLB inspection returns mesh, skeleton, animation-player, animation and node counts. Errors return a stable `error_code` and human-readable `error`; nonzero process exit codes are treated as failures.
 
 ## Security and limits
 

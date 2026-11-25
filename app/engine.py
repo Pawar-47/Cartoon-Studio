@@ -5,6 +5,7 @@ import logging
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -43,7 +44,7 @@ class EnginePathError(EngineAdapterError, ValueError):
 
 
 class GodotEngineAdapter:
-    """Supervise short-lived Godot worker processes behind the FastAPI control plane."""
+    """Supervise one-shot Godot worker processes behind the FastAPI control plane."""
 
     def __init__(
         self,
@@ -51,7 +52,11 @@ class GodotEngineAdapter:
         worker_project: str | Path | None = None,
         timeout_seconds: float = 60.0,
     ) -> None:
-        self.engine_root = Path(__file__).resolve().parents[1] / "engine"
+        if getattr(sys, "frozen", False):
+            application_root = Path(sys.executable).resolve().parent
+        else:
+            application_root = Path(__file__).resolve().parents[1]
+        self.engine_root = application_root / "engine"
         self.executable = (
             Path(executable).expanduser().resolve()
             if executable is not None
@@ -60,7 +65,7 @@ class GodotEngineAdapter:
         self.worker_project = (
             Path(worker_project).expanduser().resolve()
             if worker_project is not None
-            else (self.engine_root / "worker").resolve()
+            else (self.engine_root / "godot_worker").resolve()
         )
         self.timeout_seconds = max(0.0, float(timeout_seconds))
 
@@ -71,8 +76,8 @@ class GodotEngineAdapter:
             candidates.append(Path(override).expanduser())
         candidates.extend(
             [
-                self.engine_root / "godot.exe",
                 self.engine_root / "Godot_v4.7.2-stable_win64.exe",
+                self.engine_root / "godot.exe",
                 self.engine_root / "godot",
             ]
         )
@@ -113,14 +118,22 @@ class GodotEngineAdapter:
         return root, asset
 
     def handshake(self, cancel_event: threading.Event | None = None) -> dict[str, Any]:
-        response = self._invoke("handshake", cancel_event=cancel_event)
-        engine = response.get("engine", {})
-        version = str(engine.get("version", ""))
+        response = self._invoke("ping", cancel_event=cancel_event)
+        version = str(response.get("engine_version", ""))
         if not version.startswith(EXPECTED_GODOT_VERSION):
             raise EngineWorkerError(
                 f"Expected Godot {EXPECTED_GODOT_VERSION}, received {version or 'unknown'}."
             )
-        return response
+        return {
+            "status": "ok",
+            "protocol_version": PROTOCOL_VERSION,
+            "engine": {
+                "name": "Godot Engine",
+                "version": version,
+                "renderer": response.get("renderer", "gl_compatibility"),
+            },
+            "capabilities": response.get("capabilities", []),
+        }
 
     def inspect_glb(
         self,
@@ -129,19 +142,37 @@ class GodotEngineAdapter:
         cancel_event: threading.Event | None = None,
     ) -> dict[str, Any]:
         root, asset = self._validated_asset(project_root, relative_path)
-        return self._invoke(
+        response = self._invoke(
             "inspect_glb",
-            project_root=str(root),
-            asset_path=str(asset),
+            payload={"project_root": str(root), "source_path": str(asset)},
             cancel_event=cancel_event,
         )
+        return {
+            "status": "ok",
+            "protocol_version": PROTOCOL_VERSION,
+            "engine": {
+                "name": "Godot Engine",
+                "version": str(response.get("engine_version", "unknown")),
+                "renderer": response.get("renderer", "gl_compatibility"),
+            },
+            "asset": {
+                "file_name": asset.name,
+                "file_size_bytes": asset.stat().st_size,
+            },
+            "metrics": {
+                "mesh_count": int(response.get("mesh_count", 0)),
+                "skeleton_count": int(response.get("skeleton_count", 0)),
+                "animation_player_count": int(response.get("animation_player_count", 0)),
+                "animation_count": int(response.get("animation_count", 0)),
+                "node_count": int(response.get("node_count", 0)),
+            },
+        }
 
     def _invoke(
         self,
-        action: str,
+        operation: str,
         *,
-        project_root: str | None = None,
-        asset_path: str | None = None,
+        payload: dict[str, Any] | None = None,
         cancel_event: threading.Event | None = None,
     ) -> dict[str, Any]:
         if self.executable is None or not self.executable.is_file():
@@ -153,16 +184,12 @@ class GodotEngineAdapter:
             raise EngineUnavailableError("The bundled Godot worker project is missing.")
 
         request_id = str(uuid.uuid4())
-        request: dict[str, Any] = {
+        request = {
             "protocol_version": PROTOCOL_VERSION,
             "request_id": request_id,
-            "action": action,
+            "operation": operation,
+            "payload": payload or {},
         }
-        if project_root is not None:
-            request["project_root"] = project_root
-        if asset_path is not None:
-            request["asset_path"] = asset_path
-
         with tempfile.TemporaryDirectory(prefix="cartoon-studio-godot-") as temporary:
             temporary_dir = Path(temporary)
             request_path = temporary_dir / "request.json"
@@ -177,10 +204,8 @@ class GodotEngineAdapter:
                 "--script",
                 "res://worker.gd",
                 "--",
-                "--request",
-                str(request_path),
-                "--response",
-                str(response_path),
+                f"--request-file={request_path}",
+                f"--response-file={response_path}",
             ]
             environment = os.environ.copy()
             environment["GODOT_SILENCE_ROOT_WARNING"] = "1"
@@ -188,7 +213,7 @@ class GodotEngineAdapter:
             started_at = time.monotonic()
             LOGGER.info(
                 "Starting Godot worker",
-                extra={"request_id": request_id, "action": action},
+                extra={"request_id": request_id, "operation": operation},
             )
             try:
                 with log_path.open("ab") as log_handle:
@@ -234,9 +259,9 @@ class GodotEngineAdapter:
                 raise EngineWorkerError("Godot worker protocol version mismatch.")
             if response.get("request_id") != request_id:
                 raise EngineWorkerError("Godot worker response request ID mismatch.")
-            if response.get("status") != "ok":
+            if not response.get("ok", False):
                 raise EngineWorkerError(
-                    str(response.get("message", "Godot worker reported an unknown error."))
+                    str(response.get("error", "Godot worker reported an unknown error."))
                 )
             if process.returncode != 0:
                 raise EngineWorkerError(
@@ -244,7 +269,7 @@ class GodotEngineAdapter:
                 )
             LOGGER.info(
                 "Godot worker request completed",
-                extra={"request_id": request_id, "action": action},
+                extra={"request_id": request_id, "operation": operation},
             )
             return response
 

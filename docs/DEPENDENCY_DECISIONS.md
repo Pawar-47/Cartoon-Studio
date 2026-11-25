@@ -118,7 +118,7 @@ PyInstaller's official license documentation explains the bundling exception. NS
 
 - Runtime: Godot 4.7.2-stable standard Windows x86_64 executable, Compatibility renderer, invoked with `--headless`.
 - Official release archive: `Godot_v4.7.2-stable_win64.exe.zip`, 86,013,866 bytes, SHA-256 `731980f9608d61333e5baf54a2ef17210acc7a538446c0cb9969f002aca1e953`.
-- CI downloads the exact official GitHub release asset, verifies SHA-256 before extraction, and bundles the executable under `_internal/engine/godot.exe`.
+- CI downloads the exact official GitHub release asset, verifies SHA-256 before extraction, and bundles the executable under `engine/Godot_v4.7.2-stable_win64.exe`.
 - Upstream MIT `LICENSE.txt` and exhaustive `COPYRIGHT.txt` from tag `4.7.2-stable` are retained in source and copied into the installer. The Godot runtime is added as a CycloneDX component with the archive hash and distribution reference.
 - The Python adapter launches a one-request/one-process worker with bounded timeout, optional cancellation, structured logs and a JSON file protocol. This avoids an unauthenticated network listener and keeps the browser control plane separate.
 - The worker exposes only a version/capability handshake and project-contained GLB inspection in P2.1. Character creation, rigging, animation editing and rendering remain later batches.

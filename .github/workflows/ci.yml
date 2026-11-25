@@ -47,8 +47,6 @@ jobs:
         run: uv export --locked --all-groups --format cyclonedx1.5 --output-file dependency-sbom.cdx.json
       - name: Add Godot runtime to CycloneDX inventory
         run: uv run --locked python scripts/augment_sbom.py --sbom dependency-sbom.cdx.json --manifest engine/godot_runtime.json --runtime-report build/godot-runtime/godot-runtime-report.json
-      - name: Add pinned Godot runtime to CycloneDX SBOM
-        run: uv run --locked python scripts/add_engine_sbom.py dependency-sbom.cdx.json
       - name: Package Windows bootstrap
         shell: pwsh
         run: |
@@ -65,17 +63,16 @@ jobs:
           $bundle = (Resolve-Path "dist/installer-v1/CartoonStudio").Path
           Copy-Item LICENSES -Destination $bundle -Recurse -Force
           Copy-Item docs/THIRD_PARTY_NOTICES.md, dependency-sbom.cdx.json -Destination $bundle -Force
-          $engineRoot = Join-Path $bundle "_internal\engine"
-          New-Item -ItemType Directory -Force -Path $engineRoot | Out-Null
-          Copy-Item $env:CARTOON_STUDIO_GODOT_PATH (Join-Path $engineRoot "godot.exe") -Force
-          Copy-Item "engine/worker" -Destination $engineRoot -Recurse -Force
-          $engineNotices = Join-Path $engineRoot "notices"
-          New-Item -ItemType Directory -Force -Path $engineNotices | Out-Null
-          Copy-Item "third_party/godot-4.7.2/LICENSE.txt", "third_party/godot-4.7.2/COPYRIGHT.txt" -Destination $engineNotices -Force
           $engineRoot = Join-Path $bundle "engine"
           New-Item -ItemType Directory -Force -Path $engineRoot | Out-Null
           Copy-Item build/godot-runtime/Godot_v4.7.2-stable_win64.exe -Destination $engineRoot -Force
           Copy-Item engine/godot_worker -Destination $engineRoot -Recurse -Force
+          $engineNotices = Join-Path $engineRoot "notices"
+          New-Item -ItemType Directory -Force -Path $engineNotices | Out-Null
+          Copy-Item "third_party/godot-4.7.2/LICENSE.txt", "third_party/godot-4.7.2/COPYRIGHT.txt", "third_party/godot-4.7.2/AUTHORS.md" -Destination $engineNotices -Force
+          $engineNotices = Join-Path $engineRoot "notices"
+          New-Item -ItemType Directory -Force -Path $engineNotices | Out-Null
+          Copy-Item "third_party/godot-4.7.2/LICENSE.txt", "third_party/godot-4.7.2/COPYRIGHT.txt", "third_party/godot-4.7.2/AUTHORS.md" -Destination $engineNotices -Force
       - name: Build self-contained application v2
         shell: pwsh
         run: |
