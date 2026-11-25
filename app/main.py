@@ -865,7 +865,10 @@ def get_character_retarget_preview(project_id: str, retarget_id: str) -> dict[st
             asset_path = resolve_project_relative(DATA_DIR, project_id, relative_path)
             asset_id = str(uuid.UUID(Path(relative_path).stem))
         except ValueError as error:
-            raise HTTPException(status_code=409, detail="A retarget character asset path is invalid.") from error
+            raise HTTPException(
+                status_code=409,
+                detail="A retarget character asset path is invalid.",
+            ) from error
         if not relative_path.startswith("assets/characters/") or not asset_path.is_file():
             raise HTTPException(status_code=404, detail="A retarget character GLB is missing.")
         raw_mapping = asset.get("rig_analysis", {}).get("godot_profile_mapping", {})
