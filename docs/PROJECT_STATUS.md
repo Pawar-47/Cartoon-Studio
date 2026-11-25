@@ -4,20 +4,21 @@
 
 - Repository: Pawar-47/Cartoon-Studio
 - Branch: main
-- Latest implementation checkpoint: `696929595b2d03e64e46a568ec9d163860ae3239`
+- Latest implementation checkpoint: main (GitHub HEAD; this record is updated with each substantial batch).
 - Phase 0: COMPLETE.
 - Phase 1: COMPLETE.
 - Phase 2 — Character Studio: ACTIVE; import, preview, profiles, appearance recipes, rig diagnostics and the first user-facing imported-rig retarget workflow are implemented. Phase 2 is not complete.
 - Windows CI #326: full pipeline PASSED on `696929595b2d03e64e46a568ec9d163860ae3239`, including lint, Python compilation, full pytest, pinned Godot 4.7.2 worker, Windows bootstrap, both self-contained application builds, NSIS installers and clean install/upgrade/uninstall/reinstall lifecycle.
+- Windows CI #334: quick CI PASSED on `00b4ed9f97360cba1a304054a8285fd4df1cc827`; pinned RobotExpressive download/checksum, Ruff, Python compilation and full pytest passed. The complete application and installer were intentionally not rebuilt.
 - Dedicated Godot native-worker proof #18 PASSED.
 - Chat-independent continuation record: `docs/SESSION_CHECKPOINT.md`.
 
 ## Current Character Studio capabilities
 
 - Local project-contained GLB 2.0 import, validation, provenance and Godot inspection.
-- Browser GLB preview and imported animation selection. Godot inspection now returns the actual named clips (excluding the RESET track), and the retarget form selects from the source character's imported clips rather than relying on manually typed names.
+- Browser GLB preview and imported animation selection.
 - Persistent versioned character profiles.
-- Non-destructive material appearance recipes and facial morph-target sliders; Godot inspection reports imported blend-shape names/defaults, controls accept signed weights from -1 to 1, and reset restores each imported default. Appearance editing pauses embedded animation playback so an animation track cannot overwrite live expression-slider changes; ordinary character previews continue to play imported animations. A pinned CC0 third-party RobotExpressive GLB adds a real animated character with three facial-expression morph targets on its Head_4 mesh; CI fetches the upstream binary by immutable commit and verifies its SHA-256 before Godot import. A named Smile/Blink fixture continues to exercise deterministic node/mesh default precedence; persistence and range validation are covered by API tests. The new real-asset acceptance test is awaiting its first quick-CI result.
+- Non-destructive material appearance recipes and facial morph-target sliders; Godot inspection reports imported blend-shape names/defaults, controls accept signed weights from -1 to 1, and reset restores each imported default. Appearance editing pauses embedded animation playback so an animation track cannot overwrite live expression-slider changes; ordinary character previews continue to play imported animations. The pinned CC0 RobotExpressive asset was successfully imported by Godot in CI with at least three facial morph targets, numeric defaults and ten or more named animation clips. A pinned CC0 third-party RobotExpressive GLB adds a real animated character with three facial-expression morph targets on its Head_4 mesh; CI fetches the upstream binary by immutable commit and verifies its SHA-256 before Godot import. A named Smile/Blink fixture continues to exercise deterministic node/mesh default precedence; persistence and range validation are covered by API tests. The new real-asset acceptance test is awaiting its first quick-CI result.
 - Indexed 15-bone humanoid mapping, parent-chain diagnostics and per-bone rest-transform measurements; common 3ds Max Biped, Character Creator, Unreal-style, Blender Rigify and Cesium Rigged Figure bone names are recognized. Duplicate/negative hierarchy indices are rejected.
 - Imported-GLB retarget workflow with source/target selection, strict preflight, Godot scene creation, persistent history and scene download.
 - Worker verifies that the reopened source AnimationPlayer starts, the source pose changes, and the target upper-arm pose matches Godot's model-space rest-corrected retarget transform after 72 frames. This validates different rest axes without incorrectly requiring raw local rotation angles to match. Failed pose verification removes the generated scene.

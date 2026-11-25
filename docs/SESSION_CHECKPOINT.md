@@ -3,7 +3,7 @@
 Updated: 2026-11-25
 Repository: https://github.com/Pawar-47/Cartoon-Studio
 Branch: main
-Latest implementation checkpoint: 696929595b2d03e64e46a568ec9d163860ae3239
+Latest implementation checkpoint: main (GitHub HEAD; see recent commits for the exact revision).
 
 ## Mission and operating rules
 
@@ -23,7 +23,7 @@ Phase 2 — Character Studio is ACTIVE. Phase 0 and Phase 1 are complete. Do not
 ## Implemented Character Studio capabilities
 
 - Project-contained GLB 2.0 import, validation, SHA-256 provenance and Godot inspection.
-- Browser GLB preview, imported animation selection and camera controls. Godot inspection returns unique imported animation names (excluding RESET); the retarget UI now presents those clips as a source-specific selector instead of a free-text field.
+- Browser GLB preview, imported animation selection and camera controls.
 - Persistent editable character profiles.
 - Non-destructive PBR material recipes and facial morph-target controls. Godot reports imported blend-shape names/defaults; signed weights from -1 to 1 persist; reset restores each model's imported defaults. A pinned CC0 RobotExpressive fixture (three facial morph targets on Head_4) is fetched and SHA-256 verified in CI; its first Godot import acceptance run is pending.
 - Conservative indexed 15-bone humanoid mapping, parent-chain validation and imported rest-transform diagnostics.
@@ -55,15 +55,15 @@ One real third-party humanoid model has passed native Godot import and retarget 
 
 ## CI execution policy
 
-- Push/PR CI runs lint, Python compilation and automated tests only; no PyInstaller or NSIS builds.
+- Push/PR CI runs lint, Python compilation and the full automated test suite only; no PyInstaller or NSIS builds. Windows CI #334 passed the pinned RobotExpressive fixture acquisition and Godot facial-morph inspection.
 - Full Windows application and installer validation lives in `.github/workflows/release-windows.yml` and is manually dispatched after a phase/release milestone.
 - Workflow concurrency groups prevent overlapping runs. Avoid duplicate CI runs for minor edits.
 
 ## Next substantial implementation batch
 
-1. Verify RobotExpressive facial morph import with the pinned Godot worker, then test browser slider/reset and saved-recipe behavior against it.
-2. Retarget RobotExpressive across its named animation clips and document accepted/unsupported clips.
-3. Add more humanoid fixtures from distinct exporters and exercise unusual rest axes, bone roll and scale variation.
+1. Expose imported Godot animation names in inspection metadata and provide a source-clip dropdown in the retarget UI; validate against RobotExpressive.
+2. Test browser facial sliders, reset and saved-recipe behavior against the real morph asset.
+3. Retarget RobotExpressive across its named clips and add humanoid fixtures with unusual rest axes, bone roll and scale variation.
 4. Compare browser retarget preview with the authoritative Godot scene across rig families.
 5. Continue deterministic export and animation round-trip after broader acceptance.
 

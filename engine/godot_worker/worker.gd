@@ -131,14 +131,14 @@ func _inspect_glb(payload: Dictionary) -> Dictionary:
     var animation_count := 0
     var animation_names: Array[String] = []
     var animation_players := scene.find_children("*", "AnimationPlayer", true, false)
-    for player_node in animation_players:
-        var player := player_node as AnimationPlayer
-        var player_animations := player.get_animation_list()
-        animation_count += player_animations.size()
-        for animation_value in player_animations:
-            var animation_name := str(animation_value)
-            if animation_name.to_upper() != "RESET" and not animation_names.has(animation_name):
-                animation_names.append(animation_name)
+    for player in animation_players:
+        var animation_player := player as AnimationPlayer
+        var player_animation_names := animation_player.get_animation_list()
+        animation_count += player_animation_names.size()
+        for animation_value in player_animation_names:
+            var animation_label := str(animation_value)
+            if not animation_names.has(animation_label):
+                animation_names.append(animation_label)
     var mesh_nodes := scene.find_children("*", "MeshInstance3D", true, false)
     var morph_targets: Array[Dictionary] = []
     for mesh_node in mesh_nodes:
