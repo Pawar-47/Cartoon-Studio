@@ -3,77 +3,64 @@
 Updated: 2026-11-25
 Repository: https://github.com/Pawar-47/Cartoon-Studio
 Branch: main
-Checkpoint HEAD: pending verification commit
+Latest implementation checkpoint: 67e5a36e41eca364ab91aa2c8c58ed8340a5e3a2
 
-## Mission and source of truth
+## Mission and operating rules
 
-Build the full local-first cartoon production studio defined in MASTER_EXECUTION_PROMPT.md, MASTER_PLAN.md and PROJECT_SPECIFICATION.md. GitHub main is the only source of truth. Preserve all accepted work. Continue in coherent feature batches and do not restart audits or completed phases.
+Build the complete local-first Cartoon Studio desktop application defined by `MASTER_EXECUTION_PROMPT.md`, `MASTER_PLAN.md` and `PROJECT_SPECIFICATION.md`.
+
+- GitHub `main` is the only source of truth.
+- Preserve accepted work; do not restart completed phases or reset repositories.
+- Work in substantial, coherent feature batches.
+- Report implementation, automated tests, Godot execution and visual acceptance separately.
+- Respond in English.
+- Physical-PC testing and performance benchmarking remain Phase 8; they are not development gates.
 
 ## Current phase
 
-Phase 2 — Character Studio remains ACTIVE. Phase 0 and Phase 1 are complete. Do not jump into World Builder or unfreeze the partial Story Generator out of sequence. Physical-PC testing remains Phase 8 and is not a development gate.
+Phase 2 — Character Studio is ACTIVE. Phase 0 and Phase 1 are complete. Do not skip ahead to World Builder or unfreeze the partial Story Generator.
 
-## Accepted capabilities in this sequence
+## Implemented Character Studio capabilities
 
-- Project-contained GLB import, validation, SHA-256 provenance and Godot inspection.
-- Browser GLB preview with orbit/zoom, animation selection and camera reset.
-- Persistent versioned character profiles, metadata editing, project recovery and canonical project references.
-- Non-destructive PBR material recipes and imported morph-target sliders with profile persistence.
-- Skeleton hierarchy inspection and conservative 15-bone Godot humanoid profile mapping.
-- Parent-chain validation with valid/incomplete/invalid/unavailable status.
-- Per-bone imported rest transforms (local origin, rotation, scale) and local-offset summaries.
-- Deterministic skinned 15-bone humanoid GLB fixture with imported arm animation.
-- Native Godot proof that imports the fixture, confirms skin binding and animation, then transfers the imported source animation to a differently proportioned target skeleton.
+- Project-contained GLB 2.0 import, validation, SHA-256 provenance and Godot inspection.
+- Browser GLB preview, orbit/zoom, imported animation selection and camera reset.
+- Versioned character profiles with metadata editing and project references.
+- Non-destructive PBR material recipes and existing facial morph-target controls.
+- Skeleton hierarchy analysis, conservative indexed 15-bone humanoid mapping, parent-chain validation and per-bone rest-transform diagnostics.
+- A skinned 15-bone humanoid GLB fixture with an imported arm animation.
+- Character Studio source/target retarget selectors, optional animation-name entry, preflight, Godot scene creation, persistent retarget records and scene download.
+- Retarget preflight requires distinct imported assets, exactly one skeleton per character, complete unambiguous 15-bone mapping, valid parent chains, an animated source and a skinned target.
+- Original GLBs are preserved; the retarget scene and JSON record are separate project files.
 
-## Imported-pair retarget workflow batch — 2026-11-25
+## Verification checkpoint
 
-- Added Character Studio source/target selection, optional animation name, scene creation and retarget history.
-- Added project API preflight and persistent retarget records. The API requires distinct characters, complete unambiguous 15-bone mappings, valid parent chains, a source animation and target skin binding.
-- Godot saves a separate scene and starts the chosen source animation on scene load. Original GLB files are not edited.
-- CI #245 exposed an imported fixture hierarchy mismatch. The next successful worker test must include the hierarchy diagnostics; no arbitrary-import acceptance is claimed.
+- Windows CI #250 PASSED on `ae0e5c8bd762e45aef8f00f432c67e5bb8b7be1a`: lint, Python tests, real Godot worker tests, application builds, installer compilation and install/upgrade/uninstall/reinstall lifecycle.
+- Windows CI #251 PASSED on `cf46fa26e074e703a9ac2391558069a221aa36ea`: validates use of the actual GLB container skin count in retarget preflight.
+- Windows CI #252 PASSED on `67e5a36e41eca364ab91aa2c8c58ed8340a5e3a2`: validates exact-one-skeleton preflight and saved-scene download, including full packaging lifecycle.
+- Dedicated Godot native-worker proof #11 PASSED on `6b2f47bdaa42775bb7c24fd28030902d93004aed`: fixture import, scene/animation, save/reopen and MovieWriter checks.
+- Earlier failures #243–#249 were traced to lint formatting, the fixture's incorrect upper-arm parent links, and a set-versus-dict comparison bug. These were corrected; do not carry them forward as unresolved.
 
-## Current verification
+## Important acceptance boundary
 
-- Windows CI #229 passed on hierarchy analyzer commit 1cac9e93adff60bd051c4029df829ebc5fc662f0.
-- Windows CI #230 and #231 passed on UI and hierarchy-status correction commits.
-- Windows CI #236 passed after the rest-transform association fix.
-- Windows CI #237 passed on fixture commit c8f7bb3ac83ac46975e385648f773f4e20b951c8; its real pinned Godot worker test imported the skinned humanoid GLB and checked the skeleton/rest-transform payload.
-- Windows CI #238 passed on proof commit ae63724b12a0f2cf670469ac74613acaee07e15c.
-- Dedicated Godot proof #8 passed all imported source-to-different-proportion target retarget checks: https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45611145465
-- Dedicated Godot proof #9 passed after explicit target-rest assignment: https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45611193996
-- Latest HEAD aadce3ed has Windows CI #241 and dedicated Godot proof #10 running. Proof #10 adds an explicit save/reopen check for the imported retarget modifier and target skeleton.
-- Earlier intermediate runs #232–#235 failed on lint formatting or a rest-transform association bug; both defects were fixed. Do not report those failures as unresolved.
+The application worker test currently uses two separate imported copies of the same humanoid fixture. It validates indexed mappings, hierarchy, target skin binding, retarget scene save/reopen and preservation of both GLB files. The dedicated Godot proof separately demonstrates imported-source animation transfer to a generated target skeleton with different proportions.
 
-## Important technical boundary
+This is not yet acceptance of arbitrary pairs of user-imported GLBs. In particular, different imported proportions, non-canonical bone naming/order, animation-track behavior after canonical bone renaming, and actual target pose transfer in the saved two-imported-asset scene still need dedicated verification. Do not describe this as general-purpose retargeting or visual acceptance.
 
-The imported animation is currently retargeted in a Godot proof from the imported fixture's Skeleton3D to a target Skeleton3D generated from the same imported hierarchy with altered limb rest lengths. This is real imported-source animation retargeting, but it is not yet a general user-facing pipeline for two arbitrary imported GLBs. The app must still support safe target-rig binding, rest-pose diagnostics/correction, save/reopen and export without modifying the source GLB.
+## Next substantial implementation batch
 
-## Immediate next work
+1. Add a second imported humanoid target fixture with different rest proportions and bone ordering; preserve a reproducible fixture-generation/validation path.
+2. Verify animation track paths remain valid when source/target bone names are normalized to Godot humanoid profile names.
+3. Extend the worker proof to verify source animation autoplay after scene reopen and actual target pose transfer across frames for two imported GLBs.
+4. Exercise the workflow on representative non-fixture GLBs and report compatibility limits clearly.
+5. Continue Character Studio authoring and deterministic export only after rig/animation round-trip behavior is proven.
 
-1. Complete the actual two-imported-GLB pose-transfer check in the worker, including scene reopen and source animation playback.
-2. Test with distinct imported target proportions and additional naming conventions; the current integration fixture pair is duplicated from the same humanoid GLB.
-3. Add a usable retarget preview/open action in Character Studio; currently the UI saves the Godot scene and lists its record.
-4. Validate real facial morph controls on blend-shape GLBs, including intended facial-region deformation and persistence.
-5. Add deterministic export/round-trip only after retarget and appearance preservation are proven.
-6. Keep Phase 2 active until character authoring, import, retarget, preview, persistence and export acceptance are real.
+## Later phases
 
-## Operating discipline
+- Phase 3 — World Builder: NOT STARTED.
+- Phase 4 — Story and Scene Engine: PARTIAL / FROZEN; preserve existing Story Generator work.
+- Phase 5 — Animation Engine: NOT STARTED.
+- Phase 6 — Urdu Voice and Lip-Sync: research complete; implementation not started.
+- Phase 7 — Episode Generator: NOT STARTED.
+- Phase 8 — Optimization and Reliability: deferred, including physical-PC performance testing.
 
-- Work in substantial coherent batches, not trivial one-line commits.
-- GitHub main is the only source of truth.
-- Report implementation, automated tests, Godot execution, visual inspection and imported-asset acceptance separately.
-- Never call a generated or fixture proof acceptance of arbitrary user models.
-- Do not claim full project completion while Phases 3–7 remain unimplemented.
-- No mandatory paid APIs, cloud rendering or online activation.
-- Always respond in English for this project.
-
-
-
-
-## Imported-pair pose-transfer verification — 2026-11-25
-
-- Windows CI #250 passed the complete pipeline, including tests, Godot worker checks, application builds, installer compilation and install/upgrade/uninstall/reinstall smoke tests.
-- Added an additional runtime acceptance check to the retarget worker: reopen the saved two-GLB scene, advance the SceneTree, and compare the animated source LeftUpperArm pose with the retargeted target pose.
-- The worker now refuses the retarget scene and removes the generated scene file if pose transfer is not verified.
-- The API records `pose_transferred`; the Character Studio retarget history exposes the verification state.
-- CI for this new pose-transfer check is pending. The current integration test uses two separate copies of the same imported GLB; differing-proportion imported target acceptance remains future work.
+Never claim the complete application is finished while Phases 2–7 remain incomplete.
