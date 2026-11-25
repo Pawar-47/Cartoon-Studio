@@ -1,68 +1,64 @@
 # Project Status — 2026-11-25
 
-## Live GitHub checkpoint
-
+## Live checkpoint before this policy batch
 - Repository: Pawar-47/Cartoon-Studio
 - Branch: main
-- Current HEAD at this checkpoint: 6823cdf8913fc6b645017a6b459c06062d2cc973
-- Latest CI run: #88 — SUCCESS on that exact HEAD.
-- Latest application CI run #67 passed Ruff, Python compile, 12 pytest tests and Windows bootstrap ZIP packaging/upload. The bootstrap ZIP is not a self-contained installer.
-- Commit history confirms P0.3 closeout and P0.4 target-PC probe harness are pushed. No work is discarded or restarted.
+- HEAD: 745d557a5f043bca4a1012ec95d79e2fb87dd91d
+- Latest CI: run #90 — SUCCESS on that exact HEAD.
+- Original 25-part brief remains verbatim at `docs/MASTER_EXECUTION_PROMPT.md`.
+- P0.2 complete: 171 atomic requirement rows, 171 one-to-one traceability rows, 75 legacy IDs retained.
 
-## Master brief and phase order
+## Corrected hardware-testing policy
+The user's physical PC is **not a gate** for architecture, implementation or phase progression. The project must still be designed around i3-5005U / Intel HD 5500 / 8 GB / SSD with sequential processing, caching, bounded memory and four quality modes.
+- P0.4 compatibility assessment is source-based and records unknowns honestly.
+- The PowerShell/Godot probe remains optional, not a required user task.
+- Actual representative-scene benchmarks and quality-preset tuning belong to Phase 8 / P8.1.
+- Slow rendering is an optimization target, not a reason to stop building the complete product.
+- No FPS/render-time/RAM/driver-stability claim is made without measurement.
+- Clean Windows install checks can run in CI or a clean VM; the user's PC is not the Phase 1 gate.
 
-- The exact original 25-part execution brief is stored verbatim at docs/MASTER_EXECUTION_PROMPT.md (1,133 lines, 4,642 words; SHA-256 541098eebd96b98e0153770f0bc37a1031a7242fd9cb97bc5a6b52c35c9ddfde).
-- P0.2: 171 atomic requirement rows, 171 one-to-one traceability rows, and 75 legacy IDs preserved.
-- P0.3: source-level comparative research and provisional scorecard complete. No engine, plugin, voice, provider or asset has been selected.
-- Required phase order remains: 0 Specification/Research; 1 GitHub/CI Foundation; 2 Character Studio; 3 World Builder; 4 Story/Scene; 5 Animation; 6 Urdu Voice/Lip-Sync; 7 Episode Generator; 8 Optimization/Reliability.
-
-## Existing implementation — preserve it
-
-- FastAPI backend, static dashboard and Story Generator workspace.
-- SQLite project metadata and partial story-plan schema/validation.
-- CI workflow and Windows bootstrap ZIP.
-- Ara-derived action/location/expression IDs are provisional validation catalogs only. Ara proof run #6 was cancelled during MP4 export; it is not an approved engine and does not prove production export.
-- The early Story Generator is out of sequence; preserve it and freeze expansion until Phase 4.
+## Master brief phase order
+0. Specification/research/architecture; 1. GitHub and CI/CD foundation; 2. Character Studio; 3. World Builder; 4. Story and Scene Engine; 5. Animation Engine; 6. Urdu Voice and Lip-Sync; 7. Episode Generator; 8. Optimization and Reliability.
 
 ## Phase 0 status
-
 | Batch | Status | Evidence / limitation |
 |---|---|---|
-| P0.1 baseline and preservation audit | COMPLETE | Live repo, source, tests, workflows and artifacts inspected |
+| P0.1 baseline and preservation audit | COMPLETE | Repository, source, tests, workflows and artifacts inspected |
 | P0.2 atomic requirements/traceability | COMPLETE | 171 atomic rows and 171 traceability rows; legacy IDs retained |
-| P0.3 comparative GitHub research | COMPLETE | Candidate scorecard and source-level evidence; no candidate selected |
-| P0.4 hardware/Urdu/provider feasibility | IN PROGRESS | Windows diagnostic harness committed; Urdu/provider feasibility and acceptance protocol refreshed; target PC and real-audio proof pending |
-| P0.5 architecture freeze | BLOCKED | Wait for P0.4 evidence |
-| P0.6 bounded candidate proofs | BLOCKED | Wait for P0.5; Ara run #6 is not accepted |
-| P0.7 Phase 0 compliance/freeze | BLOCKED | Wait for P0.2–P0.6 |
+| P0.3 comparative GitHub research | COMPLETE | Source-level candidate matrix and provisional scorecard |
+| P0.4 source-based hardware/Urdu/provider feasibility | COMPLETE | Official hardware/API, Urdu model/license, provider region/quota/privacy/cost evidence recorded; physical-PC benchmark deferred to P8.1; native-speaker voice evaluation remains in Phase 6 |
+| P0.5 architecture and dependency decisions | IN PROGRESS | Proceed now; no personal-PC test prerequisite |
+| P0.6 bounded candidate proofs | NEXT | After P0.5; architecture-critical proofs only |
+| P0.7 Phase 0 compliance/freeze | PENDING | After P0.2–P0.6 |
 
-## P0.4 findings so far
+## Existing implementation — preserve it
+- FastAPI backend, static dashboard and Story Generator workspace.
+- SQLite project metadata and partial story-plan schema/validation.
+- CI workflow and Windows bootstrap ZIP; bootstrap is not a self-contained installer.
+- Ara-derived action/location/expression IDs are provisional validation catalogs only. Ara proof run #6 was cancelled during MP4 export; it is not an approved engine.
+- Existing early Story Generator remains preserved and frozen until Phase 4.
 
-- Target PC baseline supplied by user: Windows 10, Intel Core i3-5005U, Intel HD Graphics 5500, 8 GB RAM, SSD. Exact OS build and installed Intel driver remain unknown.
-- Godot 4.7.2 Compatibility is the leading on-paper runtime candidate only; no target-PC startup/performance/render test has run.
-- Blender 4.5.17 LTS remains an optional authoring candidate, but target CPU is below Blender's published 4-core minimum and the HD 5500 has documented driver caveats.
-- eSpeak NG contains Urdu-script pronunciation rules and can emit phoneme/IPA traces; it is a G2P candidate, not a natural Urdu voice. Smol Urdu TTS V1 is not approved because the linked code has no LICENSE and requires a BF16/Liger/WavTokenizer stack.
-- WhisperX upstream maps ur to a 300M / 1.41 GB FP32 Urdu wav2vec2 aligner (Apache-2.0 model metadata); its Common Voice 8 Urdu ASR score is 39.89% WER, so retain it only as a forced-aligner candidate, not transcript ASR. A separate 0.8B Urdu Whisper Turbo ASR model reports 26.23% WER but is 3.24 GB FP32. CPU memory/speed and Pakistani conversational quality are untested.
-- Qwen Audio TTS Flash lists male Urdu voice Sahar, but its documented endpoints are Singapore and China North 2 and its standard pricing is paid. No provider is approved.
-- Gemini API official supported-region list includes Pakistan; free-tier data-use and changing per-model quotas remain caveats.
-- Groq free limits are model/organization-specific; its documented data centres are outside Pakistan. Cloudflare Workers AI and OpenRouter have limited free quotas, not unlimited free inference.
-- No keys are connected; no user data or audio has been sent to providers.
+## Known feasibility findings and risks
+- Godot 4.7.2 Compatibility is the leading source-based runtime candidate: HD 5500 reports OpenGL 4.3 versus Godot's OpenGL 3.3 Compatibility floor. This is paper compatibility, not measured performance.
+- Blender 4.5.17 remains an optional authoring candidate; documented CPU minimum and legacy Intel driver caveats make it a riskier default runtime.
+- eSpeak NG provides Urdu G2P/phoneme diagnostics, not an approved natural Urdu voice.
+- WhisperX's Urdu aligner is a forced-alignment candidate only; its model-card ASR metrics are weak and target performance is untested.
+- Smol Urdu TTS V1 is not approved for bundling due to missing code-repository license and heavy BF16/Liger/WavTokenizer stack.
+- Qwen Sahar is paid/cloud-only; no provider is approved for production Urdu TTS.
+- No API keys are connected and no user data has been sent.
 
-## What is actually implemented/tested
+## Implementation status
+No production Character Studio, persistent World Builder, canonical animation playback/library, direct multi-provider orchestration, research agent, approved Pakistani Urdu TTS, lip-sync, audio mixer, full 3D renderer, end-to-end MP4 episode pipeline, recovery/cache system or self-contained installer has been demonstrated. No requirement is VERIFIED solely from code presence or CI. No target-PC benchmark has been run; it is scheduled for Phase 8, not a blocker.
 
-No production Character Studio, persistent World Builder, canonical animation playback/library, direct multi-provider orchestration, research agent, approved Pakistani Urdu TTS, lip-sync, audio mixer, full 3D renderer, end-to-end MP4 episode pipeline, recovery/cache system, self-contained installer or target-PC benchmark has been demonstrated. No requirement is marked VERIFIED.
-
-## Immediate next work
-
-1. Continue P0.4 source-level Urdu voice and provider feasibility, then prepare a repeatable test protocol.
-2. User runs the target-PC diagnostic on the actual Windows machine and shares its JSON/log/optional AVI.
-3. Obtain a short consented Pakistani Urdu sample and verified transcript for alignment/G2P evaluation; do not upload it to any cloud provider without explicit authorization.
-4. Only after P0.4 evidence, proceed to P0.5 architecture, P0.6 bounded proofs and P0.7 freeze.
+## Immediate work
+1. Continue P0.5: engine-neutral contracts, adapter boundaries, data layout, queue/cache/recovery and dependency decisions.
+2. Keep Godot provisional until bounded P0.6 proofs; do not claim it selected/verified.
+3. Keep Urdu voice selection open until Phase 6 native-speaker sample evaluation.
+4. Complete Phase 0, then follow Phases 1–8 in the original order.
 
 ## Operating constraints
-
-- GitHub main is the source of truth.
-- Make coherent batches and commit/push once per batch; do not generate a stream of tiny docs-only commits.
-- Preserve current code and artifacts; no reset or audit from zero.
-- No production feature implementation before P0.7; Phase 2 also waits for Phase 1's tested installation gate.
-- Local-first, no mandatory paid API, no hidden quota bypass. Keep manual recording, manual viseme correction and manual AI handoff fallbacks.
+- GitHub main is the only project source of truth.
+- Preserve all source/artifacts; no reset or audit from zero.
+- Work in substantial coherent batches, one commit per batch.
+- No mandatory paid APIs, subscriptions, cloud inference or cloud rendering.
+- Do not send user content/audio to an external provider without explicit approval.

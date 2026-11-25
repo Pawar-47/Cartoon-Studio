@@ -22,7 +22,7 @@
 11. AI provider adapters — official APIs where permitted; manual handoff otherwise.
 12. Research agent — evidence-backed search and evaluation.
 
-Do not lock the 3D engine until source review and hardware proofs are complete. Do not use browser rendering for final episodes. GitHub Actions builds/tests/packages; local production rendering is separate.
+Do not lock a production 3D engine until source review and architecture-critical P0.6 proofs are complete. Physical target-PC benchmarking is not an architecture gate and is scheduled for Phase 8. Do not use browser rendering for final episodes unless a later proof establishes a production-quality export path. GitHub Actions builds/tests/packages; local production rendering is separate.
 
 ## Initial API
 GET /api/health  
@@ -37,7 +37,7 @@ The current `app/story.py` validates `location_id`, `action_id` and expression v
 
 ## P0.3 research findings — not yet frozen
 
-A plausible candidate architecture is a browser-first FastAPI UI, a local engine adapter, a background renderer and a durable SQLite stage/job store. Blender 4.5.17 LTS is under evaluation as a local production engine, while Three.js-based editors (Ara/Ekza) remain browser-editor candidates. This is not a decision: the target i3-5005U is below Blender's published CPU minimum and HD 5500 has a documented Intel driver risk.
+A plausible candidate architecture is a browser-first FastAPI UI, a local engine adapter, a background renderer and a durable SQLite stage/job store. Blender 4.5.17 LTS is under evaluation as a local production engine, while Three.js-based editors (Ara/Ekza) remain browser-editor candidates. This is not a decision: the target i3-5005U is below Blender's published CPU minimum and HD 5500 has a documented Intel driver risk. These source-based risks inform the design but do not block architecture or implementation; benchmark the completed representative workflow in Phase 8.
 
 Bene Procgen Maps and Blender Level Architect are world-generation candidates; MPFB2/CharacterCreator are character-generation candidates; Parrot/Allosaurus and Charley3d are lip-sync research candidates. Their GPL obligations and target compatibility must be reviewed before integration. FFmpeg must be pinned to a known license/configuration; the default LGPL build differs from builds enabling GPL codecs.
 
@@ -45,7 +45,7 @@ Do not mix engine-specific identifiers into canonical project data. Use stable C
 
 ## P0.3 Godot candidate architecture — not yet frozen
 
-Godot 4.7.2 Compatibility renderer is now the leading on-paper runtime candidate for the target i3-5005U/HD 5500/8 GB machine. A Godot-native environment stack is under review: Terrain3D for terrain/foliage, Road Generator for roads/lanes, Building Generator for low-poly structures, Roommate for interiors, and a Cartoon Studio-owned toon shader. Imported GLB assets and an original modular character editor may avoid making Blender a mandatory runtime dependency.
+Godot 4.7.2 Compatibility renderer is now the leading source-based runtime candidate for the target i3-5005U/HD 5500/8 GB machine. No physical-PC benchmark is required before architecture freeze. A Godot-native environment stack is under review: Terrain3D for terrain/foliage, Road Generator for roads/lanes, Building Generator for low-poly structures, Roommate for interiors, and a Cartoon Studio-owned toon shader. Imported GLB assets and an original modular character editor may avoid making Blender a mandatory runtime dependency.
 
 The existing FastAPI/SQLite project/story backend and browser UI must be preserved. P0.5 must compare three integration paths: (1) Godot as the native app/editor shell with FastAPI as local service, (2) Godot as a local renderer sidecar controlled by the browser UI, or (3) Godot Web export embedded as a browser viewport. Each has IPC, memory, windowing and performance trade-offs.
 
@@ -87,3 +87,12 @@ Godot VRM/MToon is a candidate import/export and shading path. Keep non-humanoid
 - **Viseme conversion:** map aligned Urdu characters/words through eSpeak G2P into a compact Urdu phoneme/viseme table, then drive VRM/Cartoon Studio expression weights. This is an experimental approximation; actual coarticulation and timing must be manually correctable.
 - **Alternative phone recognition:** Allosaurus universal model may provide phone labels with approximate timestamps; verify Urdu inventory and quality before use.
 - **Fallbacks:** manual voice recording, word/character alignment, and manual mouth-keyframe correction. Do not claim automatic lip-sync quality until a native Pakistani Urdu sample is reviewed.
+
+
+## Hardware-aware architecture policy — 2026-11-25
+
+- Use the published hardware profile to constrain memory use, background concurrency, asset density and renderer/API selection from the start.
+- Do not block architecture, implementation or phase completion on the user's physical PC. Source-based compatibility and bounded architecture proofs suffice for earlier decisions when unknowns are explicit.
+- Keep Preview, Low Hardware, Balanced and High Quality modes. Quality changes may reduce resolution, samples, effects, concurrency or render speed, but must not silently remove required features.
+- Design for sequential/chunked rendering, asset reuse, scene caching, resumable jobs and memory/disk monitoring.
+- Run representative-scene benchmarks and tune modes in Phase 8 / P8.1. Until then, publish no FPS or episode render-time promises.

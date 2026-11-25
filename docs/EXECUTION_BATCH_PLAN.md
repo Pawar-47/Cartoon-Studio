@@ -10,13 +10,13 @@ P0.2 checkpoint: atomic registry and traceability were expanded on 2026-11-25. T
 |---|---|---|---|---|
 | P0.1 | Repository baseline, preservation, code/tests/workflows/artifacts audit | BASELINE_AUDIT.md | Main branch, commit history, current source, docs, CI and candidate proof inspected | COMPLETE |
 | P0.2 | Atomic decomposition of all 25 master-brief parts and all 24 PROJECT_SPECIFICATION sections | Atomic registry and one-to-one traceability | 171 atomic rows and 171 traceability rows; 75 legacy IDs preserved | COMPLETE — atomic registry/traceability complete; verbatim prompt stored at docs/MASTER_EXECUTION_PROMPT.md |
-| P0.3 | Comparative source-level GitHub research across 3D editors, character generation/rigging, toon styling, worlds, animation, renderers, TTS/lip-sync, audio, queue/recovery, packaging and AI providers | GITHUB_RESEARCH, REPOSITORY_EVALUATION, OPEN_SOURCE_REUSE_MATRIX, ASSET_LICENSES, RESEARCH_LOG, CANDIDATE_SCORECARD | Source-level research across engine/editor, character/face, world, animation, Urdu voice/lip-sync, audio/MP4, queues, packaging, providers and asset licensing; provisional weighted scorecard published; no candidate selected | COMPLETE — research gate only; target and quality proofs remain in P0.4/P0.6 |
-| P0.4 | Target hardware, Urdu and provider feasibility | HARDWARE_PROFILE, AI_PROVIDERS, URDU_VOICE_FEASIBILITY, scripts/run_target_pc_probe.ps1, tools/godot_target_probe/ | Target-PC profile and Godot Compatibility/AVI probe; Urdu G2P/forced-alignment/TTS comparison; Pakistan API availability, quotas, privacy and cost | IN PROGRESS — source-level Urdu/provider feasibility refreshed; target-PC and real-audio tests pending |
-| P0.5 | Engine-neutral architecture and dependency decisions | ARCHITECTURE, DECISION_LOG | Versioned contracts, adapters, data layout, offline mode, queue/cache/recovery, packaging and rejected options documented | BLOCKED BY P0.4 |
+| P0.3 | Comparative source-level GitHub research across all major subsystems | Research matrix, license records and candidate scorecard | Source-level research and provisional weighted scorecard published | COMPLETE |
+| P0.4 | Source-based hardware, Urdu and provider feasibility | HARDWARE_PROFILE, AI_PROVIDERS, URDU_VOICE_FEASIBILITY; optional target-PC probe retained | Official compatibility/resource evidence; Urdu G2P/alignment/TTS and model/license assessment; Pakistan API availability, quotas, privacy and cost; explicit unknowns | COMPLETE — source-level feasibility documented. Physical-PC benchmarks move to P8.1; native-speaker voice evaluation remains a Phase 6 prerequisite |
+| P0.5 | Engine-neutral architecture and dependency decisions | ARCHITECTURE, DECISION_LOG | Versioned contracts, adapters, data layout, offline mode, queue/cache/recovery, packaging and rejected options documented | IN PROGRESS — no physical-PC test prerequisite |
 | P0.6 | Bounded, diagnostic candidate proofs only where needed | Proof workflow, logs, sample outputs and measurements | Open/import/animate/save/reopen/render and inspect output; Ara run #6 is CANCELLED and not accepted | BLOCKED BY P0.5 |
 | P0.7 | Phase 0 compliance review and architecture freeze | MASTER_PLAN, EXECUTION_BATCH_PLAN, decision record | Every requirement traced; critical risks explicit; architecture and downstream dependencies frozen | BLOCKED BY P0.2–P0.6 |
 
-**Phase 0 rule:** no new production-feature implementation before P0.7 exits. Preserve existing source. The existing Story Generator/schema is an early partial slice; do not expand it until Phase 4.
+**Phase 0 rule:** no new production-feature implementation before P0.7 exits. Preserve existing source. The existing Story Generator/schema is an early partial slice; do not expand it until Phase 4. Physical-PC performance testing is not a Phase 0 gate; P8.1 owns actual benchmarks.
 
 ## Phase 1 — GitHub and CI/CD Foundation
 
@@ -24,10 +24,10 @@ P0.2 checkpoint: atomic registry and traceability were expanded on 2026-11-25. T
 |---|---|---|---|---|
 | P1.1 | Harden existing FastAPI app, project lifecycle, SQLite persistence and versioned local data layout | App/storage contract and tests | Create/list/save/load/restart/data-preservation integration tests | PARTIAL |
 | P1.2 | Reproducible dependencies, lint/static checks and CI | Pinned/locked dependencies and CI workflow | Clean Windows runner builds/tests with reproducible logs | PARTIAL |
-| P1.3 | Portable Windows package and simple launcher | Bootstrap/portable package | Clean Windows install, launch, shutdown and diagnostics test | PARTIAL — bootstrap only; no target-PC install evidence |
+| P1.3 | Portable Windows package and simple launcher | Bootstrap/portable package | Clean Windows CI/VM install, launch, shutdown and diagnostics test | PARTIAL — bootstrap only; no clean-install evidence; user's PC is not the gate |
 | P1.4 | Self-contained installer, upgrade and data migration | Installer and release pipeline | Install/upgrade/uninstall tests; project data survives upgrades | NOT STARTED |
 
-**Phase 1 exit gate:** tested local app, repeatable Windows artifact, documented clean installation, persistent user data. Do not start Phase 2 until it passes.
+**Phase 1 exit gate:** tested local app, repeatable Windows artifact, documented clean installation in a clean Windows CI/VM environment, persistent user data. Do not require installation on the user's PC to start Phase 2; target-PC performance is P8.1.
 
 ## Phase 2 — Character Studio
 
@@ -82,7 +82,7 @@ P0.2 checkpoint: atomic registry and traceability were expanded on 2026-11-25. T
 
 | Batch | Scope | Deliverables | Exit evidence | State |
 |---|---|---|---|---|
-| P8.1 | Target-PC benchmarks and quality presets | Benchmark report and presets | Actual i3-5005U/HD 5500/8 GB runs | NOT STARTED |
+| P8.1 | Target-PC benchmarks and quality presets | Benchmark report and presets | Representative scenes measured on i3-5005U/HD 5500/8 GB; tune Preview, Low Hardware, Balanced and High Quality without silently removing features | NOT STARTED — optimization stage, not an upstream gate |
 | P8.2 | Installer, backup, updates, diagnostics and recovery | Final Windows release package | Clean install/upgrade/recovery tests | PARTIAL — bootstrap only |
 | P8.3 | Full acceptance and release | Versioned release and complete test report | Every final acceptance criterion has direct evidence | NOT STARTED |
 

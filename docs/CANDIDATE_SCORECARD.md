@@ -1,13 +1,13 @@
 # Candidate Scorecard — P0.3 source-level comparison
 
 **Date:** 2026-11-25  
-**Purpose:** compare serious candidates before target-PC proof and architecture freeze. This is a source-based scorecard, not a benchmark or final selection.
+**Purpose:** compare serious candidates before architecture freeze. This is a source-based scorecard, not a benchmark or final selection. The hardware dimension scores documented API/resource fit, not measured performance on the user's PC.
 
 ## Scoring method
 
 Scores are 1–5 (5 is strongest). Weighted score:
 
-- Target-hardware fit: 25%
+- Documented hardware/API and resource fit: 25% (source evidence only; no physical-PC benchmark)
 - Feature coverage: 20%
 - License and redistribution fit: 15%
 - Offline / no-mandatory-cost fit: 15%
@@ -24,7 +24,7 @@ Scores reflect public source/docs inspected on 2026-11-25. Unknown target perfor
 | Blender 4.5.17 LTS | 2 | 5 | 3 | 5 | 5 | 2 | **3.65** | Medium. Full 3D authoring/rendering; target is below published CPU minimum and has legacy Intel driver risk; GPL3 obligations. |
 | Browser WebGL / Ara / Ekza | 3 | 3 | 3 | 4 | 2 | 3 | **3.00** | Low. Fast UI/preview path but editor maturity, CI and MP4 export proof are incomplete/cancelled; browser memory needs testing. |
 
-**Current research leader:** Godot 4.7.2 Compatibility as the target runtime candidate. This is not frozen; P0.4 target-PC tests and P0.6 bounded proofs can change the ranking.
+**Current research leader:** Godot 4.7.2 Compatibility as the source-based target runtime candidate. This is not frozen; P0.6 architecture-critical proofs can change the ranking. Physical-PC measurements are deferred to Phase 8 and do not gate architecture or implementation.
 
 ## World and environment
 
@@ -99,9 +99,13 @@ A minimal Cartoon Studio-owned SQLite queue may still be simpler; choose in P0.5
 
 ## P0.3 outcome and next gates
 
-P0.3 source-level research and provisional scorecard are complete. The scorecard does not select an engine or authorize code/assets. P0.4 now owns target-PC compatibility, Pakistan region/account quota, native Urdu quality, privacy and cost feasibility. P0.5 will freeze the engine-neutral architecture only after P0.4; P0.6 will run bounded proofs after P0.5. Preserve the current FastAPI/browser/SQLite and Story Generator work; do not restart or expand production features before P0.7.
+P0.3 source-level research and provisional scorecard are complete. The scorecard does not select an engine or authorize code/assets. P0.4 source-based hardware/API compatibility, Pakistan region/account quota, Urdu model/voice feasibility, privacy and cost research is complete with unknowns recorded. P0.5 architecture proceeds without a physical-PC test. P0.6 runs only architecture-critical bounded proofs after P0.5. Actual target-PC benchmarks are Phase 8 work. Preserve the current FastAPI/browser/SQLite and Story Generator work; do not restart or expand production features before P0.7.
 
 ## P0.4 Urdu model-card refinements — 2026-11-25
 - WhisperX Urdu forced-alignment candidate: Apache-2.0 model card, 300M parameters / 1.41 GB FP32; Common Voice 8 Urdu WER 39.89% and CER 16.70% with 5-gram decoder. Retain only for forced-alignment experiments, not as production ASR. Boundary quality must be measured separately.
 - Urdu Whisper large-v3-turbo ASR candidate: Apache-2.0 model card, 0.8B parameters / 3.24 GB FP32; Common Voice 17 Urdu WER 26.234% and CER 8.795% self-reported. CTranslate2 int8 conversion is 824 MB. Too large to assume viable on the 8 GB target without testing.
 - Smol Urdu TTS V1: 135M BF16 weights and Apache-2.0 model-card metadata, but linked inference repository has no LICENSE, requires Liger Kernel and separate WavTokenizer files, and BF16 CPU operation on Broadwell is unverified. Not approved for bundling.
+
+
+## Hardware score interpretation
+The hardware score is an evidence-based compatibility/resource estimate, not measured FPS, render time, memory or driver stability. The target-PC probe is optional before Phase 8. P0.6 proves architecture-critical behavior; Phase 8 measures real performance.

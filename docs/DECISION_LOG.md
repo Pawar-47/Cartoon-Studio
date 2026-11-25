@@ -24,3 +24,7 @@ Date: 2026-11-25. The existing Story Generator/schema is preserved as early part
 
 ## D-008 — One coherent commit per substantial batch
 Date: 2026-11-25. The previous checkpoint update created 15 documentation-only commits and 15 CI runs (#53–#67), contrary to the anti-stall/batch rules. Going forward, related source, tests, docs and traceability updates must be committed together once per coherent batch; do not trigger CI for each documentation edit. Accepted.
+
+
+## D-009 — Physical target-PC testing is a Phase 8 benchmark, not an upstream gate
+Date: 2026-11-25. The user's i3-5005U / Intel HD 5500 / 8 GB PC remains the design target, but testing on that physical machine must not block P0.5 architecture, P0.6 bounded proofs, P0.7 freeze or Phases 1–7. P0.4 uses official specifications, upstream source and documented driver/API evidence with explicit uncertainty. Architecture-critical candidate proofs may run in CI/VM or other controlled environments. Actual representative-scene performance, quality-preset tuning and target-PC acceptance are performed in Phase 8 / P8.1. Slow performance is addressed through scalable quality modes and optimization without silently dropping required features. Accepted per user instruction.

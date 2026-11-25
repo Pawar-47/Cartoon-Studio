@@ -18,7 +18,7 @@ This is a complete production application, not a mockup, theme, prompt generator
 8. A batch is complete only after implementation, relevant tests, output inspection, documentation and one coherent commit.
 9. Green lint/compile/unit tests do not prove production rendering or final product acceptance.
 10. Do not claim functionality, compatibility, performance or test success without direct evidence.
-11. Local episode production must respect the Intel Core i3-5005U, Intel HD Graphics 5500, 8 GB RAM and SSD target.
+11. Design for the stated Intel Core i3-5005U, Intel HD Graphics 5500, 8 GB RAM and SSD constraints. Actual target-PC testing is not a prerequisite for research, architecture, implementation or phase progression; representative measurements belong to Phase 8.
 12. No mandatory paid APIs, subscriptions, online activation, cloud inference or cloud rendering.
 13. Respect provider quotas, project terms, software/model/dataset/asset licenses and user privacy.
 14. User is not responsible for running developer commands, coordinating batches or fixing implementation errors. The lead agent owns repository execution and reporting.
@@ -72,15 +72,16 @@ For every serious candidate inspect its source, documentation, releases, commit 
 
 Deliverables: updated `GITHUB_RESEARCH.md`, `REPOSITORY_EVALUATION.md`, `OPEN_SOURCE_REUSE_MATRIX.md`, `ASSET_LICENSES.md` and `RESEARCH_LOG.md`.
 
-P0.4 — Target-hardware and Urdu feasibility
-- Verify graphics/API compatibility for Intel HD 5500 and the supported Windows environment.
-- Compare browser GPU, CPU and Blender render paths.
-- Estimate RAM/disk footprint from measured or source-supported evidence.
-- Evaluate Urdu-script support, Pakistani pronunciation, speaker consistency, model rights and CPU viability.
-- Verify current free AI-provider allowances, official integration options, terms and Pakistan availability.
+P0.4 — Source-based hardware, Urdu and provider feasibility
+- Use official system requirements, API specifications, upstream source, driver documentation and known hardware specifications to assess compatibility and resource risks.
+- Compare browser GPU, CPU, Godot Compatibility and Blender render paths on paper; label all estimates and untested assumptions.
+- Record the target hardware profile, likely bottlenecks, memory/disk risks and quality-scaling strategies.
+- Evaluate Urdu-script support, Pakistani pronunciation evidence, speaker consistency, model rights and CPU viability. Keep voice selection provisional until native-speaker sample evaluation in Phase 6.
+- Verify current free AI-provider allowances, official integration options, terms, privacy and Pakistan availability.
 - Keep manual voice and AI handoff fallbacks where direct integration is unavailable.
+- Do not require a physical test on the user's PC to close P0.4 or proceed. Preserve the diagnostic harness as optional; actual representative-scene benchmarks are scheduled in Phase 8.
 
-Deliverables: evidence-backed `HARDWARE_PROFILE.md` and `AI_PROVIDERS.md`.
+Deliverables: evidence-backed `HARDWARE_PROFILE.md`, `AI_PROVIDERS.md` and `URDU_VOICE_FEASIBILITY.md`, with unknowns explicitly recorded.
 
 P0.5 — Architecture and dependency decisions
 - Select the smallest maintainable architecture that meets the full requirements.
@@ -96,13 +97,13 @@ P0.6 — Bounded candidate proofs
 - Run only small, reproducible proofs for the leading candidates where they resolve a critical architecture question.
 - Ara proof run #6 (45486950450) was CANCELLED during the browser MP4 export check; it is not a pass. Type-check and partial editor checks completed, but Studio checks, production build and artifact upload were skipped.
 - Diagnose the export test, make it bounded and diagnostic, and rerun only when it provides evidence needed for the Phase 0 decision. Inspect actual output and resource use; never approve a candidate from type-checking alone.
-- Keep Ara unapproved unless the complete proof, licensing and target-hardware gates pass.
+- Keep Ara unapproved unless the architecture-critical proof and licensing gates pass. A user's physical-PC benchmark is not a P0.6 approval gate; actual performance is measured in Phase 8.
 
 P0.7 — Architecture freeze and execution baseline
 - Freeze engine-neutral contracts, selected/rejected components, dependency versions, data layout, packaging and phase dependencies.
 - Publish the exact batch plan and acceptance tests for each phase.
 
-**Phase 0 exit gate:** every specification requirement has registry and traceability coverage; major technical choices have source/license/compatibility evidence; target-hardware and Urdu risks are explicit; architecture and batch dependencies are frozen; no unresolved critical decision is silently assumed.
+**Phase 0 exit gate:** every specification requirement has registry and traceability coverage; major technical choices have source/license/compatibility evidence; target-hardware and Urdu risks are explicit; architecture and batch dependencies are frozen; no unresolved critical decision is silently assumed. Physical target-PC benchmarks are deferred to Phase 8 and do not block this exit gate. Voice quality remains unapproved until its Phase 6 native-speaker evaluation.
 
 ### Phase 1 — GitHub and CI/CD Foundation
 
@@ -117,7 +118,7 @@ Preserve and complete the existing application shell; do not recreate it.
 
 **Current state:** partial. The bootstrap ZIP and CI exist, but no self-contained installer or user-PC installation test is evidenced.
 
-**Exit gate:** repeatable Windows artifact, tested local app, persistent project data and a clean documented installation path.
+**Exit gate:** repeatable Windows artifact, tested local app, persistent project data and a clean documented installation path, verified on a clean Windows CI/VM environment. Installation or performance testing on the user's personal PC is not a prerequisite for Phase 2.
 
 ### Phase 2 — Character Studio
 
@@ -186,7 +187,7 @@ Preserve and complete the existing application shell; do not recreate it.
 - Finalize installer, logs, diagnostics, backup/recovery, updates and release documentation.
 - Run the full acceptance matrix and publish verified artifacts.
 
-**Exit gate:** reproducible installation, measured target-PC performance, recovery tests and full acceptance evidence.
+**Exit gate:** reproducible installation, representative target-PC performance measurements, recovery tests and full acceptance evidence. Actual physical-PC benchmarking occurs here; slow performance triggers optimization and quality-preset tuning, not retroactive blocking of earlier development.
 
 ## Standard batch protocol
 
@@ -212,6 +213,6 @@ On every resume, read the latest main HEAD, this plan, `NEXT_STEPS.md`, `PROJECT
 
 The product is complete only when the full acceptance list in `PROJECT_SPECIFICATION.md` has direct test evidence, including a real 5–7 minute Urdu cartoon MP4, editable project, persistent original characters/world, working animation, voice/lip-sync or explicitly approved fallback, recovery, Windows installation and measured target-hardware performance.
 
-## 2026-11-25 checkpoint — P0.3 research complete
+## 2026-11-25 checkpoint — P0.4 source-feasibility closeout and P0.5 start
 
-P0.3 source-level research and provisional candidate scoring are complete. The full candidate matrix and trade-offs are recorded in `docs/GITHUB_RESEARCH.md`, `docs/REPOSITORY_EVALUATION.md`, `docs/OPEN_SOURCE_REUSE_MATRIX.md`, `docs/ASSET_LICENSES.md` and `docs/CANDIDATE_SCORECARD.md`. No engine, plugin, voice, provider or asset is selected. P0.4 is now the next gate: actual target-PC compatibility, Pakistani Urdu quality/alignment, Pakistan provider access/quotas, privacy and cost. P0.5 architecture freeze and P0.6 bounded proofs remain blocked until their prerequisites are met.
+P0.3 source-level research and provisional candidate scoring are complete. P0.4 source-based hardware/API compatibility, Urdu model/voice feasibility and provider region/quota/privacy/cost research are documented. The physical target-PC probe remains available but optional and is deferred to Phase 8; it is not a gate for P0.5, P0.6, P0.7 or earlier implementation phases. No actual performance claim is made. Urdu voice selection remains provisional until native-speaker sample evaluation in Phase 6. Proceed with P0.5 engine-neutral architecture and dependency decisions, retaining explicit risks and reversible adapters.
