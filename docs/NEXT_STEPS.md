@@ -145,3 +145,10 @@ After CI acceptance, continue with character profile editing and real mesh/mater
 2. Inspect the new Skeleton3D hierarchy report on representative skinned GLBs; verify the reported bone parents and coverage against actual model structure.
 3. Use the conservative 15-bone report only as a preflight. Next, build a controlled Godot 4.7.2 retarget proof with a source/target humanoid pair and inspect the resulting motion; do not claim compatibility from names alone.
 4. Keep V-Sekai VRM optional until its pinned addon and MToon subrepo commits pass an isolated import/export test on the exact bundled runtime. Avoid standalone glTF export until the documented destructive-material warning is resolved.
+
+
+## Native humanoid retarget proof — next validation
+
+- Godot 4.7.2 source confirms `RetargetModifier3D` discovers direct child Skeleton3D targets and maps the bone names in its assigned SkeletonProfile. The source skeleton owns the modifier; target skeletons are direct children of that modifier.
+- The proof scene now creates a `SkeletonProfileHumanoid` source/target pair with different limb lengths and animates a source bone. CI must prove the target pose changes and survives scene serialization before this is accepted.
+- After the engine proof passes, adapt imported skeleton names to the canonical humanoid profile without altering the original GLB, then test on a real skinned character asset. Do not claim universal rig compatibility from the generated proof alone.

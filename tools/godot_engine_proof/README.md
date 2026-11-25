@@ -26,3 +26,8 @@ ffprobe -v error -show_entries format=duration -of json tools/godot_engine_proof
 ```
 
 The GitHub Actions workflow pins Godot to 4.7.2 stable and uploads the JSON report, engine log and AVI for inspection. The CI job also performs a temporary MP4 assembly using FFmpeg's built-in MPEG-4 Part 2/AAC encoders. This is a format-pipeline proof only, not approval of the final distribution codec or FFmpeg build. A passing CI proof demonstrates the engine boundary on the hosted runner only; target-PC performance remains Phase 8.
+
+
+## Humanoid retargeting proof
+
+The proof scene also builds a canonical humanoid source/target skeleton pair with different limb lengths. A Godot 4.7.2 `RetargetModifier3D` uses `SkeletonProfileHumanoid` to transfer an animated left-upper-arm pose from the source to the target. The JSON report checks modifier creation, source animation playback, different rest lengths, transferred target rotation and scene save/reopen of the retarget pair. This is a native engine API proof with generated skeletons, not yet retarget acceptance for arbitrary imported cartoon GLBs or production animation clips.

@@ -78,3 +78,10 @@
 - The application computes a conservative 15-bone humanoid-name coverage report, selecting the strongest individual skeleton rather than combining unrelated skeletons.
 - The report explicitly never marks retargeting ready: rest pose, bone axes, scale, skin weights and real motion playback still require validation.
 - This is rig inspection/preflight, not rig creation, skinning repair or retargeting. A real skinned cartoon GLB visual/animation acceptance test remains required.
+
+
+## Native humanoid retargeting engine proof — 2026-11-25
+
+- The Godot 4.7.2 proof project now constructs a canonical source/target humanoid skeleton pair with different limb proportions.
+- A native `RetargetModifier3D` and `SkeletonProfileHumanoid` transfer a keyed source arm animation to the target skeleton.
+- CI checks source animation playback, different rest lengths, target pose transfer and saved/reopened retarget hierarchy. This is a runtime capability proof, not yet retargeting of imported user models or a production animation library.

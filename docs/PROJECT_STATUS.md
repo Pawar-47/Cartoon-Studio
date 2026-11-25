@@ -159,3 +159,9 @@ Added GLB morph-target discovery and a slider-based facial control panel. Existi
 - Saved profile editor is implemented; the follow-up correction now loads multi-value metadata with real line breaks instead of literal backslash-n text. Windows CI #219 is the acceptance run for this correction.
 - Next code batch adds native Skeleton3D hierarchy reporting and conservative humanoid bone-name coverage. It is not rig creation or retargeting.
 - V-Sekai/godot-vrm remains a researched optional adapter; no upstream code or sample avatars have been bundled.
+
+
+## Native humanoid retarget proof — 2026-11-25
+
+- Extended the Godot 4.7.2 MovieWriter proof with a generated source/target humanoid pair, native `RetargetModifier3D`, `SkeletonProfileHumanoid`, a source arm animation and target-pose assertions.
+- The proof deliberately uses different source/target limb lengths and verifies the retargeted pose and scene save/reopen. It remains a generated-engine proof; imported-model compatibility and visual acceptance are separate gates.
