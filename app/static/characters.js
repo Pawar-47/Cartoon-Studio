@@ -18,6 +18,28 @@ function updateProportionButton(){
  const unchanged=proportionFields.every(name=>Math.abs(Number($(name.replaceAll("_","-")).value)-1)<0.0001);
  $("apply-proportions").disabled=!activeProject||!importedAsset?.asset_id||!hasSingleRig||unchanged;
 }
+function updateHairButton(){
+ const hasSingleRig=Number(importedAsset?.engine_inspection?.skeleton_count)===1;
+ $("apply-hair").disabled=!activeProject||!importedAsset?.asset_id||!hasSingleRig;
+}
+async function applyHairStyle(){
+ if(!activeProject||!importedAsset?.asset_id)return;
+ const style=$("hair-style").value,color=$("hair-color").value;
+ $("apply-hair").disabled=true;$("hair-status").textContent="Godot is generating and attaching hairstyle geometry…";
+ try{
+  const response=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(importedAsset.asset_id)+"/hair",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({style,color})});
+  const result=await response.json();if(!response.ok)throw new Error(result.detail||"Hairstyle generation failed.");
+  const assetResponse=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(result.asset_id));
+  if(!assetResponse.ok)throw new Error("The hairstyle was exported, but its preview could not be loaded.");
+  const loaded=await showCharacterPreview(await assetResponse.arrayBuffer(),"Character with "+style+" hair");
+  if(!loaded)throw new Error("The hairstyle GLB was exported, but the browser preview could not be created.");
+  importedAsset=result;rememberAssemblyAsset(result,style+" hairstyle");
+  $("hair").value=style+" hairstyle ("+color+")";
+  $("hair-status").textContent=style+" hair added as "+result.geometry_edit.mesh_count+" mesh pieces, attached to "+result.geometry_edit.attachment_bone+". Animation clips retained; original GLB preserved.";
+  $("save-character").disabled=false;
+  updateProportionButton();updateHairButton();
+ }catch(error){$("hair-status").textContent=error.message;updateHairButton()}
+}
 async function applyBodyProportions(){
  if(!activeProject||!importedAsset?.asset_id)return;
  const proportions=readProportionControls();
@@ -36,8 +58,8 @@ async function applyBodyProportions(){
   $("save-character").disabled=false;
   $("proportion-status").textContent="Body geometry updated on "+result.geometry_edit.changed_bones.length+" rig bones. Animation clips and skin binding survived export. Original GLB preserved.";
   $("profile-status").textContent="Review the new body shape, then save it as a character profile.";
-  updateProportionButton();
- }catch(error){$("proportion-status").textContent=error.message;updateProportionButton()}
+  updateProportionButton();updateHairButton();
+ }catch(error){$("proportion-status").textContent=error.message;updateProportionButton();updateHairButton()}
 }
 function resetProfileEditor(){editingCharacter=null;$("character-form").reset();$("profile-heading").textContent="Save reusable profile";$("save-character").textContent="Save character profile";$("cancel-edit-profile").hidden=true;$("save-character").disabled=!importedAsset}
 function cancelProfileEdit(){resetProfileEditor();$("profile-status").textContent="Profile editing cancelled. The saved character was not changed."}
@@ -47,7 +69,12 @@ async function editCharacterProfile(document){
  importedAsset=savedAssetId?{asset_id:savedAssetId,...savedAsset}:null;
  if(savedAssetId&&activeProject){
   const manifestResponse=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(savedAssetId)+"/manifest");
-  if(manifestResponse.ok){const manifest=await manifestResponse.json();importedAsset={asset_id:savedAssetId,...(manifest.data||savedAsset)}}
+  if(manifestResponse.ok){
+   const manifest=await manifestResponse.json();importedAsset={asset_id:savedAssetId,...(manifest.data||savedAsset)};
+   let hairEdit=importedAsset.geometry_edit||{};
+   if(hairEdit.type!=="procedural_hair")hairEdit=importedAsset.previous_geometry_edit||{};
+   if(hairEdit.type==="procedural_hair"){$("hair-style").value=hairEdit.style||"short";$("hair-color").value=hairEdit.color||"#2b1b13"}
+  }
   const modelResponse=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(savedAssetId));
   if(modelResponse.ok)await showCharacterPreview(await modelResponse.arrayBuffer(),data.name||"Saved character");
  }
@@ -61,7 +88,7 @@ async function editCharacterProfile(document){
  $("dialogue-style").value=data.dialogue_style||"";
  const savedProportions=data.body_proportions||{};
  for(const name of proportionFields){const value=Number(savedProportions[name]??1);$(name.replaceAll("_","-")).value=Number.isFinite(value)&&value>=0.75&&value<=1.25?String(value):"1"}
- updateProportionLabels();updateProportionButton();
+ updateProportionLabels();updateProportionButton();updateHairButton();
  $("profile-heading").textContent="Edit character profile";$("save-character").textContent="Save profile changes";
  $("save-character").disabled=false;$("cancel-edit-profile").hidden=false;
  $("profile-status").textContent="Editing "+(data.name||"character")+". The original GLB and saved appearance recipe will be preserved.";
@@ -79,7 +106,7 @@ async function loadProjects(){
  await selectProject(select.value);
 }
 async function selectProject(id){
- activeProject=id;assemblyAssets=[];assemblyAccessories=[];renderAssemblyAccessories();refreshAssemblyControls();$("library-import").disabled=!id||!selectedLibraryModel();importedAsset=null;activeCharacter=null;resetProfileEditor();appearanceRecipe={materials:{},morph_targets:{},morph_bindings:{}};$("export-appearance").disabled=true;$("download-appearance").hidden=true;$("material-editor").hidden=true;$("morph-editor").hidden=true;$("save-appearance").disabled=true;$("asset-report").hidden=true;$("profile-status").textContent="";$("save-character").disabled=true;$("refresh-characters").disabled=!id;resetProportionControls();$("body-proportions").value="";$("proportion-status").textContent="Import or assemble a rigged character to edit its proportions.";updateProportionButton();
+ activeProject=id;assemblyAssets=[];assemblyAccessories=[];renderAssemblyAccessories();refreshAssemblyControls();$("library-import").disabled=!id||!selectedLibraryModel();importedAsset=null;activeCharacter=null;resetProfileEditor();appearanceRecipe={materials:{},morph_targets:{},morph_bindings:{}};$("export-appearance").disabled=true;$("download-appearance").hidden=true;$("material-editor").hidden=true;$("morph-editor").hidden=true;$("save-appearance").disabled=true;$("asset-report").hidden=true;$("profile-status").textContent="";$("save-character").disabled=true;$("refresh-characters").disabled=!id;resetProportionControls();$("body-proportions").value="";$("proportion-status").textContent="Import or assemble a rigged character to edit its proportions.";updateProportionButton();$("hair-style").value="short";$("hair-color").value="#2b1b13";$("hair-status").textContent="Import or assemble a rigged character to add generated hair.";updateHairButton();
  $("project-status").textContent=id?"Project selected. Import a GLB model to begin.":"Choose a project to begin.";
  $("character-list").replaceChildren();
  if(!id){$("character-list").innerHTML='<div class="empty">Select a project to see its characters.</div>';return}
@@ -398,14 +425,14 @@ $("create-retarget").addEventListener("click",async()=>{
  finally{$("create-retarget").disabled=!$("retarget-source").value||!$("retarget-target").value||$("retarget-source").value===$("retarget-target").value}
 });
 $("project-select").addEventListener("change",event=>selectProject(event.target.value).catch(error=>$("project-status").textContent=error.message));
-$("model-file").addEventListener("change",()=>{if(editingCharacter)cancelProfileEdit();$("import-model").disabled=!activeProject||!$("model-file").files.length;importedAsset=null;$("save-character").disabled=true;$("asset-report").hidden=true;updateProportionButton()});
+$("model-file").addEventListener("change",()=>{if(editingCharacter)cancelProfileEdit();$("import-model").disabled=!activeProject||!$("model-file").files.length;importedAsset=null;$("save-character").disabled=true;$("asset-report").hidden=true;updateProportionButton();updateHairButton()});
 $("import-model").addEventListener("click",async()=>{
  const file=$("model-file").files[0];if(!file||!activeProject)return;
  $("import-model").disabled=true;$("import-status").textContent="Uploading and inspecting with Godot…";
  try{
   const response=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/character-assets",{method:"POST",headers:{"Content-Type":"application/octet-stream","X-Asset-Filename":file.name},body:file});
   const data=await response.json();if(!response.ok)throw new Error(data.detail||"Model import failed.");
-  importedAsset=data;rememberAssemblyAsset(data,file.name);updateProportionButton();await showCharacterPreview(await file.arrayBuffer(),file.name);$("asset-report").hidden=false;$("asset-report").replaceChildren();
+  importedAsset=data;rememberAssemblyAsset(data,file.name);updateProportionButton();updateHairButton();await showCharacterPreview(await file.arrayBuffer(),file.name);$("asset-report").hidden=false;$("asset-report").replaceChildren();
   const heading=document.createElement("strong");heading.textContent="Godot import successful · "+data.container.format;
   const metrics=document.createElement("div");metrics.className="asset-metrics";
   const rigAnalysis=data.rig_analysis||{};
@@ -448,13 +475,14 @@ $("character-form").addEventListener("submit",async event=>{
   const response=await fetch(url,{method:editing?"PUT":"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
   const data=await response.json();if(!response.ok)throw new Error(data.detail||"Could not save character.");
   $("profile-status").textContent=(editing?"Character profile updated.":"Character saved.")+" Revision "+data.revision+".";
-  importedAsset=null;editingCharacter=null;resetProfileEditor();resetProportionControls();updateProportionButton();$("model-file").value="";$("asset-report").hidden=true;$("import-status").textContent="Import another model to create another character.";$("save-character").disabled=true;
+  importedAsset=null;editingCharacter=null;resetProfileEditor();resetProportionControls();updateProportionButton();updateHairButton();$("model-file").value="";$("asset-report").hidden=true;$("import-status").textContent="Import another model to create another character.";$("save-character").disabled=true;
   await loadCharacters();
  }catch(error){$("profile-status").textContent=error.message;$("save-character").disabled=!importedAsset&&!editingCharacter}
 });
 $("cancel-edit-profile").addEventListener("click",cancelProfileEdit);
 for(const name of proportionFields)$(name.replaceAll("_","-")).addEventListener("input",()=>{updateProportionLabels();updateProportionButton()});
 $("apply-proportions").addEventListener("click",applyBodyProportions);
+$("apply-hair").addEventListener("click",applyHairStyle);
 $("reset-proportions").addEventListener("click",()=>{resetProportionControls();updateProportionButton()});
 $("refresh-characters").addEventListener("click",()=>loadCharacters().catch(error=>$("project-status").textContent=error.message));
 
@@ -575,7 +603,7 @@ $("assemble-character").addEventListener("click",async()=>{
  try{
   const response=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/modular-assemblies",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({base_relative_path:base.relative_path,parts,accessories:assemblyAccessories.map(({relative_path,mesh_path,attachment_bone})=>({relative_path,mesh_path,attachment_bone}))})});
   const result=await response.json();if(!response.ok)throw new Error(result.detail||"Modular character assembly failed.");
-  importedAsset=result;editingCharacter=null;rememberAssemblyAsset(result,"Assembled character");updateProportionButton();
+  importedAsset=result;editingCharacter=null;rememberAssemblyAsset(result,"Assembled character");updateProportionButton();updateHairButton();
   const assetResponse=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(result.asset_id));
   if(!assetResponse.ok)throw new Error("Assembly was saved, but its preview asset could not be retrieved.");
   const loaded=await showCharacterPreview(await assetResponse.arrayBuffer(),"Assembled character");

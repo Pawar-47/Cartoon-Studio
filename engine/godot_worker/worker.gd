@@ -64,7 +64,7 @@ func _handle_request(request_value: Variant) -> Dictionary:
     if operation == "ping":
         response["ok"] = true
         response["capabilities"] = [
-            "ping", "glb_inspect", "scene_metrics", "skeleton_report", "retarget_glb_pair", "assemble_modular_character", "probe_glb_animation", "export_character_appearance", "customize_character_proportions"
+            "ping", "glb_inspect", "scene_metrics", "skeleton_report", "retarget_glb_pair", "assemble_modular_character", "probe_glb_animation", "export_character_appearance", "customize_character_proportions", "add_character_hair"
         ]
         return response
 
@@ -84,6 +84,12 @@ func _handle_request(request_value: Variant) -> Dictionary:
         var proportion_result: Dictionary = await _customize_character_proportions(payload)
         for key in proportion_result:
             response[key] = proportion_result[key]
+        return response
+
+    if operation == "add_character_hair":
+        var hair_result: Dictionary = await _add_character_hair(payload)
+        for key in hair_result:
+            response[key] = hair_result[key]
         return response
 
     if operation == "assemble_modular_character":
@@ -482,6 +488,215 @@ func _export_character_appearance(payload: Dictionary) -> Dictionary:
     verification["applied_morph_targets"] = applied_morphs
     return verification
 
+
+
+
+func _add_hair_primitive(parent: Node, scene_owner: Node, primitive: Mesh, mesh_name: String, position: Vector3, scale: Vector3, rotation: Vector3, material: StandardMaterial3D) -> void:
+    var instance := MeshInstance3D.new()
+    instance.name = mesh_name
+    instance.mesh = primitive
+    instance.material_override = material
+    instance.position = position
+    instance.scale = scale
+    instance.rotation = rotation
+    parent.add_child(instance)
+    instance.owner = scene_owner
+
+
+func _add_character_hair(payload: Dictionary) -> Dictionary:
+    var project_root := _normalise_path(str(payload.get("project_root", "")))
+    var source_path := _normalise_path(str(payload.get("source_path", "")))
+    var output_path := _normalise_path(str(payload.get("output_path", "")))
+    var style := str(payload.get("style", "short"))
+    var hair_color := str(payload.get("color", "#2b1b13"))
+    var styles := ["short", "bob", "long", "ponytail", "spiky", "curly", "mohawk"]
+    if not styles.has(style):
+        return {"error_code": "invalid_hair_style", "error": "Choose a supported generated hairstyle."}
+    if hair_color.length() != 7 or not hair_color.begins_with("#"):
+        return {"error_code": "invalid_hair_color", "error": "Hair color must be a six-digit hexadecimal color."}
+    if project_root.is_empty() or not DirAccess.dir_exists_absolute(project_root):
+        return {"error_code": "invalid_project_root", "error": "A valid project root is required."}
+    var root_prefix := project_root.trim_suffix("/") + "/"
+    for path in [source_path, output_path]:
+        if not path.to_lower().begins_with(root_prefix.to_lower()):
+            return {"error_code": "path_outside_project", "error": "A hairstyle path resolves outside the project."}
+    if not source_path.to_lower().ends_with(".glb") or not FileAccess.file_exists(source_path):
+        return {"error_code": "hair_source_missing", "error": "The source character GLB does not exist."}
+    if not output_path.to_lower().ends_with(".glb") or FileAccess.file_exists(output_path):
+        return {"error_code": "invalid_hair_output", "error": "Hairstyle generation must create a new GLB file."}
+    var document := GLTFDocument.new()
+    var state := GLTFState.new()
+    var import_error := document.append_from_file(source_path, state)
+    if import_error != OK:
+        return {"error_code": "hair_import_failed", "error": "Godot could not import the source character.", "godot_error": import_error}
+    var scene := document.generate_scene(state)
+    if scene == null:
+        return {"error_code": "hair_scene_failed", "error": "Godot could not create the source character scene."}
+    root.add_child(scene)
+    await process_frame
+    var skeleton_nodes := scene.find_children("*", "Skeleton3D", true, false)
+    if skeleton_nodes.size() != 1:
+        scene.queue_free()
+        return {"error_code": "hair_skeleton_count", "error": "Generated hairstyles require exactly one humanoid Skeleton3D."}
+    var skeleton := skeleton_nodes[0] as Skeleton3D
+    var head_bone_name := ""
+    for bone_index in range(skeleton.get_bone_count()):
+        var bone_name := str(skeleton.get_bone_name(bone_index))
+        var parts := bone_name.to_lower().split(":")
+        var token := str(parts[parts.size() - 1]).replace("_", "").replace(" ", "")
+        if token == "head":
+            head_bone_name = bone_name
+            break
+    if head_bone_name.is_empty():
+        scene.queue_free()
+        return {"error_code": "hair_head_bone_missing", "error": "The humanoid rig does not contain a recognizable Head bone."}
+    for mesh_node in scene.find_children("*", "MeshInstance3D", true, false):
+        var mesh_instance := mesh_node as MeshInstance3D
+        if str(mesh_instance.name).begins_with("SiraOS_Hair_"):
+            mesh_instance.queue_free()
+    for attachment_node in scene.find_children("*", "BoneAttachment3D", true, false):
+        var old_attachment := attachment_node as BoneAttachment3D
+        if str(old_attachment.name).begins_with("SiraOS_Hair_Attachment"):
+            old_attachment.queue_free()
+    await process_frame
+    var min_y := 1.0e20
+    var max_y := -1.0e20
+    for bone_index in range(skeleton.get_bone_count()):
+        var bone_position := skeleton.get_bone_global_rest(bone_index).origin
+        min_y = minf(min_y, bone_position.y)
+        max_y = maxf(max_y, bone_position.y)
+    var radius := maxf(max_y - min_y, 0.8) * 0.075
+    var material := StandardMaterial3D.new()
+    material.albedo_color = Color.from_string(hair_color, Color(0.12, 0.07, 0.04))
+    material.roughness = 0.88
+    var attachment := BoneAttachment3D.new()
+    attachment.name = "SiraOS_Hair_Attachment"
+    attachment.bone_name = head_bone_name
+    skeleton.add_child(attachment)
+    attachment.owner = scene
+    var mesh_count := 0
+    var cap := SphereMesh.new()
+    cap.radius = 1.0
+    cap.height = 2.0
+    cap.radial_segments = 20
+    cap.rings = 12
+    _add_hair_primitive(attachment, scene, cap, "SiraOS_Hair_Cap", Vector3(0, radius * 0.32, 0), Vector3(radius * 1.08, radius * 0.76, radius * 1.08), Vector3.ZERO, material)
+    mesh_count += 1
+    if style == "short":
+        var fringe := CapsuleMesh.new()
+        fringe.radius = 0.45
+        fringe.height = 0.9
+        _add_hair_primitive(attachment, scene, fringe, "SiraOS_Hair_Fringe", Vector3(0, radius * 0.38, -radius * 0.78), Vector3(radius * 0.72, radius * 0.32, radius * 0.35), Vector3.ZERO, material)
+        mesh_count += 1
+    elif style == "bob" or style == "long":
+        for side in [-1.0, 1.0]:
+            var lock := CapsuleMesh.new()
+            lock.radius = 0.38
+            lock.height = 2.0 if style == "bob" else 4.2
+            _add_hair_primitive(attachment, scene, lock, "SiraOS_Hair_Side_" + str(side), Vector3(side * radius * 0.82, -radius * (0.55 if style == "bob" else 1.45), 0), Vector3(radius * 0.48, radius * (0.8 if style == "bob" else 1.55), radius * 0.48), Vector3(0, 0, side * 0.08), material)
+            mesh_count += 1
+        if style == "bob":
+            var back_bob := SphereMesh.new()
+            back_bob.radius = 1.0
+            back_bob.height = 2.0
+            _add_hair_primitive(attachment, scene, back_bob, "SiraOS_Hair_Back", Vector3(0, -radius * 0.45, radius * 0.42), Vector3(radius * 0.92, radius * 0.82, radius * 0.65), Vector3.ZERO, material)
+            mesh_count += 1
+    elif style == "ponytail":
+        var tail := CapsuleMesh.new()
+        tail.radius = 0.42
+        tail.height = 3.8
+        _add_hair_primitive(attachment, scene, tail, "SiraOS_Hair_Ponytail", Vector3(0, -radius * 0.62, radius * 0.92), Vector3(radius * 0.46, radius * 1.3, radius * 0.46), Vector3(0.18, 0, 0), material)
+        var tie := SphereMesh.new()
+        tie.radius = 1.0
+        tie.height = 2.0
+        _add_hair_primitive(attachment, scene, tie, "SiraOS_Hair_Tie", Vector3(0, -radius * 0.05, radius * 0.78), Vector3(radius * 0.38, radius * 0.28, radius * 0.38), Vector3.ZERO, material)
+        mesh_count += 2
+    elif style == "spiky":
+        for spike_index in range(7):
+            var spike := CylinderMesh.new()
+            spike.top_radius = 0.0
+            spike.bottom_radius = 1.0
+            spike.height = 2.0
+            spike.radial_segments = 12
+            var angle := TAU * float(spike_index) / 7.0
+            var spike_position := Vector3(cos(angle) * radius * 0.48, radius * 0.95, sin(angle) * radius * 0.48)
+            _add_hair_primitive(attachment, scene, spike, "SiraOS_Hair_Spike_" + str(spike_index), spike_position, Vector3(radius * 0.28, radius * 0.62, radius * 0.28), Vector3.ZERO, material)
+            mesh_count += 1
+    elif style == "curly":
+        for curl_index in range(12):
+            var curl := SphereMesh.new()
+            curl.radius = 1.0
+            curl.height = 2.0
+            curl.radial_segments = 12
+            curl.rings = 8
+            var angle := TAU * float(curl_index) / 12.0
+            var curl_position := Vector3(cos(angle) * radius * 0.78, radius * 0.78, sin(angle) * radius * 0.78)
+            _add_hair_primitive(attachment, scene, curl, "SiraOS_Hair_Curl_" + str(curl_index), curl_position, Vector3.ONE * radius * 0.38, Vector3.ZERO, material)
+            mesh_count += 1
+    elif style == "mohawk":
+        var ridge := CapsuleMesh.new()
+        ridge.radius = 0.35
+        ridge.height = 3.2
+        _add_hair_primitive(attachment, scene, ridge, "SiraOS_Hair_Mohawk", Vector3(0, radius * 1.05, 0), Vector3(radius * 0.36, radius * 1.0, radius * 0.42), Vector3.ZERO, material)
+        mesh_count += 1
+    var source_animation_names := _scene_animation_names(scene)
+    var export_document := GLTFDocument.new()
+    var export_state := GLTFState.new()
+    var export_error := export_document.append_from_scene(scene, export_state)
+    if export_error != OK:
+        scene.queue_free()
+        return {"error_code": "hair_export_prepare_failed", "error": "Godot could not prepare the hairstyle GLB for export.", "godot_error": export_error}
+    var output_error := export_document.write_to_filesystem(export_state, output_path)
+    scene.queue_free()
+    if output_error != OK or not FileAccess.file_exists(output_path):
+        if FileAccess.file_exists(output_path):
+            DirAccess.remove_absolute(output_path)
+        return {"error_code": "hair_export_failed", "error": "Godot could not write the generated hairstyle GLB.", "godot_error": output_error}
+    var verification := _inspect_glb({"project_root": project_root, "source_path": output_path})
+    if not bool(verification.get("ok", false)):
+        DirAccess.remove_absolute(output_path)
+        return {"error_code": "hair_reimport_failed", "error": str(verification.get("error", "The generated hairstyle failed re-import verification."))}
+    var exported_animation_names: Array = verification.get("animation_names", [])
+    if int(verification.get("skeleton_count", 0)) != 1 or exported_animation_names.size() != source_animation_names.size():
+        DirAccess.remove_absolute(output_path)
+        return {"error_code": "hair_rig_verification_failed", "error": "The generated hairstyle did not retain the humanoid rig and animation clips."}
+    for animation_name in source_animation_names:
+        if not exported_animation_names.has(animation_name):
+            DirAccess.remove_absolute(output_path)
+            return {"error_code": "hair_animation_verification_failed", "error": "A source animation was lost during hairstyle export: " + str(animation_name)}
+    var verify_document := GLTFDocument.new()
+    var verify_state := GLTFState.new()
+    var verify_error := verify_document.append_from_file(output_path, verify_state)
+    if verify_error != OK:
+        DirAccess.remove_absolute(output_path)
+        return {"error_code": "hair_attachment_reimport_failed", "error": "Godot could not reopen the generated hair attachment.", "godot_error": verify_error}
+    var verify_scene := verify_document.generate_scene(verify_state)
+    if verify_scene == null:
+        DirAccess.remove_absolute(output_path)
+        return {"error_code": "hair_attachment_scene_failed", "error": "Godot could not rebuild the generated hair attachment."}
+    root.add_child(verify_scene)
+    await process_frame
+    var exported_hair_mesh_count := 0
+    var attachment_verified := false
+    for hair_node in verify_scene.find_children("*", "MeshInstance3D", true, false):
+        var hair_mesh := hair_node as MeshInstance3D
+        if not str(hair_mesh.name).begins_with("SiraOS_Hair_"):
+            continue
+        exported_hair_mesh_count += 1
+        var parent_node := hair_mesh.get_parent()
+        if parent_node is BoneAttachment3D and str((parent_node as BoneAttachment3D).bone_name) == head_bone_name:
+            attachment_verified = true
+    verify_scene.queue_free()
+    if exported_hair_mesh_count < mesh_count or not attachment_verified:
+        DirAccess.remove_absolute(output_path)
+        return {"error_code": "hair_attachment_verification_failed", "error": "The hairstyle geometry or its head-bone attachment did not survive GLB export and re-import."}
+    verification["hair_verified"] = true
+    verification["hair_style"] = style
+    verification["hair_color"] = hair_color
+    verification["hair_attachment_bone"] = head_bone_name
+    verification["hair_mesh_count"] = exported_hair_mesh_count
+    verification["hair_attachment_verified"] = attachment_verified
+    return verification
 
 
 func _customize_character_proportions(payload: Dictionary) -> Dictionary:

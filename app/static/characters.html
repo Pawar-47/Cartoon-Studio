@@ -84,6 +84,16 @@
     <div class="appearance-actions"><button id="apply-proportions" type="button" disabled>Apply body shape</button><button id="reset-proportions" class="secondary" type="button">Reset controls</button></div>
     <p id="proportion-status" class="inline-status" role="status">Import or assemble a rigged character to edit its proportions.</p>
    </section>
+   <section id="hair-editor" class="proportion-editor">
+    <div class="editor-heading"><strong>Hairstyle studio</strong><span>Generated 3D hair geometry</span></div>
+    <p class="helper">Choose a style and color. Hair is attached to the character's Head bone and exported with its animation rig.</p>
+    <div class="form-grid">
+     <label>Hairstyle<select id="hair-style"><option value="short">Short</option><option value="bob">Bob</option><option value="long">Long</option><option value="ponytail">Ponytail</option><option value="spiky">Spiky</option><option value="curly">Curly</option><option value="mohawk">Mohawk</option></select></label>
+     <label>Hair color<input id="hair-color" type="color" value="#2b1b13"></label>
+    </div>
+    <div class="appearance-actions"><button id="apply-hair" type="button" disabled>Generate hairstyle</button></div>
+    <p id="hair-status" class="inline-status" role="status">Import or assemble a rigged character to add generated hair.</p>
+   </section>
    <section id="material-editor" class="material-editor" hidden>
     <div class="editor-heading"><strong>Appearance editor</strong><span>Non-destructive material recipe</span></div>
     <label>Model material<select id="material-select"></select></label>
