@@ -87,7 +87,11 @@ def uninstall(install_dir: Path) -> None:
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-    subprocess.run([str(uninstaller), "/S"], check=True, timeout=180)
+    subprocess.run(
+        [str(uninstaller), "/S", f"_?={install_dir}"],
+        check=True,
+        timeout=180,
+    )
     if (install_dir / "CartoonStudio.exe").exists():
         debug_views = [
             subprocess.run(

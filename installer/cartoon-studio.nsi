@@ -72,7 +72,7 @@ Section "Cartoon Studio" SEC_MAIN
     WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CartoonStudio" "DisplayName" "Cartoon Studio"
     WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CartoonStudio" "DisplayVersion" "${APP_VERSION}"
     WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CartoonStudio" "InstallLocation" "$INSTDIR"
-    WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CartoonStudio" "UninstallString" '"$INSTDIR\Uninstall.exe"'
+    WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CartoonStudio" "UninstallString" '"$INSTDIR\Uninstall.exe" _?=$INSTDIR'
     WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CartoonStudio" "NoModify" 1
     WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CartoonStudio" "NoRepair" 1
 SectionEnd
@@ -110,23 +110,3 @@ exe_check_done:
 
     ; Deliberately preserve %LOCALAPPDATA%\CartoonStudio and all project data.
 SectionEnd
-
-Function un.onInit
-    SetShellVarContext current
-    SetRegView 64
-    ReadRegStr $INSTDIR HKCU "Software\CartoonStudio" "InstallDir"
-    WriteRegStr HKCU "Software\CartoonStudioDebug" "InitPath" "$INSTDIR"
-    StrCmp $INSTDIR "" set_default_install_dir done_init
-set_default_install_dir:
-    StrCpy $INSTDIR "$LOCALAPPDATA\Programs\Cartoon Studio"
-done_init:
-FunctionEnd
-
-Function .onInit
-    SetRegView 64
-    ReadRegStr $INSTDIR HKCU "Software\CartoonStudio" "InstallDir"
-    StrCmp $INSTDIR "" set_default_install_dir done_init
-set_default_install_dir:
-    StrCpy $INSTDIR "$LOCALAPPDATA\Programs\Cartoon Studio"
-done_init:
-FunctionEnd
