@@ -192,6 +192,16 @@ def test_character_retarget_api_saves_scene_and_persistent_record(tmp_path, monk
     assert download.status_code == 200
     assert download.text == "[gd_scene format=3]"
 
+    preview = client.get(f"/api/projects/{project_id}/retargets/{record['id']}/preview")
+    assert preview.status_code == 200
+    preview_data = preview.json()
+    assert preview_data["preview_kind"] == "threejs_browser_retarget"
+    assert preview_data["animation_name"] == "Walk"
+    assert "/character-assets/" in preview_data["source_asset_url"]
+    assert preview_data["source_mapping"]["Hips"] == "Hips"
+    assert preview_data["target_mapping"]["LeftUpperArm"] == "LeftUpperArm"
+    assert preview_data["authoritative_scene"].endswith("/scene")
+
 
 def test_character_retarget_api_rejects_invalid_hierarchy_before_engine_call(
     tmp_path, monkeypatch

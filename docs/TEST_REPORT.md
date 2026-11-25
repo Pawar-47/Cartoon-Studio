@@ -170,3 +170,13 @@ Added API coverage for saving morph-target weights and rejecting values outside 
 - All 49 pytest tests passed; Ruff lint and Python compilation passed.
 - Both self-contained Windows application builds, NSIS installer compilation and clean install/upgrade/uninstall/reinstall smoke tests passed.
 - This run validates the material/morph appearance API persistence and validation tests plus packaging. Browser visual review with a representative facial-morph GLB remains outstanding.
+
+
+## Phase 2 retarget checkpoint — Windows CI #279
+
+- Workflow: https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45622238283
+- Commit: 56c61487089097108b6baa862f9ac9125568b9a5.
+- Result: SUCCESS. The complete Windows job passed lint, Python compilation, full pytest, the actual pinned Godot 4.7.2 worker test, bootstrap packaging/smoke, both self-contained application builds, NSIS compilation, clean install, upgrade, uninstall, reinstall and artifact uploads.
+- Artifacts: Windows installer 103,861,406 bytes; bootstrap 819,154 bytes; dependency SBOM 32,632 bytes.
+- The Mixamo-named animated-source fixture and distinct target pose-transfer test passed.
+- The browser retarget-preview API and UI are in the current implementation batch; this new code has not yet been tested by CI.

@@ -1,4 +1,4 @@
-import { showCharacterPreview, getCharacterMaterials, applyCharacterAppearance, getCharacterMorphTargets, applyCharacterMorphTargets } from "./character-preview.js";
+import { showCharacterPreview, showRetargetPreview, getCharacterMaterials, applyCharacterAppearance, getCharacterMorphTargets, applyCharacterMorphTargets } from "./character-preview.js";
 const $=id=>document.getElementById(id);
 let activeProject="", importedAsset=null, activeCharacter=null, editingCharacter=null, appearanceRecipe={materials:{},morph_targets:{}};
 const params=new URLSearchParams(window.location.search);
@@ -71,8 +71,25 @@ async function loadRetargets(){
   const poseLabel=item.data.pose_transferred?"pose transfer verified":"pose transfer unverified";
   const angles=Number.isFinite(item.data.source_pose_angle_degrees)&&Number.isFinite(item.data.target_pose_angle_degrees)?" · "+Number(item.data.source_pose_angle_degrees).toFixed(1)+"° → "+Number(item.data.target_pose_angle_degrees).toFixed(1)+"°":"";
   const detail=document.createElement("span");detail.textContent=(item.data.animation_name||"Imported animation")+" · "+item.data.mapped_bone_count+"/15 bones · "+(item.data.scene_reopened?"scene reopened":"scene saved")+" · "+poseLabel+angles;
+  const previewButton=document.createElement("button");previewButton.type="button";previewButton.className="secondary preview-saved";previewButton.textContent="Preview retarget";
+  previewButton.addEventListener("click",async()=>{
+   previewButton.disabled=true;detail.textContent="Loading source and target models for browser preview…";
+   try{
+    const base="/api/projects/"+encodeURIComponent(activeProject)+"/retargets/"+encodeURIComponent(item.id);
+    const infoResponse=await fetch(base+"/preview"),info=await infoResponse.json();
+    if(!infoResponse.ok)throw new Error(info.detail||"Could not load retarget preview data.");
+    const [sourceResponse,targetResponse]=await Promise.all([fetch(info.source_asset_url),fetch(info.target_asset_url)]);
+    if(!sourceResponse.ok||!targetResponse.ok)throw new Error("A source or target GLB could not be loaded.");
+    const [sourceBuffer,targetBuffer]=await Promise.all([sourceResponse.arrayBuffer(),targetResponse.arrayBuffer()]);
+    const opened=await showRetargetPreview(sourceBuffer,targetBuffer,info.source_mapping,info.target_mapping,info.animation_name,title.textContent);
+    if(!opened)throw new Error("The browser preview could not be created. See the preview status above.");
+    document.querySelector(".preview-panel").scrollIntoView({behavior:"smooth",block:"center"});
+    detail.textContent=(item.data.animation_name||"Imported animation")+" · browser preview (Three.js) · saved Godot scene remains authoritative.";
+   }catch(error){detail.textContent=error.message}
+   finally{previewButton.disabled=false}
+  });
   const download=document.createElement("a");download.href="/api/projects/"+encodeURIComponent(activeProject)+"/retargets/"+encodeURIComponent(item.id)+"/scene";download.textContent="Download Godot scene";download.className="retarget-download";
-  row.append(title,detail,download);container.append(row);
+  row.append(title,detail,previewButton,download);container.append(row);
  }
  if(!documents.length){const empty=document.createElement("p");empty.className="inline-status";empty.textContent="No retarget scenes saved in this project yet.";container.append(empty)}
 }

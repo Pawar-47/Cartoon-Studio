@@ -1,6 +1,7 @@
 import * as THREE from "/static/vendor/three/build/three.module.js";
 import { GLTFLoader } from "/static/vendor/three/examples/jsm/loaders/GLTFLoader.js";
 import { OrbitControls } from "/static/vendor/three/examples/jsm/controls/OrbitControls.js";
+import { retargetClip } from "/static/vendor/three/examples/jsm/utils/SkeletonUtils.js";
 
 const canvas = document.getElementById("model-preview");
 const status = document.getElementById("preview-status");
@@ -265,3 +266,65 @@ animationSelect.addEventListener("change", () => {
   const index = Number(animationSelect.value);
   if (Number.isInteger(index) && clips[index]) mixer.clipAction(clips[index]).play();
 });
+
+export async function showRetargetPreview(sourceBuffer, targetBuffer, sourceMapping, targetMapping, animationName, label = "Retargeted character") {
+  canvas.style.display = "block";
+  if (!ensureRenderer()) return false;
+  status.textContent = "Preparing browser retarget preview…";
+  try {
+    const [sourceGltf, targetGltf] = await Promise.all([loader.parseAsync(sourceBuffer, ""), loader.parseAsync(targetBuffer, "")]);
+    const findSkinnedMesh = (root) => {
+      let result = null;
+      root.traverse((node) => { if (!result && node.isSkinnedMesh && node.skeleton) result = node; });
+      return result;
+    };
+    const sourceMesh = findSkinnedMesh(sourceGltf.scene), targetMesh = findSkinnedMesh(targetGltf.scene);
+    if (!sourceMesh || !targetMesh) throw new Error("Both GLBs must contain a skinned humanoid mesh.");
+    const clip = sourceGltf.animations.find((item) => item.name === animationName)
+      || sourceGltf.animations.find((item) => item.name.toUpperCase() !== "RESET");
+    if (!clip) throw new Error("The saved source animation is no longer available.");
+    const names = {};
+    for (const profileName of Object.keys(sourceMapping || {})) {
+      const sourceName = sourceMapping[profileName], targetName = targetMapping?.[profileName];
+      if (sourceName && targetName) names[targetName] = sourceName;
+    }
+    if (Object.keys(names).length < 15) throw new Error("The saved humanoid mapping is incomplete; browser preview was not started.");
+    const retargetedClip = retargetClip(targetMesh, sourceMesh, clip, {
+      names, hip: sourceMapping?.Hips || "Hips", preserveBoneMatrix: true, preserveBonePositions: true,
+    });
+    if (!retargetedClip || !retargetedClip.tracks.length) throw new Error("Three.js could not produce a retargeted animation clip.");
+    disposeCurrentObject();
+    currentObject = targetGltf.scene;
+    scene.add(currentObject);
+    currentObject.updateMatrixWorld(true);
+    collectMaterials(currentObject);
+    collectMorphTargets(currentObject);
+    const bounds = new THREE.Box3().setFromObject(currentObject);
+    if (bounds.isEmpty()) throw new Error("The target GLB contains no visible geometry.");
+    const center = bounds.getCenter(new THREE.Vector3()), size = bounds.getSize(new THREE.Vector3());
+    currentObject.position.sub(center);
+    cameraDistance = Math.max(size.x, size.y, size.z, 0.1) * 2.1;
+    camera.near = Math.max(cameraDistance / 10000, 0.001);
+    camera.far = Math.max(cameraDistance * 100, 100);
+    camera.position.set(cameraDistance * 0.9, cameraDistance * 0.65, cameraDistance * 1.15);
+    camera.updateProjectionMatrix();
+    controls.target.set(0, 0, 0);
+    controls.update();
+    clips = [retargetedClip];
+    mixer = new THREE.AnimationMixer(currentObject);
+    mixer.clipAction(retargetedClip).play();
+    animationSelect.replaceChildren();
+    const option = document.createElement("option");
+    option.value = "0";
+    option.textContent = retargetedClip.name || "Retargeted " + clip.name;
+    animationSelect.append(option);
+    animationSelect.disabled = true;
+    empty.hidden = true;
+    resetButton.disabled = false;
+    status.textContent = label + " · browser preview only; saved Godot scene remains authoritative.";
+    return true;
+  } catch (error) {
+    status.textContent = "Retarget preview unavailable: " + error.message;
+    return false;
+  }
+}

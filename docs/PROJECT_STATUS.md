@@ -8,7 +8,7 @@
 - Phase 0: COMPLETE.
 - Phase 1: COMPLETE.
 - Phase 2 — Character Studio: ACTIVE; import, preview, profiles, appearance recipes, rig diagnostics and the first user-facing imported-rig retarget workflow are implemented. Phase 2 is not complete.
-- Windows CI #278: lint, Python compilation and full tests PASSED, including the real Godot worker test for a Mixamo-named animated source and animation-track path remapping. Windows installer compilation/lifecycle were still running at the last check.
+- Windows CI #279: full Windows pipeline PASSED, including lint, compilation, full tests, Godot worker, bootstrap, both self-contained builds, NSIS installer and clean install/upgrade/uninstall/reinstall lifecycle.
 - Dedicated Godot native-worker proof #18 PASSED.
 - Chat-independent continuation record: `docs/SESSION_CHECKPOINT.md`.
 
@@ -22,6 +22,7 @@
 - Imported-GLB retarget workflow with source/target selection, strict preflight, Godot scene creation, persistent history and scene download.
 - Worker verifies that the reopened source AnimationPlayer starts and that its upper-arm pose reaches the target skeleton after 72 frames. Failed pose verification removes the generated scene.
 - Retarget history displays source/target pose angles and verification state.
+- Saved retargets now expose an in-app browser preview: Three.js retargets the selected source clip onto the saved target GLB using persisted canonical humanoid mappings. The saved Godot scene remains authoritative; browser preview is a separate visual aid, not proof of native-scene rendering.
 - Original source and target GLBs remain byte-identical.
 
 ## Distinct imported fixture coverage
@@ -46,11 +47,10 @@ Godot may normalize raw skin-joint ordering during import. The application uses 
 
 ## Next implementation batch
 
-1. Complete the Windows installer lifecycle for CI #278.
-2. Add an in-app preview/open action for saved retarget scenes.
-3. Exercise representative third-party GLBs and document compatibility limits.
-4. Validate real facial morph controls.
-5. Continue deterministic export and round-trip work after broader rig acceptance.
+1. Exercise representative third-party GLBs and document compatibility limits, including naming, rest-pose axes and multi-clip behavior.
+2. Validate facial morph controls on real blend-shape GLBs.
+3. Compare browser preview fidelity against the authoritative Godot scene and add visual acceptance fixtures.
+4. Continue deterministic export and round-trip work after broader rig acceptance.
 
 ## Frozen architecture and constraints
 

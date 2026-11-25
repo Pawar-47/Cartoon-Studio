@@ -835,6 +835,61 @@ def download_character_retarget_scene(
     )
 
 
+
+@app.get("/api/projects/{project_id}/retargets/{retarget_id}/preview")
+def get_character_retarget_preview(project_id: str, retarget_id: str) -> dict[str, Any]:
+    """Return project-local GLBs and canonical bone maps for the browser preview."""
+    initialize_database()
+    with connect_db() as connection:
+        exists = connection.execute("SELECT 1 FROM projects WHERE id = ?", (project_id,)).fetchone()
+    if exists is None:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    try:
+        safe_id = str(uuid.UUID(retarget_id))
+        config_path = resolve_project_relative(DATA_DIR, project_id, f"retargets/{safe_id}.json")
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail="Invalid retarget ID.") from error
+    if not config_path.is_file():
+        raise HTTPException(status_code=404, detail="Retarget record not found.")
+    document = read_json(config_path)
+    if document.get("document_type") != "character_retarget" or document.get("id") != safe_id:
+        raise HTTPException(status_code=409, detail="Retarget record is invalid.")
+    data = document.get("data", {})
+    source = _character_document(DATA_DIR, project_id, str(data.get("source_character_id", "")))
+    target = _character_document(DATA_DIR, project_id, str(data.get("target_character_id", "")))
+
+    def preview_asset(character: dict[str, Any]) -> tuple[str, dict[str, str]]:
+        asset = character.get("data", {}).get("asset", {})
+        relative_path = str(asset.get("relative_path", ""))
+        try:
+            asset_path = resolve_project_relative(DATA_DIR, project_id, relative_path)
+            asset_id = str(uuid.UUID(Path(relative_path).stem))
+        except ValueError as error:
+            raise HTTPException(status_code=409, detail="A retarget character asset path is invalid.") from error
+        if not relative_path.startswith("assets/characters/") or not asset_path.is_file():
+            raise HTTPException(status_code=404, detail="A retarget character GLB is missing.")
+        raw_mapping = asset.get("rig_analysis", {}).get("godot_profile_mapping", {})
+        if not isinstance(raw_mapping, dict):
+            raise HTTPException(status_code=409, detail="A retarget humanoid mapping is invalid.")
+        mapping: dict[str, str] = {}
+        for profile_name, entry in raw_mapping.items():
+            if isinstance(entry, dict) and isinstance(entry.get("source_name"), str):
+                mapping[str(profile_name)] = entry["source_name"]
+        return f"/api/projects/{project_id}/character-assets/{asset_id}", mapping
+
+    source_url, source_mapping = preview_asset(source)
+    target_url, target_mapping = preview_asset(target)
+    return {
+        "source_asset_url": source_url,
+        "target_asset_url": target_url,
+        "source_mapping": source_mapping,
+        "target_mapping": target_mapping,
+        "animation_name": str(data.get("animation_name", "")),
+        "preview_kind": "threejs_browser_retarget",
+        "authoritative_scene": f"/api/projects/{project_id}/retargets/{safe_id}/scene",
+    }
+
+
 @app.get("/api/projects/{project_id}/characters")
 def list_characters(project_id: str) -> list[dict[str, Any]]:
     initialize_database()
