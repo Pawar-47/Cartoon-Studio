@@ -7,6 +7,12 @@ var _errors: Array[String] = []
 var _checks := {
     "glb_imported": false,
     "glb_contains_mesh": false,
+    "imported_humanoid_loaded": false,
+    "imported_humanoid_skeleton_found": false,
+    "imported_humanoid_has_15_bones": false,
+    "imported_humanoid_skin_bound": false,
+    "imported_humanoid_animation_found": false,
+    "imported_humanoid_rest_transforms_finite": false,
     "animation_created": false,
     "animation_playing": false,
     "scene_saved": false,
@@ -79,6 +85,41 @@ func _import_glb_fixture() -> void:
         _errors.append("Imported GLB contains no MeshInstance3D.")
     else:
         _checks["glb_contains_mesh"] = true
+
+    var humanoid_packed := load("res://fixtures/proof_humanoid.glb") as PackedScene
+    if humanoid_packed == null:
+        _errors.append("Skinned humanoid GLB fixture did not import as a PackedScene.")
+        return
+    var humanoid := humanoid_packed.instantiate()
+    humanoid.name = "ImportedHumanoid"
+    humanoid.position = Vector3(1.8, 0.0, 0.0)
+    add_child(humanoid)
+    _checks["imported_humanoid_loaded"] = true
+
+    var humanoid_skeletons := humanoid.find_children("*", "Skeleton3D", true, false)
+    var humanoid_meshes := humanoid.find_children("*", "MeshInstance3D", true, false)
+    var humanoid_players := humanoid.find_children("*", "AnimationPlayer", true, false)
+    if humanoid_skeletons.size() == 1:
+        _checks["imported_humanoid_skeleton_found"] = true
+        var skeleton := humanoid_skeletons[0] as Skeleton3D
+        _checks["imported_humanoid_has_15_bones"] = skeleton.get_bone_count() == 15
+        var finite_rest := skeleton.get_bone_count() == 15
+        for bone_index in range(skeleton.get_bone_count()):
+            if not skeleton.get_bone_rest(bone_index).origin.is_finite():
+                finite_rest = false
+        _checks["imported_humanoid_rest_transforms_finite"] = finite_rest
+
+    for mesh_node in humanoid_meshes:
+        var skinned_mesh := mesh_node as MeshInstance3D
+        if skinned_mesh.skin != null:
+            _checks["imported_humanoid_skin_bound"] = true
+            break
+
+    for player_node in humanoid_players:
+        var imported_player := player_node as AnimationPlayer
+        if imported_player.get_animation_list().size() > 0:
+            _checks["imported_humanoid_animation_found"] = true
+            break
 
 
 func _build_animated_character_proxy() -> void:
@@ -229,6 +270,8 @@ func _save_and_reopen_scene() -> void:
         _errors.append("Reopened scene is missing AnimatedCube.")
     elif instance.get_node_or_null("ImportedGLB") == null:
         _errors.append("Reopened scene is missing imported GLB instance.")
+    elif instance.get_node_or_null("ImportedHumanoid") == null:
+        _errors.append("Reopened scene is missing the skinned humanoid GLB instance.")
     elif instance.get_node_or_null("AnimationPlayer") == null:
         _errors.append("Reopened scene is missing AnimationPlayer.")
     elif instance.get_node_or_null("SourceSkeleton/RetargetModifier3D/TargetSkeleton") == null:
