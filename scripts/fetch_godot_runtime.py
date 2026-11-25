@@ -5,8 +5,8 @@ import hashlib
 import json
 import pathlib
 import subprocess
-from urllib import request
 import zipfile
+from urllib import request
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
