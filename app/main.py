@@ -16,19 +16,19 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from app.engine import (
-    EngineError,
-    EnginePathError,
-    EngineTimeoutError,
-    EngineUnavailableError,
-    GodotEngineAdapter,
-)
 from app.character_builder import (
     CharacterLibraryError,
     UnknownCharacterModel,
     ensure_model_asset,
     get_character_catalog,
     get_model_spec,
+)
+from app.engine import (
+    EngineError,
+    EnginePathError,
+    EngineTimeoutError,
+    EngineUnavailableError,
+    GodotEngineAdapter,
 )
 from app.rig_analysis import analyze_rig
 from app.storage import connect_db as open_database
