@@ -4,7 +4,8 @@
 
 - Repository: Pawar-47/Cartoon-Studio
 - Branch: main
-- Latest implementation checkpoint: `5d31f804e638e5ca076115ca886a7e7932c4058a` (PR #7 merged; outfit shuffle/downloads, animation playback probe and expression preset batches merged; main CI pending).
+- Latest implementation checkpoint: `d42a6e766fdae22e9a742435228cfdb4431c656b` (PR #10 merged; verified baked appearance GLB export; PR #11 recipe save/reopen/reassembly regression coverage already merged; main quick CI passed).
+- Latest main quick CI: [run 45663866235 PASSED](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45663866235) on `d42a6e766fdae22e9a742435228cfdb4431c656b` (locked dependency install, Ruff, Node syntax check, compileall and full pytest).
 - Phase 0: COMPLETE.
 - Phase 1: COMPLETE.
 - Phase 2 — Character Studio: ACTIVE; import, preview, profiles, appearance recipes, rig diagnostics and the first user-facing imported-rig retarget workflow are implemented. Phase 2 is not complete.
@@ -32,6 +33,8 @@
 - Retarget history displays source/target local pose angles as rest-axis-dependent diagnostics plus the transfer verification state.
 - Saved retargets expose an in-app browser preview: Three.js retargets the selected source clip onto the saved target GLB using persisted canonical humanoid mappings. Browser retarget sampling is performed from the full GLTF scene roots (so animation tracks can reach skeleton bones that are siblings of the skinned mesh); the generated clip is played against the target SkinnedMesh skeleton. A Node-based regression suite exercises scene-root source tracks, sibling target skeletons, rest-axis roll, hip translation and invalid mappings. Clip names resolve exactly or by a unique Godot animation-library suffix; unknown or ambiguous saved names now produce an explicit error instead of silently previewing a different clip. The saved Godot scene remains authoritative; browser preview is a separate visual aid, not proof of native-scene rendering.
 - Original source and target GLBs remain byte-identical.
+- PR #10 adds non-destructive baked appearance export: Godot writes BaseMaterial3D color/roughness/metallic values and bound morph weights into a new GLB, re-imports it and verifies baked values while preserving animation clips and the original source asset.
+- PR #11 adds API-level modular recipe round-trip coverage: restore all source asset manifests, reopen the assembled character profile and reassemble from the recovered four-part/accessory recipe. This proves persistence/replay contracts, not interactive browser acceptance.
 
 ## Distinct imported fixture coverage
 
@@ -55,11 +58,11 @@ Godot may normalize raw skin-joint ordering during import. The application uses 
 
 ## Next implementation batch
 
-1. Run interactive browser acceptance of the corrected scene-root retarget preview, then compare its motion against the authoritative saved Godot scene across the accepted humanoid, bone-roll and RobotExpressive fixtures.
-2. Add more third-party humanoid rig families, including varied rest axes and different skeleton hierarchies.
-3. Perform interactive browser acceptance of RobotExpressive facial sliders, reset-to-imported-defaults and save/reopen.
-4. Continue deterministic export and animation round-trip after broader compatibility acceptance.
-5. Keep routine push/PR CI to one quick validation workflow; use native-worker proof and full application release workflows manually at phase milestones.
+1. Perform interactive browser acceptance of the complete modular creator: library preview/import, four-slot selection, shuffle, accessory add/remove, assembly, GLB download, expression preview, profile save/reopen and recipe restoration.
+2. Visually accept PR #10's baked appearance export using a real morph-capable character: compare pre/post material values, facial weights and animation playback; confirm the source GLB remains unchanged.
+3. Compare browser retarget preview against the authoritative saved Godot scene across the accepted humanoid, bone-roll and RobotExpressive fixtures.
+4. Implement genuine geometric customization for proportions, face and hair using compatible mesh, morph-target or rig operations; distinguish real geometry changes from metadata-only profile fields.
+5. Broaden third-party rig families only where direct compatibility tests and visual acceptance justify support.
 
 ## Frozen architecture and constraints
 
@@ -72,7 +75,7 @@ Godot may normalize raw skin-joint ordering during import. The application uses 
 
 ## Active P2.2 direction — modular character creator (2026-11-25)
 
-- Main HEAD: `b4dd8237e6369bbb74c58ef844e0fac5c9667c77`; PR #3 merged. Feature CI `45653413604` and merge CI `45653650908` both passed.
+- Main HEAD: `d42a6e766fdae22e9a742435228cfdb4431c656b`. PRs #3, #4, #6, #7, #9 and #11 provide the modular assembly, accessories, shuffle, playback probe, expression presets and recipe round-trip coverage. PR #10 adds verified baked appearance GLB export. Main quick CI run `45663866235` passed.
 - The pinned Quaternius Ultimate Modular Men/Women CC0 library contains 21 outfit GLBs (34.92 MiB) with four candidate slots and 24 animation clips per model. Downloads are lazy, cached and verified against the pinned source commit, byte size and Git blob SHA-1.
 - Character Studio now offers head/body/legs/feet selectors, filtered by skinned mesh slot candidates. Godot performs exact shared-skeleton, hierarchy, rest-pose, rig-transform and skin-bind checks; it removes base skinned outfit meshes, attaches the selected meshes to the base skeleton, exports and re-imports the GLB, then verifies the four selected meshes and base animation names.
 - A real CI integration test combines Beach head, Casual_2 body, Farmer legs and King feet on the Male Adventurer base and verifies all 24 base animation clips survive. Assembly manifests persist the base/part recipe and allow source restoration.

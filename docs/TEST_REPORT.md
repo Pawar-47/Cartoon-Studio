@@ -1,5 +1,11 @@
 # Test Report — 2026-11-25
 
+## Latest main validation and CI coverage audit — 2026-11-25
+
+- Main quick CI [45663866235](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45663866235) passed on `d42a6e766fdae22e9a742435228cfdb4431c656b`: locked dependency verification/install, pinned Godot and RobotExpressive fixture acquisition, Ruff, Node syntax check, Python compileall and full pytest.
+- Read-only coverage review found that the Ruff command named only selected scripts, omitting `scripts/patch_ara_foundation.py` and `scripts/set_build_version.py`; the browser syntax step directly checked only `characters.js`, leaving other first-party browser entry points unchecked.
+- The accompanying maintenance change broadens Ruff to all of `scripts` and parses every first-party top-level `.js`/`.mjs` file under `app/static`, excluding the vendored subdirectory. The maintenance PR's CI result is recorded after that run completes; this entry does not pre-claim it passed.
+
 ## Phase 2 — imported morph metadata and appearance persistence — 2026-11-25
 
 - Windows CI #303: [SUCCESS](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45631358729) on commit `0bfce71625d6e3084b4ceda9b64a9825cca95101`. Full lint, compile, pytest, pinned Godot 4.7.2 worker, bootstrap, both self-contained builds, NSIS installer and clean install/upgrade/uninstall/reinstall lifecycle passed.

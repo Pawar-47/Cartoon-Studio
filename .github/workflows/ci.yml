@@ -37,13 +37,22 @@ jobs:
       - name: Fetch pinned CC0 facial morph fixture
         run: uv run --locked python scripts/fetch_robot_expressive_fixture.py --output-dir tests/fixtures/third_party
       - name: Lint
-        run: uv run --locked ruff check app tests scripts/fetch_godot_runtime.py scripts/fetch_robot_expressive_fixture.py scripts/augment_sbom.py
+        run: uv run --locked ruff check app tests scripts
       - uses: actions/setup-node@v4
         name: Set up Node
         with:
           node-version: "22"
       - name: Check browser JavaScript syntax
-        run: node --experimental-default-type=module --check app/static/characters.js
+        shell: pwsh
+        run: |
+          $browserScripts = Get-ChildItem app/static -File | Where-Object { $_.Extension -in @(".js", ".mjs") }
+          if (-not $browserScripts) { throw "No first-party browser JavaScript files were found." }
+          foreach ($script in $browserScripts) {
+            node --experimental-default-type=module --check $script.FullName
+            if ($LASTEXITCODE -ne 0) {
+              throw "JavaScript syntax check failed: $($script.Name)"
+            }
+          }
       - name: Compile Python
         run: uv run --locked python -m compileall -q app scripts
       - name: Test

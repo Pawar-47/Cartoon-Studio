@@ -23,7 +23,13 @@ Before making any change, read this file completely, then read the complete auth
 15. docs/BUILD_AND_INSTALL.md
 16. docs/TEST_REPORT.md
 17. docs/NEXT_STEPS.md
-18. Read the source and tests of every module you intend to change. For upstream Ara changes, also read scripts/patch_ara_foundation.py and the exact pinned upstream files it patches.
+18. docs/SESSION_CHECKPOINT.md
+19. docs/P2_2_CHARACTER_STUDIO_REPORT.md
+20. docs/DECISION_LOG.md
+21. docs/ARCHITECTURE_CONTRACTS.md
+22. docs/EXECUTION_BATCH_PLAN.md
+23. docs/TEST_REPORT.md
+24. Read the source and tests of every module you intend to change. For upstream Ara changes, also read scripts/patch_ara_foundation.py and the exact pinned upstream files it patches.
 
 Do not begin coding after reading only a summary or a few sections. Recheck the relevant registry entries and their dependencies before each implementation batch. Reconcile every requirement with code and tests before marking it complete.
 

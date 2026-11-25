@@ -3,7 +3,7 @@
 Updated: 2026-11-25
 Repository: https://github.com/Pawar-47/Cartoon-Studio
 Branch: main
-Latest implementation checkpoint: `5d31f804e638e5ca076115ca886a7e7932c4058a` (outfit shuffle/downloads, Godot animation playback probe and semantic expression presets merged; main CI run 45657010942 pending at checkpoint).
+Latest implementation checkpoint: `d42a6e766fdae22e9a742435228cfdb4431c656b` (PR #10 baked appearance export and PR #11 modular recipe round-trip coverage merged; main quick CI run 45663866235 passed).
 
 ## Mission and operating rules
 
@@ -19,6 +19,12 @@ Build the complete local-first Cartoon Studio desktop application defined by `MA
 ## Current phase
 
 Phase 2 — Character Studio is ACTIVE. Phase 0 and Phase 1 are complete. Do not skip ahead to World Builder or unfreeze the partial Story Generator.
+
+## Latest merged work
+
+- PR #10: appearance recipes can be baked into a new GLB by the Godot worker; baked material and morph values are re-imported and verified, animation clips are retained, and the source GLB remains unchanged.
+- PR #11: modular assembly recipes now have API-level save/reopen/reassemble regression coverage, including all source asset manifests and a bone-attached accessory.
+- Main CI run [45663866235](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45663866235) passed on `d42a6e766fdae22e9a742435228cfdb4431c656b`.
 
 ## Implemented Character Studio capabilities
 
@@ -69,10 +75,10 @@ Two real third-party assets have passed native Godot acceptance for tested scena
 
 ## Next substantial implementation batch
 
-1. Perform interactive browser acceptance of the modular builder, outfit randomizer, direct GLB downloads, accessory chips and semantic expression presets; verify save/reopen behavior and preview quality.
-2. Add browser-facing animation acceptance so the user can inspect a selected clip on the assembled GLB; the Godot worker now verifies bone-pose changes and skinned mesh bindings after re-import.
-3. Extend genuine geometric customization (proportions, face and hair) using compatible mesh/morph/rig operations; do not treat text-only profile fields as implemented geometry editing.
-4. Add an end-to-end saved-profile recipe round-trip/reassemble test and continue broadening rig families only where tests prove compatibility.
+1. Perform interactive browser acceptance of the complete modular creator, including outfit selection/shuffle, accessories, assembly, preview, GLB download, profile save/reopen and recipe restoration. PR #11 now covers the API-level recipe replay contract; it does not replace visual acceptance.
+2. Visually accept PR #10's baked appearance export with a real morph-capable character, checking material values, facial weights, animation preservation and source-file immutability.
+3. Compare browser retarget preview motion against the authoritative Godot scene across the accepted humanoid, bone-roll and RobotExpressive fixtures.
+4. Implement genuine geometric customization for proportions, face and hair; do not count text-only profile metadata as geometry editing.
 
 ## Later phases
 
