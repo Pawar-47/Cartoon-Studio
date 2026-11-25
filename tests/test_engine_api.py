@@ -136,6 +136,14 @@ def test_modular_assembly_api_validates_slots_and_persists_verified_asset(
     )
     assert download.status_code == 200
     assert download.content.startswith(b"glTF")
+    manifest = client.get(
+        f"/api/projects/{project_id}/character-assets/{result['asset_id']}/manifest"
+    )
+    assert manifest.status_code == 200
+    assert manifest.json()["assembly"]["verified"] is True
+    assert manifest.json()["assembly"]["parts"][0]["slot"] in {
+        "head", "body", "legs", "feet"
+    }
 
 
 def test_modular_assembly_api_rejects_duplicate_or_missing_slots(tmp_path, monkeypatch):
