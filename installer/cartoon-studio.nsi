@@ -29,13 +29,23 @@ VIAddVersionKey "FileDescription" "Cartoon Studio Installer"
 !macro RemoveInstalledFiles
     ; Never recursively delete the user's selected install root. Remove only known app-owned paths.
     SetOutPath "$TEMP"
+    WriteRegStr HKCU "Software\CartoonStudioDebug" "Step1" "$INSTDIR"
+    SetFileAttributes "$INSTDIR\CartoonStudio.exe" NORMAL
+    SetFileAttributes "$INSTDIR\dependency-sbom.cdx.json" NORMAL
+    SetFileAttributes "$INSTDIR\THIRD_PARTY_NOTICES.md" NORMAL
+    SetFileAttributes "$INSTDIR\Uninstall.exe" NORMAL
     RMDir /r "$INSTDIR\_internal"
+    WriteRegStr HKCU "Software\CartoonStudioDebug" "Step2" "Internal removed"
     RMDir /r "$INSTDIR\LICENSES"
+    WriteRegStr HKCU "Software\CartoonStudioDebug" "Step3" "Licenses removed"
     Delete "$INSTDIR\CartoonStudio.exe"
+    WriteRegStr HKCU "Software\CartoonStudioDebug" "Step4" "Executable delete attempted"
     Delete "$INSTDIR\dependency-sbom.cdx.json"
     Delete "$INSTDIR\THIRD_PARTY_NOTICES.md"
     Delete "$INSTDIR\Uninstall.exe"
+    WriteRegStr HKCU "Software\CartoonStudioDebug" "Step5" "Uninstaller delete attempted"
     RMDir "$INSTDIR"
+    WriteRegStr HKCU "Software\CartoonStudioDebug" "Step6" "Install root removal attempted"
 !macroend
 
 Section "Cartoon Studio" SEC_MAIN
