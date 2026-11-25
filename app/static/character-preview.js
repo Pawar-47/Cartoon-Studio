@@ -341,26 +341,26 @@ export async function exportCharacterTurnaround({ width = 1024, transparent = tr
   const previousBackground = scene.background;
   const previousClearColor = renderer.getClearColor(new THREE.Color()).clone();
   const previousClearAlpha = renderer.getClearAlpha();
-  frameCharacter("full");
-  const turnaroundTarget = controls.target.clone();
-  const offset = camera.position.clone().sub(turnaroundTarget);
-  const horizontalRadius = Math.max(Math.hypot(offset.x, offset.z), 0.01);
-  const baseAngle = Math.atan2(offset.x, offset.z);
   const labels = ["3/4", "Side", "Back", "Opposite"];
-  const sheet = window.document.createElement("canvas");
-  sheet.width = tileSize * 2;
-  sheet.height = tileSize * 2;
-  const context = sheet.getContext("2d");
-  if (!context) throw new Error("The browser could not create a 2D canvas for the turnaround sheet.");
-  const captureTile = () => new Promise((resolve, reject) => {
-    renderer.domElement.toBlob(
-      (blob) => blob ? resolve(blob) : reject(new Error("The browser could not encode a turnaround view.")),
-      "image/png",
-    );
-  });
-  previewFrozen = true;
-  controls.enabled = false;
   try {
+    previewFrozen = true;
+    controls.enabled = false;
+    frameCharacter("full");
+    const turnaroundTarget = controls.target.clone();
+    const offset = camera.position.clone().sub(turnaroundTarget);
+    const horizontalRadius = Math.max(Math.hypot(offset.x, offset.z), 0.01);
+    const baseAngle = Math.atan2(offset.x, offset.z);
+    const sheet = window.document.createElement("canvas");
+    sheet.width = tileSize * 2;
+    sheet.height = tileSize * 2;
+    const context = sheet.getContext("2d");
+    if (!context) throw new Error("The browser could not create a 2D canvas for the turnaround sheet.");
+    const captureTile = () => new Promise((resolve, reject) => {
+      renderer.domElement.toBlob(
+        (blob) => blob ? resolve(blob) : reject(new Error("The browser could not encode a turnaround view.")),
+        "image/png",
+      );
+    });
     renderer.setPixelRatio(1);
     renderer.setSize(tileSize, tileSize, false);
     camera.aspect = 1;
