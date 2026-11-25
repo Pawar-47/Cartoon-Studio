@@ -16,6 +16,7 @@ Name "Cartoon Studio"
 OutFile "${OUTPUT_FILE}"
 InstallDir "$LOCALAPPDATA\Programs\Cartoon Studio"
 InstallDirRegKey HKCU "Software\CartoonStudio" "InstallDir"
+Page instfiles
 ShowInstDetails show
 ShowUnInstDetails show
 UninstPage uninstConfirm
