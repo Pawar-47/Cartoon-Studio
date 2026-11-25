@@ -2,13 +2,15 @@
 
 ## Current checkpoint
 
-Main is `6a3406efb320a0895d4b2a7253395a107d6a394d`. PR #17 adds generated 3D hairstyles and PR #19 adds transparent PNG portrait export; CI runs #421 and #423 passed. PR #20, four-view turnaround export, remains open with CI #425 passed. Phase 2 remains active; automated API/worker coverage does not count as interactive browser or visual acceptance.
+Main is `4d2a7848b7c123358b868f56eac0704a80f6c58d`; quick CI #426 passed. PR #20 and #21 remain open separately with CI #428/#430 passed. Phase 2 remains active; automated API/worker coverage does not count as interactive browser or visual acceptance.
 
-Local continuation is on `work/p2-2-body-shape-acceptance`, based on current main and containing the committed profile UI fixes. The browser passes functional acceptance on the synthetic humanoid fixture and pinned CC0 Male Adventurer GLB, but P2.2 remains PARTIAL.
+Local continuation is on `work/character-hair-fit`, based on that main commit. The pinned-Godot regression passes for short and ponytail placement on the CC0 Male Adventurer, including animation retention/playback and source immutability. A fresh browser visual check was unavailable, so P2.2 remains PARTIAL.
 
 ## Active batch — Phase 2 Character Studio
 
 The first user-facing non-destructive imported-GLB retarget workflow and saved browser preview are implemented. Facial morph-target metadata is now reported by the Godot worker; named and unnamed morph fixtures are covered, and the appearance API has save/reopen/range-validation regression tests. The appearance editor now pauses embedded animation playback to prevent morph animation tracks from fighting expression sliders; ordinary previews still auto-play. Windows CI #326 passed the complete full-build pipeline on `696929595b2d03e64e46a568ec9d163860ae3239`. Windows CI #334 passed the quick validation pipeline, including the pinned third-party RobotExpressive download and Godot facial morph/animation inspection. Windows CI #299 passed the complete pipeline, including a real third-party Khronos Rigged Figure retargeted onto the canonical target after scene save/reopen. It includes source/target selectors, preflight validation, a saved Godot scene, a persistent project record, scene download, and a runtime check that the reopened source animation transfers its pose to the target skeleton.
+
+The current hair-fit change uses the skinned head-mesh bounds in Head-bone space and face-feature surfaces to orient front/back placement. The real Adventurer regression passes locally with pinned Godot 4.7.2; visual preview and saved-profile style/color acceptance are still open.
 
 Saved retarget records now also have a browser preview action. The preview endpoint resolves the project's original source/target GLBs and canonical humanoid mappings; the browser uses the locally vendored Three.js SkeletonUtils retarget pass to animate the target GLB. This is a visual aid, not the authoritative saved-scene renderer. The Godot scene remains the authoritative native artifact.
 
@@ -32,7 +34,7 @@ Saved retarget records now also have a browser preview action. The preview endpo
 
 The latest main CI passed the rig-based body-proportion implementation, including the pinned Godot worker tests. A local browser smoke now confirms the edit, export, animation playback and profile-reopen path on a pinned CC0 character. Full visual signoff still requires rigs that pass the project's compatibility diagnostics and morph-capable models.
 
-1. Complete browser acceptance of procedural hairstyles and transparent PNG exports, including saved-profile style/color restoration.
+1. Complete browser acceptance of the short/ponytail placement fix and transparent PNG exports, including saved-profile style/color restoration.
 2. Establish and test the body-edit compatibility boundary on a representative rig that passes hierarchy validation; compare source and export in matched poses.
 3. Exercise imported face/body morph sliders and baked appearance in the browser on a morph-capable GLB.
 4. Complete modular assembly, outfit shuffle, accessories, download and recipe-reopen acceptance in the browser.

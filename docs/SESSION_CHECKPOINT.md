@@ -2,8 +2,8 @@
 
 Updated: 2026-11-25
 Repository: https://github.com/Pawar-47/Cartoon-Studio
-Branch: `work/p2-2-body-shape-acceptance`
-Latest upstream main: `6a3406efb320a0895d4b2a7253395a107d6a394d` (PR #17 generated hairstyles and PR #19 transparent PNG portraits merged; CI #421 and #423 passed).
+Branch: `work/character-hair-fit`
+Latest upstream main: `4d2a7848b7c123358b868f56eac0704a80f6c58d` (main quick CI #426 passed; PR #20 and #21 remain separate with CI #428/#430 passed).
 
 ## Mission and operating rules
 
@@ -97,6 +97,15 @@ Two real third-party assets have passed native Godot acceptance for tested scena
 - Phase 8 — Optimization and Reliability: deferred, including physical-PC performance testing.
 
 Never claim the complete application is finished while Phases 2–7 remain incomplete.
+
+## 2026-11-25 — Geometry-aware hairstyle placement
+
+- Work is on `work/character-hair-fit`, based on `origin/main` at `4d2a7848b7c123358b868f56eac0704a80f6c58d`; PR #20 and #21 remain separate. The earlier preview-polish stash/work is preserved and was not changed in this batch.
+- The worker fits hair from the skinned head mesh in Head-bone space and infers front/back from named face-feature surfaces, with a skeleton fallback when no head mesh is found.
+- Pinned Godot 4.7.2 SHA-256: `731980f9608d61333e5baf54a2ef17210acc7a538446c0cb9969f002aca1e953`. `tests/test_engine.py` passed **14 tests**, including real Adventurer short/ponytail placement, explicit face-feature front detection, retained clips, Walk playback and source immutability. The full local suite passed **121 tests with 4 environment-dependent skips** (three Node.js suites and one symlink-capability test). Ruff and `git diff --check` passed.
+- The RobotExpressive fixture was fetched with the repository script and SHA-256 verified after the first suite attempt found it absent.
+- Computer Use could not capture a fresh browser screenshot; no hairstyle visual or saved-profile acceptance is claimed. Phase 2/P2.2 remains PARTIAL.
+- Next: complete browser acceptance for short/ponytail generation, profile style/color restore and PNG output, then continue remaining modular assembly, morph and original-geometry acceptance.
 
 
 ## 2026-11-25 — Body-proportion editing checkpoint

@@ -280,3 +280,13 @@ Added API coverage for saving morph-target weights and rejecting values outside 
 - `python -m ruff check app tests`, `python -m compileall -q app tests` and `git diff --check` passed. Pytest emitted one Starlette deprecation warning about using `httpx`; it did not fail tests.
 - PR #20's four-view turnaround export remains open and separate; CI #425 passed. Its feature is not included in this branch.
 - No local visual acceptance was performed for generated hairstyles or PNG export. Existing Adventurer hierarchy warnings and the absence of original face geometry keep P2.2 PARTIAL.
+
+## 2026-11-25 — Geometry-aware hairstyle placement regression
+
+- The Godot worker now derives bounds from a skinned head mesh in Head-bone rest space, fits the cap/fringe to that geometry and uses named face-feature surfaces to determine front/back orientation. The existing skeleton-based fit remains as a fallback for rigs without an identifiable head mesh.
+- Added real pinned Quaternius Male Adventurer coverage for short hair and ponytail. It asserts the named face-feature orientation path, checks placement/export-reimport and animation retention/playback, and confirms the source GLB remains byte-identical.
+- Verified the pinned Godot 4.7.2 Windows runtime against SHA-256 `731980f9608d61333e5baf54a2ef17210acc7a538446c0cb9969f002aca1e953`. The first full engine-suite run exposed the expected missing CI-fetched RobotExpressive fixture; `scripts/fetch_robot_expressive_fixture.py` downloaded and checksum-verified it before the successful rerun.
+- `python -m pytest -o addopts= -q -rs tests\test_engine.py`: **14 passed**. The focused real-Adventurer hair-fit test also passed independently.
+- Full local `python -m pytest -o addopts= -q -rs`: **121 passed, 4 skipped** in 101.42 seconds. Skips require Node.js (three browser-helper suites) or symlink support (one test); the pinned Godot tests ran.
+- `python -m ruff check tests\test_engine.py` and `git diff --check` passed. Pytest reported the existing Starlette/httpx deprecation warning.
+- Browser visual acceptance could not be completed in this environment. This is native worker/integration evidence only; saved-profile hair restoration, rendered visual quality, original face geometry and Phase 2 exit remain open.

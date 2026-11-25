@@ -3,13 +3,13 @@
 ## Live checkpoint
 
 - Repository: Pawar-47/Cartoon-Studio
-- Branch: main
-- Latest main implementation checkpoint: `6a3406efb320a0895d4b2a7253395a107d6a394d` (PR #17 adds generated 3D hairstyles; PR #19 adds transparent PNG portrait export).
-- Main quick CI runs [#421](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45675952510) and [#423](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45676735754) passed on the hairstyle and portrait-export commits, respectively.
-- Local continuation branch: `work/p2-2-body-shape-acceptance`, based on `6a3406e`; it contains the saved-profile UI fixes and current documentation updates. PR #20, four-view turnaround export, remains open with passing CI #425 and is not included in this branch.
+- Branch: `work/character-hair-fit`, based on `origin/main` at `4d2a7848b7c123358b868f56eac0704a80f6c58d`.
+- Latest main quick CI #426 passed. PR #20 and PR #21 remain open and separate; their CI runs #428 and #430 passed.
+- This branch contains the local hairstyle-placement hardening and real-Adventurer regression; no changes from either open PR are included.
 - Phase 0: COMPLETE.
 - Phase 1: COMPLETE.
-- Phase 2 — Character Studio: ACTIVE; import, preview, profiles, appearance recipes, rig-based body-proportion export, procedural Head-attached hairstyles, transparent PNG portrait export, rig diagnostics and retargeting are implemented. The pinned CC0 Adventurer body edit/profile reopen has local browser acceptance; hairstyle/PNG visual acceptance and original face geometry remain.
+- Phase 2 — Character Studio: ACTIVE; import, preview, profiles, appearance recipes, rig-based body-proportion export, procedural Head-attached hairstyles, transparent PNG portrait export, rig diagnostics and retargeting are implemented. The pinned CC0 Adventurer body edit/profile reopen has local browser acceptance, and the short/ponytail placement fix passes the pinned Godot integration test; browser hairstyle/PNG visual acceptance and original face geometry remain.
+- Local full pytest with pinned Godot: 121 passed, 4 environment-dependent skips (three Node.js tests, one symlink-capability test). The engine module passed all 14 tests, including real Adventurer hair placement, retained clips, Walk playback and source immutability.
 - Windows CI #326: full pipeline PASSED on `696929595b2d03e64e46a568ec9d163860ae3239`, including lint, Python compilation, full pytest, pinned Godot 4.7.2 worker, Windows bootstrap, both self-contained application builds, NSIS installers and clean install/upgrade/uninstall/reinstall lifecycle.
 - Windows CI #334: quick CI PASSED on `00b4ed9f97360cba1a304054a8285fd4df1cc827`; pinned RobotExpressive download/checksum, Ruff, Python compilation and full pytest passed. The complete application and installer were intentionally not rebuilt.
 - Windows CI #340: quick CI PASSED on `fba0ad5cec13a5738a2807a2af7bebf0317451cd`; animation-name catalog, explicit/default clip selection, legacy compatibility and unknown-clip rejection passed.
@@ -62,7 +62,7 @@ Godot may normalize raw skin-joint ordering during import. The application uses 
 
 ## Next implementation batch
 
-1. Complete browser acceptance for procedural hairstyles and transparent PNG exports; verify saved-profile hair selection and output appearance.
+1. Complete browser acceptance for the short/ponytail placement fix and transparent PNG exports; verify saved-profile hair selection/color restoration and inspect actual rendered appearance.
 2. Extend acceptance to modular assembly, imported morph controls and baked appearance on representative, hierarchy-validated rigs.
 3. Resolve and document the body-edit compatibility boundary: the pinned Adventurer edit succeeded, but its import report still flags 13/15 humanoid names and a hierarchy needing review.
 4. Compare browser retarget preview against the authoritative saved Godot scene across accepted humanoid, bone-roll and RobotExpressive fixtures.
@@ -80,7 +80,7 @@ Godot may normalize raw skin-joint ordering during import. The application uses 
 
 ## Active P2.2 direction — modular character creator (2026-11-25)
 
-- Main HEAD: `6a3406efb320a0895d4b2a7253395a107d6a394d`. PRs #3, #4, #6, #7, #9, #10 and #11 provide modular assembly, accessories, shuffle, playback probe, expression presets, baked appearance export and recipe round-trip coverage. PR #15 adds rig-based body-proportion editing and face/body morph grouping; PR #17 adds procedural hairstyles; PR #19 adds transparent PNG portrait export. Main quick CI runs #417, #421 and #423 passed. PR #20 turnaround export remains open with passing CI #425.
+- Main HEAD: `4d2a7848b7c123358b868f56eac0704a80f6c58d`; main quick CI #426 passed. PR #20 and #21 remain open separately with CI #428/#430 passed. PRs #3, #4, #6, #7, #9, #10 and #11 provide modular assembly, accessories, shuffle, playback probe, expression presets, baked appearance export and recipe round-trip coverage. PR #15 adds rig-based body-proportion editing and face/body morph grouping; PR #17 adds procedural hairstyles; PR #19 adds transparent PNG portrait export.
 - The pinned Quaternius Ultimate Modular Men/Women CC0 library contains 21 outfit GLBs (34.92 MiB) with four candidate slots and 24 animation clips per model. Downloads are lazy, cached and verified against the pinned source commit, byte size and Git blob SHA-1.
 - Character Studio now offers head/body/legs/feet selectors, filtered by skinned mesh slot candidates. Godot performs exact shared-skeleton, hierarchy, rest-pose, rig-transform and skin-bind checks; it removes base skinned outfit meshes, attaches the selected meshes to the base skeleton, exports and re-imports the GLB, then verifies the four selected meshes and base animation names.
 - A real CI integration test combines Beach head, Casual_2 body, Farmer legs and King feet on the Male Adventurer base and verifies all 24 base animation clips survive. Assembly manifests persist the base/part recipe and allow source restoration.
