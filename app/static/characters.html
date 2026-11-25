@@ -26,6 +26,19 @@
   <p id="library-status" class="inline-status" role="status">Loading verified CC0 model catalog…</p>
   <p class="library-license">Source: Quaternius Ultimate Modular Characters · CC0 1.0 · pinned upstream revision.</p>
  </section>
+ <section class="panel assembly-panel">
+  <span class="eyebrow">00A / MODULAR CHARACTER ASSEMBLY</span><h2>Build a character from four interchangeable parts</h2>
+  <p class="helper">Import source outfits into this project, then choose a base rig and one skinned mesh for each slot. Godot only combines parts whose bone order, hierarchy, rest pose and rig transform match exactly. The base character's animation clips are retained and checked after GLB export.</p>
+  <div class="form-grid">
+   <label>Base character rig<select id="assembly-base"><option value="">Import a rigged character first…</option></select></label>
+   <label>Head mesh<select id="assembly-head"><option value="">Import a skinned mesh first…</option></select></label>
+   <label>Body mesh<select id="assembly-body"><option value="">Import a skinned mesh first…</option></select></label>
+   <label>Legs mesh<select id="assembly-legs"><option value="">Import a skinned mesh first…</option></select></label>
+   <label>Feet mesh<select id="assembly-feet"><option value="">Import a skinned mesh first…</option></select></label>
+  </div>
+  <button id="assemble-character" type="button" disabled>Assemble and verify character</button>
+  <p id="assembly-status" class="inline-status" role="status">Import source GLBs into the active project to populate the part selectors.</p>
+ </section>
  <div class="character-grid">
  <section class="panel">
   <span class="eyebrow">01 / MODEL IMPORT</span><h2>Import a 3D character</h2>

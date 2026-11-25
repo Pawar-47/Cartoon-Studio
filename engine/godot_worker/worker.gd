@@ -64,7 +64,7 @@ func _handle_request(request_value: Variant) -> Dictionary:
     if operation == "ping":
         response["ok"] = true
         response["capabilities"] = [
-            "ping", "glb_inspect", "scene_metrics", "skeleton_report", "retarget_glb_pair"
+            "ping", "glb_inspect", "scene_metrics", "skeleton_report", "retarget_glb_pair", "assemble_modular_character"
         ]
         return response
 
@@ -72,6 +72,12 @@ func _handle_request(request_value: Variant) -> Dictionary:
         var inspection := _inspect_glb(payload)
         for key in inspection:
             response[key] = inspection[key]
+        return response
+
+    if operation == "assemble_modular_character":
+        var assembly_result: Dictionary = await _assemble_modular_character(payload)
+        for key in assembly_result:
+            response[key] = assembly_result[key]
         return response
 
     if operation == "retarget_glb_pair":
@@ -246,6 +252,193 @@ func _inspect_glb(payload: Dictionary) -> Dictionary:
     }
     scene.free()
     return result
+
+
+func _assemble_modular_character(payload: Dictionary) -> Dictionary:
+    var project_root := _normalise_path(str(payload.get("project_root", "")))
+    var base_path := _normalise_path(str(payload.get("base_path", "")))
+    var output_path := _normalise_path(str(payload.get("output_path", "")))
+    if project_root.is_empty() or not DirAccess.dir_exists_absolute(project_root):
+        return {"error_code": "invalid_project_root", "error": "A valid project root is required."}
+    var root_prefix := project_root.trim_suffix("/") + "/"
+    for path in [base_path, output_path]:
+        if not path.to_lower().begins_with(root_prefix.to_lower()):
+            return {"error_code": "path_outside_project", "error": "An assembly path resolves outside the project directory."}
+    if not base_path.to_lower().ends_with(".glb") or not FileAccess.file_exists(base_path):
+        return {"error_code": "base_glb_missing", "error": "The base character GLB does not exist."}
+    if not output_path.to_lower().ends_with(".glb") or FileAccess.file_exists(output_path):
+        return {"error_code": "invalid_output_path", "error": "Assembly output must be a new .glb file."}
+
+    var parts_value: Variant = payload.get("parts", [])
+    if typeof(parts_value) != TYPE_ARRAY or parts_value.size() != 4:
+        return {"error_code": "invalid_parts", "error": "Exactly four modular parts are required."}
+    var required_slots := ["head", "body", "legs", "feet"]
+    var selected_slots: Array[String] = []
+    for part_value in parts_value:
+        if typeof(part_value) != TYPE_DICTIONARY:
+            return {"error_code": "invalid_part", "error": "Each modular part must be an object."}
+        var part: Dictionary = part_value
+        var slot := str(part.get("slot", ""))
+        var source_path := _normalise_path(str(part.get("source_path", "")))
+        var mesh_path := str(part.get("mesh_path", ""))
+        if not required_slots.has(slot) or selected_slots.has(slot):
+            return {"error_code": "invalid_slot", "error": "Select exactly one part for each of head, body, legs and feet."}
+        if not source_path.to_lower().begins_with(root_prefix.to_lower()) or not source_path.to_lower().ends_with(".glb") or not FileAccess.file_exists(source_path):
+            return {"error_code": "invalid_part_path", "error": "A modular part GLB is missing or outside the project."}
+        if mesh_path.is_empty() or mesh_path.length() > 1024:
+            return {"error_code": "invalid_mesh_path", "error": "A modular part mesh path is invalid."}
+        selected_slots.append(slot)
+    for slot in required_slots:
+        if not selected_slots.has(slot):
+            return {"error_code": "missing_slot", "error": "Missing required modular slot: " + slot}
+
+    var base_document := GLTFDocument.new()
+    var base_state := GLTFState.new()
+    var import_error := base_document.append_from_file(base_path, base_state)
+    if import_error != OK:
+        return {"error_code": "base_import_failed", "error": "Godot could not import the base character GLB.", "godot_error": import_error}
+    var base_scene := base_document.generate_scene(base_state)
+    if base_scene == null:
+        return {"error_code": "base_scene_failed", "error": "Godot could not create the base character scene."}
+    root.add_child(base_scene)
+    await process_frame
+    var target_skeletons := base_scene.find_children("*", "Skeleton3D", true, false)
+    if target_skeletons.size() != 1:
+        base_scene.queue_free()
+        return {"error_code": "base_skeleton_count", "error": "The base character must contain exactly one Skeleton3D."}
+    var target_skeleton := target_skeletons[0] as Skeleton3D
+    var base_animation_names := _scene_animation_names(base_scene)
+    var added_parts: Array[Dictionary] = []
+    var total_added := 0
+
+    for part_value in parts_value:
+        var part: Dictionary = part_value
+        var slot := str(part["slot"])
+        var source_path := _normalise_path(str(part["source_path"]))
+        var source_document := GLTFDocument.new()
+        var source_state := GLTFState.new()
+        var source_error := source_document.append_from_file(source_path, source_state)
+        if source_error != OK:
+            base_scene.queue_free()
+            return {"error_code": "part_import_failed", "error": "Godot could not import the " + slot + " part GLB.", "godot_error": source_error}
+        var source_scene := source_document.generate_scene(source_state)
+        if source_scene == null:
+            base_scene.queue_free()
+            return {"error_code": "part_scene_failed", "error": "Godot could not create the " + slot + " part scene."}
+        root.add_child(source_scene)
+        await process_frame
+        var mesh_node := source_scene.get_node_or_null(NodePath(str(part["mesh_path"]))) as MeshInstance3D
+        if mesh_node == null or mesh_node.mesh == null:
+            source_scene.queue_free()
+            base_scene.queue_free()
+            return {"error_code": "part_mesh_missing", "error": "The selected " + slot + " mesh node was not found."}
+        if mesh_node.skin == null:
+            source_scene.queue_free()
+            base_scene.queue_free()
+            return {"error_code": "part_not_skinned", "error": "The selected " + slot + " mesh is not bound to a skin; rigid parts cannot be safely attached to the shared rig yet."}
+        var source_skeleton := mesh_node.get_node_or_null(mesh_node.get_skeleton_path()) as Skeleton3D
+        if source_skeleton == null:
+            source_scene.queue_free()
+            base_scene.queue_free()
+            return {"error_code": "part_skeleton_missing", "error": "The selected " + slot + " mesh has no resolvable Skeleton3D."}
+        if not _skeletons_compatible(source_skeleton, target_skeleton):
+            source_scene.queue_free()
+            base_scene.queue_free()
+            return {"error_code": "incompatible_skeleton", "error": "The " + slot + " part uses a different bone order, hierarchy or rest pose. It must be retargeted before assembly."}
+        if not _transforms_compatible(source_skeleton.global_transform, target_skeleton.global_transform):
+            source_scene.queue_free()
+            base_scene.queue_free()
+            return {"error_code": "incompatible_skeleton_transform", "error": "The " + slot + " part rig has a different world transform; automatic alignment is not safe."}
+        var cloned_mesh := mesh_node.duplicate() as MeshInstance3D
+        if cloned_mesh == null:
+            source_scene.queue_free()
+            base_scene.queue_free()
+            return {"error_code": "mesh_clone_failed", "error": "Godot could not duplicate the " + slot + " mesh."}
+        var source_global_transform := mesh_node.global_transform
+        base_scene.add_child(cloned_mesh)
+        cloned_mesh.owner = base_scene
+        cloned_mesh.name = "Modular_" + slot.capitalize()
+        cloned_mesh.transform = base_scene.global_transform.affine_inverse() * source_global_transform
+        cloned_mesh.set_skeleton_path(NodePath(str(base_scene.get_path_to(target_skeleton))))
+        total_added += 1
+        added_parts.append({
+            "slot": slot,
+            "source_path": source_path,
+            "mesh_path": str(part["mesh_path"]),
+            "mesh_name": str(mesh_node.name),
+            "bone_count": source_skeleton.get_bone_count()
+        })
+        source_scene.queue_free()
+        await process_frame
+
+    var export_document := GLTFDocument.new()
+    var export_state := GLTFState.new()
+    var export_error := export_document.append_from_scene(base_scene, export_state)
+    if export_error != OK:
+        base_scene.queue_free()
+        return {"error_code": "assembly_export_prepare_failed", "error": "Godot could not prepare the assembled character for GLB export.", "godot_error": export_error}
+    var output_error := export_document.write_to_filesystem(export_state, output_path)
+    base_scene.queue_free()
+    if output_error != OK or not FileAccess.file_exists(output_path):
+        if FileAccess.file_exists(output_path):
+            DirAccess.remove_absolute(output_path)
+        return {"error_code": "assembly_export_failed", "error": "Godot could not write the assembled GLB.", "godot_error": output_error}
+
+    var verification := _inspect_glb({"project_root": project_root, "source_path": output_path})
+    if not bool(verification.get("ok", false)):
+        DirAccess.remove_absolute(output_path)
+        return {"error_code": "assembly_verification_failed", "error": str(verification.get("error", "The exported GLB failed re-import verification."))}
+    var verified_animations: Array = verification.get("animation_names", [])
+    for animation_name in base_animation_names:
+        if not verified_animations.has(animation_name):
+            DirAccess.remove_absolute(output_path)
+            return {"error_code": "animation_preservation_failed", "error": "The assembled GLB did not preserve base animation clip: " + str(animation_name)}
+    if int(verification.get("mesh_count", 0)) < total_added:
+        DirAccess.remove_absolute(output_path)
+        return {"error_code": "mesh_verification_failed", "error": "The assembled GLB did not retain all selected modular meshes."}
+    verification["added_parts"] = added_parts
+    verification["base_animation_names"] = base_animation_names
+    verification["animation_preserved"] = true
+    verification["assembly_verified"] = true
+    return verification
+
+
+func _scene_animation_names(scene: Node) -> Array[String]:
+    var names: Array[String] = []
+    for player_node in scene.find_children("*", "AnimationPlayer", true, false):
+        var player := player_node as AnimationPlayer
+        for animation_name in player.get_animation_list():
+            var label := str(animation_name)
+            if label.get_file().to_upper() != "RESET" and not names.has(label):
+                names.append(label)
+    return names
+
+
+func _skeletons_compatible(source: Skeleton3D, target: Skeleton3D) -> bool:
+    if source.get_bone_count() != target.get_bone_count():
+        return false
+    for bone_index in range(source.get_bone_count()):
+        if source.get_bone_name(bone_index) != target.get_bone_name(bone_index):
+            return false
+        if source.get_bone_parent(bone_index) != target.get_bone_parent(bone_index):
+            return false
+        var source_rest := source.get_bone_rest(bone_index)
+        var target_rest := target.get_bone_rest(bone_index)
+        if not _transforms_compatible(source_rest, target_rest):
+            return false
+    return true
+
+
+func _transforms_compatible(source: Transform3D, target: Transform3D) -> bool:
+    if source.origin.distance_to(target.origin) > 0.001:
+        return false
+    if source.basis.x.distance_to(target.basis.x) > 0.001:
+        return false
+    if source.basis.y.distance_to(target.basis.y) > 0.001:
+        return false
+    if source.basis.z.distance_to(target.basis.z) > 0.001:
+        return false
+    return true
 
 
 func _classify_mesh_slot(source_name: String) -> String:
