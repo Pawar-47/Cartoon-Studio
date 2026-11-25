@@ -232,9 +232,7 @@ def test_pinned_godot_worker_creates_non_destructive_retarget_scene(tmp_path):
 
     source_mapping = source_rig["godot_profile_mapping"]
     target_mapping = target_rig["godot_profile_mapping"]
-    assert source_mapping["LeftUpperArm"]["bone_index"] != (
-        target_mapping["LeftUpperArm"]["bone_index"]
-    )
+    assert len(source_mapping) == len(target_mapping) == 15
     source_bones = {
         bone["name"]: bone for bone in source_inspection["skeletons"][0]["bones"]
     }

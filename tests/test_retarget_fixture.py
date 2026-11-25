@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from tools.godot_engine_proof.generate_retarget_target_fixture import (
+    _read_glb,
     generate_target_fixture,
 )
 
@@ -19,3 +20,15 @@ def test_retarget_target_fixture_is_reproducible(tmp_path):
     generate_target_fixture(source, generated)
 
     assert generated.read_bytes() == expected.read_bytes()
+
+    source_document, _ = _read_glb(source.read_bytes())
+    target_document, _ = _read_glb(expected.read_bytes())
+    assert source_document["skins"][0]["joints"] != (
+        target_document["skins"][0]["joints"]
+    )
+    source_nodes = {node.get("name"): node for node in source_document["nodes"]}
+    target_nodes = {node.get("name"): node for node in target_document["nodes"]}
+    assert source_nodes["Spine"]["children"] != target_nodes["Spine"]["children"]
+    assert source_nodes["LeftLowerArm"]["translation"] != (
+        target_nodes["LeftLowerArm"]["translation"]
+    )
