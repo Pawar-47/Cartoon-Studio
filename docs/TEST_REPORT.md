@@ -272,3 +272,11 @@ Added API coverage for saving morph-target weights and rejecting values outside 
 - Local targeted suite with the pinned Godot runtime: `tests/test_app.py tests/test_characters.py tests/test_engine.py` — 44 passed in 39.72 seconds. The first attempt lacked the CI-fetched RobotExpressive fixture; `scripts/fetch_robot_expressive_fixture.py` downloaded and checksum-verified it before the successful rerun.
 - Node was not available on the local PATH for `node --check`; the changed browser module was fetched with a cache-busted URL and executed by the integrated browser during the acceptance workflow. CI #417's Node syntax checks apply to main, not this local branch.
 - The Quaternius sample's rig warnings remain a compatibility limitation. This is functional browser acceptance, not blanket visual signoff, full modular-assembly acceptance, or original face/hair geometry authoring.
+
+## 2026-11-25 — Upstream hairstyle and portrait-export integration
+
+- Integrated the current main baseline `6a3406efb320a0895d4b2a7253395a107d6a394d`, containing PR #17 procedural Head-attached hairstyles and PR #19 transparent PNG portrait export. Main CI #421 and #423 passed; the hairstyle CI included pinned Godot worker coverage.
+- The local feature branch preserves the saved-profile and preview-placeholder fixes. Current local full suite: `python -m pytest -o addopts= -q -rs` — **96 passed, 28 skipped** in 14.11 seconds. Skips: 24 pinned-Godot tests, three Node.js tests and one symlink-capability test. These runtimes/capabilities were unavailable locally.
+- `python -m ruff check app tests`, `python -m compileall -q app tests` and `git diff --check` passed. Pytest emitted one Starlette deprecation warning about using `httpx`; it did not fail tests.
+- PR #20's four-view turnaround export remains open and separate; CI #425 passed. Its feature is not included in this branch.
+- No local visual acceptance was performed for generated hairstyles or PNG export. Existing Adventurer hierarchy warnings and the absence of original face geometry keep P2.2 PARTIAL.

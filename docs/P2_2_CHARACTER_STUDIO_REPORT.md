@@ -19,15 +19,23 @@
 
 ## Explicit limitations
 - GLB 2.0 is the only integrated import format. VRM was researched but is not yet integrated.
-- This slice does not author new 3D meshes, create/edit rigs, edit materials or blend shapes, generate a live 3D viewport/thumbnail, edit animation or export a modified GLB.
-- Expressions, clothing, voice and relationships are stored as metadata; the corresponding visual/audio systems are not implemented yet.
-- P2.2 is not complete until real preview and authoring/export capabilities are delivered and verified.
+- Geometry authoring is limited to generated hairstyle shapes and supported rig/morph edits; arbitrary face geometry, new rigs, texture painting and new facial blend-shape authoring are not implemented.
+- Transparent PNG portrait export is available from the browser preview; user-facing visual acceptance of hairstyles and exported portraits remains outstanding.
+- Voice and relationships remain profile metadata without corresponding audio/story runtime integration.
+- P2.2 is not complete until the remaining character-authoring requirements and representative visual acceptance are delivered and verified.
 
 ## Verification
 - New test module: `tests/test_characters.py`.
 - The tests use a deterministic fake Godot adapter for API-level contract tests.
 - The existing Windows CI job also runs the real pinned Godot 4.7.2 worker integration tests.
 - Windows CI #208 passed on commit `41aabbb627e36f3f02f306e79e3cba33bd19dc84`: 45 tests passed; lint, compilation, runtime integrity, bootstrap smoke, both self-contained builds and the full installer lifecycle passed. The run uploaded the bootstrap, installer and SBOM artifacts.
+
+## 2026-11-25 — Procedural hairstyles and portrait export integration
+
+- Current main `6a3406efb320a0895d4b2a7253395a107d6a394d` includes seven procedural hairstyle choices. Godot attaches generated geometry to the imported Head bone, verifies the exported hair and retained animation clips, and leaves the source GLB unchanged.
+- The browser can export the current character preview as a PNG portrait with optional transparency. Main CI #421 passed the Godot hairstyle coverage; CI #423 passed portrait-export checks. Open PR #20 adds a four-view turnaround sheet and its CI #425 check passed; the PR is not part of this main baseline.
+- Local validation on the integrated branch: full pytest **96 passed, 28 skipped**; 24 skips require the pinned Godot runtime, three require Node.js and one requires symlink support. Ruff and Python compilation passed. Godot/Node-backed cases were not run locally; CI provides the runtime coverage.
+- Visual acceptance of the new hairstyles and PNG output remains outstanding. The new procedural hair feature does not complete original face-geometry authoring, so P2.2 remains PARTIAL.
 
 
 ## Browser preview extension — 2026-11-25

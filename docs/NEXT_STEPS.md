@@ -2,9 +2,9 @@
 
 ## Current checkpoint
 
-Main is `f9a03b9613d22c8bf99e96c5cf3d5de9997e0fd2`. PR #15 adds rig-based body-proportion editing and face/body morph grouping; main quick CI run [45672883272 PASSED](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45672883272). Phase 2 remains active. Automated API/worker coverage does not count as interactive browser or visual acceptance.
+Main is `6a3406efb320a0895d4b2a7253395a107d6a394d`. PR #17 adds generated 3D hairstyles and PR #19 adds transparent PNG portrait export; CI runs #421 and #423 passed. PR #20, four-view turnaround export, remains open with CI #425 passed. Phase 2 remains active; automated API/worker coverage does not count as interactive browser or visual acceptance.
 
-Local continuation is on `work/p2-2-body-shape-acceptance` from that main commit; changes are uncommitted. The browser now passes functional acceptance on the synthetic humanoid fixture and the pinned CC0 Male Adventurer GLB, but P2.2 remains PARTIAL.
+Local continuation is on `work/p2-2-body-shape-acceptance`, based on current main and containing the committed profile UI fixes. The browser passes functional acceptance on the synthetic humanoid fixture and pinned CC0 Male Adventurer GLB, but P2.2 remains PARTIAL.
 
 ## Active batch — Phase 2 Character Studio
 
@@ -32,11 +32,12 @@ Saved retarget records now also have a browser preview action. The preview endpo
 
 The latest main CI passed the rig-based body-proportion implementation, including the pinned Godot worker tests. A local browser smoke now confirms the edit, export, animation playback and profile-reopen path on a pinned CC0 character. Full visual signoff still requires rigs that pass the project's compatibility diagnostics and morph-capable models.
 
-1. Establish and test the body-edit compatibility boundary on a representative rig that passes hierarchy validation; compare source and export in matched poses.
-2. Exercise imported face/body morph sliders and baked appearance in the browser on a morph-capable GLB.
-3. Complete modular assembly, outfit shuffle, accessories, download and recipe-reopen acceptance in the browser.
-4. Compare browser retarget preview motion against the authoritative Godot scene across accepted humanoid, bone-roll and RobotExpressive fixtures.
-5. Continue original face/hair geometry authoring; imported-rig edits and metadata do not satisfy original-geometry requirements.
+1. Complete browser acceptance of procedural hairstyles and transparent PNG exports, including saved-profile style/color restoration.
+2. Establish and test the body-edit compatibility boundary on a representative rig that passes hierarchy validation; compare source and export in matched poses.
+3. Exercise imported face/body morph sliders and baked appearance in the browser on a morph-capable GLB.
+4. Complete modular assembly, outfit shuffle, accessories, download and recipe-reopen acceptance in the browser.
+5. Compare browser retarget preview motion against the authoritative Godot scene across accepted humanoid, bone-roll and RobotExpressive fixtures.
+6. Continue original face geometry authoring; procedural hairstyles and imported-rig edits do not satisfy original-face requirements.
 
 ## Deferred to their specified phases
 
