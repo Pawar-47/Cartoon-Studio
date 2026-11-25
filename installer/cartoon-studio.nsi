@@ -39,13 +39,13 @@ VIAddVersionKey "FileDescription" "Cartoon Studio Installer"
     RMDir /r "$INSTDIR\LICENSES"
     WriteRegStr HKCU "Software\CartoonStudioDebug" "Step3" "Licenses removed"
     Delete "$INSTDIR\CartoonStudio.exe"
+    Delete "$INSTDIR\CartoonStudio.exe"
     WriteRegStr HKCU "Software\CartoonStudioDebug" "Step4" "Executable delete attempted"
+    IfFileExists "$INSTDIR\CartoonStudio.exe" 0 +2
+    WriteRegStr HKCU "Software\CartoonStudioDebug" "ExeStillExistsAfterDelete" "yes"
     Delete "$INSTDIR\dependency-sbom.cdx.json"
     Delete "$INSTDIR\THIRD_PARTY_NOTICES.md"
-    Delete "$INSTDIR\Uninstall.exe"
-    WriteRegStr HKCU "Software\CartoonStudioDebug" "Step5" "Uninstaller delete attempted"
-    RMDir "$INSTDIR"
-    WriteRegStr HKCU "Software\CartoonStudioDebug" "Step6" "Install root removal attempted"
+    WriteRegStr HKCU "Software\CartoonStudioDebug" "Step5" "App files removed"
 !macroend
 
 Section "Cartoon Studio" SEC_MAIN
@@ -87,9 +87,11 @@ Section "Uninstall"
     Delete "$SMPROGRAMS\Cartoon Studio\Cartoon Studio.lnk"
     RMDir "$SMPROGRAMS\Cartoon Studio"
     Delete "$DESKTOP\Cartoon Studio.lnk"
-    !insertmacro RemoveInstalledFiles
     DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\CartoonStudio"
     DeleteRegKey HKCU "Software\CartoonStudio"
+    !insertmacro RemoveInstalledFiles
+    Delete "$INSTDIR\Uninstall.exe"
+    RMDir "$INSTDIR"
 
     ; Deliberately preserve %LOCALAPPDATA%\CartoonStudio and all project data.
 SectionEnd
