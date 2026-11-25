@@ -385,28 +385,35 @@ def test_pinned_godot_worker_retargets_robot_expressive_selected_clip(tmp_path):
     assert target_rig["status"] == "humanoid_names_complete"
 
     animation_names = source_inspection["animation_names"]
-    walking_clip = next(
-        name for name in animation_names if name.rsplit("/", 1)[-1] == "Walking"
-    )
-    output = project_root / "retargets" / "robot-expressive-walking.tscn"
-    response = adapter.retarget_glb_pair(
-        source,
-        target,
-        output,
-        allowed_root=project_root,
-        source_profile_mapping=source_rig["godot_profile_mapping"],
-        target_profile_mapping=target_rig["godot_profile_mapping"],
-        animation_name=walking_clip,
-    )
+    available_clips = {
+        name.rsplit("/", 1)[-1]: name for name in animation_names
+    }
+    for clip_label in ("Walking", "Dance"):
+        assert clip_label in available_clips
+        selected_clip = available_clips[clip_label]
+        output = (
+            project_root
+            / "retargets"
+            / f"robot-expressive-{clip_label.lower()}.tscn"
+        )
+        response = adapter.retarget_glb_pair(
+            source,
+            target,
+            output,
+            allowed_root=project_root,
+            source_profile_mapping=source_rig["godot_profile_mapping"],
+            target_profile_mapping=target_rig["godot_profile_mapping"],
+            animation_name=selected_clip,
+        )
 
-    assert response["ok"] is True
-    assert response["animation_name"] == walking_clip
-    assert response["scene_reopened"] is True
-    assert response["source_animation_playing"] is True
-    assert response["pose_transferred"] is True
-    assert output.is_file()
-    assert source.read_bytes() == source_fixture.read_bytes()
-    assert target.read_bytes() == target_fixture.read_bytes()
+        assert response["ok"] is True
+        assert response["animation_name"] == selected_clip
+        assert response["scene_reopened"] is True
+        assert response["source_animation_playing"] is True
+        assert response["pose_transferred"] is True
+        assert output.is_file()
+        assert source.read_bytes() == source_fixture.read_bytes()
+        assert target.read_bytes() == target_fixture.read_bytes()
 
 
 def test_pinned_godot_worker_retargets_real_third_party_rigged_figure(tmp_path):
