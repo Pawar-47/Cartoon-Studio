@@ -168,7 +168,7 @@ def main() -> int:
             assert status == 200
             assert reopened["project"]["name"] == "Clean Package Smoke Test"
         finally:
-            stop(process)
+            stop(process, port)
 
     print(
         "Windows bootstrap smoke test passed: archive integrity, actual start.bat launch, "
