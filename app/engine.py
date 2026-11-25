@@ -194,7 +194,9 @@ class GodotEngineAdapter:
                 raise EnginePathError("An accessory attachment bone name is too long.")
             mesh_key = (str(source), mesh_path)
             if mesh_key in selected_meshes:
-                raise EnginePathError("A source mesh cannot be used as both a body part and an accessory.")
+                raise EnginePathError(
+                    "A source mesh cannot be used as both a body part and an accessory."
+                )
             selected_meshes.add(mesh_key)
             validated_accessories.append({
                 "source_path": str(source),

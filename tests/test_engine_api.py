@@ -37,7 +37,9 @@ class _FakeEngineAdapter:
 
 
 class _FakeAssemblyAdapter(_FakeEngineAdapter):
-    def assemble_modular_character(self, base_path, parts, output_path, allowed_root, accessories=None):
+    def assemble_modular_character(
+        self, base_path, parts, output_path, allowed_root, accessories=None
+    ):
         output_path.parent.mkdir(parents=True, exist_ok=True)
         json_chunk = json.dumps({"asset": {"version": "2.0"}}).encode("utf-8")
         json_chunk += b" " * ((-len(json_chunk)) % 4)
