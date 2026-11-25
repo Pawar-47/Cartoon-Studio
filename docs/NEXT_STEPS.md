@@ -41,3 +41,10 @@ Source-level sweep 1 and provider sweep 2 are recorded. P0.3 remains open until 
 Then P0.4 verifies the actual HD 5500 driver and target-PC compatibility, Pakistani Urdu TTS/lip-sync samples, exact Pakistan access and account quotas for Groq/Cloudflare/Gemini/OpenRouter, FreeMilk privacy/opt-out choice, and any cost/terms. No paid/cloud service becomes mandatory.
 
 Do not begin production features before P0.7. Preserve the current Story Generator and keep it frozen until Phase 4.
+
+## P0.3 — next research work
+Godot 4.7.2 has emerged as the leading on-paper runtime candidate. Continue with a source-level review of Godot's native editor/sidecar/browser integration, animation retargeting, audio tracks, MovieWriter and FFmpeg assembly. Compare Terrain3D + Road Generator + Building Generator + Roommate in a single low-poly town scene and verify all renderer requirements, versions and licenses. Inspect CC0 character/animation packs and implement no code until the license inventory is complete.
+
+P0.4 must then test Godot 4.7.2 Compatibility on the actual HD 5500 machine, measure scene generation/render time and peak RAM, test Pakistani Urdu voice samples, and verify exact Pakistan access/account quotas for Groq/Cloudflare/Gemini/OpenRouter. No paid/cloud service becomes mandatory.
+
+Do not begin production features before P0.7. Preserve the current Story Generator and keep it frozen until Phase 4.

@@ -60,3 +60,11 @@ A green CI run proves only the checks that actually ran. Source presence, docume
 - Official Gemini, Groq, Cloudflare Workers AI, OpenRouter, GitHub Copilot, OpenAI billing, Claude, Perplexity, Mistral and Cerebras documentation inspected.
 - Provider quota and availability findings are documentation snapshots only; they must be rechecked in the user's own accounts and target region before integration.
 - No app integration, API call, quota test, Pakistan-region test or model-quality benchmark was run.
+
+## Godot candidate upstream evidence (not Cartoon Studio tests)
+- Godot AI Animation Toolkit 2.0.0: upstream Actions #386 SUCCESS on `e8f57c27c0374a6c76fce0e4b5d35d443ba3510b`.
+- Terrain3D: upstream Actions #96/#2685 SUCCESS on `43734bbada0b65fb5a642cfad0d9caeccfafade8`.
+- Godot Road Generator: upstream Actions #169 SUCCESS on dev commit `648f07295a6d1cd9e0607c71196f7a2de98e6fc5`.
+- Roommate: Actions #12 success is a documentation workflow, not a runtime test.
+- Building Generator has manual test scripts but no Actions workflow found. OpenCity has headless behavior test modes but no Actions workflow found.
+- None of these repositories has been run on the user's target PC or integrated into Cartoon Studio.

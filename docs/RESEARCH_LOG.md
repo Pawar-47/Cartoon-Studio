@@ -83,3 +83,18 @@ This is the first broad source-level sweep, not P0.3 completion. No production e
 - Verified Copilot Free's 2,000 code completions/month and limited features; it is a coding UI/agent, not a general API.
 - Verified ChatGPT consumer subscriptions and API billing are separate. Claude API has trial credits for new users but usage is billed. Perplexity Free has limited Pro searches and separate API product. Mistral Free mode does not include API access. Cerebras starts with $5 free credit. GitHub Models retired July 30, 2026.
 - No API keys were connected and no user project source was sent to any external provider. Pakistan-specific API access, exact account quotas, provider privacy and output quality remain P0.4 checks.
+
+## 2026-11-25 — Godot runtime and native world stack sweep
+
+- Inspected Godot 4.7.2-stable source, MIT license, system requirements, Compatibility renderer, GLTF/Skeleton/Animation APIs and MovieWriter documentation. Godot 4.7.2 is stable; 4.8 is beta.
+- Confirmed Compatibility renderer OpenGL 3.3; HD 5500 reports OpenGL 4.3. Godot minimum CPU is x86_64/SSE4.2 and 4 GB RAM; target meets minimum, but 2 physical cores are below recommended 4. 8 GB meets recommended memory.
+- MovieWriter supports non-real-time fixed-frame recording, outputs OGV/AVI or PNG+WAV; MP4 needs FFmpeg. No target test.
+- Inspected Terrain3D MIT v1.1.0 docs/source; latest main commit `69699ff0e3b629230dd1a0d7e6e7dda84cca2d26`, upstream CI #96/#2685 success on commit `43734bbada0b65fb5a642cfad0d9caeccfafade8`. Compatibility renderer fully supported since v1.0/Godot4.4.
+- Inspected Godot Road Generator MIT v0.9.5, Godot4.4+, upstream Actions #169 success on dev commit `648f07295a6d1cd9e0607c71196f7a2de98e6fc5`; README explicitly says not feature complete.
+- Inspected Building Generator MIT v0.2.0, Godot4.7, commit `c6e662360dbd8d51fb1e62e0d9ce03190ee5fa79`; 26 variants/3 LOD and manual test scripts; no CI found.
+- Inspected Roommate MPL-2.0, commit `fd9381b5e833807c83e10af50fd95fb4ca0b6bb3`; creates interior meshes/collision/scenes/navigation; its Actions #12 is docs-only.
+- Inspected OpenCity MIT, Godot4.7, procedural city/traffic/pedestrians/vehicles and headless test modes; only two commits, no CI, placeholder geometry.
+- Inspected Godot AI Animation Toolkit 2.0.0 MIT, commit `e8f57c27c0374a6c76fce0e4b5d35d443ba3510b`, upstream Actions #386 success; requires Godot4.7.2 and Godot AI/MCP; 103 operations for motion, rigs, IK, retargeting and AnimationTree.
+- Inspected Godot Toon Shader CC0 sample; Compatibility renderer works but shadow-casting lights produce overly bright toon bands in the sample.
+- Inspected Ducz CharacterCreator; no code license found, so code cannot be copied. Its Quaternius assets are separately credited CC0.
+- Revised leading on-paper runtime candidate from Blender to Godot 4.7.2 Compatibility. This remains unselected until target-PC tests and integration design.

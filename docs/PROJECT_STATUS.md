@@ -54,7 +54,7 @@ P0.3 — continue the comparative source-level research sweep. P0.4 hardware/Urd
 - P0.3 source-level sweep 1 inspected Blender 4.5 compatibility, two procedural world generators, character-generation candidates, NPR/outline approaches, Urdu lip-sync candidates, SQLite queues, Windows packaging, FFmpeg licensing and CC0 asset libraries.
 - No engine or code dependency is selected. No candidate code or assets were copied.
 - Major risk discovered: target i3-5005U is 2C/4T, below Blender's published 4-core minimum; HD 5500 has a documented legacy driver crash issue. P0.4 must test exact driver and actual hardware.
-- Current leading candidate set: Blender 4.5.17 LTS for local production; Bene Procgen Maps / Blender Level Architect for procedural worlds; MPFB2/CharacterCreator for human base characters; browser-first Ara/Ekza editors as alternatives; Parrot/Allosaurus as Urdu lip-sync research only.
+- Current candidate set: Godot 4.7.2 Compatibility as leading on-paper runtime; Terrain3D/Road Generator/Building Generator/Roommate as Godot-native environment candidates; Blender 4.5 and its world/character add-ons as optional authoring research; Ara/Ekza as browser-editor candidates; Parrot/Allosaurus as Urdu lip-sync research only.
 - Urdu TTS: no local model approved. Qwen-Audio-TTS 3.1 Flash officially lists Urdu but is cloud-only and requires P0.4 review of Pakistan availability, pricing, terms, privacy and quality.
 
 ## AI provider research checkpoint
@@ -62,3 +62,9 @@ P0.3 — continue the comparative source-level research sweep. P0.4 hardware/Urd
 - Current official API candidates with free usage: GroqCloud, Cloudflare Workers AI, Gemini Developer API and OpenRouter. Each has quotas and privacy/region caveats.
 - GitHub Models is retired; Copilot Free is limited to 2,000 completions/month and is not a backend API. ChatGPT, Claude and Perplexity consumer free plans do not provide a general free API.
 - No provider is integrated or approved. No API keys have been connected.
+
+## Godot runtime research checkpoint
+- Godot 4.7.2 Compatibility renderer is now the strongest on-paper runtime candidate for the target i3-5005U/HD 5500/8 GB machine: OpenGL 3.3 compatibility, minimum SSE4.2 CPU and 4 GB RAM. The target meets minimum requirements but is below recommended 4-core CPU.
+- Native Godot candidates: Terrain3D (MIT; Compatibility renderer supported), Road Generator (MIT; incomplete), Building Generator (MIT; 26 low-poly variants), Roommate (MPL-2.0), OpenCity (MIT prototype), and Godot AI Animation Toolkit (MIT, optional authoring tool).
+- Blender 4.5 remains optional asset-authoring research, not the target runtime leader.
+- No target-PC test or integration has been performed; no engine/plugin is selected.
