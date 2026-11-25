@@ -95,7 +95,16 @@
      <button class="secondary" type="button" data-expression-preset="angry" disabled>Angry</button>
     </div>
     <div id="morph-controls" class="morph-controls"></div>
-    <button id="reset-expressions" class="secondary" type="button" disabled>Reset facial controls</button>
+    <div class="morph-section">
+     <div class="editor-heading"><strong>Body shape controls</strong><span>Real imported mesh deformations</span></div>
+     <p id="body-morph-status" class="inline-status">No body-specific blend shapes detected.</p>
+     <div id="body-morph-controls" class="morph-controls"></div>
+    </div>
+    <div id="other-morph-group" class="morph-section" hidden>
+     <div class="editor-heading"><strong>Other shape controls</strong><span>Additional imported blend shapes</span></div>
+     <div id="other-morph-controls" class="morph-controls"></div>
+    </div>
+    <button id="reset-expressions" class="secondary" type="button" disabled>Reset all shape controls</button>
    </section>
    </section>
   </div>
