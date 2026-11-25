@@ -514,7 +514,7 @@ def test_pinned_godot_worker_preserves_nonzero_imported_morph_defaults(tmp_path)
     assert {
         entry["name"]: entry["default_value_source"]
         for entry in response["morph_targets"]
-    } == {"Smile": "node", "Blink": "node"}
+    } == {"Smile": "gltf_node", "Blink": "gltf_node"}
 
 
 def test_pinned_godot_worker_reports_imported_blend_shape_names_and_defaults(tmp_path):
