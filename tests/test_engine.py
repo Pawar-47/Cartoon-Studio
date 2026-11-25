@@ -49,6 +49,12 @@ ROBOT_FIXTURE = (
     / "third_party"
     / "robot_expressive_cc0.glb"
 )
+CESIUM_FIXTURE = (
+    Path(__file__).resolve().parent
+    / "fixtures"
+    / "third_party"
+    / "rigged_figure_ccby.glb"
+)
 GODOT_PATH = Path(os.environ.get("CARTOON_STUDIO_GODOT_PATH", ""))
 HAS_GODOT = bool(os.environ.get("CARTOON_STUDIO_GODOT_PATH")) and GODOT_PATH.is_file()
 
@@ -239,6 +245,39 @@ def test_godot_worker_bakes_humanoid_body_proportions_and_preserves_animation(tm
     )
     assert playback["pose_changed"] is True
     assert playback["skinned_mesh_count"] >= 1
+
+
+@pytest.mark.skipif(
+    not HAS_GODOT or not CESIUM_FIXTURE.is_file(),
+    reason="Pinned Godot runtime and Cesium rig fixture are required.",
+)
+def test_godot_worker_proportions_use_canonical_mapping_for_cesium_rig(tmp_path):
+    adapter = GodotEngineAdapter(data_dir=tmp_path, timeout_seconds=120)
+    project_root = tmp_path / "cesium-proportion-project"
+    project_root.mkdir()
+    source = project_root / "rigged-figure.glb"
+    output = project_root / "rigged-figure-proportioned.glb"
+    shutil.copy2(CESIUM_FIXTURE, source)
+    original_bytes = source.read_bytes()
+    before = adapter.inspect_glb(source, allowed_root=project_root)
+    rig = analyze_rig(before)
+    assert rig["status"] == "humanoid_names_complete"
+    assert rig["bone_mapping"]["Spine"].startswith("torso_joint")
+    result = adapter.customize_character_proportions(
+        source,
+        {"torso_length": 1.08, "shoulder_width": 1.1, "arm_length": 0.95,
+         "leg_length": 1.06, "head_size": 1.04},
+        output,
+        allowed_root=project_root,
+        bone_mapping=rig["bone_mapping"],
+        timeout_seconds=120,
+    )
+    assert result["proportions_verified"] is True
+    assert result["changed_bones"]
+    assert result["skeleton_count"] == 1
+    assert set(result["animation_names"]) == set(before["animation_names"])
+    assert source.read_bytes() == original_bytes
+    assert output.is_file()
 
 
 @pytest.mark.skipif(not HAS_GODOT, reason="Pinned Godot runtime is supplied by Windows CI.")

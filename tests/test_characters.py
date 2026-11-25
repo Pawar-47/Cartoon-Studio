@@ -188,6 +188,8 @@ def test_browser_preview_modules_are_served_from_local_static_assets():
     assert 'id="body-morph-status"' in page.text
     assert 'id="torso-length"' in page.text
     assert 'id="apply-proportions"' in page.text
+    assert "previewCharacterBodyProportions" in client.get("/static/characters.js").text
+    assert "applyCharacterBodyProportions" in preview.text
     assert "applyBodyProportions" in client.get("/static/characters.js").text
     assert 'id="body-morph-controls"' in page.text
     assert 'id="body-morph-status"' in page.text
