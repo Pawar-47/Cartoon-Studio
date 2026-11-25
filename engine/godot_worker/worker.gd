@@ -140,7 +140,7 @@ func _inspect_glb(payload: Dictionary) -> Dictionary:
         if array_mesh == null:
             continue
         for shape_index in range(mesh_instance.get_blend_shape_count()):
-            var default_info: Dictionary = _glb_morph_default(
+            var default_info = _glb_morph_default(
                 glb_document,
                 mesh_instance,
                 shape_index,
