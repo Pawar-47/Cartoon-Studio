@@ -259,7 +259,7 @@ $("import-model").addEventListener("click",async()=>{
   const coverage=rigAnalysis.required_bone_count?rigAnalysis.matched_bone_count+"/"+rigAnalysis.required_bone_count:"Unavailable";
   const missing=Array.isArray(rigAnalysis.missing_bones)?rigAnalysis.missing_bones.join(", "):"Not reported";
   const hierarchy=rigAnalysis.hierarchy_validation||{};
-  const hierarchyLabel=hierarchy.status==="valid"?"Valid":hierarchy.status==="invalid"?"Needs review":hierarchy.status==="incomplete"?"Incomplete":"Not available";
+  const hierarchyLabel=hierarchy.status==="valid"?"Valid":hierarchy.status==="valid_with_ik_foot_hierarchy"?"Valid · IK-foot source":hierarchy.status==="invalid"?"Needs review":hierarchy.status==="incomplete"?"Incomplete":"Not available";
   const restPose=rigAnalysis.rest_pose_summary||{};
   const morphTargets=Array.isArray(data.engine_inspection.morph_targets)?data.engine_inspection.morph_targets:[];
   const morphNames=morphTargets.map(target=>target.name).filter(Boolean);

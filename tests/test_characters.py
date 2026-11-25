@@ -148,6 +148,7 @@ def test_character_studio_page_is_served():
     assert '<select id="retarget-animation"' in response.text
     assert "updateRetargetAnimationOptions" in script.text
     assert "animation_names" in script.text
+    assert 'valid_with_ik_foot_hierarchy' in script.text
     assert "morph_target_count" in script.text
     assert "appearanceRecipe,{playAnimations:false}" in script.text
 

@@ -251,7 +251,9 @@ def _validate_humanoid_hierarchy(
         ancestor_index = int(ancestor["bone_index"])
         checked += 1
         if child_index not in parents or ancestor_index not in parents:
-            structural_issues.append(f"{child_name} or {ancestor_name} has no indexed hierarchy entry.")
+            structural_issues.append(
+                f"{child_name} or {ancestor_name} has no indexed hierarchy entry."
+            )
         elif not is_descendant(child_index, ancestor_index):
             failed_chains.append((child_name, ancestor_name))
 
