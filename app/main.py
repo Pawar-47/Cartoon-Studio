@@ -23,9 +23,9 @@ from app.storage import (
     read_json,
     reconcile_project_files,
     resolve_project_relative,
+    sync_episode_reference,
     upsert_document_index,
     write_json_atomic,
-    sync_episode_reference,
 )
 from app.storage import initialize_database as migrate_database
 from app.story import EpisodePlan, StoryPromptRequest, build_story_prompt
