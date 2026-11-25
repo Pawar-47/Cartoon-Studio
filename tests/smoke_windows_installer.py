@@ -88,7 +88,16 @@ def uninstall(install_dir: Path) -> None:
             stderr=subprocess.DEVNULL,
         )
     subprocess.run([str(uninstaller), "/S"], check=True, timeout=180)
-    if (install_dir / "CartoonStudio.exe").exists():
+
+    # NSIS starts a temporary copy of the uninstaller and exits the original
+    # process first. Wait for that child process to finish its cleanup.
+    deadline = time.monotonic() + 45
+    while uninstaller.exists() or (install_dir / "CartoonStudio.exe").exists():
+        if time.monotonic() >= deadline:
+            break
+        time.sleep(0.25)
+
+    if (install_dir / "CartoonStudio.exe").exists() or uninstaller.exists():
         debug_views = [
             subprocess.run(
                 ["reg", "query", r"HKCU\Software\CartoonStudioDebug", "/s", view],
