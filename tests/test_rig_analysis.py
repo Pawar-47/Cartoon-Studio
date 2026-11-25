@@ -316,3 +316,32 @@ def test_negative_and_out_of_range_parent_indices_are_rejected():
     assert negative["hierarchy_validation"]["status"] == "invalid"
     assert invalid_parent["hierarchy_validation"]["status"] == "invalid"
 
+
+
+
+def test_robot_expressive_imported_bone_names_map_to_humanoid_profile():
+    names = [
+        "Hips", "Abdomen", "Head_2",
+        "UpperLeg.L", "LowerLeg.L", "Foot.L",
+        "UpperLeg.R", "LowerLeg.R", "Foot.R",
+        "UpperArm.L", "LowerArm.L", "Palm2.L",
+        "UpperArm.R", "LowerArm.R", "Palm2.R",
+    ]
+    parents = [-1, 0, 1, 0, 3, 4, 0, 6, 7, 1, 9, 10, 1, 12, 13]
+    bones = [
+        {"index": index, "name": name, "parent_index": parents[index]}
+        for index, name in enumerate(names)
+    ]
+
+    result = _analyze_rig({
+        "skeleton_count": 1,
+        "skeletons": [{"bone_count": len(bones), "bones": bones}],
+    })
+
+    assert result["status"] == "humanoid_names_complete"
+    assert result["matched_bone_count"] == 15
+    assert result["missing_bones"] == []
+    assert result["hierarchy_validation"]["status"] == "valid"
+    assert result["godot_profile_mapping"]["Head"]["source_name"] == "Head_2"
+    assert result["godot_profile_mapping"]["LeftHand"]["source_name"] == "Palm2.L"
+    assert result["godot_profile_mapping"]["RightHand"]["source_name"] == "Palm2.R"
