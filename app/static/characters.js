@@ -270,8 +270,17 @@ $("import-model").addEventListener("click",async()=>{
   const hierarchyIssues=Array.isArray(hierarchy.issues)?hierarchy.issues:[];
   const restNote=restPose.measured_bone_count?(" Godot also reported local rest offsets for "+restPose.measured_bone_count+" mapped bones; these are not world-space limb lengths."):"";
   hierarchyNote.textContent=(hierarchy.status==="valid"?"Required humanoid parent chains are structurally consistent; rest pose, axes, scale, skin weights and real animation transfer remain unverified.":hierarchyIssues.length?hierarchyIssues.join(" "):(hierarchy.note||"Parent-chain validation is not available for this asset."))+restNote;
-  const morphNote=document.createElement("p");morphNote.className="inline-status";morphNote.textContent=morphNames.length?"Godot imported facial blend shapes: "+morphNames.join(", ")+". Browser preview controls are checked separately.":"Godot did not detect facial blend shapes in this asset.";
-  $("asset-report").append(heading,metrics,rigNote,hierarchyNote,morphNote);$("import-status").textContent="Asset stored inside this project. Complete the profile to save it."; $("save-character").disabled=false;
+  const morphNote=document.createElement("p");morphNote.className="inline-status";morphNote.textContent=morphNames.length?"Godot imported facial blend shapes: "+morphNames.join(", ")+". Browser preview controls are checked separately.":"Godot did not detect facial blend shapes in this asset."; 
+  const meshInventory=Array.isArray(data.engine_inspection.mesh_inventory)?data.engine_inspection.mesh_inventory:[];
+  const slotCounts={head:0,body:0,legs:0,feet:0,unclassified:0};
+  for(const mesh of meshInventory){const slot=mesh.slot_candidate||"unclassified";slotCounts[slot]=(slotCounts[slot]||0)+1}
+  const inventory=document.createElement("details");inventory.className="mesh-inventory";
+  const inventorySummary=document.createElement("summary");inventorySummary.textContent="Mesh inventory · "+meshInventory.length+" mesh nodes · candidate slots: "+["head","body","legs","feet"].map(slot=>slot+" "+slotCounts[slot]).join(" / ");
+  const inventoryList=document.createElement("ul");
+  for(const mesh of meshInventory){const item=document.createElement("li");const title=document.createElement("strong");title.textContent=mesh.node_name||mesh.node_path||"Mesh";const metadata=document.createElement("span");metadata.textContent=" · "+(mesh.slot_candidate||"unclassified")+" · "+(mesh.skin_bound?"skinned":"not skinned")+" · "+(mesh.skeleton_bone_count||0)+" skeleton bones · "+(mesh.surface_count||0)+" surfaces";item.append(title,metadata);inventoryList.append(item)}
+  inventory.append(inventorySummary,inventoryList);
+  const inventoryNote=document.createElement("p");inventoryNote.className="inline-status";inventoryNote.textContent="Slot labels are name-based candidates only; geometry, skin weights and shared-skeleton compatibility still require validation before parts can be combined.";
+  $("asset-report").append(heading,metrics,rigNote,hierarchyNote,morphNote,inventory,inventoryNote);$("import-status").textContent="Asset stored inside this project. Complete the profile to save it."; $("save-character").disabled=false;
  }catch(error){$("import-status").textContent=error.message}
  finally{$("import-model").disabled=!activeProject||!$("model-file").files.length}
 });

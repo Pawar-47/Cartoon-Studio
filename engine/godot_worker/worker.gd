@@ -156,7 +156,7 @@ func _inspect_glb(payload: Dictionary) -> Dictionary:
         for shape_index in range(mesh_instance.get_blend_shape_count()):
             blend_shape_names.append(str(mesh_resource.get_blend_shape_name(shape_index)))
         var skeleton_path := str(mesh_instance.get_skeleton_path())
-        var bound_skeleton := scene.get_node_or_null(NodePath(skeleton_path)) as Skeleton3D if not skeleton_path.is_empty() else null
+        var bound_skeleton := mesh_instance.get_node_or_null(mesh_instance.get_skeleton_path()) as Skeleton3D if not skeleton_path.is_empty() else null
         var bounds := mesh_resource.get_aabb()
         var slot_candidate := _classify_mesh_slot(
             str(mesh_instance.name) + " " + str(mesh_resource.resource_name) + " " + str(scene.get_path_to(mesh_instance))
