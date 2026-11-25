@@ -3,7 +3,7 @@
 Updated: 2026-11-25
 Repository: https://github.com/Pawar-47/Cartoon-Studio
 Branch: main
-Latest implementation checkpoint: `f00bb3dbba55af7b6f3a02ca5b602bf773872a35` (modular outfit and bone-attached accessory batch merged; feature CI 45654673022 passed; main CI pending at checkpoint).
+Latest implementation checkpoint: `5d31f804e638e5ca076115ca886a7e7932c4058a` (outfit shuffle/downloads, Godot animation playback probe and semantic expression presets merged; main CI run 45657010942 pending at checkpoint).
 
 ## Mission and operating rules
 
@@ -69,10 +69,10 @@ Two real third-party assets have passed native Godot acceptance for tested scena
 
 ## Next substantial implementation batch
 
-1. Perform interactive browser acceptance of the modular builder, including saved accessory chips and recipe reopen, then inspect the assembled preview.
-2. Verify animation playback and visible skin deformation on the exported assembled GLB, not only clip-name preservation.
+1. Perform interactive browser acceptance of the modular builder, outfit randomizer, direct GLB downloads, accessory chips and semantic expression presets; verify save/reopen behavior and preview quality.
+2. Add browser-facing animation acceptance so the user can inspect a selected clip on the assembled GLB; the Godot worker now verifies bone-pose changes and skinned mesh bindings after re-import.
 3. Extend genuine geometric customization (proportions, face and hair) using compatible mesh/morph/rig operations; do not treat text-only profile fields as implemented geometry editing.
-4. Continue browser-versus-Godot retarget-preview comparison and broaden rig families without weakening strict compatibility checks.
+4. Add an end-to-end saved-profile recipe round-trip/reassemble test and continue broadening rig families only where tests prove compatibility.
 
 ## Later phases
 

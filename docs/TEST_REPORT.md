@@ -234,3 +234,15 @@ Added API coverage for saving morph-target weights and rejecting values outside 
 - The mixed-outfit integration test now adds the Quaternius Adventurer Backpack, exports/re-imports the result, verifies the accessory mesh is present, and confirms the base animation clips remain.
 - The versioned assembly manifest stores accessory paths/bone names; reopening a saved assembly restores its accessory selections.
 - Limitations remain: no arbitrary-rig conversion, general hair/face geometry authoring, or interactive visual acceptance is claimed.
+
+
+## Phase 2 — outfit shuffle, GLB download and animation playback probe — 2026-11-25
+
+- PR #6 feature CI [45655967987](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45655967987): SUCCESS. Main CI [45656217264](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45656217264): SUCCESS.
+- Added a one-click outfit shuffler that selects four distinct source meshes and can add optional accessories. Saved and newly assembled characters now expose direct GLB download links.
+- PR #7 feature CI [45655936153](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45655936153): SUCCESS. Main CI [45656445021](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45656445021): SUCCESS.
+- Added the Godot `probe_glb_animation` worker operation and Python adapter. It imports a GLB, plays a requested clip at a deterministic sample ratio, compares skeleton bone poses, counts meshes whose skin binding resolves to the same Skeleton3D and reports valid BoneAttachment3D bones.
+- The real mixed outfit plus Backpack test now probes `Walk` after export/re-import and asserts that bone poses change and at least four modular skinned meshes remain bound. This is stronger than clip-name preservation alone; it does not claim browser visual acceptance.
+- PR #9 feature CI [45656755304](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45656755304): SUCCESS. Main CI run 45657010942 was pending at this checkpoint.
+- Added Smile/Frown/Surprise/Angry semantic presets for imported morph targets, with name matching, unmatched-target preservation, manual slider integration, live preview and versioned appearance persistence. Presets are disabled when the model has no morph targets.
+- PR #5 added Node 22 syntax validation for `app/static/characters.js`; feature CI 45655204627 and main CI 45655471623 passed.

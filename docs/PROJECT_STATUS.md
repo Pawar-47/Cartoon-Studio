@@ -4,7 +4,7 @@
 
 - Repository: Pawar-47/Cartoon-Studio
 - Branch: main
-- Latest implementation checkpoint: `f00bb3dbba55af7b6f3a02ca5b602bf773872a35` (PR #4 merged; accessory integration CI passed; main CI pending).
+- Latest implementation checkpoint: `5d31f804e638e5ca076115ca886a7e7932c4058a` (PR #7 merged; outfit shuffle/downloads, animation playback probe and expression preset batches merged; main CI pending).
 - Phase 0: COMPLETE.
 - Phase 1: COMPLETE.
 - Phase 2 — Character Studio: ACTIVE; import, preview, profiles, appearance recipes, rig diagnostics and the first user-facing imported-rig retarget workflow are implemented. Phase 2 is not complete.
@@ -77,4 +77,7 @@ Godot may normalize raw skin-joint ordering during import. The application uses 
 - Character Studio now offers head/body/legs/feet selectors, filtered by skinned mesh slot candidates. Godot performs exact shared-skeleton, hierarchy, rest-pose, rig-transform and skin-bind checks; it removes base skinned outfit meshes, attaches the selected meshes to the base skeleton, exports and re-imports the GLB, then verifies the four selected meshes and base animation names.
 - A real CI integration test combines Beach head, Casual_2 body, Farmer legs and King feet on the Male Adventurer base and verifies all 24 base animation clips survive. Assembly manifests persist the base/part recipe and allow source restoration.
 - PR #4 adds optional skinned or BoneAttachment3D accessories, including the Adventurer Backpack integration test. Assembly recipes persist accessory paths and bone references and restore the selected accessory list when reopening an assembled character.
-- Phase 2 remains ACTIVE; P2.2 remains PARTIAL. Interactive browser visual acceptance, visible animation/skin deformation acceptance and true geometry/face/proportion/hair authoring remain open. Strict shared-rig matching is supported; automatic conversion of arbitrary incompatible rigs is not claimed.
+- PR #6 adds one-click outfit shuffling with unique source meshes and direct GLB downloads for saved and newly assembled characters.
+- PR #7 adds a Godot playback probe: after GLB export/re-import it plays the Walk clip, compares bone poses, counts skinned meshes bound to the rig and reports bone attachments. The mixed-outfit-plus-Backpack test verifies pose changes and at least four skinned meshes.
+- PR #9 adds Smile/Frown/Surprise/Angry presets for imported morph targets. Presets are name-matched, do not fabricate geometry and remain disabled when no morph targets are present. Node 22 syntax checking is now part of CI.
+- Phase 2 remains ACTIVE; P2.2 remains PARTIAL. Interactive browser visual acceptance, real geometry/face/proportion/hair authoring and cross-scene visual consistency remain open. Strict shared-rig matching is supported; automatic conversion of arbitrary incompatible rigs is not claimed.

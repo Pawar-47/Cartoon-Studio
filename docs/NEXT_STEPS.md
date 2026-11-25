@@ -56,8 +56,8 @@ Work in coherent feature batches, preserve all existing work, use GitHub main as
 The pinned CC0 library, four-slot Godot assembly/export, browser selectors and versioned recipe manifest are implemented and merged. The real mixed-outfit integration test passes on the Male Adventurer base and preserves all 24 clips. The next batch is not another catalog-only pass:
 
 1. Add an automated recipe save/reopen/reassemble test that starts from a saved character profile and restores every source asset and accessory through its manifest.
-2. Exercise the browser builder end-to-end: import/select parts and accessories, assemble, preview, save profile, reload project and reopen the recipe. Record visual acceptance separately from CI.
-3. Verify a selected animation actually plays on the exported character and that each modular mesh and accessory follows the intended skeleton/bone during playback; clip-name equality alone is insufficient.
+2. Exercise the browser builder end-to-end: import/select parts, shuffle, add/remove accessories, assemble, download, preview expressions, save profile, reload project and reopen the recipe. Record visual acceptance separately from CI.
+3. Add browser-facing playback acceptance for assembled GLBs; the Godot probe now confirms the Walk clip changes bone poses and the selected skinned meshes remain bound after re-import.
 4. Implement real geometric customization for proportions, face and hair using compatible mesh, morph-target or rig operations. Keep metadata-only fields clearly distinguished from geometry changes.
 5. Compare browser retarget preview with the authoritative Godot scene and broaden rig families only where tests prove compatibility.
 

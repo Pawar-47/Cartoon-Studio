@@ -309,3 +309,13 @@ The next P2.2 sub-phase is the **Modular Character Builder**:
 - Presets update the live preview, individual sliders and the existing versioned appearance save endpoint. Manual slider fine-tuning and reset remain available.
 - Added Node unit coverage for matching, baseline restoration, unmatched-target safety and invalid preset names, wired into pytest.
 - Semantic mapping is best-effort for compatible imported assets, not a universal guarantee across arbitrary GLBs.
+
+
+## 2026-11-25 — P2.2 creator workflow and animation-quality gates
+
+- PR #6 adds one-click outfit shuffling using unique source meshes and direct GLB downloads for assembled and saved characters. Feature CI `45655967987` and main CI `45656217264` passed.
+- PR #7 adds a deterministic Godot animation playback probe. It imports the exported GLB, plays the selected clip, samples skeleton poses, reports changed bones, counts skinned meshes bound to the skeleton and lists valid BoneAttachment3D bones. The mixed outfit plus Backpack integration test confirms the Walk clip changes bone poses and at least four skinned meshes remain bound. Feature CI `45655936153` and main CI `45656445021` passed.
+- PR #9 adds Smile, Frown, Surprise and Angry presets for imported morph targets. Presets only modify name-matched targets, preserve unmatched target values, update manual sliders/live preview and use the existing versioned appearance persistence. Node unit tests cover matching and invalid preset names; preset controls are enabled only when morph targets exist. Feature CI `45656755304` passed.
+- PR #5 added Node 22 browser-JavaScript syntax validation to the main CI workflow; its feature and main CI runs `45655204627` and `45655471623` passed.
+- Main CI for the expression-preset merge was run `45657010942` and was pending when this checkpoint was written.
+- Phase 2 and P2.2 remain PARTIAL: automated native assembly and pose verification are now covered, but interactive browser visual acceptance, saved-profile recipe round-trip/reassemble, browser playback review and real geometric proportions/face/hair authoring remain.
