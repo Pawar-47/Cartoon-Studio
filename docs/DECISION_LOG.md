@@ -32,3 +32,16 @@ Date: 2026-11-25. The user's i3-5005U / Intel HD 5500 / 8 GB PC remains the desi
 
 ## D-010 — Preserve FastAPI/browser control plane; isolate 3D behind a dual-target engine adapter
 Date: 2026-11-25. P0.5 architecture direction is to retain the current FastAPI + browser UI + SQLite foundation as the control plane. Godot is the leading engine candidate, not yet accepted. Preferred boundary: supervised native Godot render worker, with an optional Godot Web export for an embedded viewport if P0.6 proves browser integration and resource behavior. The native-shell replacement path is rejected as default because it would replace/duplicate working UI and project services. Canonical JSON project/character/world/episode/scene/asset/job contracts remain engine-neutral. P0.6 must prove selected engine operations and licensing before engine approval. Actual target-PC performance remains Phase 8. This is a provisional architecture direction, not an engine approval.
+
+
+## D-011 — Hardware benchmark is Phase 8 only; architecture progresses on source evidence
+
+Date: 2026-11-25. User explicitly clarified that testing on their personal PC is not important enough to gate progress; slower operation is acceptable and performance tuning can happen later. The PowerShell/Godot target probe remains optional. Source/API compatibility, sequential processing, four quality modes, caching and bounded workloads remain design constraints. Actual frame-time, peak RAM, render duration, driver stability and preset tuning are Phase 8 work. Do not ask the user to run the probe as a prerequisite and do not claim measured performance without a real run.
+
+## D-012 — Dependency strategy: minimal local core, adapters at subsystem edges
+
+Date: 2026-11-25. Retain Python 3.11+, FastAPI/Uvicorn, Pydantic, stdlib SQLite and the existing vanilla browser UI. Keep Godot 4.7.2 Compatibility as the leading native worker candidate pending P0.6 proof; Web export is optional. Start with an app-owned SQLite job queue. FFmpeg is behind a process adapter, but no binary/encoder is selected until build flags, codec and license are verified. AI/TTS remain optional and manual Urdu recording remains a supported baseline. See DEPENDENCY_DECISIONS.md for exact boundaries and evidence.
+
+## D-013 — Complete registry-to-architecture crosswalk
+
+Date: 2026-11-25. Added ARCHITECTURE_TRACEABILITY.md with one row for every one of the 171 atomic registry IDs, including architecture home, planned module boundary and delivery phase. This is an ownership/architecture map, not evidence that the planned code exists.

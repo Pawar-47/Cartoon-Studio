@@ -184,3 +184,22 @@ Allowed job states are queued, preparing, rendering, assembling, completed, fail
 - [ ] Review and reconcile all 171 registry/traceability rows against this architecture.
 - [ ] Freeze the architecture and P0.6 proof plan after the dependency/licensing pass.
 
+
+
+## 15. P0.5 architecture crosswalk and dependency decisions
+
+The complete 171-requirement ownership map is in ARCHITECTURE_TRACEABILITY.md. Subsystem dependency choices, version policy, licenses, no-bundle decisions and P0.6 proof criteria are in DEPENDENCY_DECISIONS.md.
+
+P0.5 decisions recorded:
+- [x] Preserve FastAPI/browser/SQLite as the current control plane.
+- [x] Define stable, versioned, engine-neutral document families and timeline invariants.
+- [x] Define the preferred native-worker / optional web-viewport adapter boundary without claiming it is proven.
+- [x] Define portable project layout, rebuildable index, durable job journal and recovery behavior.
+- [x] Define provider secret isolation and local IPC security.
+- [x] Record per-subsystem dependency candidates, version-pinning policy, licenses, optional/no-bundle boundaries and unresolved proof gates.
+- [x] Map all 171 registry IDs to an architecture home, planned module boundary and delivery phase.
+- [x] Reconcile hardware policy: exact-PC performance testing is Phase 8, not an architecture or implementation gate.
+- [ ] Complete P0.6 bounded engine/renderer/queue/codec proofs.
+- [ ] P0.7 final review and freeze after P0.6 evidence.
+
+This checklist marks architecture documentation only; it does not mark candidate software integrated, runtime behavior tested, or product requirements implemented.

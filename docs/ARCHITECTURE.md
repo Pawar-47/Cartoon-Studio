@@ -136,3 +136,16 @@ SQLite is the transactional index for project IDs, document revisions, asset met
 
 ### Honest implementation boundary
 This is a target architecture, not a claim about current code. Current implementation remains project metadata + one saved story plan per project, FastAPI routes and static UI. Asset registry, migrations, render queue, engine/provider adapters, scene renderer and recovery are not implemented. Existing Ara-derived catalogs are prototype validation only and will be replaced with stable Cartoon Studio IDs in Phase 4.
+
+
+## P0.5 dependency decisions and implementation boundaries
+
+The dependency-level choices and unresolved adoption gates are maintained in DEPENDENCY_DECISIONS.md. The complete requirement-to-module ownership crosswalk is maintained in ARCHITECTURE_TRACEABILITY.md.
+
+Architecture direction is now concrete:
+- Retain Python 3.11+, FastAPI/Uvicorn, Pydantic, stdlib SQLite and the existing vanilla browser UI; lock exact versions for releases in Phase 1.
+- Treat Godot 4.7.2 Compatibility as the leading native worker candidate, subject to P0.6 functional proofs. A Web export is optional and cannot be the sole production renderer.
+- Start with an application-owned SQLite job queue rather than adding an external task framework; preserve per-scene checkpoints and idempotent retry semantics.
+- Use an FFmpeg process adapter, but do not bundle a binary or freeze an MP4 encoder until exact build flags, codec availability and licensing are checked.
+- Keep AI/TTS optional, manual Pakistani Urdu recording supported, and model/asset adoption individually licensed.
+- Actual PC performance measurements are Phase 8 only and do not gate any earlier phase.
