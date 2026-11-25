@@ -105,6 +105,9 @@ class _FakeRetargetAdapter(_FakeEngineAdapter):
             "target_skinned_mesh_count": 1,
             "scene_reopened": True,
             "pose_transferred": True,
+            "source_animation_playing": True,
+            "source_pose_angle_degrees": 29.0,
+            "target_pose_angle_degrees": 29.0,
         }
 
 

@@ -4,12 +4,13 @@
 
 - Repository: Pawar-47/Cartoon-Studio
 - Branch: main
-- Latest implementation checkpoint: `48fdb9cdc7ebd61bdd1b1633e479a6fc541b485c`
+- Latest implementation checkpoint: `f1c40ec251ebce18e91a8261eeed7fa93d89ff8e`
 - Phase 0: COMPLETE.
 - Phase 1: COMPLETE.
-- Phase 2 — Character Studio: ACTIVE; GLB import/preview, profiles, appearance recipes, rig diagnostics and the first user-facing imported-rig retarget workflow are implemented. Phase 2 is not complete.
-- Latest full Windows CI: [run #252](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45615829102) PASSED, including tests, Godot worker integration, packaging and installer lifecycle.
-- Dedicated Godot native-worker proof: [run #11](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45614672455) PASSED.
+- Phase 2 — Character Studio: ACTIVE; import, preview, profiles, appearance recipes, rig diagnostics and the first user-facing imported-rig retarget workflow are implemented. Phase 2 is not complete.
+- Windows CI #257 PASSED, including real source-to-target pose transfer in the reopened imported retarget scene and the full Windows packaging lifecycle.
+- Dedicated Godot native-worker proof #12 PASSED.
+- Latest distinct-fixture batch CI #259 failed only because the API fake adapter omitted new playback/angle fields; the fake is corrected and CI is being rerun.
 - Chat-independent continuation record: `docs/SESSION_CHECKPOINT.md`.
 
 ## Current Character Studio capabilities
@@ -18,21 +19,16 @@
 - Browser GLB preview and imported animation selection.
 - Persistent versioned character profiles.
 - Non-destructive material appearance recipes and existing facial morph-target sliders.
-- Conservative 15-bone humanoid mapping with source indices, parent metadata, hierarchy diagnostics and imported rest transforms.
-- Character-to-character retarget scene workflow:
-  - choose an animated source and a separate target character;
-  - require exactly one skeleton in each GLB;
-  - require complete unambiguous humanoid mappings and valid parent chains;
-  - require a source animation and target skinned mesh;
-  - create a separate Godot scene and persistent JSON record;
-  - download the saved scene;
-  - preserve the original imported GLBs.
+- Indexed 15-bone humanoid mapping, parent-chain diagnostics and per-bone rest-transform measurements.
+- Imported-GLB retarget workflow with source/target selection, strict preflight, Godot scene creation, persistent history and scene download.
+- Worker verifies that the reopened source AnimationPlayer starts and that its upper-arm pose reaches the target skeleton after 72 frames. Failed pose verification removes the generated scene.
+- Original source and target GLBs are preserved.
 
-## Retarget acceptance limits
+## Distinct imported fixture coverage
 
-The worker test now uses two different imported GLBs: a canonical animated source and a Mixamo-named target with different arm/leg rest proportions. It verifies indexed mapping, hierarchy, target skin binding, saved-scene reopen, actual upper-arm pose transfer and byte-identical preservation of both source files. Godot proof #11 separately verifies imported-source retargeting to a generated target skeleton with different proportions.
+The source fixture is a canonical animated humanoid. The target is a separate imported GLB with Mixamo-style bone names, different arm/leg rest proportions and no target animation. A committed generator script reproduces the target fixture. The worker test checks mapping, hierarchy, rest-length difference, target skin binding, animation playback, pose transfer, scene save/reopen and byte-identical preservation of both GLBs.
 
-This is still bounded fixture acceptance, not arbitrary imported-GLB compatibility. Different bone ordering, broader animation-track conventions and visual acceptance remain to be tested.
+This is bounded fixture acceptance, not arbitrary third-party GLB acceptance. Different bone ordering, broader animation-track conventions and visual acceptance in the app remain future work.
 
 ## Phase status
 
@@ -40,7 +36,7 @@ This is still bounded fixture acceptance, not arbitrary imported-GLB compatibili
 |---|---|---|
 | Phase 0 — Specification/research/architecture | COMPLETE | Baseline, requirements, research and architecture documented |
 | Phase 1 — GitHub and CI/CD foundation | COMPLETE | Windows bootstrap and installer lifecycle verified |
-| Phase 2 — Character Studio | ACTIVE | Import, preview, profiles, appearance, rig diagnostics and initial retarget workflow implemented; broader rig acceptance and deterministic export remain |
+| Phase 2 — Character Studio | ACTIVE | Import, preview, profiles, appearance, rig diagnostics and initial imported-pair retarget workflow implemented; broader rig acceptance, preview and deterministic export remain |
 | Phase 3 — World Builder | NOT STARTED | No persistent production world/location builder |
 | Phase 4 — Story and Scene Engine | PARTIAL / FROZEN | Preserve existing Story Generator and saved story plan |
 | Phase 5 — Animation Engine | NOT STARTED | No production timeline/action library |
@@ -50,10 +46,11 @@ This is still bounded fixture acceptance, not arbitrary imported-GLB compatibili
 
 ## Next implementation batch
 
-1. Validate the distinct-proportion Mixamo-named target fixture in full Windows CI.
-2. Add a target fixture with different bone ordering and test imported animation-track path compatibility.
-3. Exercise representative user-imported GLBs and document compatibility limits.
-4. Continue Character Studio authoring and deterministic export after broader retarget round-trip acceptance.
+1. Complete Windows CI for the distinct imported source/target fixture and API playback-metrics test.
+2. Add a target fixture with different bone ordering and verify animation-track path compatibility.
+3. Exercise representative third-party GLBs and document compatibility limits.
+4. Add a practical in-app preview/open action for saved retarget scenes.
+5. Validate real facial morph controls and continue deterministic export/round-trip after broader retarget acceptance.
 
 ## Frozen architecture and constraints
 
