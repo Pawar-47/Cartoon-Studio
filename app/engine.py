@@ -245,16 +245,32 @@ class GodotEngineAdapter:
             for field, default in face_defaults.items():
                 value = face_recipe.get(field, default)
                 if field.endswith("_color"):
-                    if not isinstance(value, str) or len(value) != 7 or value[0] != "#" or any(char not in "0123456789abcdefABCDEF" for char in value[1:]):
-                        raise EnginePathError(f"Face feature {field} must be a six-digit hexadecimal color.")
+                    if (
+                        not isinstance(value, str)
+                        or len(value) != 7
+                        or value[0] != "#"
+                        or any(char not in "0123456789abcdefABCDEF" for char in value[1:])
+                    ):
+                        raise EnginePathError(
+                            f"Face feature {field} must be a six-digit hexadecimal color."
+                        )
                     validated_face_features[field] = value
                 else:
                     if not isinstance(value, (int, float)):
                         raise EnginePathError(f"Face feature {field} must be numeric.")
                     number = float(value)
-                    lower, upper = (0.65, 1.5) if field == "eye_scale" else (0.65, 1.35) if field == "eye_spacing" else (-1.0, 1.0) if field == "smile" else (-0.5, 0.5)
+                    if field == "eye_scale":
+                        lower, upper = 0.65, 1.5
+                    elif field == "eye_spacing":
+                        lower, upper = 0.65, 1.35
+                    elif field == "smile":
+                        lower, upper = -1.0, 1.0
+                    else:
+                        lower, upper = -0.5, 0.5
                     if not lower <= number <= upper:
-                        raise EnginePathError(f"Face feature {field} is outside its supported range.")
+                        raise EnginePathError(
+                            f"Face feature {field} is outside its supported range."
+                        )
                     validated_face_features[field] = number
         if not validated_materials and not validated_morphs and not face_enabled:
             raise EnginePathError("There are no material, morph or face edits to export.")
