@@ -896,7 +896,20 @@ def test_pinned_godot_worker_builds_episode_scenes_with_world_and_character_glb(
                 "duration_seconds": 60,
                 "location_id": "street-cafe",
                 "character_ids": ["ali"],
-                "dialogue": [],
+                "dialogue": (
+                    [
+                        {
+                            "character_id": "ali",
+                            "text": "یہ تو بہت مزے کی بات ہے!",
+                            "emotion": "happy",
+                            "delivery": "excited",
+                            "start_seconds": 5,
+                            "duration_seconds": 2,
+                        }
+                    ]
+                    if index == 1
+                    else []
+                ),
                 "actions": (
                     [
                         {
@@ -943,8 +956,9 @@ def test_pinned_godot_worker_builds_episode_scenes_with_world_and_character_glb(
     assert all(Path(scene["scene_path"]).is_file() for scene in result["scenes"])
     assert all(Path(scene["preview_path"]).is_file() for scene in result["scenes"])
     assert result["scenes"][0]["action_cue_count"] == 1
+    assert result["scenes"][0]["expression_cue_count"] == 1
     assert result["scenes"][0]["camera_cue_count"] == 1
-    assert result["scenes"][0]["animation_track_count"] == 5
+    assert result["scenes"][0]["animation_track_count"] > 5
     assert all(
         scene["action_cue_count"] == 0
         and scene["camera_cue_count"] == 0

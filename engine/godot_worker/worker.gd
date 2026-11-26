@@ -2833,6 +2833,35 @@ func _build_episode_timeline(
                 if expression_tracks > 0:
                     expression_cue_count += 1
             action_count += 1
+    var dialogue_value: Variant = scene_data.get("dialogue", [])
+    if typeof(dialogue_value) == TYPE_ARRAY:
+        for dialogue_entry in dialogue_value:
+            if typeof(dialogue_entry) != TYPE_DICTIONARY:
+                continue
+            var line: Dictionary = dialogue_entry
+            var speaker_id := str(line.get("character_id", ""))
+            var emotion_id := str(line.get("emotion", "neutral"))
+            if emotion_id == "neutral" or not character_anchors.has(speaker_id):
+                continue
+            var dialogue_start := clampf(float(line.get("start_seconds", 0.0)), 0.0, duration)
+            var dialogue_end := clampf(
+                dialogue_start + float(line.get("duration_seconds", 1.0)),
+                dialogue_start,
+                duration
+            )
+            var dialogue_middle := lerpf(dialogue_start, dialogue_end, 0.5)
+            var dialogue_tracks := _add_episode_expression_tracks(
+                animation,
+                scene_root,
+                character_anchors[speaker_id],
+                emotion_id,
+                dialogue_start,
+                dialogue_middle,
+                dialogue_end
+            )
+            track_count += dialogue_tracks
+            if dialogue_tracks > 0:
+                expression_cue_count += 1
     var camera_value: Variant = scene_data.get("camera", [])
     var camera_cue_count := 0
     if typeof(camera_value) == TYPE_ARRAY:
