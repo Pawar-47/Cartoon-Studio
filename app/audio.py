@@ -283,8 +283,8 @@ def generate_episode_audio(
     scene_offset = 0.0
     for scene_index, scene in enumerate(scenes, start=1):
         scene_duration = int(scene.get("duration_seconds", 0))
+        scene_id = scene.get("id", scene_index)
         if scene_duration <= 0:
-            scene_id = scene.get("id", scene_index)
             raise SpeechGenerationError(
                 f"Scene {scene_id} has an invalid duration."
             )
