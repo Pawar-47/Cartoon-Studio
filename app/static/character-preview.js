@@ -247,6 +247,68 @@ function collectMorphTargets(root) {
   morphTargetCatalog = entries;
 }
 
+
+let faceFeatureGroup = null;
+function removeFaceFeaturePreview() {
+  if (!faceFeatureGroup || !currentObject) return;
+  currentObject.remove(faceFeatureGroup);
+  faceFeatureGroup.traverse((node) => {
+    node.geometry?.dispose();
+    if (node.material) (Array.isArray(node.material) ? node.material : [node.material]).forEach((material) => material.dispose());
+  });
+  faceFeatureGroup = null;
+}
+export function applyCharacterFaceFeatures(recipe = {}) {
+  if (!currentObject) return false;
+  removeFaceFeaturePreview();
+  if (!recipe.enabled) return true;
+  currentObject.updateMatrixWorld(true);
+  const bounds = new THREE.Box3().setFromObject(currentObject);
+  if (bounds.isEmpty()) return false;
+  let head = null;
+  currentObject.traverse((node) => {
+    if (!node.isMesh || !/(head|face|skull)/i.test(node.name || "")) return;
+    const box = new THREE.Box3().setFromObject(node);
+    if (!box.isEmpty() && (!head || box.getSize(new THREE.Vector3()).y > head.getSize(new THREE.Vector3()).y)) head = box;
+  });
+  if (!head) {
+    const size = bounds.getSize(new THREE.Vector3());
+    head = new THREE.Box3(new THREE.Vector3(bounds.min.x,bounds.max.y-size.y*0.24,bounds.max.z-size.z*0.28),bounds.max.clone());
+  }
+  const size=head.getSize(new THREE.Vector3()), center=head.getCenter(new THREE.Vector3());
+  const width=Math.max(size.x*0.56,size.y*0.18,0.035), height=Math.max(size.y*0.48,width*0.55,0.035);
+  const front=head.max.z+Math.max(size.z*0.035,width*0.025);
+  const eyeScale=THREE.MathUtils.clamp(Number(recipe.eye_scale??1),0.65,1.5);
+  const spacing=THREE.MathUtils.clamp(Number(recipe.eye_spacing??1),0.65,1.35);
+  const smile=THREE.MathUtils.clamp(Number(recipe.smile??0.35),-1,1);
+  const browAngle=THREE.MathUtils.clamp(Number(recipe.brow_angle??0),-0.5,0.5);
+  const group=new THREE.Group();group.name="CartoonStudioFacePreview";
+  const mat=(color,roughness=0.72)=>new THREE.MeshStandardMaterial({color:color||"#ffffff",roughness,metalness:0,depthTest:false,depthWrite:false});
+  const ellipsoid=(name,color,pos,scale,roughness=0.72)=>{
+    const mesh=new THREE.Mesh(new THREE.SphereGeometry(1,20,14),mat(color,roughness));
+    mesh.name=name;mesh.position.copy(pos);mesh.scale.set(scale.x,scale.y,scale.z);mesh.renderOrder=30;group.add(mesh);return mesh;
+  };
+  const eyeY=center.y+height*0.10, offset=width*0.245*spacing, ew=width*0.105*eyeScale, eh=height*0.17*eyeScale, depth=Math.max(width*0.045,0.008);
+  for(const side of [-1,1]){
+    const x=center.x+side*offset;
+    ellipsoid("FaceEyeWhite",recipe.eye_color,new THREE.Vector3(x,eyeY,front),new THREE.Vector3(ew,eh,depth));
+    ellipsoid("FaceIris",recipe.iris_color,new THREE.Vector3(x+width*0.018,eyeY-height*0.012,front+depth*0.88),new THREE.Vector3(ew*0.49,eh*0.57,depth*0.42),0.35);
+    ellipsoid("FacePupil","#17191d",new THREE.Vector3(x+width*0.022,eyeY-height*0.012,front+depth*1.22),new THREE.Vector3(ew*0.23,eh*0.34,depth*0.22),0.25);
+    const brow=ellipsoid("FaceEyebrow",recipe.brow_color,new THREE.Vector3(x,eyeY+eh*1.55,front+depth*0.12),new THREE.Vector3(ew*1.32,Math.max(height*0.035,0.006),depth*0.38));
+    brow.rotation.z=-side*browAngle;
+  }
+  ellipsoid("FaceNose",recipe.nose_color,new THREE.Vector3(center.x,center.y-height*0.08,front+depth*0.6),new THREE.Vector3(width*0.055,height*0.075,depth*0.8));
+  const my=center.y-height*0.30,mw=width*0.19;
+  const curve=new THREE.CatmullRomCurve3([
+    new THREE.Vector3(center.x-mw,my+smile*height*0.075,front+depth*0.5),
+    new THREE.Vector3(center.x-mw*0.5,my-smile*height*0.07,front+depth*0.55),
+    new THREE.Vector3(center.x+mw*0.5,my-smile*height*0.07,front+depth*0.55),
+    new THREE.Vector3(center.x+mw,my+smile*height*0.075,front+depth*0.5),
+  ]);
+  const mouth=new THREE.Mesh(new THREE.TubeGeometry(curve,20,Math.max(width*0.012,0.003),8,false),mat(recipe.mouth_color));
+  mouth.name="FaceMouth";mouth.renderOrder=31;group.add(mouth);
+  currentObject.add(group);faceFeatureGroup=group;return true;
+}
 export function getCharacterMorphTargets() {
   return morphTargetCatalog.map((entry) => ({ ...entry }));
 }
@@ -330,6 +392,7 @@ export async function showCharacterPreview(buffer, label = "Character", appearan
     const center = bounds.getCenter(new THREE.Vector3());
     const size = bounds.getSize(new THREE.Vector3());
     currentObject.position.sub(center);
+    applyCharacterFaceFeatures(appearance.face_features || {});
 
     cameraDistance = Math.max(size.x, size.y, size.z, 0.1) * 2.1;
     characterBounds = bounds.clone();
