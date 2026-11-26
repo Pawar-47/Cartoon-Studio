@@ -9,7 +9,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
@@ -101,6 +101,26 @@ class ProjectUpdate(BaseModel):
 
 class GlbInspectRequest(BaseModel):
     relative_path: str = Field(min_length=1, max_length=512)
+
+
+class WorldObjectInput(BaseModel):
+    id: str = Field(min_length=1, max_length=64)
+    kind: Literal["road", "building", "shop", "tree", "vehicle", "lamp", "park"]
+    label: str = Field(min_length=1, max_length=80)
+    x: float = Field(ge=0, le=100)
+    y: float = Field(ge=0, le=100)
+    width: float = Field(default=12, ge=2, le=60)
+    height: float = Field(default=8, ge=2, le=60)
+    rotation: float = Field(default=0, ge=0, le=360)
+    color: str = Field(default="#c89b67", pattern=r"^#[0-9a-fA-F]{6}$")
+
+
+class WorldPlanInput(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    theme: Literal["small_town", "village", "market", "park"] = "small_town"
+    ground_color: str = Field(default="#789b58", pattern=r"^#[0-9a-fA-F]{6}$")
+    sky: Literal["day", "sunset", "night"] = "day"
+    objects: list[WorldObjectInput] = Field(default_factory=list, max_length=100)
 
 
 class CharacterHairInput(BaseModel):
@@ -685,6 +705,161 @@ def get_story_plan(project_id: str) -> dict[str, Any]:
         "plan": json.loads(row["plan_json"]),
     }
 
+
+
+
+@app.get("/worlds", include_in_schema=False)
+def world_builder() -> FileResponse:
+    return FileResponse(STATIC_DIR / "worlds.html")
+
+
+def _project_worlds(project_id: str) -> list[dict[str, Any]]:
+    initialize_database()
+    with connect_db() as connection:
+        project = connection.execute(
+            "SELECT id FROM projects WHERE id = ?", (project_id,)
+        ).fetchone()
+        if project is None:
+            raise HTTPException(status_code=404, detail="Project not found.")
+        rows = connection.execute(
+            """
+            SELECT * FROM project_documents
+            WHERE project_id = ? AND document_type = 'world'
+            ORDER BY updated_at DESC
+            """,
+            (project_id,),
+        ).fetchall()
+    worlds = []
+    for row in rows:
+        path = resolve_project_relative(DATA_DIR, project_id, row["relative_path"])
+        if path.is_file():
+            document = read_json(path)
+            worlds.append({
+                "id": document["id"],
+                "revision": document["revision"],
+                "updated_at": document["updated_at"],
+                **document["data"],
+            })
+    return worlds
+
+
+def _sync_world_reference(project_id: str, world_document: dict[str, Any]) -> None:
+    project_path = project_directory(DATA_DIR, project_id) / "project.json"
+    project_document = read_json(project_path)
+    references = project_document.setdefault("data", {}).setdefault("references", {})
+    world_ids = references.setdefault("worlds", [])
+    if world_document["id"] not in world_ids:
+        world_ids.append(world_document["id"])
+    project_document["revision"] = int(project_document.get("revision", 1)) + 1
+    project_document["updated_at"] = world_document["updated_at"]
+    digest = write_json_atomic(project_path, project_document)
+    with connect_db() as connection:
+        upsert_document_index(
+            connection, project_id, project_document, "project.json", digest
+        )
+        connection.execute(
+            "UPDATE projects SET updated_at = ? WHERE id = ?",
+            (world_document["updated_at"], project_id),
+        )
+
+
+@app.get("/api/projects/{project_id}/worlds")
+def list_project_worlds(project_id: str) -> list[dict[str, Any]]:
+    return _project_worlds(project_id)
+
+
+@app.post("/api/projects/{project_id}/worlds", status_code=201)
+def create_project_world(project_id: str, payload: WorldPlanInput) -> dict[str, Any]:
+    initialize_database()
+    now = datetime.now(UTC).isoformat()
+    world_id = str(uuid.uuid4())
+    data = payload.model_dump(mode="json")
+    data["name"] = data["name"].strip()
+    if not data["name"]:
+        raise HTTPException(status_code=422, detail="World name cannot be blank.")
+    with connect_db() as connection:
+        project = connection.execute(
+            "SELECT id, created_at FROM projects WHERE id = ?", (project_id,)
+        ).fetchone()
+        if project is None:
+            raise HTTPException(status_code=404, detail="Project not found.")
+        document = make_envelope("world", world_id, data, project["created_at"], now)
+        relative_path = f"worlds/{world_id}.json"
+        digest = write_json_atomic(
+            resolve_project_relative(DATA_DIR, project_id, relative_path), document
+        )
+        upsert_document_index(connection, project_id, document, relative_path, digest)
+    _sync_world_reference(project_id, document)
+    return {"id": world_id, "revision": 1, "updated_at": now, **data}
+
+
+@app.get("/api/projects/{project_id}/worlds/{world_id}")
+def get_project_world(project_id: str, world_id: str) -> dict[str, Any]:
+    initialize_database()
+    with connect_db() as connection:
+        project = connection.execute(
+            "SELECT id FROM projects WHERE id = ?", (project_id,)
+        ).fetchone()
+        indexed = connection.execute(
+            """
+            SELECT * FROM project_documents
+            WHERE project_id = ? AND document_id = ? AND document_type = 'world'
+            """,
+            (project_id, world_id),
+        ).fetchone()
+    if project is None or indexed is None:
+        raise HTTPException(status_code=404, detail="World not found.")
+    path = resolve_project_relative(DATA_DIR, project_id, indexed["relative_path"])
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="World document not found.")
+    document = read_json(path)
+    return {
+        "id": document["id"],
+        "revision": document["revision"],
+        "updated_at": document["updated_at"],
+        **document["data"],
+    }
+
+
+@app.put("/api/projects/{project_id}/worlds/{world_id}")
+def update_project_world(
+    project_id: str, world_id: str, payload: WorldPlanInput
+) -> dict[str, Any]:
+    initialize_database()
+    now = datetime.now(UTC).isoformat()
+    data = payload.model_dump(mode="json")
+    data["name"] = data["name"].strip()
+    if not data["name"]:
+        raise HTTPException(status_code=422, detail="World name cannot be blank.")
+    with connect_db() as connection:
+        project = connection.execute(
+            "SELECT id FROM projects WHERE id = ?", (project_id,)
+        ).fetchone()
+        indexed = connection.execute(
+            """
+            SELECT * FROM project_documents
+            WHERE project_id = ? AND document_id = ? AND document_type = 'world'
+            """,
+            (project_id, world_id),
+        ).fetchone()
+        if project is None or indexed is None:
+            raise HTTPException(status_code=404, detail="World not found.")
+        path = resolve_project_relative(DATA_DIR, project_id, indexed["relative_path"])
+        document = read_json(path)
+        document["data"] = data
+        document["revision"] = int(document.get("revision", 1)) + 1
+        document["updated_at"] = now
+        digest = write_json_atomic(path, document)
+        upsert_document_index(
+            connection, project_id, document, indexed["relative_path"], digest
+        )
+    _sync_world_reference(project_id, document)
+    return {
+        "id": world_id,
+        "revision": document["revision"],
+        "updated_at": now,
+        **data,
+    }
 
 
 @app.get("/characters", include_in_schema=False)

@@ -74,6 +74,98 @@ def test_status_endpoint_reports_current_character_studio_milestone(
     assert "face/hair geometry authoring" in milestone
 
 
+
+def test_world_builder_is_served():
+    response = client.get("/worlds")
+    assert response.status_code == 200
+    assert "World Builder" in response.text
+
+
+def test_world_layout_create_edit_and_portable_reopen(tmp_path, monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "worlds.sqlite3")
+    main._INITIALIZED_DB_KEY = None
+    project = client.post("/api/projects", json={"name": "Town Project"})
+    project_id = project.json()["id"]
+    payload = {
+        "name": "Sunny Town",
+        "theme": "small_town",
+        "ground_color": "#789b58",
+        "sky": "day",
+        "objects": [
+            {
+                "id": "road-main",
+                "kind": "road",
+                "label": "Main Road",
+                "x": 50,
+                "y": 50,
+                "width": 70,
+                "height": 10,
+                "rotation": 0,
+                "color": "#55585c",
+            },
+            {
+                "id": "shop-1",
+                "kind": "shop",
+                "label": "Corner Shop",
+                "x": 25,
+                "y": 25,
+                "width": 14,
+                "height": 12,
+                "rotation": 0,
+                "color": "#d9a15b",
+            },
+        ],
+    }
+    created = client.post(f"/api/projects/{project_id}/worlds", json=payload)
+    assert created.status_code == 201
+    world_id = created.json()["id"]
+    world_path = tmp_path / "projects" / project_id / "worlds" / f"{world_id}.json"
+    document = json.loads(world_path.read_text(encoding="utf-8"))
+    assert document["document_type"] == "world"
+    assert document["data"]["objects"][0]["kind"] == "road"
+    project_doc = json.loads(
+        (tmp_path / "projects" / project_id / "project.json").read_text(encoding="utf-8")
+    )
+    assert world_id in project_doc["data"]["references"]["worlds"]
+
+    changed = {**payload, "name": "Sunny Town v2", "sky": "sunset"}
+    updated = client.put(
+        f"/api/projects/{project_id}/worlds/{world_id}", json=changed
+    )
+    assert updated.status_code == 200
+    assert updated.json()["revision"] == 2
+    reopened = client.get(f"/api/projects/{project_id}/worlds/{world_id}")
+    assert reopened.status_code == 200
+    assert reopened.json()["name"] == "Sunny Town v2"
+    assert reopened.json()["sky"] == "sunset"
+    assert len(client.get(f"/api/projects/{project_id}/worlds").json()) == 1
+
+
+def test_world_layout_rejects_out_of_bounds_objects_and_unknown_kinds(tmp_path, monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "world-validation.sqlite3")
+    main._INITIALIZED_DB_KEY = None
+    project = client.post("/api/projects", json={"name": "Validation Project"})
+    project_id = project.json()["id"]
+    invalid = {
+        "name": "Broken Map",
+        "objects": [{
+            "id": "bad",
+            "kind": "spaceship",
+            "label": "Unknown",
+            "x": 101,
+            "y": 50,
+        }],
+    }
+    response = client.post(f"/api/projects/{project_id}/worlds", json=invalid)
+    assert response.status_code == 422
+
+
 def test_story_builder_is_served():
     response = client.get("/story")
     assert response.status_code == 200
