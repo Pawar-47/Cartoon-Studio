@@ -5,8 +5,6 @@ import struct
 
 import pytest
 
-from scripts import generate_foundry_master
-
 from app.character_foundry import (
     CLOTHING_ASSET_ID,
     MASTER_TEMPLATE_ID,
@@ -17,6 +15,7 @@ from app.character_foundry import (
     validate_character_recipe,
     write_master_character,
 )
+from scripts import generate_foundry_master
 
 
 def _read_glb(data: bytes) -> dict:
