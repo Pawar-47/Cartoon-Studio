@@ -717,6 +717,170 @@ def save_story_plan(project_id: str, plan: EpisodePlan) -> dict[str, Any]:
     }
 
 
+@app.post("/api/projects/{project_id}/story/production")
+def build_episode_production(project_id: str) -> dict[str, Any]:
+    saved = get_story_plan(project_id)
+    plan = saved["plan"]
+    episode_id = saved["episode_id"]
+    world_id = plan.get("world_id")
+    if not world_id:
+        raise HTTPException(status_code=422, detail="Select and export a 3D world before production.")
+    world = next(
+        (item for item in _project_worlds(project_id) if item["id"] == world_id),
+        None,
+    )
+    if world is None:
+        raise HTTPException(status_code=422, detail="The episode's saved world is unavailable.")
+    world_relative = str(world.get("scene_relative_path", ""))
+    if not world_relative.startswith("assets/worlds/") or not world_relative.endswith(".tscn"):
+        raise HTTPException(status_code=422, detail="Export the selected world scene before production.")
+    world_scene = resolve_project_relative(DATA_DIR, project_id, world_relative)
+    if not world_scene.is_file():
+        raise HTTPException(status_code=422, detail="The selected world scene file is missing.")
+    available_assets = {
+        item["asset_id"]: item for item in _project_character_assets(project_id)
+    }
+    character_assets = []
+    for character in plan["characters"]:
+        asset_id = character.get("asset_id")
+        asset = available_assets.get(asset_id)
+        if asset is None or not asset["rig_ready"]:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Link a rigged project GLB to character {character['name']} before production.",
+            )
+        character_assets.append({
+            "id": character["id"],
+            "name": character["name"],
+            "asset_path": str(
+                resolve_project_relative(DATA_DIR, project_id, asset["relative_path"])
+            ),
+        })
+    build_id = str(uuid.uuid4())
+    relative_output = f"assets/episodes/{episode_id}/builds/{build_id}/scenes"
+    output_directory = resolve_project_relative(DATA_DIR, project_id, relative_output)
+    try:
+        result = get_engine_adapter().export_episode_scenes(
+            plan,
+            world_scene,
+            character_assets,
+            output_directory,
+            allowed_root=project_directory(DATA_DIR, project_id),
+        )
+    except EngineUnavailableError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    except EngineTimeoutError as error:
+        shutil.rmtree(output_directory.parent, ignore_errors=True)
+        raise HTTPException(status_code=504, detail=str(error)) from error
+    except EnginePathError as error:
+        shutil.rmtree(output_directory.parent, ignore_errors=True)
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    except EngineError as error:
+        shutil.rmtree(output_directory.parent, ignore_errors=True)
+        raise HTTPException(status_code=502, detail=f"Episode scene generation failed: {error}") from error
+    if not result.get("ok") or len(result.get("scenes", [])) != len(plan["scenes"]):
+        shutil.rmtree(output_directory.parent, ignore_errors=True)
+        raise HTTPException(status_code=502, detail="Godot did not generate every episode scene.")
+    project_root = project_directory(DATA_DIR, project_id).resolve()
+    scenes = []
+    for item in result["scenes"]:
+        scene_relative = str(Path(item["scene_path"]).resolve().relative_to(project_root)).replace("\\", "/")
+        preview_relative = str(Path(item["preview_path"]).resolve().relative_to(project_root)).replace("\\", "/")
+        scenes.append({
+            "scene_id": item["scene_id"],
+            "title": item["title"],
+            "duration_seconds": item["duration_seconds"],
+            "character_count": item["character_count"],
+            "dialogue_line_count": item["dialogue_line_count"],
+            "action_cue_count": item["action_cue_count"],
+            "scene_relative_path": scene_relative,
+            "preview_relative_path": preview_relative,
+            "scene_reopened": item["scene_reopened"],
+            "reopened_character_count": item["reopened_character_count"],
+        })
+    now = datetime.now(UTC).isoformat()
+    data = {
+        "episode_id": episode_id,
+        "episode_title": plan["title"],
+        "world_id": world_id,
+        "character_asset_ids": [item["asset_id"] for item in plan["characters"]],
+        "scene_count": len(scenes),
+        "total_duration_seconds": sum(item["duration_seconds"] for item in scenes),
+        "scenes": scenes,
+        "generated_at": now,
+    }
+    relative_manifest = f"assets/episodes/{episode_id}/builds/{build_id}/production.json"
+    manifest = make_envelope("episode_production", build_id, data, now, now, 1)
+    digest = write_json_atomic(
+        resolve_project_relative(DATA_DIR, project_id, relative_manifest), manifest
+    )
+    with connect_db() as connection:
+        upsert_document_index(
+            connection, project_id, manifest, relative_manifest, digest
+        )
+    return {"build_id": build_id, **data}
+
+
+@app.get("/api/projects/{project_id}/story/production")
+def get_episode_production(project_id: str) -> dict[str, Any]:
+    initialize_database()
+    with connect_db() as connection:
+        row = connection.execute(
+            """
+            SELECT * FROM project_documents
+            WHERE project_id = ? AND document_type = 'episode_production'
+            ORDER BY updated_at DESC LIMIT 1
+            """,
+            (project_id,),
+        ).fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="No episode production has been generated.")
+    path = resolve_project_relative(DATA_DIR, project_id, row["relative_path"])
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="Episode production manifest is missing.")
+    manifest = read_json(path)
+    return {"build_id": manifest["id"], **manifest["data"]}
+
+
+@app.get("/api/projects/{project_id}/story/production/{build_id}/scenes/{scene_id}/{file_format}")
+def download_episode_scene(
+    project_id: str, build_id: str, scene_id: str, file_format: str
+) -> FileResponse:
+    if file_format not in {"tscn", "glb"}:
+        raise HTTPException(status_code=404, detail="Unsupported episode scene format.")
+    initialize_database()
+    with connect_db() as connection:
+        row = connection.execute(
+            """
+            SELECT * FROM project_documents
+            WHERE project_id = ? AND document_id = ? AND document_type = 'episode_production'
+            """,
+            (project_id, build_id),
+        ).fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Episode production build not found.")
+    manifest_path = resolve_project_relative(DATA_DIR, project_id, row["relative_path"])
+    manifest = read_json(manifest_path)
+    scene = next(
+        (item for item in manifest["data"]["scenes"] if item["scene_id"] == scene_id),
+        None,
+    )
+    if scene is None:
+        raise HTTPException(status_code=404, detail="Episode scene not found.")
+    relative_path = scene["scene_relative_path"] if file_format == "tscn" else scene["preview_relative_path"]
+    if not relative_path.startswith("assets/episodes/"):
+        raise HTTPException(status_code=409, detail="Episode scene path is invalid.")
+    scene_path = resolve_project_relative(DATA_DIR, project_id, relative_path)
+    if not scene_path.is_file():
+        raise HTTPException(status_code=404, detail="Episode scene file is missing.")
+    media_type = "model/gltf-binary" if file_format == "glb" else "application/octet-stream"
+    return FileResponse(
+        scene_path,
+        media_type=media_type,
+        filename=f"{scene_id}.{file_format}",
+    )
+
+
 @app.get("/api/projects/{project_id}/story")
 def get_story_plan(project_id: str) -> dict[str, Any]:
     initialize_database()

@@ -64,8 +64,14 @@ func _handle_request(request_value: Variant) -> Dictionary:
     if operation == "ping":
         response["ok"] = true
         response["capabilities"] = [
-            "ping", "glb_inspect", "scene_metrics", "skeleton_report", "retarget_glb_pair", "assemble_modular_character", "probe_glb_animation", "export_character_appearance", "customize_character_proportions", "add_character_hair", "export_world_scene"
+            "ping", "glb_inspect", "scene_metrics", "skeleton_report", "retarget_glb_pair", "assemble_modular_character", "probe_glb_animation", "export_character_appearance", "customize_character_proportions", "add_character_hair", "export_world_scene", "export_episode_scenes"
         ]
+        return response
+
+    if operation == "export_episode_scenes":
+        var episode_result: Dictionary = await _export_episode_scenes(payload)
+        for key in episode_result:
+            response[key] = episode_result[key]
         return response
 
     if operation == "export_world_scene":
@@ -2555,5 +2561,159 @@ func _export_world_scene(payload: Dictionary) -> Dictionary:
         "scene_reopened": true,
         "scene_child_count": reopened_objects,
         "lighting_preset": sky_name
+    }
+
+
+
+func _export_episode_scenes(payload: Dictionary) -> Dictionary:
+    var project_root := _normalise_path(str(payload.get("project_root", "")))
+    var world_scene_path := _normalise_path(str(payload.get("world_scene_path", "")))
+    var output_directory := _normalise_path(str(payload.get("output_directory", "")))
+    var episode_value: Variant = payload.get("episode", {})
+    var assets_value: Variant = payload.get("character_assets", [])
+    if project_root.is_empty() or not DirAccess.dir_exists_absolute(project_root):
+        return {"error_code": "invalid_project_root", "error": "A valid episode project root is required."}
+    var root_prefix := project_root.trim_suffix("/") + "/"
+    if not world_scene_path.to_lower().begins_with(root_prefix.to_lower()) or not world_scene_path.to_lower().ends_with(".tscn") or not FileAccess.file_exists(world_scene_path):
+        return {"error_code": "invalid_world_scene", "error": "A project-local exported world scene is required."}
+    if not output_directory.to_lower().begins_with(root_prefix.to_lower()):
+        return {"error_code": "invalid_output_directory", "error": "Episode output must stay inside the project."}
+    if typeof(episode_value) != TYPE_DICTIONARY or typeof(assets_value) != TYPE_ARRAY:
+        return {"error_code": "invalid_episode", "error": "Episode plan and character assets are required."}
+    var episode: Dictionary = episode_value
+    var scenes_value: Variant = episode.get("scenes", [])
+    if typeof(scenes_value) != TYPE_ARRAY or scenes_value.size() < 5 or scenes_value.size() > 7:
+        return {"error_code": "invalid_scenes", "error": "Episode must contain five to seven scenes."}
+    var assets_by_id: Dictionary = {}
+    for asset_value in assets_value:
+        if typeof(asset_value) != TYPE_DICTIONARY:
+            return {"error_code": "invalid_character_asset", "error": "Character asset entries must be objects."}
+        var asset: Dictionary = asset_value
+        var character_id := str(asset.get("id", ""))
+        var asset_path := _normalise_path(str(asset.get("asset_path", "")))
+        if character_id.is_empty() or assets_by_id.has(character_id):
+            return {"error_code": "invalid_character_asset", "error": "Character asset IDs must be unique."}
+        if not asset_path.to_lower().begins_with(root_prefix.to_lower()) or not asset_path.to_lower().ends_with(".glb") or not FileAccess.file_exists(asset_path):
+            return {"error_code": "invalid_character_asset_path", "error": "Character GLB must exist inside the project."}
+        assets_by_id[character_id] = asset
+    var world_packed := ResourceLoader.load(world_scene_path) as PackedScene
+    if world_packed == null:
+        return {"error_code": "world_scene_load_failed", "error": "Godot could not load the exported world scene."}
+    var episode_characters: Dictionary = {}
+    var characters_value: Variant = episode.get("characters", [])
+    if typeof(characters_value) != TYPE_ARRAY:
+        return {"error_code": "invalid_characters", "error": "Episode characters must be an array."}
+    for character_value in characters_value:
+        if typeof(character_value) == TYPE_DICTIONARY:
+            var character: Dictionary = character_value
+            episode_characters[str(character.get("id", ""))] = character
+    var generated_scenes: Array[Dictionary] = []
+    for scene_value in scenes_value:
+        if typeof(scene_value) != TYPE_DICTIONARY:
+            return {"error_code": "invalid_scene", "error": "Episode scene entries must be objects."}
+        var scene_data: Dictionary = scene_value
+        var scene_id := str(scene_data.get("id", ""))
+        if scene_id.is_empty():
+            return {"error_code": "invalid_scene_id", "error": "Episode scene ID is invalid."}
+        var scene_root := Node3D.new()
+        scene_root.name = "Episode_" + scene_id
+        scene_root.set_meta("episode_title", str(episode.get("title", "Episode")))
+        scene_root.set_meta("scene_title", str(scene_data.get("title", scene_id)))
+        scene_root.set_meta("scene_id", scene_id)
+        scene_root.set_meta("duration_seconds", int(scene_data.get("duration_seconds", 0)))
+        scene_root.set_meta("location_id", str(scene_data.get("location_id", "")))
+        scene_root.set_meta("environment_description", str(scene_data.get("environment_description", "")))
+        scene_root.set_meta("lighting", str(scene_data.get("lighting", "")))
+        scene_root.set_meta("dialogue_json", JSON.stringify(scene_data.get("dialogue", [])))
+        scene_root.set_meta("actions_json", JSON.stringify(scene_data.get("actions", [])))
+        scene_root.set_meta("camera_json", JSON.stringify(scene_data.get("camera", [])))
+        scene_root.set_meta("audio_json", JSON.stringify(scene_data.get("audio", [])))
+        scene_root.set_meta("props_json", JSON.stringify(scene_data.get("props", [])))
+        var world_instance := world_packed.instantiate()
+        world_instance.name = "EstablishedWorld"
+        scene_root.add_child(world_instance)
+        var cast_root := Node3D.new()
+        cast_root.name = "Cast"
+        scene_root.add_child(cast_root)
+        var scene_character_ids: Variant = scene_data.get("character_ids", [])
+        if typeof(scene_character_ids) != TYPE_ARRAY:
+            scene_root.free()
+            return {"error_code": "invalid_scene_cast", "error": "Scene character IDs must be an array."}
+        var placed_count := 0
+        for character_id_value in scene_character_ids:
+            var character_id := str(character_id_value)
+            if not episode_characters.has(character_id) or not assets_by_id.has(character_id):
+                scene_root.free()
+                return {"error_code": "missing_character_asset", "error": "Every scene character must have a linked GLB asset."}
+            var character_data: Dictionary = episode_characters[character_id]
+            var asset_data: Dictionary = assets_by_id[character_id]
+            var gltf_document := GLTFDocument.new()
+            var gltf_state := GLTFState.new()
+            var import_error := gltf_document.append_from_file(str(asset_data.get("asset_path", "")), gltf_state)
+            if import_error != OK:
+                scene_root.free()
+                return {"error_code": "character_import_failed", "error": "Godot could not import character " + character_id, "godot_error": import_error}
+            var character_scene := gltf_document.generate_scene(gltf_state)
+            if character_scene == null:
+                scene_root.free()
+                return {"error_code": "character_scene_failed", "error": "Godot could not generate character " + character_id}
+            var character_anchor := Node3D.new()
+            character_anchor.name = "Character_" + character_id
+            character_anchor.set_meta("character_id", character_id)
+            character_anchor.set_meta("character_name", str(character_data.get("name", character_id)))
+            character_anchor.position = Vector3((float(placed_count) - float(scene_character_ids.size() - 1) * 0.5) * 2.8, 0.0, 4.0)
+            cast_root.add_child(character_anchor)
+            character_scene.name = "Model"
+            character_anchor.add_child(character_scene)
+            placed_count += 1
+        var output_path := output_directory.path_join(scene_id + ".tscn")
+        var output_glb_path := output_directory.path_join(scene_id + ".glb")
+        if FileAccess.file_exists(output_path) or FileAccess.file_exists(output_glb_path):
+            scene_root.free()
+            return {"error_code": "episode_output_exists", "error": "Refusing to overwrite an existing episode scene."}
+        _set_scene_ownership(scene_root, scene_root)
+        var packed_scene := PackedScene.new()
+        var pack_error := packed_scene.pack(scene_root)
+        if pack_error != OK:
+            scene_root.free()
+            return {"error_code": "episode_scene_pack_failed", "error": "Godot could not pack episode scene.", "godot_error": pack_error}
+        var save_error := ResourceSaver.save(packed_scene, output_path)
+        if save_error != OK:
+            scene_root.free()
+            return {"error_code": "episode_scene_save_failed", "error": "Godot could not save episode scene.", "godot_error": save_error}
+        var gltf_export := GLTFDocument.new()
+        var gltf_export_state := GLTFState.new()
+        var append_error := gltf_export.append_from_scene(scene_root, gltf_export_state)
+        if append_error != OK:
+            scene_root.free()
+            return {"error_code": "episode_preview_failed", "error": "Godot could not prepare episode preview.", "godot_error": append_error}
+        var glb_error := gltf_export.write_to_filesystem(gltf_export_state, output_glb_path)
+        scene_root.free()
+        if glb_error != OK:
+            return {"error_code": "episode_preview_save_failed", "error": "Godot could not save episode preview.", "godot_error": glb_error}
+        var reopened := ResourceLoader.load(output_path) as PackedScene
+        if reopened == null:
+            return {"error_code": "episode_scene_reopen_failed", "error": "Generated episode scene could not be reopened."}
+        var reopened_root := reopened.instantiate()
+        var reopened_cast := reopened_root.get_node_or_null("Cast")
+        var reopened_character_count := reopened_cast.get_child_count() if reopened_cast != null else 0
+        reopened_root.free()
+        generated_scenes.append({
+            "scene_id": scene_id,
+            "title": str(scene_data.get("title", scene_id)),
+            "duration_seconds": int(scene_data.get("duration_seconds", 0)),
+            "character_count": placed_count,
+            "dialogue_line_count": scene_data.get("dialogue", []).size(),
+            "action_cue_count": scene_data.get("actions", []).size(),
+            "scene_path": output_path,
+            "preview_path": output_glb_path,
+            "scene_reopened": true,
+            "reopened_character_count": reopened_character_count
+        })
+    return {
+        "ok": true,
+        "episode_title": str(episode.get("title", "Episode")),
+        "scene_count": generated_scenes.size(),
+        "scenes": generated_scenes
     }
 

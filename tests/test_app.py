@@ -638,3 +638,107 @@ def test_episode_character_assets_are_project_scoped_and_require_a_rig(tmp_path,
     plan["characters"][0]["asset_id"] = foreign_asset
     rejected_foreign = client.put(f"/api/projects/{project_id}/story", json=plan)
     assert rejected_foreign.status_code == 422
+
+
+def test_episode_production_endpoint_persists_scene_build_manifest(tmp_path, monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "episode-production.sqlite3")
+    monkeypatch.setattr(main, "_INITIALIZED_DB_KEY", None)
+    project = client.post("/api/projects", json={"name": "Production Project"})
+    project_id = project.json()["id"]
+    world = client.post(
+        f"/api/projects/{project_id}/worlds",
+        json={
+            "name": "Town",
+            "theme": "small_town",
+            "ground_color": "#789b58",
+            "sky": "day",
+            "objects": [],
+        },
+    )
+
+    class FakeWorldExporter:
+        def export_world_scene(self, world_data, output_path, allowed_root, **kwargs):
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text(
+                '[gd_scene format=3]\\n[node name="CartoonWorld" type="Node3D"]\\n',
+                encoding="utf-8",
+            )
+            output_path.with_suffix(".glb").write_bytes(b"glTF-preview")
+            return {"ok": True, "object_count": 0, "scene_reopened": True}
+
+        def export_episode_scenes(
+            self, episode, world_scene_path, character_assets, output_directory,
+            allowed_root, **kwargs
+        ):
+            output_directory.mkdir(parents=True, exist_ok=True)
+            scenes = []
+            for scene in episode["scenes"]:
+                tscn = output_directory / f"{scene['id']}.tscn"
+                glb = output_directory / f"{scene['id']}.glb"
+                tscn.write_text('[gd_scene format=3]\\n', encoding="utf-8")
+                glb.write_bytes(b"glTF-preview")
+                scenes.append({
+                    "scene_id": scene["id"],
+                    "title": scene["title"],
+                    "duration_seconds": scene["duration_seconds"],
+                    "character_count": len(scene["character_ids"]),
+                    "dialogue_line_count": len(scene["dialogue"]),
+                    "action_cue_count": len(scene["actions"]),
+                    "scene_path": str(tscn),
+                    "preview_path": str(glb),
+                    "scene_reopened": True,
+                    "reopened_character_count": len(scene["character_ids"]),
+                })
+            return {"ok": True, "scene_count": len(scenes), "scenes": scenes}
+
+    monkeypatch.setattr(main, "get_engine_adapter", FakeWorldExporter)
+    world_export = client.post(
+        f"/api/projects/{project_id}/worlds/{world.json()['id']}/export"
+    )
+    assert world_export.status_code == 200
+
+    now = "2026-11-26T00:00:00+00:00"
+    asset_id = str(uuid.uuid4())
+    relative = f"assets/characters/{asset_id}.glb"
+    asset_path = main.resolve_project_relative(main.DATA_DIR, project_id, relative)
+    asset_path.parent.mkdir(parents=True, exist_ok=True)
+    asset_path.write_bytes(b"test-glb")
+    asset_data = {
+        "original_filename": "Ali.glb",
+        "relative_path": relative,
+        "rig_ready": True,
+        "animation_ready": True,
+    }
+    asset_doc = main.make_envelope("character_asset", asset_id, asset_data, now, now)
+    asset_manifest = main.resolve_project_relative(
+        main.DATA_DIR, project_id, f"assets/characters/{asset_id}.json"
+    )
+    digest = main.write_json_atomic(asset_manifest, asset_doc)
+    with main.connect_db() as connection:
+        main.upsert_document_index(
+            connection, project_id, asset_doc,
+            f"assets/characters/{asset_id}.json", digest,
+        )
+
+    plan = valid_episode_plan()
+    plan["world_id"] = world.json()["id"]
+    plan["characters"][0]["asset_id"] = asset_id
+    saved = client.put(f"/api/projects/{project_id}/story", json=plan)
+    assert saved.status_code == 200
+
+    generated = client.post(f"/api/projects/{project_id}/story/production")
+    assert generated.status_code == 200
+    assert generated.json()["scene_count"] == 5
+    assert generated.json()["total_duration_seconds"] == 300
+    reopened = client.get(f"/api/projects/{project_id}/story/production")
+    assert reopened.status_code == 200
+    assert reopened.json()["build_id"] == generated.json()["build_id"]
+    scene_id = generated.json()["scenes"][0]["scene_id"]
+    download = client.get(
+        f"/api/projects/{project_id}/story/production/"
+        f"{generated.json()['build_id']}/scenes/{scene_id}/glb"
+    )
+    assert download.status_code == 200

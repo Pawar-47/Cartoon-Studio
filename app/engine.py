@@ -588,6 +588,78 @@ class GodotEngineAdapter:
             cancel_event=cancel_event,
         )
 
+    def export_episode_scenes(
+        self,
+        episode: dict[str, Any],
+        world_scene_path: Path,
+        character_assets: list[dict[str, Any]],
+        output_directory: Path,
+        allowed_root: Path,
+        timeout_seconds: float | None = None,
+        cancel_event: threading.Event | None = None,
+    ) -> dict[str, Any]:
+        root = Path(allowed_root).resolve(strict=False)
+        world_scene = Path(world_scene_path).resolve(strict=True)
+        output_dir = Path(output_directory).resolve(strict=False)
+        if not root.is_dir():
+            raise EnginePathError("The allowed episode project root does not exist.")
+        if world_scene == root or root not in world_scene.parents:
+            raise EnginePathError("Episode world scene escapes the project directory.")
+        if world_scene.suffix.lower() != ".tscn" or not world_scene.is_file():
+            raise EnginePathError("Episode production requires an existing .tscn world.")
+        if output_dir == root or root not in output_dir.parents:
+            raise EnginePathError("Episode scene output escapes the project directory.")
+        scenes = episode.get("scenes", []) if isinstance(episode, dict) else []
+        if not isinstance(scenes, list) or not 5 <= len(scenes) <= 7:
+            raise EnginePathError("Episode production requires five to seven scenes.")
+        if not isinstance(character_assets, list) or not 1 <= len(character_assets) <= 5:
+            raise EnginePathError("Episode production requires one to five character assets.")
+        validated_assets: list[dict[str, str]] = []
+        seen_ids: set[str] = set()
+        for asset in character_assets:
+            character_id = str(asset.get("id", ""))
+            asset_path = Path(str(asset.get("asset_path", ""))).resolve(strict=True)
+            if (
+                not character_id
+                or character_id in seen_ids
+                or asset_path == root
+                or root not in asset_path.parents
+                or asset_path.suffix.lower() != ".glb"
+                or not asset_path.is_file()
+            ):
+                raise EnginePathError("Episode character asset is invalid or outside the project.")
+            if asset_path.stat().st_size > MAX_GLB_BYTES:
+                raise EnginePathError("Episode character GLB exceeds the 512 MiB limit.")
+            seen_ids.add(character_id)
+            validated_assets.append({
+                "id": character_id,
+                "name": str(asset.get("name", character_id))[:80],
+                "asset_path": str(asset_path),
+            })
+        for scene in scenes:
+            scene_id = str(scene.get("id", ""))
+            if (
+                not scene_id
+                or not scene_id[0].isalpha()
+                or not scene_id.replace("-", "").replace("_", "").isalnum()
+            ):
+                raise EnginePathError("Episode contains an unsafe scene ID.")
+            if not set(scene.get("character_ids", [])).issubset(seen_ids):
+                raise EnginePathError("Episode scene references a character without a GLB asset.")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        return self._run(
+            "export_episode_scenes",
+            {
+                "project_root": str(root),
+                "world_scene_path": str(world_scene),
+                "output_directory": str(output_dir),
+                "episode": episode,
+                "character_assets": validated_assets,
+            },
+            timeout_seconds=timeout_seconds,
+            cancel_event=cancel_event,
+        )
+
     def _write_log(self, record: dict[str, Any]) -> None:
         log_dir = self.data_dir / "logs"
         log_dir.mkdir(parents=True, exist_ok=True)

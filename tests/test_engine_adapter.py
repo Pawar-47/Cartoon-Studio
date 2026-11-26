@@ -864,3 +864,58 @@ def test_pinned_godot_worker_exports_and_reopens_a_real_world_scene(tmp_path):
     assert inspection["ok"] is True
     assert inspection["mesh_count"] >= 10
 
+
+
+def test_pinned_godot_worker_builds_episode_scenes_with_world_and_character_glb(tmp_path):
+    adapter = _real_godot_adapter(tmp_path)
+    project_root = tmp_path / "episode-production-project"
+    project_root.mkdir()
+    world_path = project_root / "assets" / "worlds" / "town.tscn"
+    adapter.export_world_scene(
+        {
+            "name": "Town",
+            "theme": "small_town",
+            "ground_color": "#789b58",
+            "sky": "day",
+            "objects": [],
+        },
+        world_path,
+        allowed_root=project_root,
+    )
+    fixture = Path(__file__).parent / "fixtures" / "third_party" / "animated_morph_cube_cc0.glb"
+    character_path = project_root / "assets" / "characters" / "ali.glb"
+    character_path.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(fixture, character_path)
+    episode = {
+        "title": "Five Scene Test",
+        "characters": [{"id": "ali", "name": "Ali"}],
+        "scenes": [
+            {
+                "id": f"scene-{index}",
+                "title": f"Scene {index}",
+                "duration_seconds": 60,
+                "location_id": "street-cafe",
+                "character_ids": ["ali"],
+                "dialogue": [],
+                "actions": [],
+                "camera": [],
+                "audio": [],
+                "props": [],
+            }
+            for index in range(1, 6)
+        ],
+    }
+    output = project_root / "assets" / "episodes" / "build-1" / "scenes"
+    result = adapter.export_episode_scenes(
+        episode,
+        world_path,
+        [{"id": "ali", "name": "Ali", "asset_path": str(character_path)}],
+        output,
+        allowed_root=project_root,
+    )
+    assert result["ok"] is True
+    assert result["scene_count"] == 5
+    assert all(scene["scene_reopened"] for scene in result["scenes"])
+    assert all(scene["reopened_character_count"] == 1 for scene in result["scenes"])
+    assert all(Path(scene["scene_path"]).is_file() for scene in result["scenes"])
+    assert all(Path(scene["preview_path"]).is_file() for scene in result["scenes"])
