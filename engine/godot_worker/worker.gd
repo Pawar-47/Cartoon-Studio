@@ -392,11 +392,10 @@ func _add_character_face_features(scene: Node, recipe: Dictionary) -> Dictionary
         var mesh_instance := mesh_node as MeshInstance3D
         if mesh_instance.mesh == null:
             continue
-        var bound_skeleton := mesh_instance.get_node_or_null(mesh_instance.get_skeleton_path()) as Skeleton3D
-        if bound_skeleton != skeleton:
-            continue
         var label := str(mesh_instance.name) + " " + str(mesh_instance.mesh.resource_name) + " " + str(scene.get_path_to(mesh_instance))
-        if _classify_mesh_slot(label) != "head":
+        var is_named_head := _classify_mesh_slot(label) == "head"
+        var has_face_morphs := mesh_instance.get_blend_shape_count() > 0
+        if not is_named_head and not has_face_morphs:
             continue
         var candidate := _mesh_bounds_in_bone_space(mesh_instance, skeleton, head_bone_index)
         if candidate.size.x <= 0.01 or candidate.size.y <= 0.01 or candidate.size.z <= 0.01:
