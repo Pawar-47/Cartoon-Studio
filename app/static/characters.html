@@ -119,6 +119,12 @@
     <div class="editor-heading"><strong>Cartoon face studio</strong><span>Editable 3D facial features</span></div>
     <p class="helper">Create a stylized face with editable eyes, brows, nose, mouth and added cheek, jaw and chin geometry. Match the face skin tint to the model, then export a new GLB; Godot attaches the generated pieces to the Head bone and verifies them after re-import.</p>
     <label><input id="face-enabled" type="checkbox"> Enable generated cartoon face</label>
+    <div class="expression-presets" aria-label="Generated face expression presets">
+     <button class="secondary" type="button" data-generated-face-expression="smile">Smile</button>
+     <button class="secondary" type="button" data-generated-face-expression="frown">Frown</button>
+     <button class="secondary" type="button" data-generated-face-expression="surprise">Surprise</button>
+     <button class="secondary" type="button" data-generated-face-expression="angry">Angry</button>
+    </div>
     <div class="form-grid">
      <label>Face skin tint<input id="face-skin-color" type="color" value="#c98768"></label>
      <label>Eye white<input id="face-eye-color" type="color" value="#ffffff"></label>

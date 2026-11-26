@@ -16,3 +16,17 @@ export function buildExpressionPreset(name, targets) {
   }
   return { weights, matched, unmatched };
 }
+
+const GENERATED_FACE_EXPRESSIONS = Object.freeze({
+  smile: Object.freeze({ enabled: true, smile: 0.82, brow_angle: -0.04, eye_scale: 1.08, eye_spacing: 1 }),
+  frown: Object.freeze({ enabled: true, smile: -0.78, brow_angle: 0.16, eye_scale: 0.96 }),
+  surprise: Object.freeze({ enabled: true, smile: 0.05, brow_angle: -0.42, eye_scale: 1.38, eye_spacing: 1.08 }),
+  angry: Object.freeze({ enabled: true, smile: -0.45, brow_angle: 0.42, eye_scale: 0.92, eye_spacing: 0.96 }),
+});
+
+export function buildGeneratedFaceExpression(name, current = {}) {
+  if (!Object.hasOwn(GENERATED_FACE_EXPRESSIONS, name)) {
+    throw new RangeError("Unknown generated face expression: " + name);
+  }
+  return { ...current, ...GENERATED_FACE_EXPRESSIONS[name] };
+}

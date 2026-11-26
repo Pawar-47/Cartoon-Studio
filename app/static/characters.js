@@ -1,4 +1,4 @@
-import { buildExpressionPreset } from "./character-expression-presets.js";
+import { buildExpressionPreset, buildGeneratedFaceExpression } from "./character-expression-presets.js";
 import { showCharacterPreview, showRetargetPreview, exportCharacterPreview, exportCharacterTurnaround, getCharacterMaterials, applyCharacterAppearance, getCharacterMorphTargets, applyCharacterMorphTargets, applyCharacterFaceFeatures, applyCharacterBodyProportions as previewCharacterBodyProportions } from "./character-preview.js";
 const $=id=>document.getElementById(id);
 let activeProject="", importedAsset=null, activeCharacter=null, editingCharacter=null, appearanceRecipe={materials:{},morph_targets:{},morph_bindings:{},face_features:{enabled:false}}, retargetCharacters=[], assemblyAssets=[], assemblyAccessories=[];
@@ -476,6 +476,21 @@ function updateFaceFeaturePreview() {
  $("face-status").textContent=recipe.enabled?"Live face preview updated. Export a new GLB to bake the facial geometry onto the Head bone.":"Face preview is off. Enable it to add editable facial geometry.";
 }
 for(const id of ["face-enabled","face-skin-color","face-eye-color","face-iris-color","face-brow-color","face-mouth-color","face-nose-color","face-width","face-cheek-fullness","face-jaw-width","face-chin-length","face-eye-scale","face-eye-spacing","face-smile","face-brow-angle"])$(id).addEventListener("input",updateFaceFeaturePreview);
+function applyGeneratedFaceExpression(name) {
+ if(!importedAsset){$("face-status").textContent="Import a character model before applying an expression.";return;}
+ const next=buildGeneratedFaceExpression(name,appearanceRecipe.face_features||{});
+ appearanceRecipe.face_features=next;
+ for(const [key,value] of Object.entries(next)){
+  const input=$("face-"+key.replaceAll("_","-"));
+  if(input&&input.type!=="checkbox")input.value=String(value);
+  else if(input?.type==="checkbox")input.checked=Boolean(value);
+ }
+ updateFaceFeaturePreview();
+ $("face-status").textContent=name.charAt(0).toUpperCase()+name.slice(1)+" expression applied to the generated face. Adjust the controls or save/export the result.";
+}
+for(const button of document.querySelectorAll("[data-generated-face-expression]")){
+ button.addEventListener("click",()=>applyGeneratedFaceExpression(button.dataset.generatedFaceExpression));
+}
 $("material-select").addEventListener("change",event=>selectMaterial(event.target.value));
 for(const id of ["material-color","material-roughness","material-metalness"])$(id).addEventListener("input",previewSelectedMaterial);
 $("save-appearance").addEventListener("click",async()=>{

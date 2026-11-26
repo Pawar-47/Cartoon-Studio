@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildExpressionPreset } from "../app/static/character-expression-presets.js";
+import { buildExpressionPreset, buildGeneratedFaceExpression } from "../app/static/character-expression-presets.js";
 import { classifyMorphTarget } from "../app/static/character-morph-groups.js";
 
 const targets = [
@@ -41,4 +41,20 @@ test("morph classification prioritizes shape name over mesh name", () => {
   assert.equal(classifyMorphTarget({ name: "JawOpen", meshName: "HeadMesh" }), "face");
   assert.equal(classifyMorphTarget({ name: "Muscle", meshName: "Character" }), "body");
   assert.equal(classifyMorphTarget({ name: "UnknownShape", meshName: "Character" }), "other");
+});
+
+test("generated face smile preset enables face and sets a friendly expression", () => {
+  const result = buildGeneratedFaceExpression("smile", { face_width: 1.12, smile: 0 });
+  assert.equal(result.enabled, true);
+  assert.equal(result.smile, 0.82);
+  assert.equal(result.eye_scale, 1.08);
+  assert.equal(result.face_width, 1.12);
+});
+test("generated face presets provide frown, surprise and angry expressions", () => {
+  assert.equal(buildGeneratedFaceExpression("frown").smile, -0.78);
+  assert.equal(buildGeneratedFaceExpression("surprise").eye_scale, 1.38);
+  assert.equal(buildGeneratedFaceExpression("angry").brow_angle, 0.42);
+});
+test("generated face preset rejects unknown names", () => {
+  assert.throws(() => buildGeneratedFaceExpression("laugh"), RangeError);
 });
