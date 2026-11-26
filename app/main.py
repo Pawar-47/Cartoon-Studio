@@ -37,6 +37,12 @@ from app.engine import (
     GodotEngineAdapter,
 )
 from app.rig_analysis import analyze_rig
+from app.render import (
+    RenderDependencyUnavailable,
+    RenderExecutionError,
+    RenderPathError,
+    render_episode_video,
+)
 from app.storage import connect_db as open_database
 from app.storage import (
     default_data_dir,
@@ -917,6 +923,160 @@ def build_episode_production(project_id: str) -> dict[str, Any]:
             connection, project_id, manifest, relative_manifest, digest
         )
     return {"build_id": build_id, **data}
+
+
+def _latest_episode_manifest(
+    project_id: str,
+    document_type: str,
+    episode_id: str,
+) -> dict[str, Any] | None:
+    with connect_db() as connection:
+        row = connection.execute(
+            """
+            SELECT relative_path FROM project_documents
+            WHERE project_id = ? AND document_type = ?
+            ORDER BY updated_at DESC LIMIT 1
+            """,
+            (project_id, document_type),
+        ).fetchone()
+    if row is None:
+        return None
+    path = resolve_project_relative(DATA_DIR, project_id, row["relative_path"])
+    if not path.is_file():
+        return None
+    manifest = read_json(path)
+    if manifest.get("data", {}).get("episode_id") != episode_id:
+        return None
+    return manifest
+
+
+@app.post("/api/projects/{project_id}/story/render")
+def render_episode(project_id: str) -> dict[str, Any]:
+    saved = get_story_plan(project_id)
+    episode_id = saved["episode_id"]
+    production = _latest_episode_manifest(project_id, "episode_production", episode_id)
+    audio = _latest_episode_manifest(project_id, "episode_audio", episode_id)
+    if production is None or audio is None:
+        raise HTTPException(
+            status_code=422,
+            detail="Generate the episode's 3D scenes and Urdu dialogue audio before rendering.",
+        )
+    production_data = production["data"]
+    audio_data = audio["data"]
+    scenes = production_data.get("scenes", [])
+    if not scenes:
+        raise HTTPException(status_code=422, detail="The episode has no generated scenes.")
+    if not audio_data.get("subtitles_relative_path"):
+        raise HTTPException(
+            status_code=422,
+            detail="Regenerate Urdu dialogue audio to create the timed subtitle file.",
+        )
+    audio_clips = audio_data.get("clips", [])
+    if any(clip.get("mouth_envelope") for clip in audio_clips):
+        if not any(
+            scene.get("audio_driven_speech_cue_count", 0) > 0
+            for scene in scenes
+        ):
+            raise HTTPException(
+                status_code=422,
+                detail="Regenerate the 3D scenes after dialogue audio so mouth movement matches speech.",
+            )
+    project_root = project_directory(DATA_DIR, project_id)
+    scene_paths = [
+        resolve_project_relative(DATA_DIR, project_id, scene["scene_relative_path"])
+        for scene in scenes
+    ]
+    scene_durations = [int(scene["duration_seconds"]) for scene in scenes]
+    audio_path = resolve_project_relative(
+        DATA_DIR, project_id, audio_data["audio_relative_path"]
+    )
+    subtitles_path = resolve_project_relative(
+        DATA_DIR, project_id, audio_data["subtitles_relative_path"]
+    )
+    render_id = str(uuid.uuid4())
+    relative_output = f"assets/episodes/{episode_id}/renders/{render_id}"
+    output_directory = resolve_project_relative(DATA_DIR, project_id, relative_output)
+    output_path = output_directory / "episode.mp4"
+    try:
+        result = render_episode_video(
+            scene_paths,
+            scene_durations,
+            audio_path,
+            subtitles_path,
+            output_path,
+            project_root,
+            get_engine_adapter().executable,
+        )
+    except RenderDependencyUnavailable as error:
+        shutil.rmtree(output_directory, ignore_errors=True)
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    except RenderPathError as error:
+        shutil.rmtree(output_directory, ignore_errors=True)
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    except RenderExecutionError as error:
+        shutil.rmtree(output_directory, ignore_errors=True)
+        raise HTTPException(status_code=502, detail=str(error)) from error
+    video_relative = str(
+        Path(result["video_path"]).resolve().relative_to(project_root.resolve())
+    ).replace("\\", "/")
+    now = datetime.now(UTC).isoformat()
+    data = {
+        "episode_id": episode_id,
+        "episode_title": saved["plan"]["title"],
+        "video_relative_path": video_relative,
+        "duration_seconds": result["duration_seconds"],
+        "fps": result["fps"],
+        "width": result["width"],
+        "height": result["height"],
+        "size_bytes": result["size_bytes"],
+        "rendered_at_elapsed_seconds": result["rendered_at_elapsed_seconds"],
+        "generated_at": now,
+    }
+    relative_manifest = f"{relative_output}/render.json"
+    manifest = make_envelope("episode_render", render_id, data, now, now, 1)
+    digest = write_json_atomic(
+        resolve_project_relative(DATA_DIR, project_id, relative_manifest),
+        manifest,
+    )
+    with connect_db() as connection:
+        upsert_document_index(
+            connection, project_id, manifest, relative_manifest, digest
+        )
+    return {
+        "build_id": render_id,
+        **data,
+        "video_url": f"/api/projects/{project_id}/story/render/{render_id}/mp4",
+    }
+
+
+@app.get("/api/projects/{project_id}/story/render/{render_id}/mp4")
+def download_episode_video(project_id: str, render_id: str) -> FileResponse:
+    initialize_database()
+    with connect_db() as connection:
+        row = connection.execute(
+            """
+            SELECT * FROM project_documents
+            WHERE project_id = ? AND document_id = ? AND document_type = 'episode_render'
+            """,
+            (project_id, render_id),
+        ).fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Episode video render not found.")
+    manifest_path = resolve_project_relative(DATA_DIR, project_id, row["relative_path"])
+    if not manifest_path.is_file():
+        raise HTTPException(status_code=404, detail="Episode video manifest is missing.")
+    manifest = read_json(manifest_path)
+    relative_path = str(manifest.get("data", {}).get("video_relative_path", ""))
+    if not relative_path.startswith("assets/episodes/") or not relative_path.endswith(".mp4"):
+        raise HTTPException(status_code=409, detail="Episode video path is invalid.")
+    video_path = resolve_project_relative(DATA_DIR, project_id, relative_path)
+    if not video_path.is_file():
+        raise HTTPException(status_code=404, detail="Episode MP4 file is missing.")
+    return FileResponse(
+        video_path,
+        media_type="video/mp4",
+        filename=f"{render_id}-episode.mp4",
+    )
 
 
 @app.post("/api/projects/{project_id}/story/audio")
