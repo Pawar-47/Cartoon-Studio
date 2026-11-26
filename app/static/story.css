@@ -19,3 +19,5 @@
 .production-scene a{font-size:12px;color:var(--blue);text-decoration:none}
 
 #audio-results audio{width:100%;margin-top:8px}
+
+.voice-binding{display:grid;gap:5px;margin:0!important;color:var(--muted)!important;font-size:11px!important}.voice-binding select{width:100%;min-width:0;padding:8px;border:1px solid #3a4b60;border-radius:7px;background:#101822;color:#fff;font:inherit}.asset-binding-row{grid-template-columns:minmax(100px,1fr) minmax(160px,1.4fr) minmax(170px,1.2fr)}@media(max-width:650px){.asset-binding-row{grid-template-columns:1fr;gap:5px}}

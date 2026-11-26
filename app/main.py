@@ -16,6 +16,12 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from app.audio import (
+    SpeechEngineUnavailable,
+    SpeechGenerationError,
+    generate_episode_audio,
+)
+
 from app.character_builder import (
     CharacterLibraryError,
     UnknownCharacterModel,
@@ -31,9 +37,10 @@ from app.engine import (
     GodotEngineAdapter,
 )
 from app.rig_analysis import analyze_rig
-from app.storage import connect_db as open_database
 from app.storage import (
+    connect_db as open_database,
     default_data_dir,
+    initialize_database as migrate_database,
     make_envelope,
     project_directory,
     read_json,
@@ -43,12 +50,6 @@ from app.storage import (
     sync_episode_reference,
     upsert_document_index,
     write_json_atomic,
-)
-from app.storage import initialize_database as migrate_database
-from app.audio import (
-    SpeechEngineUnavailable,
-    SpeechGenerationError,
-    generate_episode_audio,
 )
 from app.story import EpisodePlan, StoryPromptRequest, build_story_prompt
 from app.version import APP_VERSION

@@ -85,7 +85,9 @@ def _download_verified(url: str, destination: Path, expected_size: int, expected
             while chunk := response.read(1024 * 1024):
                 total += len(chunk)
                 if total > MAX_MODEL_BYTES:
-                    raise SpeechGenerationError("The selected Urdu voice model exceeded its size limit.")
+                    raise SpeechGenerationError(
+                        "The selected Urdu voice model exceeded its size limit."
+                    )
                 out.write(chunk)
     except (OSError, urllib.error.URLError) as error:
         temporary.unlink(missing_ok=True)
@@ -146,7 +148,9 @@ class PiperEngine:
                 voice.synthesize_wav(text, wav_file)
         except Exception as error:
             output_path.unlink(missing_ok=True)
-            raise SpeechGenerationError("Piper could not synthesize one of the dialogue lines.") from error
+            raise SpeechGenerationError(
+                "Piper could not synthesize one of the dialogue lines."
+            ) from error
 
 
 def _read_pcm(path: Path) -> tuple[int, array.array]:
@@ -199,9 +203,13 @@ def generate_episode_audio(
     synthesizer: object | None = None,
 ) -> dict:
     if plan.get("language", "ur") != "ur":
-        raise SpeechGenerationError("The current offline speech pack supports Pakistani Urdu episodes only.")
+        raise SpeechGenerationError(
+            "The current offline speech pack supports Pakistani Urdu episodes only."
+        )
     scenes = plan.get("scenes", [])
-    total_duration = sum(int(scene.get("duration_seconds", 0)) for scene in scenes)
+    total_duration = sum(
+        int(scene.get("duration_seconds", 0)) for scene in scenes
+    )
     dialogue_count = sum(len(scene.get("dialogue", [])) for scene in scenes)
     if not 1 <= dialogue_count <= MAX_DIALOGUE_LINES:
         raise SpeechGenerationError(
