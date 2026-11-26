@@ -119,14 +119,19 @@ def test_godot_movie_maker_renders_an_episode_scene(tmp_path):
     _write_render_project(render_project)
     scene_path = tmp_path / "episode-scene.tscn"
     scene_path.write_text(
-        "[gd_scene load_steps=2 format=3]\\n\\n"
-        "[sub_resource type=\\\"SphereMesh\\\" id=\\\"SphereMesh_test\\\"]\\n\\n"
-        "[node name=\\\"EpisodeScene\\\" type=\\\"Node3D\\\"]\\n\\n"
-        "[node name=\\\"EpisodeCamera\\\" type=\\\"Camera3D\\\" parent=\\\".\\\"]\\n"
-        "transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 5)\\n"
-        "current = true\\n\\n"
-        "[node name=\\\"Sphere\\\" type=\\\"MeshInstance3D\\\" parent=\\\"]\\n"
-        "mesh = SubResource(\\\"SphereMesh_test\\\")\\n",
+        """[gd_scene load_steps=2 format=3]
+
+[sub_resource type="SphereMesh" id="SphereMesh_test"]
+
+[node name="EpisodeScene" type="Node3D"]
+
+[node name="EpisodeCamera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 5)
+current = true
+
+[node name="Sphere" type="MeshInstance3D" parent="."]
+mesh = SubResource("SphereMesh_test")
+""",
         encoding="utf-8",
     )
     output_path = tmp_path / "movie-smoke.avi"
@@ -156,6 +161,8 @@ def test_godot_movie_maker_renders_an_episode_scene(tmp_path):
         timeout=180,
         check=False,
     )
-    assert result.returncode == 0, (result.stdout + "\\n" + result.stderr)[-6000:]
+    output = result.stdout + "\\n" + result.stderr
+    assert result.returncode == 0, output[-6000:]
+    assert "24 frames at 24 FPS" in output
     assert output_path.is_file()
     assert output_path.stat().st_size > 1024
