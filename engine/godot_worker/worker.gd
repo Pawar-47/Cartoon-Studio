@@ -2454,7 +2454,11 @@ func _export_world_scene(payload: Dictionary) -> Dictionary:
             for post_x in [-3.1, 3.1]:
                 for post_z in [-1.25, 1.25]:
                     _world_add_cylinder(stall, "CanopyPost", 0.12, 3.2, Vector3(post_x, 1.6, post_z), "#6d4b36")
-            var canopy_color := ["#d85f52", "#e2b34e", "#4f91a4"][stall_index]
+            var canopy_color: String = "#d85f52"
+            if stall_index == 1:
+                canopy_color = "#e2b34e"
+            elif stall_index == 2:
+                canopy_color = "#4f91a4"
             _world_add_box(stall, "StripedCanopy", Vector3(7.8, 0.42, 4.0), Vector3(0.0, 3.25, 0.0), canopy_color)
             _world_add_box(stall, "FrontSign", Vector3(4.2, 0.75, 0.18), Vector3(0.0, 2.35, 1.72), "#f4dfb6")
         theme_prop_count = 3
@@ -2489,7 +2493,12 @@ func _export_world_scene(payload: Dictionary) -> Dictionary:
                 _world_add_box(bench, "BenchLeg", Vector3(0.22, 0.95, 0.22), Vector3(leg_x, 0.48, 0.0), "#444b50")
         for flower_index in range(8):
             var flower_x := -24.0 + float(flower_index) * 6.8
-            _world_add_sphere(root, "ParkFlower_%02d" % flower_index, 0.42, Vector3(flower_x, 0.45, 18.0), ["#e7a2a4", "#f3d16c", "#a6a8dc"][flower_index % 3])
+            var flower_color: String = "#e7a2a4"
+            if flower_index % 3 == 1:
+                flower_color = "#f3d16c"
+            elif flower_index % 3 == 2:
+                flower_color = "#a6a8dc"
+            _world_add_sphere(root, "ParkFlower_%02d" % flower_index, 0.42, Vector3(flower_x, 0.45, 18.0), flower_color)
         theme_prop_count = 11
     else:
         var bus_stop := Node3D.new()
