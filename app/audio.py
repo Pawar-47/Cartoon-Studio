@@ -282,10 +282,21 @@ def generate_episode_audio(
     clips: list[dict] = []
     scene_offset = 0.0
     for scene_index, scene in enumerate(scenes, start=1):
+        scene_duration = int(scene.get("duration_seconds", 0))
+        if scene_duration <= 0:
+            raise SpeechGenerationError(f"Scene {scene.get('id', scene_index)} has an invalid duration.")
         for line_index, line in enumerate(scene.get("dialogue", []), start=1):
             text = str(line.get("text", "")).strip()
             if not text:
                 raise SpeechGenerationError("A dialogue line is empty.")
+            try:
+                local_start = float(line.get("start_seconds", 0))
+            except (TypeError, ValueError) as error:
+                raise SpeechGenerationError("A dialogue line has an invalid start time.") from error
+            if not math.isfinite(local_start) or local_start < 0 or local_start >= scene_duration:
+                raise SpeechGenerationError(
+                    f"Dialogue in scene {scene.get('id', scene_index)} starts outside its duration."
+                )
             character_id = str(line.get("character_id", "narrator"))
             voice_id = voice_by_character.get(character_id, DEFAULT_URDU_VOICE)
             if voice_id not in VOICE_CATALOG:
@@ -296,7 +307,14 @@ def generate_episode_audio(
             engine.synthesize(text, voice_id, clip_path)
             _, samples = _read_pcm(clip_path)
             actual_duration = len(samples) / SAMPLE_RATE
-            timeline_start = scene_offset + float(line.get("start_seconds", 0))
+            remaining_scene_time = scene_duration - local_start
+            if actual_duration > remaining_scene_time + (1 / SAMPLE_RATE):
+                clip_path.unlink(missing_ok=True)
+                raise SpeechGenerationError(
+                    f"Dialogue in scene {scene.get('id', scene_index)} runs past the scene boundary. "
+                    "Shorten the line or move it earlier before generating audio."
+                )
+            timeline_start = scene_offset + local_start
             clips.append({
                 "scene_id": scene["id"],
                 "line_index": line_index,
@@ -310,7 +328,7 @@ def generate_episode_audio(
                 "relative_path": clip_path.relative_to(output_directory).as_posix(),
                 "path": str(clip_path),
             })
-        scene_offset += int(scene["duration_seconds"])
+        scene_offset += scene_duration
     mix_path = output_directory / "dialogue_mix.wav"
     _write_episode_mix(mix_path, total_duration, clips)
     subtitles_path = output_directory / "subtitles.srt"

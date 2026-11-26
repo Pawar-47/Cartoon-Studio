@@ -117,3 +117,32 @@ def test_rejects_unknown_character_voice_profile(tmp_path):
             tmp_path / "data",
             synthesizer=FakeSynthesizer(),
         )
+
+@pytest.mark.parametrize("start_seconds", [1.0, 0.9])
+def test_rejects_dialogue_that_runs_past_its_scene_boundary(tmp_path, start_seconds):
+    plan = {
+        "language": "ur",
+        "characters": [{"id": "ali", "voice_profile": DEFAULT_URDU_VOICE}],
+        "scenes": [
+            {
+                "id": "short-scene",
+                "duration_seconds": 1,
+                "dialogue": [
+                    {
+                        "character_id": "ali",
+                        "text": "یہ ایک ٹیسٹ ہے۔",
+                        "start_seconds": start_seconds,
+                        "duration_seconds": 0.1,
+                    }
+                ],
+            }
+        ],
+    }
+    with pytest.raises(SpeechGenerationError, match="outside its duration|scene boundary"):
+        generate_episode_audio(
+            plan,
+            tmp_path / "audio",
+            tmp_path / "data",
+            synthesizer=FakeSynthesizer(),
+        )
+
