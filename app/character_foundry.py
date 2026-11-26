@@ -514,6 +514,7 @@ def build_master_character_glb(recipe: dict[str, Any] | None = None) -> bytes:
     return b"".join((
         struct.pack("<4sII", b"glTF", 2, total_length),
         struct.pack("<I4s", len(json_chunk), b"JSON"),
+        json_chunk,
         struct.pack("<I4s", len(binary), b"BIN\x00"),
         bytes(binary),
     ))
