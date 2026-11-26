@@ -302,6 +302,9 @@ export function applyCharacterFaceFeatures(recipe = {}) {
     ellipsoid("FaceEar",skinColor,new THREE.Vector3(center.x+side*size.x*0.43,center.y-height*0.02,front+depth*0.08),new THREE.Vector3(width*0.075,height*0.14,depth*0.72));
   }
   for(const side of [-1,1]){
+    ellipsoid("FaceEarInner","#a96859",new THREE.Vector3(center.x+side*size.x*0.43,center.y-height*0.02,front+depth*0.69),new THREE.Vector3(width*0.027,height*0.085,depth*0.19));
+  }
+  for(const side of [-1,1]){
     const x=center.x+side*offset;
     ellipsoid("FaceEyeWhite",recipe.eye_color,new THREE.Vector3(x,eyeY,front),new THREE.Vector3(ew,eh,depth));
     ellipsoid("FaceIris",recipe.iris_color,new THREE.Vector3(x+width*0.018,eyeY-height*0.012,front+depth*0.88),new THREE.Vector3(ew*0.49,eh*0.57,depth*0.42),0.35);
@@ -316,6 +319,9 @@ export function applyCharacterFaceFeatures(recipe = {}) {
   ellipsoid("FaceChin",skinColor,new THREE.Vector3(center.x,center.y-height*(0.405+(chinLength-1)*0.025),front+depth*0.24),new THREE.Vector3(width*0.13*jawWidth,height*0.06*chinLength,depth*0.62));
   ellipsoid("FaceNoseBridge",recipe.nose_color,new THREE.Vector3(center.x,center.y-height*0.015,front+depth*0.48),new THREE.Vector3(width*0.035,height*0.09,depth*0.72));
   ellipsoid("FaceNose",recipe.nose_color,new THREE.Vector3(center.x,center.y-height*0.08,front+depth*0.6),new THREE.Vector3(width*0.055,height*0.075,depth*0.8));
+  for(const side of [-1,1]){
+    ellipsoid("FaceNostril","#633e36",new THREE.Vector3(center.x+side*width*0.027,center.y-height*0.112,front+depth*1.18),new THREE.Vector3(width*0.016,height*0.018,depth*0.19));
+  }
   const my=center.y-height*0.30,mw=width*0.19;
   if(mouthOpen>0.08){
     ellipsoid("FaceMouthOpening",recipe.mouth_color,new THREE.Vector3(center.x,my,front+depth*0.58),new THREE.Vector3(mw,height*(0.018+mouthOpen*0.11),depth*0.62));

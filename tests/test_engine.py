@@ -284,16 +284,18 @@ def test_godot_worker_bakes_cartoon_face_geometry_and_preserves_animation(tmp_pa
     assert result["appearance_verified"] is True
     assert result["face_features_verified"] is True
     assert result["face_attachment_bone"].lower().endswith("head")
-    assert result["applied_face_feature_count"] >= 19
+    assert result["applied_face_feature_count"] >= 23
     assert result["skeleton_count"] == before["skeleton_count"]
     assert result["animation_names"] == before["animation_names"]
     face_meshes = [
         item for item in result["mesh_inventory"]
         if item["node_name"].startswith("CartoonStudio_Face_")
     ]
-    assert len(face_meshes) >= 19
+    assert len(face_meshes) >= 23
     face_names = {item["node_name"] for item in face_meshes}
     assert any(name.startswith("CartoonStudio_Face_Ear_") for name in face_names)
+    assert any(name.startswith("CartoonStudio_Face_EarInner_") for name in face_names)
+    assert any(name.startswith("CartoonStudio_Face_Nostril_") for name in face_names)
     assert any(name.startswith("CartoonStudio_Face_Cheek_") for name in face_names)
     assert any(name.startswith("CartoonStudio_Face_Jaw_") for name in face_names)
     assert "CartoonStudio_Face_NoseBridge" in face_names

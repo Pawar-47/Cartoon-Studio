@@ -456,6 +456,10 @@ func _add_character_face_features(scene: Node, recipe: Dictionary) -> Dictionary
             Vector3(center.x + side * head_bounds.size.x * 0.43, center.y - height * 0.02, front_z + front_direction * eye_depth * 0.08),
             Vector3(width * 0.075, height * 0.14, eye_depth * 0.72), skin_material)
         mesh_count += 1
+        _add_face_sphere(attachment, scene, "CartoonStudio_Face_EarInner_" + str(side_index),
+            Vector3(center.x + side * head_bounds.size.x * 0.43, center.y - height * 0.02, front_z + front_direction * eye_depth * 0.69),
+            Vector3(width * 0.027, height * 0.085, eye_depth * 0.19), _face_material("#a96859"))
+        mesh_count += 1
 
     for side_index in range(2):
         var side: float = -1.0 if side_index == 0 else 1.0
@@ -498,6 +502,13 @@ func _add_character_face_features(scene: Node, recipe: Dictionary) -> Dictionary
         Vector3(center.x, center.y - height * 0.08, front_z + front_direction * eye_depth * 0.6),
         Vector3(width * 0.055, height * 0.075, eye_depth * 0.8), nose_material)
     mesh_count += 1
+    var nostril_material := _face_material("#633e36")
+    for side_index in range(2):
+        var side: float = -1.0 if side_index == 0 else 1.0
+        _add_face_sphere(attachment, scene, "CartoonStudio_Face_Nostril_" + str(side_index),
+            Vector3(center.x + side * width * 0.027, center.y - height * 0.112, front_z + front_direction * eye_depth * 1.18),
+            Vector3(width * 0.016, height * 0.018, eye_depth * 0.19), nostril_material)
+        mesh_count += 1
 
     var mouth_y := center.y - height * 0.30
     var mouth_half := width * 0.19
