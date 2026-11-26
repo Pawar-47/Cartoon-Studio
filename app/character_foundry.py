@@ -11,6 +11,51 @@ RECIPE_SCHEMA_VERSION = 1
 MASTER_TEMPLATE_ID = "cartoon-studio.stylized-adult.v1"
 GENERATOR_VERSION = "0.1.0"
 
+
+RIG_PROFILE_ID = "cartoon-studio.humanoid.v1"
+
+# Parent-first humanoid hierarchy. Local translations define the bind pose.
+_BONES = (
+    ("Hips", None, (0.0, 0.95, 0.0)),
+    ("Spine", "Hips", (0.0, 0.50, 0.0)),
+    ("Chest", "Spine", (0.0, 0.42, 0.0)),
+    ("Neck", "Chest", (0.0, 0.28, 0.0)),
+    ("Head", "Neck", (0.0, 0.18, 0.0)),
+    ("LeftShoulder", "Chest", (-0.40, 0.08, 0.0)),
+    ("LeftUpperArm", "LeftShoulder", (-0.16, -0.04, 0.0)),
+    ("LeftLowerArm", "LeftUpperArm", (-0.07, -0.48, 0.0)),
+    ("LeftHand", "LeftLowerArm", (-0.01, -0.42, 0.0)),
+    ("RightShoulder", "Chest", (0.40, 0.08, 0.0)),
+    ("RightUpperArm", "RightShoulder", (0.16, -0.04, 0.0)),
+    ("RightLowerArm", "RightUpperArm", (0.07, -0.48, 0.0)),
+    ("RightHand", "RightLowerArm", (0.01, -0.42, 0.0)),
+    ("LeftUpperLeg", "Hips", (-0.205, -0.35, 0.0)),
+    ("LeftLowerLeg", "LeftUpperLeg", (0.0, -0.62, 0.0)),
+    ("LeftFoot", "LeftLowerLeg", (0.0, -0.36, -0.10)),
+    ("RightUpperLeg", "Hips", (0.205, -0.35, 0.0)),
+    ("RightLowerLeg", "RightUpperLeg", (0.0, -0.62, 0.0)),
+    ("RightFoot", "RightLowerLeg", (0.0, -0.36, -0.10)),
+)
+
+
+def _component_bone_name(group: str, center: tuple[float, float, float]) -> str:
+    side = "Left" if center[0] < 0.0 else "Right"
+    return {
+        "torso": "Chest",
+        "neck": "Neck",
+        "head": "Head",
+        "ear": "Head",
+        "eye": "Head",
+        "nose": "Head",
+        "mouth": "Head",
+        "upper_arm": f"{side}UpperArm",
+        "forearm": f"{side}LowerArm",
+        "hand": f"{side}Hand",
+        "thigh": f"{side}UpperLeg",
+        "shin": f"{side}LowerLeg",
+        "foot": f"{side}Foot",
+    }[group]
+
 MORPH_TARGETS = (
     "head_width",
     "jaw_width",
@@ -77,7 +122,7 @@ def default_character_recipe(character_id: str = "character-foundry-preview") ->
         "clothing_asset_ids": [],
         "hair_asset_id": None,
         "accessory_asset_ids": [],
-        "rig_profile_id": None,
+        "rig_profile_id": RIG_PROFILE_ID,
         "generated_asset": None,
     }
 
@@ -202,26 +247,28 @@ def _morph_delta(
 
 def _build_geometry() -> tuple[
     list[tuple[float, float, float]], list[int],
-    dict[str, list[tuple[float, float, float]]]
+    dict[str, list[tuple[float, float, float]]], list[str]
 ]:
     positions: list[tuple[float, float, float]] = []
     indices: list[int] = []
     deltas = {name: [] for name in MORPH_TARGETS}
+    vertex_bones: list[str] = []
     for group, center, radii in _COMPONENTS:
         component, component_indices, local = _ellipsoid(center, radii)
         offset = len(positions)
         positions.extend(component)
+        vertex_bones.extend([_component_bone_name(group, center)] * len(component))
         indices.extend(offset + index for index in component_indices)
         for target in MORPH_TARGETS:
             deltas[target].extend(
                 _morph_delta(target, group, center, radii, unit, point)
                 for unit, point in zip(local, component, strict=True)
             )
-    return positions, indices, deltas
+    return positions, indices, deltas, vertex_bones
 
 
 def build_master_character_glb() -> bytes:
-    positions, indices, morphs = _build_geometry()
+    positions, indices, morphs, vertex_bones = _build_geometry()
     binary = bytearray()
     buffer_views: list[dict[str, Any]] = []
     accessors: list[dict[str, Any]] = []
@@ -279,6 +326,63 @@ def build_master_character_glb() -> bytes:
             "POSITION": add_accessor(payload, 5126, len(positions), "VEC3", 34962)
         })
 
+    bone_names = [bone[0] for bone in _BONES]
+    bone_indices = {name: index for index, name in enumerate(bone_names)}
+    joint_values = [
+        value
+        for name in vertex_bones
+        for value in (bone_indices[name], 0, 0, 0)
+    ]
+    weight_values = [value for _ in positions for value in (1.0, 0.0, 0.0, 0.0)]
+    joints_accessor = add_accessor(
+        struct.pack(f"<{len(joint_values)}H", *joint_values),
+        5123, len(positions), "VEC4", 34962
+    )
+    weights_accessor = add_accessor(
+        struct.pack(f"<{len(weight_values)}f", *weight_values),
+        5126, len(positions), "VEC4", 34962
+    )
+
+    bone_node_start = 1
+    bone_node_indices = {
+        name: bone_node_start + index for index, name in enumerate(bone_names)
+    }
+    global_positions: dict[str, tuple[float, float, float]] = {}
+    bone_nodes: list[dict[str, Any]] = []
+    bone_children: dict[str, list[int]] = {name: [] for name in bone_names}
+    for name, parent, translation in _BONES:
+        if parent is None:
+            global_positions[name] = translation
+        else:
+            parent_position = global_positions[parent]
+            global_positions[name] = tuple(
+                parent_position[axis] + translation[axis] for axis in range(3)
+            )
+            bone_children[parent].append(bone_node_indices[name])
+        node: dict[str, Any] = {"name": name, "translation": list(translation)}
+        if bone_children[name]:
+            node["children"] = bone_children[name]
+        bone_nodes.append(node)
+    # Parent nodes are emitted before children; populate child lists after the pass.
+    for name, _, _ in _BONES:
+        children = bone_children[name]
+        if children:
+            bone_nodes[bone_names.index(name)]["children"] = children
+
+    inverse_bind_values: list[float] = []
+    for name in bone_names:
+        x, y, z = global_positions[name]
+        inverse_bind_values.extend((
+            1.0, 0.0, 0.0, 0.0,
+            0.0, 1.0, 0.0, 0.0,
+            0.0, 0.0, 1.0, 0.0,
+            -x, -y, -z, 1.0,
+        ))
+    inverse_bind_accessor = add_accessor(
+        struct.pack(f"<{len(inverse_bind_values)}f", *inverse_bind_values),
+        5126, len(bone_names), "MAT4"
+    )
+
     gltf = {
         "asset": {
             "version": "2.0",
@@ -286,14 +390,26 @@ def build_master_character_glb() -> bytes:
             "extras": {"masterTemplate": MASTER_TEMPLATE_ID},
         },
         "scene": 0,
-        "scenes": [{"nodes": [0]}],
-        "nodes": [{"name": "CartoonStudio_StylizedAdult", "mesh": 0}],
+        "scenes": [{"nodes": [0, bone_node_start]}],
+        "nodes": [{
+            "name": "CartoonStudio_StylizedAdult", "mesh": 0, "skin": 0
+        }, *bone_nodes],
+        "skins": [{
+            "name": "CartoonStudio_Humanoid_v1",
+            "inverseBindMatrices": inverse_bind_accessor,
+            "skeleton": bone_node_start,
+            "joints": [bone_node_indices[name] for name in bone_names],
+        }],
         "meshes": [{
             "name": "StylizedAdult_MasterMesh",
             "weights": [0.0] * len(MORPH_TARGETS),
             "extras": {"targetNames": list(MORPH_TARGETS)},
             "primitives": [{
-                "attributes": {"POSITION": position_accessor},
+                "attributes": {
+                    "POSITION": position_accessor,
+                    "JOINTS_0": joints_accessor,
+                    "WEIGHTS_0": weights_accessor,
+                },
                 "indices": index_accessor,
                 "material": 0,
                 "mode": 4,
@@ -343,6 +459,8 @@ def write_master_character(
         "format": "glb",
         "generator_version": GENERATOR_VERSION,
         "morph_targets": list(MORPH_TARGETS),
+        "rig_profile_id": RIG_PROFILE_ID,
+        "bone_names": [bone[0] for bone in _BONES],
     }
     recipe_output = Path(recipe_path) if recipe_path else output.with_suffix(".recipe.json")
     recipe_output.parent.mkdir(parents=True, exist_ok=True)
