@@ -12,7 +12,7 @@ import pytest
 
 from app import engine
 from app.character_builder import ensure_model_asset
-from app.character_foundry import MORPH_TARGETS, write_master_character
+from app.character_foundry import MORPH_TARGETS, RIG_PROFILE_ID, write_master_character
 from app.engine import (
     EngineCancelledError,
     EngineExecutionError,
@@ -668,6 +668,10 @@ def test_pinned_godot_imports_original_foundry_master_and_morphs(tmp_path):
 
     assert inspection["ok"] is True
     assert inspection["mesh_count"] == 1
+    assert inspection["skeleton_count"] == 1
+    assert inspection["skeletons"][0]["bone_count"] == 19
+    imported_bones = {bone["name"] for bone in inspection["skeletons"][0]["bones"]}
+    assert {"Hips", "Head", "LeftUpperArm", "RightLowerLeg"} <= imported_bones
     assert inspection["morph_target_count"] == len(MORPH_TARGETS)
     assert {entry["name"] for entry in inspection["morph_targets"]} == set(
         MORPH_TARGETS
@@ -675,6 +679,7 @@ def test_pinned_godot_imports_original_foundry_master_and_morphs(tmp_path):
     assert all(entry["default_value"] == 0.0 for entry in inspection["morph_targets"])
     recipe = json.loads(recipe_path.read_text(encoding="utf-8"))
     assert recipe["character_id"] == "foundry-integration-hero"
+    assert recipe["rig_profile_id"] == RIG_PROFILE_ID
     assert recipe["generated_asset"]["filename"] == glb_path.name
 
 
