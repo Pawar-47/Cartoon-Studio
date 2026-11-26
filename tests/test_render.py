@@ -97,10 +97,16 @@ def test_render_episode_video_uses_godot_movie_maker_and_muxes_audio_subtitles(
     godot_calls = [call for call in calls if call[0] == str(godot)]
     assert len(godot_calls) == 5
     assert concat_contents == "".join(
-        f"file 'scene-{index:02d}.avi'\\n" for index in range(1, 6)
+        f"file 'scene-{index:02d}.avi'\n" for index in range(1, 6)
     )
     assert all("--write-movie" in call for call in godot_calls)
-    assert [call[call.index("--quit-after") + 1] for call in godot_calls] == ["24", "48", "24", "48", "24"]
+    assert [call[call.index("--quit-after") + 1] for call in godot_calls] == [
+        "24",
+        "48",
+        "24",
+        "48",
+        "24",
+    ]
     mux_calls = [call for call in calls if "-c:v" in call]
     assert len(mux_calls) == 1
     assert mux_calls[0][0] == str(ffmpeg)
