@@ -1,7 +1,7 @@
 import { buildExpressionPreset } from "./character-expression-presets.js";
-import { showCharacterPreview, showRetargetPreview, exportCharacterPreview, exportCharacterTurnaround, getCharacterMaterials, applyCharacterAppearance, getCharacterMorphTargets, applyCharacterMorphTargets, applyCharacterBodyProportions as previewCharacterBodyProportions } from "./character-preview.js";
+import { showCharacterPreview, showRetargetPreview, exportCharacterPreview, exportCharacterTurnaround, getCharacterMaterials, applyCharacterAppearance, getCharacterMorphTargets, applyCharacterMorphTargets, applyCharacterFaceFeatures, applyCharacterBodyProportions as previewCharacterBodyProportions } from "./character-preview.js";
 const $=id=>document.getElementById(id);
-let activeProject="", importedAsset=null, activeCharacter=null, editingCharacter=null, appearanceRecipe={materials:{},morph_targets:{},morph_bindings:{}}, retargetCharacters=[], assemblyAssets=[], assemblyAccessories=[];
+let activeProject="", importedAsset=null, activeCharacter=null, editingCharacter=null, appearanceRecipe={materials:{},morph_targets:{},morph_bindings:{},face_features:{enabled:false}}, retargetCharacters=[], assemblyAssets=[], assemblyAccessories=[];
 const params=new URLSearchParams(window.location.search);
 function lines(value){return value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean)}
 const proportionFields=["torso_length","shoulder_width","arm_length","leg_length","head_size"];
@@ -60,6 +60,7 @@ function updateProportionButton(){
 function restoreAppearancePreview(){
  applyCharacterAppearance(appearanceRecipe.materials||{});
  applyCharacterMorphTargets(appearanceRecipe.morph_targets||{});
+ applyCharacterFaceFeatures(appearanceRecipe.face_features||{});
 }
 function updateHairButton(){
  const hasSingleRig=Number(importedAsset?.engine_inspection?.skeleton_count)===1;
@@ -119,6 +120,8 @@ async function editCharacterProfile(document){
  appearanceRecipe.materials=appearanceRecipe.materials||{};
  appearanceRecipe.morph_targets=appearanceRecipe.morph_targets||{};
  appearanceRecipe.morph_bindings=appearanceRecipe.morph_bindings||{};
+ appearanceRecipe.face_features=appearanceRecipe.face_features||{enabled:false};
+ setFaceFeatureControls(appearanceRecipe.face_features);
  let effectiveProportions={...(data.body_proportions||{})};
  const savedAsset=data.asset||{},savedAssetId=(savedAsset.relative_path||"").split("/").pop().replace(/\.glb$/i,"");
  importedAsset=savedAssetId?{asset_id:savedAssetId,...savedAsset}:null;
@@ -179,7 +182,7 @@ async function loadProjects(){
  await selectProject(select.value);
 }
 async function selectProject(id){
- activeProject=id;assemblyAssets=[];assemblyAccessories=[];renderAssemblyAccessories();refreshAssemblyControls();$("library-import").disabled=!id||!selectedLibraryModel();importedAsset=null;activeCharacter=null;resetProfileEditor();appearanceRecipe={materials:{},morph_targets:{},morph_bindings:{}};$("export-appearance").disabled=true;$("download-appearance").hidden=true;$("material-editor").hidden=true;$("morph-editor").hidden=true;$("save-appearance").disabled=true;$("asset-report").hidden=true;$("profile-status").textContent="";$("save-character").disabled=true;$("refresh-characters").disabled=!id;resetProportionControls();$("body-proportions").value="";$("proportion-status").textContent="Import or assemble a rigged character to edit its proportions.";updateProportionButton();$("hair-style").value="short";$("hair-color").value="#2b1b13";$("hair-status").textContent="Import or assemble a rigged character to add generated hair.";updateHairButton();
+ activeProject=id;assemblyAssets=[];assemblyAccessories=[];renderAssemblyAccessories();refreshAssemblyControls();$("library-import").disabled=!id||!selectedLibraryModel();importedAsset=null;activeCharacter=null;resetProfileEditor();appearanceRecipe={materials:{},morph_targets:{},morph_bindings:{},face_features:{enabled:false}};$("export-appearance").disabled=true;$("download-appearance").hidden=true;$("material-editor").hidden=true;$("morph-editor").hidden=true;$("save-appearance").disabled=true;$("asset-report").hidden=true;$("profile-status").textContent="";$("save-character").disabled=true;$("refresh-characters").disabled=!id;resetProportionControls();$("body-proportions").value="";$("proportion-status").textContent="Import or assemble a rigged character to edit its proportions.";updateProportionButton();$("hair-style").value="short";$("hair-color").value="#2b1b13";$("hair-status").textContent="Import or assemble a rigged character to add generated hair.";updateHairButton();
  $("project-status").textContent=id?"Project selected. Import a GLB model to begin.":"Choose a project to begin.";
  $("character-list").replaceChildren();
  if(!id){$("character-list").innerHTML='<div class="empty">Select a project to see its characters.</div>';return}
@@ -456,6 +459,22 @@ function applyExpressionPreset(name){
 for(const button of document.querySelectorAll("[data-expression-preset]")){
  button.addEventListener("click",()=>applyExpressionPreset(button.dataset.expressionPreset));
 }
+
+function setFaceFeatureControls(recipe={}) {
+ const values={enabled:false,eye_color:"#ffffff",iris_color:"#4b83b8",brow_color:"#38251c",mouth_color:"#612b2b",nose_color:"#c98768",eye_scale:1,eye_spacing:1,smile:0.35,brow_angle:0,...recipe};
+ for(const key of Object.keys(values)){const input=$("face-"+key.replaceAll("_","-"));if(input){if(input.type==="checkbox")input.checked=Boolean(values[key]);else input.value=String(values[key]);}}
+ applyCharacterFaceFeatures(values);
+}
+function updateFaceFeaturePreview() {
+ const recipe={enabled:$("face-enabled").checked,eye_color:$("face-eye-color").value,iris_color:$("face-iris-color").value,brow_color:$("face-brow-color").value,mouth_color:$("face-mouth-color").value,nose_color:$("face-nose-color").value,eye_scale:Number($("face-eye-scale").value),eye_spacing:Number($("face-eye-spacing").value),smile:Number($("face-smile").value),brow_angle:Number($("face-brow-angle").value)};
+ appearanceRecipe.face_features=recipe;applyCharacterFaceFeatures(recipe);
+ $("face-eye-scale-value").value=recipe.eye_scale.toFixed(2)+"×";$("face-eye-spacing-value").value=recipe.eye_spacing.toFixed(2)+"×";
+ $("face-smile-value").value=recipe.smile.toFixed(2);$("face-brow-angle-value").value=recipe.brow_angle.toFixed(2);
+ $("save-appearance").disabled=!activeCharacter;
+ $("export-appearance").disabled=true;$("download-appearance").hidden=true;
+ $("face-status").textContent=recipe.enabled?"Live 3D face preview updated. Save this recipe with the character; GLB geometry baking is a later step.":"Face preview is off. Enable it to add editable cartoon eyes, brows, nose and mouth.";
+}
+for(const id of ["face-enabled","face-eye-color","face-iris-color","face-brow-color","face-mouth-color","face-nose-color","face-eye-scale","face-eye-spacing","face-smile","face-brow-angle"])$(id).addEventListener("input",updateFaceFeaturePreview);
 $("material-select").addEventListener("change",event=>selectMaterial(event.target.value));
 for(const id of ["material-color","material-roughness","material-metalness"])$(id).addEventListener("input",previewSelectedMaterial);
 $("save-appearance").addEventListener("click",async()=>{
@@ -472,14 +491,15 @@ $("save-appearance").addEventListener("click",async()=>{
 $("export-appearance").addEventListener("click",async()=>{
  if(!activeCharacter||!activeProject)return;
  const button=$("export-appearance");button.disabled=true;
- $("appearance-status").textContent="Godot is baking material and facial edits into a new GLB, then re-importing it for verification…";
+ if(appearanceRecipe.face_features?.enabled){$("appearance-status").textContent="Face-feature geometry is saved as a live 3D preview recipe but is not yet baked into GLB. Export a PNG preview to retain the designed face visually.";return;}
+ $("appearance-status").textContent="Godot is baking material and imported morph edits into a new GLB, then re-importing it for verification…";
  try{
   const response=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/characters/"+encodeURIComponent(activeCharacter.id)+"/export",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(appearanceRecipe)});
   const result=await response.json();if(!response.ok)throw new Error(result.detail||"Could not export customized character.");
   const link=$("download-appearance");link.href=result.download_url;link.download=result.original_filename;link.hidden=false;
   $("appearance-status").textContent="Customized GLB exported and verified · "+result.applied_material_count+" material edit(s), "+result.applied_morph_count+" facial morph(s). The original asset remains unchanged."; 
  }catch(error){$("appearance-status").textContent=error.message}
- finally{button.disabled=!(Object.keys(appearanceRecipe.materials).length||Object.keys(appearanceRecipe.morph_targets).length)}
+ finally{button.disabled=!(Object.keys(appearanceRecipe.materials).length||Object.keys(appearanceRecipe.morph_targets).length||appearanceRecipe.face_features?.enabled)}
 });
 $("retarget-source").addEventListener("change",()=>{$("create-retarget").disabled=!$("retarget-source").value||!$("retarget-target").value||$("retarget-source").value===$("retarget-target").value});
 $("retarget-target").addEventListener("change",()=>{$("create-retarget").disabled=!$("retarget-source").value||!$("retarget-target").value||$("retarget-source").value===$("retarget-target").value});
@@ -547,7 +567,7 @@ $("character-form").addEventListener("submit",async event=>{
   const editing=Boolean(editingCharacter),url="/api/projects/"+encodeURIComponent(activeProject)+"/characters"+(editing?"/"+encodeURIComponent(editingCharacter.id):"");
   const response=await fetch(url,{method:editing?"PUT":"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
   const data=await response.json();if(!response.ok)throw new Error(data.detail||"Could not save character.");
-  const hasAppearance=Object.keys(appearanceRecipe.materials||{}).length||Object.keys(appearanceRecipe.morph_targets||{}).length;
+  const hasAppearance=Object.keys(appearanceRecipe.materials||{}).length||Object.keys(appearanceRecipe.morph_targets||{}).length||Boolean(appearanceRecipe.face_features?.enabled);
   if(hasAppearance){
    const appearanceResponse=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/characters/"+encodeURIComponent(data.id)+"/appearance",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(appearanceRecipe)});
    const appearanceResult=await appearanceResponse.json();
