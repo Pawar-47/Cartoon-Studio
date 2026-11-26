@@ -757,7 +757,10 @@ def build_episode_production(project_id: str) -> dict[str, Any]:
         if asset is None or not asset["rig_ready"]:
             raise HTTPException(
                 status_code=422,
-                detail=f"Link a rigged project GLB to character {character['name']} before production.",
+                detail=(
+                    f"Link a rigged project GLB to character {character['name']} "
+                    "before production."
+                ),
             )
         character_assets.append({
             "id": character["id"],
@@ -787,10 +790,10 @@ def build_episode_production(project_id: str) -> dict[str, Any]:
         raise HTTPException(status_code=422, detail=str(error)) from error
     except EngineError as error:
         shutil.rmtree(output_directory.parent, ignore_errors=True)
-            raise HTTPException(
-                status_code=502,
-                detail=f"Episode scene generation failed: {error}",
-            ) from error
+        raise HTTPException(
+            status_code=502,
+            detail=f"Episode scene generation failed: {error}",
+        ) from error
     if not result.get("ok") or len(result.get("scenes", [])) != len(plan["scenes"]):
         shutil.rmtree(output_directory.parent, ignore_errors=True)
         raise HTTPException(status_code=502, detail="Godot did not generate every episode scene.")
