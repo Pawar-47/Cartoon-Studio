@@ -55,7 +55,7 @@ def test_render_episode_video_uses_godot_movie_maker_and_muxes_audio_subtitles(
             )
         if command[0] == str(ffmpeg) and "-progress" in command and "pipe:1" in command:
             return subprocess.CompletedProcess(
-                command, 0, stdout="out_time_us=5000000\nprogress=end\n", stderr=""
+                command, 0, stdout="out_time_us=7000000\nprogress=end\n", stderr=""
             )
         if command[0] == str(godot):
             movie_path = Path(command[command.index("--write-movie") + 1])

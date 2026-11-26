@@ -284,7 +284,7 @@ def render_episode_video(
                 raise RenderExecutionError(
                     f"Godot timed out while rendering scene {index}."
                 ) from error
-            render_log = result.stdout + "\\n" + result.stderr
+            render_log = result.stdout + "\n" + result.stderr
             expected_frame_report = f"{frames} frames at {fps} FPS"
             if (
                 result.returncode != 0
