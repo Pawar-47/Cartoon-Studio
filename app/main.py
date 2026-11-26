@@ -36,10 +36,9 @@ from app.engine import (
     GodotEngineAdapter,
 )
 from app.rig_analysis import analyze_rig
+from app.storage import connect_db as open_database
 from app.storage import (
-    connect_db as open_database,
     default_data_dir,
-    initialize_database as migrate_database,
     make_envelope,
     project_directory,
     read_json,
@@ -49,6 +48,9 @@ from app.storage import (
     sync_episode_reference,
     upsert_document_index,
     write_json_atomic,
+)
+from app.storage import (
+    initialize_database as migrate_database,
 )
 from app.story import EpisodePlan, StoryPromptRequest, build_story_prompt
 from app.version import APP_VERSION

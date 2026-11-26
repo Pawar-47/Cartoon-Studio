@@ -360,7 +360,8 @@ PRODUCTION RULES:
 - Every scene needs a reusable location_id, character_ids, actions, expressions,
   camera, lighting, props, audio and transition plan.
 - Dialogue must be natural, character-specific and timed within the scene.
-- Set each character voice_profile to ur_PK-fasih-medium (Pakistani Urdu male) or ur_PK-aegis_female-medium (Pakistani Urdu female).
+- Set each character voice_profile to one of these Pakistani Urdu voices:
+  ur_PK-fasih-medium (male) or ur_PK-aegis_female-medium (female).
 - Include clear physical comedy and visual actions where appropriate.
   Do not rely only on dialogue.
 - Use action_id values that can later map to the reusable animation library.
