@@ -232,6 +232,7 @@ class EpisodePlan(StrictModel):
     ending: str = Field(default="", max_length=1500)
     language: Literal["ur", "en"] = "ur"
     target_duration_seconds: int = Field(default=360, ge=300, le=420)
+    world_id: str | None = Field(default=None, max_length=64)
     characters: list[CharacterSpec] = Field(min_length=1, max_length=5)
     scenes: list[ScenePlan] = Field(min_length=5, max_length=7)
     subtitle_mode: Literal["urdu", "roman_urdu", "english", "none"] = "urdu"
@@ -302,6 +303,8 @@ class StoryPromptRequest(StrictModel):
     audience: Literal["family", "children", "general"] = "family"
     character_names: list[str] = Field(default_factory=list, max_length=5)
     continuity_notes: str = Field(default="", max_length=2000)
+    world_context: str = Field(default="", max_length=3000)
+    world_id: str | None = Field(default=None, max_length=64)
 
 
 def build_story_prompt(request: StoryPromptRequest) -> str:
@@ -338,8 +341,11 @@ TONE: {request.tone}
 AUDIENCE: {request.audience}
 PREFERRED RECURRING CHARACTERS: {characters}
 CONTINUITY NOTES: {continuity}
+ESTABLISHED WORLD: {request.world_context or "No saved world selected; choose a suitable catalog location."}
+WORLD ID: {request.world_id or "null"}
 
 PRODUCTION RULES:
+- Include the exact WORLD ID above in the episode-level world_id field. Use null only when no world ID is supplied.
 - Produce 5 to 7 scenes, each 30 to 60 seconds.
 - Total scene duration must be 300 to 420 seconds and within 30 seconds of the target.
 - Use no more than 5 characters and keep their IDs stable throughout the episode.

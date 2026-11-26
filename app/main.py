@@ -603,6 +603,37 @@ def save_story_plan(project_id: str, plan: EpisodePlan) -> dict[str, Any]:
     initialize_database()
     now = datetime.now(UTC).isoformat()
     plan_data = plan.model_dump(mode="json")
+    if plan_data.get("world_id"):
+        selected_world = next(
+            (
+                world
+                for world in _project_worlds(project_id)
+                if world["id"] == plan_data["world_id"]
+            ),
+            None,
+        )
+        if selected_world is None:
+            raise HTTPException(
+                status_code=422,
+                detail="The selected world does not belong to this project.",
+            )
+        scene_relative_path = str(selected_world.get("scene_relative_path", ""))
+        if (
+            not scene_relative_path.startswith("assets/worlds/")
+            or not scene_relative_path.endswith(".tscn")
+        ):
+            raise HTTPException(
+                status_code=422,
+                detail="Generate the selected world's 3D scene before saving this episode.",
+            )
+        scene_path = resolve_project_relative(
+            DATA_DIR, project_id, scene_relative_path
+        )
+        if not scene_path.is_file():
+            raise HTTPException(
+                status_code=422,
+                detail="The selected world's exported 3D scene is missing.",
+            )
     plan_json = json.dumps(plan_data, ensure_ascii=False)
     with connect_db() as connection:
         project = connection.execute(

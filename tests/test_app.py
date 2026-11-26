@@ -488,3 +488,91 @@ def test_database_index_rebuilds_from_portable_project_and_episode_files(tmp_pat
         assert connection.execute("SELECT COUNT(*) FROM projects").fetchone()[0] == 1
         assert connection.execute("SELECT COUNT(*) FROM project_documents").fetchone()[0] == 2
         assert connection.execute("SELECT COUNT(*) FROM story_plans").fetchone()[0] == 1
+
+def test_episode_can_be_bound_to_an_exported_world_in_its_project(tmp_path, monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "episode-world.sqlite3")
+    monkeypatch.setattr(main, "_INITIALIZED_DB_KEY", None)
+    project = client.post("/api/projects", json={"name": "World Episode"})
+    project_id = project.json()["id"]
+    world = client.post(
+        f"/api/projects/{project_id}/worlds",
+        json={
+            "name": "Market Town",
+            "theme": "market",
+            "ground_color": "#789b58",
+            "sky": "day",
+            "objects": [],
+        },
+    )
+    assert world.status_code == 201
+
+    class FakeWorldExporter:
+        def export_world_scene(self, world_data, output_path, allowed_root, **kwargs):
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text(
+                '[gd_scene format=3]\\n[node name="CartoonWorld" type="Node3D"]\\n',
+                encoding="utf-8",
+            )
+            return {
+                "ok": True,
+                "object_count": 0,
+                "scene_reopened": True,
+                "lighting_preset": "day",
+            }
+
+    monkeypatch.setattr(main, "get_engine_adapter", FakeWorldExporter)
+    exported = client.post(
+        f"/api/projects/{project_id}/worlds/{world.json()['id']}/export"
+    )
+    assert exported.status_code == 200
+
+    plan = valid_episode_plan()
+    plan["world_id"] = world.json()["id"]
+    saved = client.put(f"/api/projects/{project_id}/story", json=plan)
+    assert saved.status_code == 200
+    assert saved.json()["plan"]["world_id"] == world.json()["id"]
+    reopened = client.get(f"/api/projects/{project_id}/story")
+    assert reopened.json()["plan"]["world_id"] == world.json()["id"]
+
+
+def test_episode_rejects_unexported_or_foreign_world_reference(tmp_path, monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "episode-world-invalid.sqlite3")
+    monkeypatch.setattr(main, "_INITIALIZED_DB_KEY", None)
+    project = client.post("/api/projects", json={"name": "Episode Project"})
+    other_project = client.post("/api/projects", json={"name": "Other Project"})
+    project_id = project.json()["id"]
+    foreign_world = client.post(
+        f"/api/projects/{other_project.json()['id']}/worlds",
+        json={
+            "name": "Foreign Town",
+            "theme": "small_town",
+            "ground_color": "#789b58",
+            "sky": "day",
+            "objects": [],
+        },
+    )
+    plan = valid_episode_plan()
+    plan["world_id"] = foreign_world.json()["id"]
+    rejected = client.put(f"/api/projects/{project_id}/story", json=plan)
+    assert rejected.status_code == 422
+
+    local_world = client.post(
+        f"/api/projects/{project_id}/worlds",
+        json={
+            "name": "Unexported Town",
+            "theme": "small_town",
+            "ground_color": "#789b58",
+            "sky": "day",
+            "objects": [],
+        },
+    )
+    plan["world_id"] = local_world.json()["id"]
+    rejected = client.put(f"/api/projects/{project_id}/story", json=plan)
+    assert rejected.status_code == 422
+

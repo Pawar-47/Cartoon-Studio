@@ -7,7 +7,7 @@
 </head>
 <body>
 <main class="story-page">
-<header class="story-header"><div><a class="back-link" href="/">← Dashboard</a><span class="eyebrow">EPISODE WORKSHOP</span><h1>Story Generator</h1><p>Prepare a structured episode prompt, use any AI service, then validate and save its production plan.</p></div><span class="pill">Local-first · Manual AI handoff</span></header>
+<header class="story-header"><div><a class="back-link" href="/">← Dashboard</a><span class="eyebrow">EPISODE WORKSHOP</span><h1>Story Generator</h1><p>Prepare a structured episode prompt, attach a saved 3D world, then validate and save its production plan.</p></div><span class="pill">Local-first · Manual AI handoff</span></header>
 <div class="story-grid">
 <section class="panel">
  <span class="eyebrow">01 / STORY BRIEF</span><h2>What should happen?</h2>
@@ -19,6 +19,8 @@
    <label>Tone<select id="tone"><option value="comedy">Comedy</option><option value="adventure">Adventure</option><option value="family">Family</option><option value="mystery">Mystery</option><option value="educational">Educational</option></select></label>
    <label>Audience<select id="audience"><option value="family">Family</option><option value="children">Children</option><option value="general">General</option></select></label>
   </div>
+  <label>Episode world <small>Choose a world with an exported 3D scene</small><select id="world-select"><option value="">No world linked</option></select></label>
+  <p class="world-builder-link"><a id="open-world-builder" href="/worlds">Open World Builder to create or export a world →</a></p>
   <label>Recurring character names <small>One name per line; optional</small><textarea id="characters" rows="3" placeholder="Ali&#10;Bilu"></textarea></label>
   <label>Continuity notes <small>Optional details about established characters and previous episodes</small><textarea id="continuity" rows="3" maxlength="2000" placeholder="Keep character personalities and relationships consistent."></textarea></label>
   <button type="submit" id="build-prompt">Build AI prompt</button>
