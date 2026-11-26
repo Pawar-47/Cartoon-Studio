@@ -53,7 +53,7 @@ def test_render_episode_video_uses_godot_movie_maker_and_muxes_audio_subtitles(
             )
         if command[0] == str(ffmpeg) and "-progress" in command and "pipe:1" in command:
             return subprocess.CompletedProcess(
-                command, 0, stdout="out_time_us=5000000\\nprogress=end\\n", stderr=""
+                command, 0, stdout="out_time_us=5000000\nprogress=end\n", stderr=""
             )
         if command[0] == str(godot):
             movie_path = Path(command[command.index("--write-movie") + 1])
@@ -175,7 +175,7 @@ mesh = SubResource("SphereMesh_test")
         timeout=180,
         check=False,
     )
-    output = result.stdout + "\\n" + result.stderr
+    output = result.stdout + "\n" + result.stderr
     assert result.returncode == 0, output[-6000:]
     assert "24 frames at 24 FPS" in output
     assert output_path.is_file()
@@ -188,7 +188,7 @@ def test_render_rejects_ffmpeg_without_required_mp4_encoders_before_godot(
     project_root = tmp_path / "project"
     project_root.mkdir()
     scene_path = project_root / "scene.tscn"
-    scene_path.write_text("[gd_scene format=3]\\n", encoding="utf-8")
+    scene_path.write_text("[gd_scene format=3]\n", encoding="utf-8")
     audio_path = project_root / "dialogue.wav"
     _write_silent_wav(audio_path, 1)
     subtitles_path = project_root / "subtitles.srt"
@@ -202,7 +202,7 @@ def test_render_rejects_ffmpeg_without_required_mp4_encoders_before_godot(
     def fake_run(command, **kwargs):
         calls.append(command)
         return subprocess.CompletedProcess(
-            command, 0, stdout=" A..... aac\\n S..... mov_text\\n", stderr=""
+            command, 0, stdout=" A..... aac\n S..... mov_text\n", stderr=""
         )
 
     monkeypatch.setattr("app.render.subprocess.run", fake_run)
@@ -225,7 +225,7 @@ def test_render_rejects_ffmpeg_without_required_mp4_encoders_before_godot(
     ("verification_returncode", "verification_stdout", "verification_stderr", "error_match"),
     [
         (1, "", "Could not find codec parameters", "decode check"),
-        (0, "out_time_us=4000000\\nprogress=end\\n", "", "duration does not match"),
+        (0, "out_time_us=4000000\nprogress=end\n", "", "duration does not match"),
     ],
 )
 def test_render_removes_mp4_when_final_verification_fails(
@@ -239,12 +239,12 @@ def test_render_removes_mp4_when_final_verification_fails(
     project_root = tmp_path / "project"
     project_root.mkdir()
     scene_path = project_root / "scene.tscn"
-    scene_path.write_text("[gd_scene format=3]\\n", encoding="utf-8")
+    scene_path.write_text("[gd_scene format=3]\n", encoding="utf-8")
     audio_path = project_root / "dialogue.wav"
     _write_silent_wav(audio_path, 1)
     subtitles_path = project_root / "subtitles.srt"
     subtitles_path.write_text(
-        "1\\n00:00:00,000 --> 00:00:01,000\\nالسلام علیکم!\\n",
+        "1\n00:00:00,000 --> 00:00:01,000\nالسلام علیکم!\n",
         encoding="utf-8",
     )
     godot = tmp_path / "Godot.exe"
@@ -258,7 +258,7 @@ def test_render_removes_mp4_when_final_verification_fails(
             return subprocess.CompletedProcess(
                 command,
                 0,
-                stdout=" V..... libx264\\n A..... aac\\n S..... mov_text\\n",
+                stdout=" V..... libx264\n A..... aac\n S..... mov_text\n",
                 stderr="",
             )
         if command[0] == str(godot):
