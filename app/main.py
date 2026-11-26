@@ -211,12 +211,15 @@ class MorphBindingInput(BaseModel):
 
 class FaceFeatureInput(BaseModel):
     enabled: bool = False
+    skin_color_auto: bool = True
+    nose_color_auto: bool = True
     skin_color: str = Field(default="#c98768", pattern=r"^#[0-9a-fA-F]{6}$")
     eye_color: str = Field(default="#ffffff", pattern=r"^#[0-9a-fA-F]{6}$")
     iris_color: str = Field(default="#4b83b8", pattern=r"^#[0-9a-fA-F]{6}$")
     brow_color: str = Field(default="#38251c", pattern=r"^#[0-9a-fA-F]{6}$")
     mouth_color: str = Field(default="#612b2b", pattern=r"^#[0-9a-fA-F]{6}$")
     nose_color: str = Field(default="#c98768", pattern=r"^#[0-9a-fA-F]{6}$")
+    moustache_color: str = Field(default="#38251c", pattern=r"^#[0-9a-fA-F]{6}$")
     face_width: float = Field(default=1.0, ge=0.8, le=1.25)
     cheek_fullness: float = Field(default=1.0, ge=0.5, le=1.5)
     jaw_width: float = Field(default=1.0, ge=0.7, le=1.3)
@@ -230,6 +233,8 @@ class FaceFeatureInput(BaseModel):
     nose_width: float = Field(default=1.0, ge=0.65, le=1.5)
     nose_height: float = Field(default=1.0, ge=0.65, le=1.5)
     mouth_width: float = Field(default=1.0, ge=0.65, le=1.5)
+    moustache_enabled: bool = False
+    moustache_size: float = Field(default=1.0, ge=0.6, le=1.5)
 
 
 class CharacterAppearanceInput(BaseModel):

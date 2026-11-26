@@ -116,9 +116,9 @@
     <a id="download-appearance" class="appearance-download" hidden>Download verified customized GLB</a>
 
    <section id="face-feature-editor" class="proportion-editor">
-    <div class="editor-heading"><strong>Cartoon face studio</strong><span>Editable 3D facial features</span></div>
-    <p class="helper">Create a stylized face with editable eyes, brows, nose, mouth and added cheek, jaw and chin geometry. Match the face skin tint to the model, then export a new GLB; Godot attaches the generated pieces to the Head bone and verifies them after re-import.</p>
-    <label><input id="face-enabled" type="checkbox"> Enable generated cartoon face</label>
+    <div class="editor-heading"><strong>Character face template</strong><span>Reusable generated head and feature recipe</span></div>
+    <p class="helper">The template replaces the imported head’s Skin, Eye and Eyebrow surfaces, then fits editable eyes, brows, nose, mouth and ears to the new head. It needs a Head bone and a separately named Skin surface. Hair, body and clothing stay from the imported rig.</p>
+    <label><input id="face-enabled" type="checkbox"> Replace the imported face with this template</label>
     <div class="expression-presets" aria-label="Generated face expression presets">
      <button class="secondary" type="button" data-generated-face-expression="smile">Smile</button>
      <button class="secondary" type="button" data-generated-face-expression="frown">Frown</button>
@@ -126,12 +126,16 @@
      <button class="secondary" type="button" data-generated-face-expression="angry">Angry</button>
     </div>
     <div class="form-grid">
-     <label>Face skin tint<input id="face-skin-color" type="color" value="#c98768"></label>
+     <label>Face skin tint<input id="face-skin-color" type="color" value="#c98768" disabled></label>
+     <label><input id="face-skin-color-auto" type="checkbox" checked> Match the model’s skin material</label>
      <label>Eye white<input id="face-eye-color" type="color" value="#ffffff"></label>
      <label>Iris colour<input id="face-iris-color" type="color" value="#4b83b8"></label>
      <label>Eyebrow colour<input id="face-brow-color" type="color" value="#38251c"></label>
      <label>Mouth colour<input id="face-mouth-color" type="color" value="#612b2b"></label>
-     <label>Nose colour<input id="face-nose-color" type="color" value="#c98768"></label>
+     <label>Nose colour<input id="face-nose-color" type="color" value="#c98768" disabled></label>
+     <label><input id="face-nose-color-auto" type="checkbox" checked> Match nose to skin</label>
+     <label><input id="face-moustache-enabled" type="checkbox"> Add moustache</label>
+     <label>Moustache colour<input id="face-moustache-color" type="color" value="#38251c"></label>
     </div>
     <div class="proportion-grid">
      <label>Face width <output id="face-width-value">1.00×</output><input id="face-width" type="range" min="0.8" max="1.25" step="0.01" value="1"></label>
@@ -147,6 +151,7 @@
      <label>Nose width <output id="face-nose-width-value">1.00×</output><input id="face-nose-width" type="range" min="0.65" max="1.5" step="0.01" value="1"></label>
      <label>Nose height <output id="face-nose-height-value">1.00×</output><input id="face-nose-height" type="range" min="0.65" max="1.5" step="0.01" value="1"></label>
      <label>Mouth width <output id="face-mouth-width-value">1.00×</output><input id="face-mouth-width" type="range" min="0.65" max="1.5" step="0.01" value="1"></label>
+     <label>Moustache size <output id="face-moustache-size-value">1.00×</output><input id="face-moustache-size" type="range" min="0.6" max="1.5" step="0.01" value="1"></label>
     </div>
     <p id="face-status" class="inline-status" role="status">Enable the generated face to preview editable cartoon features.</p>
    </section>

@@ -262,7 +262,11 @@ def test_godot_worker_bakes_cartoon_face_geometry_and_preserves_animation(tmp_pa
         allowed_root=project_root,
         face_features={
             "enabled": True,
+            "skin_color_auto": False,
             "skin_color": "#bd8068",
+            "moustache_enabled": True,
+            "moustache_color": "#38251c",
+            "moustache_size": 1.1,
             "face_width": 1.12,
             "cheek_fullness": 1.25,
             "jaw_width": 0.88,
@@ -288,6 +292,14 @@ def test_godot_worker_bakes_cartoon_face_geometry_and_preserves_animation(tmp_pa
     assert result["appearance_verified"] is True
     assert result["face_features_verified"] is True
     assert result["face_attachment_bone"].lower().endswith("head")
+    assert result["face_fit_basis"] == "generated_head_template"
+    assert result["face_replaced_surface_count"] >= 3
+    assert {item.rsplit(":", 1)[-1] for item in result["face_replaced_surfaces"]} >= {
+        "Skin", "Eyebrows", "Eye",
+    }
+    assert len(result["face_eye_anchor"]) == 3
+    assert len(result["face_nose_anchor"]) == 3
+    assert len(result["face_mouth_anchor"]) == 3
     assert result["applied_face_feature_count"] >= 23
     assert result["skeleton_count"] == before["skeleton_count"]
     assert result["animation_names"] == before["animation_names"]
@@ -300,10 +312,9 @@ def test_godot_worker_bakes_cartoon_face_geometry_and_preserves_animation(tmp_pa
     assert any(name.startswith("CartoonStudio_Face_Ear_") for name in face_names)
     assert any(name.startswith("CartoonStudio_Face_EarInner_") for name in face_names)
     assert any(name.startswith("CartoonStudio_Face_Nostril_") for name in face_names)
-    assert any(name.startswith("CartoonStudio_Face_Cheek_") for name in face_names)
-    assert any(name.startswith("CartoonStudio_Face_Jaw_") for name in face_names)
+    assert "CartoonStudio_Face_Head" in face_names
+    assert any(name.startswith("CartoonStudio_Face_Moustache_") for name in face_names)
     assert "CartoonStudio_Face_NoseBridge" in face_names
-    assert "CartoonStudio_Face_Chin" in face_names
     assert "CartoonStudio_Face_MouthOpening" in face_names
     assert all(
         f"CartoonStudio_Face_Mouth_{index}" in face_names

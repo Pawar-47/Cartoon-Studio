@@ -64,6 +64,52 @@ def _fake_adapter(tmp_path, timeout=1):
     )
 
 
+def test_face_template_request_preserves_new_controls(tmp_path, monkeypatch):
+    adapter = _fake_adapter(tmp_path)
+    project_root = tmp_path / "face-template-project"
+    project_root.mkdir()
+    source = project_root / "source.glb"
+    source.write_bytes(b"glTF")
+    captured = {}
+
+    def fake_run(operation, payload, **kwargs):
+        captured["operation"] = operation
+        captured["payload"] = payload
+        return {"ok": True}
+
+    monkeypatch.setattr(adapter, "_run", fake_run)
+    result = adapter.export_character_appearance(
+        source,
+        [],
+        [],
+        project_root / "face-template.glb",
+        allowed_root=project_root,
+        face_features={
+            "enabled": True,
+            "skin_color_auto": False,
+            "nose_color_auto": False,
+            "moustache_enabled": True,
+            "moustache_color": "#38251c",
+            "moustache_size": 1.2,
+            "ear_size": 1.3,
+            "nose_width": 1.4,
+            "nose_height": 0.8,
+            "mouth_width": 1.25,
+        },
+    )
+
+    assert result["ok"] is True
+    assert captured["operation"] == "export_character_appearance"
+    assert captured["payload"]["face_features"]["skin_color_auto"] is False
+    assert captured["payload"]["face_features"]["nose_color_auto"] is False
+    assert captured["payload"]["face_features"]["moustache_enabled"] is True
+    assert captured["payload"]["face_features"]["moustache_size"] == 1.2
+    assert captured["payload"]["face_features"]["ear_size"] == 1.3
+    assert captured["payload"]["face_features"]["nose_width"] == 1.4
+    assert captured["payload"]["face_features"]["nose_height"] == 0.8
+    assert captured["payload"]["face_features"]["mouth_width"] == 1.25
+
+
 def test_engine_adapter_rejects_parent_traversal(tmp_path):
     root = tmp_path / "project"
     root.mkdir()
@@ -990,11 +1036,12 @@ def test_pinned_godot_worker_builds_episode_scenes_with_world_and_character_glb(
     assert all(scene["reopened_character_count"] == 1 for scene in result["scenes"])
     assert all(Path(scene["scene_path"]).is_file() for scene in result["scenes"])
     assert all(Path(scene["preview_path"]).is_file() for scene in result["scenes"])
-    assert result["scenes"][0]["action_cue_count"] == 3
-    assert result["scenes"][0]["skeletal_animation_track_count"] > 0
+    first_scene = result["scenes"][0]
+    assert first_scene["action_cue_count"] == 3
+    assert first_scene["skeletal_animation_track_count"] > 0
     assert (
-        result["scenes"][0]["skeletal_animation_keyframe_count"]
-        > result["scenes"][0]["skeletal_animation_track_count"]
+        first_scene["skeletal_animation_keyframe_count"]
+        > first_scene["skeletal_animation_track_count"]
     )
     assert result["scenes"][0]["expression_cue_count"] == 1
     assert result["scenes"][0]["speech_cue_count"] == 1

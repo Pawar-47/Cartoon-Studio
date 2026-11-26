@@ -294,6 +294,11 @@ def test_character_appearance_persists_facial_morph_weights(tmp_path, monkeypatc
             },
             "face_features": {
                 "enabled": True,
+                "skin_color_auto": False,
+                "nose_color_auto": False,
+                "moustache_enabled": True,
+                "moustache_color": "#38251c",
+                "moustache_size": 1.2,
                 "eye_color": "#ffffff",
                 "iris_color": "#4b83b8",
                 "eye_scale": 1.1,
@@ -312,6 +317,9 @@ def test_character_appearance_persists_facial_morph_weights(tmp_path, monkeypatc
         "0:Face/0:Head:Blink": -0.25,
     }
     assert saved["data"]["appearance_recipe"]["face_features"]["enabled"] is True
+    assert saved["data"]["appearance_recipe"]["face_features"]["skin_color_auto"] is False
+    assert saved["data"]["appearance_recipe"]["face_features"]["nose_color_auto"] is False
+    assert saved["data"]["appearance_recipe"]["face_features"]["moustache_enabled"] is True
     assert saved["data"]["appearance_recipe"]["face_features"]["eye_scale"] == 1.1
     reopened = client.get(
         f"/api/projects/{project_id}/characters/{character_id}"

@@ -362,6 +362,217 @@ func _add_face_mouth_segment(
     return instance
 
 
+func _face_surface_matches(label: String, tokens: Array[String]) -> bool:
+    var normalized := label.to_lower()
+    for token in tokens:
+        if token == "eye" and (normalized.contains("brow") or normalized.contains("eyebrow")):
+            continue
+        if normalized.contains(token):
+            return true
+    return false
+
+
+func _named_surface_bounds_in_bone_space(
+    mesh_instance: MeshInstance3D,
+    skeleton: Skeleton3D,
+    bone_index: int,
+    tokens: Array[String],
+    split_center_x: float = 0.0,
+    x_side: int = 0
+) -> Dictionary:
+    var bounds := AABB()
+    var has_bounds := false
+    var matched_surfaces: Array[int] = []
+    var mesh_to_bone := _mesh_to_bone_transform(mesh_instance, skeleton, bone_index)
+    for surface_index in range(mesh_instance.mesh.get_surface_count()):
+        var surface_label := str(mesh_instance.mesh.surface_get_name(surface_index))
+        var material := mesh_instance.get_active_material(surface_index)
+        if material != null:
+            surface_label += " " + str(material.resource_name)
+        if not _face_surface_matches(surface_label, tokens):
+            continue
+        var arrays := mesh_instance.mesh.surface_get_arrays(surface_index)
+        if arrays.size() <= Mesh.ARRAY_VERTEX:
+            continue
+        var vertex_value: Variant = arrays[Mesh.ARRAY_VERTEX]
+        if typeof(vertex_value) != TYPE_PACKED_VECTOR3_ARRAY:
+            continue
+        var vertices: PackedVector3Array = vertex_value
+        for vertex in vertices:
+            var point := mesh_to_bone * vertex
+            if x_side < 0 and point.x >= split_center_x:
+                continue
+            if x_side > 0 and point.x <= split_center_x:
+                continue
+            if not has_bounds:
+                bounds = AABB(point, Vector3.ZERO)
+                has_bounds = true
+            else:
+                bounds = bounds.expand(point)
+        if not matched_surfaces.has(surface_index):
+            matched_surfaces.append(surface_index)
+    return {"bounds": bounds, "surface_indices": matched_surfaces, "found": has_bounds}
+
+
+func _face_surface_depth_at(
+    mesh_instance: MeshInstance3D,
+    skeleton: Skeleton3D,
+    bone_index: int,
+    surface_indices: Array[int],
+    point: Vector2,
+    direction: float,
+    fallback: float
+) -> float:
+    var best_depth := fallback
+    var found := false
+    var mesh_to_bone := _mesh_to_bone_transform(mesh_instance, skeleton, bone_index)
+    for surface_index in surface_indices:
+        var arrays := mesh_instance.mesh.surface_get_arrays(surface_index)
+        if arrays.size() <= Mesh.ARRAY_VERTEX:
+            continue
+        var vertex_value: Variant = arrays[Mesh.ARRAY_VERTEX]
+        if typeof(vertex_value) != TYPE_PACKED_VECTOR3_ARRAY:
+            continue
+        var source_vertices: PackedVector3Array = vertex_value
+        var vertices := PackedVector3Array()
+        vertices.resize(source_vertices.size())
+        for vertex_index in range(source_vertices.size()):
+            vertices[vertex_index] = mesh_to_bone * source_vertices[vertex_index]
+        var indices := PackedInt32Array()
+        if arrays.size() > Mesh.ARRAY_INDEX:
+            var index_value: Variant = arrays[Mesh.ARRAY_INDEX]
+            if typeof(index_value) == TYPE_PACKED_INT32_ARRAY:
+                indices = index_value
+        var triangle_count := indices.size() if not indices.is_empty() else vertices.size()
+        for triangle_start in range(0, triangle_count - 2, 3):
+            var ia := indices[triangle_start] if not indices.is_empty() else triangle_start
+            var ib := indices[triangle_start + 1] if not indices.is_empty() else triangle_start + 1
+            var ic := indices[triangle_start + 2] if not indices.is_empty() else triangle_start + 2
+            if ia >= vertices.size() or ib >= vertices.size() or ic >= vertices.size():
+                continue
+            var a: Vector3 = vertices[ia]
+            var b: Vector3 = vertices[ib]
+            var c: Vector3 = vertices[ic]
+            var denominator := (b.y - c.y) * (a.x - c.x) + (c.x - b.x) * (a.y - c.y)
+            if absf(denominator) < 0.0000001:
+                continue
+            var weight_a := ((b.y - c.y) * (point.x - c.x) + (c.x - b.x) * (point.y - c.y)) / denominator
+            var weight_b := ((c.y - a.y) * (point.x - c.x) + (a.x - c.x) * (point.y - c.y)) / denominator
+            var weight_c := 1.0 - weight_a - weight_b
+            if weight_a < -0.001 or weight_b < -0.001 or weight_c < -0.001:
+                continue
+            var depth := weight_a * a.z + weight_b * b.z + weight_c * c.z
+            if not found or (direction > 0.0 and depth > best_depth) or (direction < 0.0 and depth < best_depth):
+                best_depth = depth
+                found = true
+    return best_depth
+
+
+func _generated_face_front_depth(
+    bounds: AABB,
+    center: Vector3,
+    x: float,
+    y: float,
+    face_width: float,
+    cheek_fullness: float,
+    jaw_width: float,
+    front_direction: float
+) -> float:
+    var t := clampf((bounds.position.y + bounds.size.y - y) / maxf(bounds.size.y, 0.001), 0.025, 0.975)
+    var ring_angle := PI * t
+    var profile := maxf(sin(ring_angle), 0.025)
+    var lower_face := clampf((t - 0.58) / 0.42, 0.0, 1.0)
+    var jaw_profile := lerpf(1.0, clampf(jaw_width, 0.7, 1.3), pow(lower_face, 1.2))
+    var cheek_distance := (t - 0.47) / 0.14
+    var cheek_profile := 1.0 + (clampf(cheek_fullness, 0.5, 1.5) - 1.0) * exp(-cheek_distance * cheek_distance)
+    var x_radius := maxf(bounds.size.x * 0.5 * pow(profile, 0.72) * jaw_profile * cheek_profile * face_width, 0.001)
+    var z_radius := bounds.size.z * 0.5 * pow(profile, 0.72) * lerpf(0.92, 1.0, cheek_profile - 0.5)
+    var side_ratio := clampf((x - center.x) / x_radius, -0.97, 0.97)
+    return center.z + front_direction * z_radius * sqrt(1.0 - side_ratio * side_ratio)
+
+
+func _make_generated_face_head_mesh(
+    bounds: AABB,
+    center: Vector3,
+    face_width: float,
+    cheek_fullness: float,
+    jaw_width: float,
+    chin_length: float,
+    front_direction: float
+) -> ArrayMesh:
+    const RING_COUNT := 18
+    const SEGMENT_COUNT := 28
+    var tool := SurfaceTool.new()
+    tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+    for ring_index in range(RING_COUNT + 1):
+        var t := float(ring_index) / float(RING_COUNT)
+        var ring_angle := PI * t
+        var vertical := cos(ring_angle)
+        var profile := maxf(sin(ring_angle), 0.025)
+        var lower_face := clampf((t - 0.58) / 0.42, 0.0, 1.0)
+        var chin_profile := lerpf(1.0, clampf(chin_length, 0.65, 1.4), pow(lower_face, 1.7))
+        var jaw_profile := lerpf(1.0, clampf(jaw_width, 0.7, 1.3), pow(lower_face, 1.2))
+        var cheek_distance := (t - 0.47) / 0.14
+        var cheek_profile := 1.0 + (clampf(cheek_fullness, 0.5, 1.5) - 1.0) * exp(-cheek_distance * cheek_distance)
+        var x_radius := bounds.size.x * 0.5 * pow(profile, 0.72) * jaw_profile * cheek_profile * face_width
+        var z_radius := bounds.size.z * 0.5 * pow(profile, 0.72) * lerpf(0.92, 1.0, cheek_profile - 0.5)
+        var y_offset := vertical * bounds.size.y * 0.5
+        if t > 0.84:
+            y_offset -= (chin_profile - 1.0) * bounds.size.y * 0.08
+        for segment_index in range(SEGMENT_COUNT + 1):
+            var u := float(segment_index) / float(SEGMENT_COUNT)
+            var angle := TAU * u
+            var point := Vector3(
+                center.x + cos(angle) * x_radius,
+                center.y + y_offset,
+                center.z + sin(angle) * z_radius * front_direction
+            )
+            tool.set_uv(Vector2(u, t))
+            tool.add_vertex(point)
+    var row_width := SEGMENT_COUNT + 1
+    for ring_index in range(RING_COUNT):
+        for segment_index in range(SEGMENT_COUNT):
+            var a := ring_index * row_width + segment_index
+            var b := (ring_index + 1) * row_width + segment_index
+            var c := b + 1
+            var d := a + 1
+            if front_direction > 0.0:
+                tool.add_index(a)
+                tool.add_index(d)
+                tool.add_index(b)
+                tool.add_index(b)
+                tool.add_index(d)
+                tool.add_index(c)
+            else:
+                tool.add_index(a)
+                tool.add_index(b)
+                tool.add_index(d)
+                tool.add_index(b)
+                tool.add_index(c)
+                tool.add_index(d)
+    tool.generate_normals()
+    return tool.commit()
+
+
+func _suppress_imported_face_surfaces(mesh_instance: MeshInstance3D) -> Array[Dictionary]:
+    var suppressed: Array[Dictionary] = []
+    var replaceable_tokens: Array[String] = ["skin", "eye", "brow", "eyebrow", "nose", "nostril", "ear", "mustache", "moustache"]
+    for surface_index in range(mesh_instance.mesh.get_surface_count()):
+        var surface_name := str(mesh_instance.mesh.surface_get_name(surface_index))
+        var material := mesh_instance.get_active_material(surface_index)
+        var label := surface_name + " " + (str(material.resource_name) if material != null else "")
+        if not _face_surface_matches(label, replaceable_tokens):
+            continue
+        var hidden_material := StandardMaterial3D.new()
+        hidden_material.resource_name = "CartoonStudio_Hidden_" + surface_name
+        hidden_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+        hidden_material.albedo_color = Color(1.0, 1.0, 1.0, 0.0)
+        hidden_material.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_DISABLED
+        mesh_instance.set_surface_override_material(surface_index, hidden_material)
+        suppressed.append({"mesh_name": str(mesh_instance.name), "surface_index": surface_index, "surface_name": surface_name})
+    return suppressed
+
+
 func _add_character_face_features(scene: Node, recipe: Dictionary) -> Dictionary:
     if not bool(recipe.get("enabled", false)):
         return {"ok": true, "mesh_count": 0, "attachment_bone": ""}
@@ -415,6 +626,24 @@ func _add_character_face_features(scene: Node, recipe: Dictionary) -> Dictionary
             old_attachment.queue_free()
     await process_frame
 
+    var skin_surface := _named_surface_bounds_in_bone_space(
+        head_mesh, skeleton, head_bone_index, ["skin"]
+    )
+    if not bool(skin_surface.get("found", false)):
+        return {"ok": false, "error_code": "face_template_skin_surface_missing", "error": "The imported head does not have a separable skin surface to replace with the generated face template."}
+    head_bounds = skin_surface["bounds"]
+    var eye_surface := _named_surface_bounds_in_bone_space(
+        head_mesh, skeleton, head_bone_index, ["eye"]
+    )
+    var brow_surface := _named_surface_bounds_in_bone_space(
+        head_mesh, skeleton, head_bone_index, ["brow", "eyebrow"]
+    )
+    var left_eye_surface := _named_surface_bounds_in_bone_space(
+        head_mesh, skeleton, head_bone_index, ["eye"], head_bounds.get_center().x, -1
+    )
+    var right_eye_surface := _named_surface_bounds_in_bone_space(
+        head_mesh, skeleton, head_bone_index, ["eye"], head_bounds.get_center().x, 1
+    )
     var center := head_bounds.get_center()
     var face_width := clampf(float(recipe.get("face_width", 1.0)), 0.8, 1.25)
     var cheek_fullness := clampf(float(recipe.get("cheek_fullness", 1.0)), 0.5, 1.5)
@@ -424,22 +653,44 @@ func _add_character_face_features(scene: Node, recipe: Dictionary) -> Dictionary
     var nose_width := clampf(float(recipe.get("nose_width", 1.0)), 0.65, 1.5)
     var nose_height := clampf(float(recipe.get("nose_height", 1.0)), 0.65, 1.5)
     var mouth_width := clampf(float(recipe.get("mouth_width", 1.0)), 0.65, 1.5)
+    var moustache_enabled := bool(recipe.get("moustache_enabled", false))
+    var moustache_size := clampf(float(recipe.get("moustache_size", 1.0)), 0.6, 1.5)
     var width := maxf(maxf(head_bounds.size.x * 0.56, head_bounds.size.y * 0.18), 0.035) * face_width
     var height := maxf(maxf(head_bounds.size.y * 0.48, width * 0.55), 0.035)
     var front_info := _head_front_direction(head_mesh, skeleton, head_bone_index, center)
     var front_direction := float(front_info.get("direction", 1.0))
-    var front_z := head_bounds.end.z if front_direction > 0.0 else head_bounds.position.z
-    front_z += front_direction * maxf(head_bounds.size.z * 0.035, width * 0.025)
     var eye_scale := clampf(float(recipe.get("eye_scale", 1.0)), 0.65, 1.5)
     var eye_spacing := clampf(float(recipe.get("eye_spacing", 1.0)), 0.65, 1.35)
     var smile := clampf(float(recipe.get("smile", 0.35)), -1.0, 1.0)
     var mouth_open := clampf(float(recipe.get("mouth_open", 0.0)), 0.0, 1.0)
     var brow_angle := clampf(float(recipe.get("brow_angle", 0.0)), -0.5, 0.5)
     var eye_depth := maxf(width * 0.045, 0.008)
+    var eye_bounds: AABB = eye_surface["bounds"] if bool(eye_surface.get("found", false)) else AABB()
+    var eye_center: Vector3 = eye_bounds.get_center() if bool(eye_surface.get("found", false)) else Vector3(center.x, center.y + height * 0.10, center.z)
+    var eye_y: float = eye_center.y
+    var front_z := _generated_face_front_depth(head_bounds, center, center.x, eye_y, face_width, cheek_fullness, jaw_width, front_direction)
     var eye_width := width * 0.105 * eye_scale
     var eye_height := height * 0.17 * eye_scale
-    var eye_y := center.y + height * 0.10
-    var eye_offset := width * 0.245 * eye_spacing
+    if bool(eye_surface.get("found", false)):
+        eye_width = minf(eye_width, maxf(eye_bounds.size.x * 0.12, 0.005))
+        eye_height = minf(eye_height, maxf(eye_bounds.size.y * 0.45, 0.005))
+    var eye_offset := maxf(eye_bounds.size.x * 0.25, width * 0.18) * eye_spacing if bool(eye_surface.get("found", false)) else width * 0.245 * eye_spacing
+    var nose_y: float = eye_y - head_bounds.size.y * 0.08
+    var mouth_y: float = eye_y - head_bounds.size.y * 0.27
+    var brow_y: float = brow_surface["bounds"].get_center().y if bool(brow_surface.get("found", false)) else eye_y + eye_height * 1.15
+    var skin_surface_indices: Array[int] = skin_surface.get("surface_indices", [])
+    var nose_surface_z := _generated_face_front_depth(head_bounds, center, center.x, nose_y, face_width, cheek_fullness, jaw_width, front_direction)
+    var mouth_surface_z := _generated_face_front_depth(head_bounds, center, center.x, mouth_y, face_width, cheek_fullness, jaw_width, front_direction)
+    var brow_surface_z := _generated_face_front_depth(head_bounds, center, center.x, brow_y, face_width, cheek_fullness, jaw_width, front_direction)
+    var generated_skin_color := str(recipe.get("skin_color", "#c98768"))
+    if bool(recipe.get("skin_color_auto", true)):
+        for surface_index in skin_surface_indices:
+            var source_skin_material := head_mesh.get_active_material(surface_index)
+            if source_skin_material is BaseMaterial3D:
+                generated_skin_color = (source_skin_material as BaseMaterial3D).albedo_color.to_html(false)
+                break
+    var generated_nose_color := generated_skin_color if bool(recipe.get("nose_color_auto", true)) else str(recipe.get("nose_color", generated_skin_color))
+    var replaced_surfaces := _suppress_imported_face_surfaces(head_mesh)
 
     var attachment := BoneAttachment3D.new()
     attachment.name = "CartoonStudio_Face_Attachment"
@@ -450,84 +701,113 @@ func _add_character_face_features(scene: Node, recipe: Dictionary) -> Dictionary
     var iris_material := _face_material(str(recipe.get("iris_color", "#4b83b8")))
     var pupil_material := _face_material("#17191d")
     var brow_material := _face_material(str(recipe.get("brow_color", "#38251c")))
-    var nose_material := _face_material(str(recipe.get("nose_color", "#c98768")))
+    var nose_material := _face_material(generated_nose_color)
     var mouth_material := _face_material(str(recipe.get("mouth_color", "#612b2b")))
-    var skin_material := _face_material(str(recipe.get("skin_color", recipe.get("nose_color", "#c98768"))))
+    var moustache_material := _face_material(str(recipe.get("moustache_color", "#38251c")))
+    var skin_material := _face_material(generated_skin_color)
     var mesh_count := 0
+    var generated_head := MeshInstance3D.new()
+    generated_head.name = "CartoonStudio_Face_Head"
+    generated_head.mesh = _make_generated_face_head_mesh(
+        head_bounds, center, face_width, cheek_fullness, jaw_width, chin_length, front_direction
+    )
+    generated_head.material_override = skin_material
+    attachment.add_child(generated_head)
+    generated_head.owner = scene
+    mesh_count += 1
 
     for side_index in range(2):
         var side: float = -1.0 if side_index == 0 else 1.0
+        var ear_x := center.x + side * (head_bounds.size.x * 0.5 + width * 0.025)
+        var ear_y: float = eye_y - head_bounds.size.y * 0.055
+        var ear_surface_x := center.x + side * head_bounds.size.x * 0.46
+        var ear_z := _generated_face_front_depth(
+            head_bounds, center, ear_surface_x, ear_y, face_width, cheek_fullness, jaw_width, front_direction
+        ) + front_direction * eye_depth * 0.25
         _add_face_sphere(attachment, scene, "CartoonStudio_Face_Ear_" + str(side_index),
-            Vector3(center.x + side * head_bounds.size.x * 0.43, center.y - height * 0.02, front_z + front_direction * eye_depth * 0.08),
-            Vector3(width * 0.075 * ear_size, height * 0.14 * ear_size, eye_depth * 0.72 * ear_size), skin_material)
+            Vector3(ear_x, ear_y, ear_z),
+            Vector3(width * 0.11 * ear_size, height * 0.14 * ear_size, eye_depth * 0.78 * ear_size), skin_material)
         mesh_count += 1
+        var inner_ear_z := _generated_face_front_depth(
+            head_bounds, center, ear_surface_x, ear_y, face_width, cheek_fullness, jaw_width, front_direction
+        ) + front_direction * eye_depth * 0.62
         _add_face_sphere(attachment, scene, "CartoonStudio_Face_EarInner_" + str(side_index),
-            Vector3(center.x + side * head_bounds.size.x * 0.43, center.y - height * 0.02, front_z + front_direction * eye_depth * 0.69),
-            Vector3(width * 0.027 * ear_size, height * 0.085 * ear_size, eye_depth * 0.19 * ear_size), _face_material("#a96859"))
+            Vector3(ear_x, ear_y, inner_ear_z),
+            Vector3(width * 0.035 * ear_size, height * 0.075 * ear_size, eye_depth * 0.3 * ear_size), _face_material("#a96859"))
         mesh_count += 1
 
     for side_index in range(2):
         var side: float = -1.0 if side_index == 0 else 1.0
-        var eye_x: float = center.x + side * eye_offset
+        var side_surface: Dictionary = left_eye_surface if side_index == 0 else right_eye_surface
+        var eye_x: float = side_surface["bounds"].get_center().x if bool(side_surface.get("found", false)) else center.x + side * eye_offset
+        eye_x = center.x + (eye_x - center.x) * eye_spacing if bool(side_surface.get("found", false)) else eye_x
+        var eye_z := _generated_face_front_depth(head_bounds, center, eye_x, eye_y, face_width, cheek_fullness, jaw_width, front_direction)
+        eye_z += front_direction * maxf(eye_depth * 0.08, 0.001)
         _add_face_sphere(attachment, scene, "CartoonStudio_Face_EyeWhite_" + str(side),
-            Vector3(eye_x, eye_y, front_z),
+            Vector3(eye_x, eye_y, eye_z),
             Vector3(eye_width, eye_height, eye_depth), eye_material)
         _add_face_sphere(attachment, scene, "CartoonStudio_Face_Iris_" + str(side),
-            Vector3(eye_x + width * 0.018, eye_y - height * 0.012, front_z + front_direction * eye_depth * 0.88),
+            Vector3(eye_x + width * 0.018, eye_y - height * 0.012, eye_z + front_direction * eye_depth * 0.82),
             Vector3(eye_width * 0.49, eye_height * 0.57, eye_depth * 0.42), iris_material)
         _add_face_sphere(attachment, scene, "CartoonStudio_Face_Pupil_" + str(side),
-            Vector3(eye_x + width * 0.022, eye_y - height * 0.012, front_z + front_direction * eye_depth * 1.22),
+            Vector3(eye_x + width * 0.022, eye_y - height * 0.012, eye_z + front_direction * eye_depth * 1.16),
             Vector3(eye_width * 0.23, eye_height * 0.34, eye_depth * 0.22), pupil_material)
         var brow := _add_face_sphere(attachment, scene, "CartoonStudio_Face_Brow_" + str(side),
-            Vector3(eye_x, eye_y + eye_height * 1.55, front_z + front_direction * eye_depth * 0.12),
-            Vector3(eye_width * 1.32, maxf(height * 0.035, 0.006), eye_depth * 0.38), brow_material)
+            Vector3(eye_x, brow_y, brow_surface_z + front_direction * eye_depth * 0.08),
+            Vector3(eye_width * 1.32, maxf(eye_height * 0.24, 0.004), eye_depth * 0.3), brow_material)
         brow.rotation.z = -side * brow_angle
         mesh_count += 4
 
-    for side_index in range(2):
-        var side: float = -1.0 if side_index == 0 else 1.0
-        _add_face_sphere(attachment, scene, "CartoonStudio_Face_Cheek_" + str(side_index),
-            Vector3(center.x + side * width * 0.255 * jaw_width, center.y - height * 0.19, front_z + front_direction * eye_depth * 0.35),
-            Vector3(width * 0.085 * cheek_fullness, height * 0.065 * cheek_fullness, eye_depth * 0.62), skin_material)
-        _add_face_sphere(attachment, scene, "CartoonStudio_Face_Jaw_" + str(side_index),
-            Vector3(center.x + side * width * 0.17 * jaw_width, center.y - height * 0.34, front_z + front_direction * eye_depth * 0.24),
-            Vector3(width * 0.115 * jaw_width, height * 0.075, eye_depth * 0.55), skin_material)
-        mesh_count += 2
-
-    _add_face_sphere(attachment, scene, "CartoonStudio_Face_Chin",
-        Vector3(center.x, center.y - height * (0.405 + (chin_length - 1.0) * 0.025), front_z + front_direction * eye_depth * 0.24),
-        Vector3(width * 0.13 * jaw_width, height * 0.06 * chin_length, eye_depth * 0.62), skin_material)
-    mesh_count += 1
-
+    var nose_bridge_y := eye_y - (eye_y - nose_y) * 0.42
+    var nose_bridge_z := _generated_face_front_depth(head_bounds, center, center.x, nose_bridge_y, face_width, cheek_fullness, jaw_width, front_direction)
     _add_face_sphere(attachment, scene, "CartoonStudio_Face_NoseBridge",
-        Vector3(center.x, center.y - height * 0.015, front_z + front_direction * eye_depth * 0.48),
-        Vector3(width * 0.035 * nose_width, height * 0.09 * nose_height, eye_depth * 0.72), nose_material)
+        Vector3(center.x, nose_bridge_y, nose_bridge_z + front_direction * eye_depth * 0.32),
+        Vector3(width * 0.025 * nose_width, height * 0.075 * nose_height, eye_depth * 0.45), nose_material)
     mesh_count += 1
     _add_face_sphere(attachment, scene, "CartoonStudio_Face_Nose",
-        Vector3(center.x, center.y - height * 0.08, front_z + front_direction * eye_depth * 0.6),
-        Vector3(width * 0.055 * nose_width, height * 0.075 * nose_height, eye_depth * 0.8), nose_material)
+        Vector3(center.x, nose_y, nose_surface_z + front_direction * eye_depth * 0.42),
+        Vector3(width * 0.05 * nose_width, height * 0.055 * nose_height, eye_depth * 0.62), nose_material)
     mesh_count += 1
     var nostril_material := _face_material("#633e36")
     for side_index in range(2):
         var side: float = -1.0 if side_index == 0 else 1.0
+        var nostril_x := center.x + side * width * 0.027 * nose_width
+        var nostril_y: float = nose_y - head_bounds.size.y * 0.025
+        var nostril_z := _generated_face_front_depth(head_bounds, center, nostril_x, nostril_y, face_width, cheek_fullness, jaw_width, front_direction)
         _add_face_sphere(attachment, scene, "CartoonStudio_Face_Nostril_" + str(side_index),
-            Vector3(center.x + side * width * 0.027 * nose_width, center.y - height * 0.112 * nose_height, front_z + front_direction * eye_depth * 1.18),
+            Vector3(nostril_x, nostril_y, nostril_z + front_direction * eye_depth * 0.82),
             Vector3(width * 0.016 * nose_width, height * 0.018 * nose_height, eye_depth * 0.19), nostril_material)
         mesh_count += 1
 
-    var mouth_y := center.y - height * 0.30
     var mouth_half := width * 0.19 * mouth_width
-    var mouth_depth := front_z + front_direction * eye_depth * 0.5
+    if moustache_enabled:
+        var moustache_y := mouth_y + height * 0.15
+        for side_index in range(2):
+            var side: float = -1.0 if side_index == 0 else 1.0
+            var moustache_x := center.x + side * width * 0.078 * moustache_size
+            var moustache_z := _generated_face_front_depth(
+                head_bounds, center, moustache_x, moustache_y,
+                face_width, cheek_fullness, jaw_width, front_direction
+            )
+            var moustache_lobe := _add_face_sphere(attachment, scene,
+                "CartoonStudio_Face_Moustache_" + str(side_index),
+                Vector3(moustache_x, moustache_y, moustache_z + front_direction * eye_depth * 0.38),
+                Vector3(width * 0.075 * moustache_size, height * 0.032 * moustache_size, eye_depth * 0.42),
+                moustache_material
+            )
+            moustache_lobe.rotation.z = -side * 0.16
+            mesh_count += 1
+    var mouth_depth := mouth_surface_z + front_direction * eye_depth * 0.38
     var mouth_opening := _add_face_sphere(attachment, scene, "CartoonStudio_Face_MouthOpening",
-        Vector3(center.x, mouth_y, front_z + front_direction * eye_depth * 0.58),
+        Vector3(center.x, mouth_y, mouth_depth),
         Vector3(mouth_half, height * 0.13, eye_depth * 0.62), mouth_material)
     mouth_opening.visible = mouth_open > 0.08
     mesh_count += 1
     var mouth_points := [
-        Vector3(center.x - mouth_half, mouth_y + smile * height * 0.075, mouth_depth),
-        Vector3(center.x - mouth_half * 0.5, mouth_y - smile * height * 0.07, mouth_depth),
-        Vector3(center.x + mouth_half * 0.5, mouth_y - smile * height * 0.07, mouth_depth),
-        Vector3(center.x + mouth_half, mouth_y + smile * height * 0.075, mouth_depth)
+        Vector3(center.x - mouth_half, mouth_y + smile * height * 0.075, _generated_face_front_depth(head_bounds, center, center.x - mouth_half, mouth_y + smile * height * 0.075, face_width, cheek_fullness, jaw_width, front_direction) + front_direction * eye_depth * 0.42),
+        Vector3(center.x - mouth_half * 0.5, mouth_y - smile * height * 0.07, _generated_face_front_depth(head_bounds, center, center.x - mouth_half * 0.5, mouth_y - smile * height * 0.07, face_width, cheek_fullness, jaw_width, front_direction) + front_direction * eye_depth * 0.42),
+        Vector3(center.x + mouth_half * 0.5, mouth_y - smile * height * 0.07, _generated_face_front_depth(head_bounds, center, center.x + mouth_half * 0.5, mouth_y - smile * height * 0.07, face_width, cheek_fullness, jaw_width, front_direction) + front_direction * eye_depth * 0.42),
+        Vector3(center.x + mouth_half, mouth_y + smile * height * 0.075, _generated_face_front_depth(head_bounds, center, center.x + mouth_half, mouth_y + smile * height * 0.075, face_width, cheek_fullness, jaw_width, front_direction) + front_direction * eye_depth * 0.42)
     ]
     var mouth_radius := maxf(width * 0.012, 0.003)
     for segment_index in range(mouth_points.size() - 1):
@@ -540,7 +820,7 @@ func _add_character_face_features(scene: Node, recipe: Dictionary) -> Dictionary
     if mouth_open > 0.45:
         var tongue_material := _face_material("#c65f72")
         _add_face_sphere(attachment, scene, "CartoonStudio_Face_MouthTongue",
-            Vector3(center.x, mouth_y - height * 0.035, front_z + front_direction * eye_depth * 1.08),
+            Vector3(center.x, mouth_y - height * 0.035, mouth_depth + front_direction * eye_depth * 0.62),
             Vector3(mouth_half * 0.52, height * 0.025, eye_depth * 0.2), tongue_material)
         mesh_count += 1
 
@@ -549,7 +829,12 @@ func _add_character_face_features(scene: Node, recipe: Dictionary) -> Dictionary
         "mesh_count": mesh_count,
         "attachment_bone": head_bone_name,
         "front_direction": front_direction,
-        "fit_basis": "head_mesh_bounds"
+        "fit_basis": "generated_head_template",
+        "head_mesh_name": str(head_mesh.name),
+        "replaced_surfaces": replaced_surfaces,
+        "eye_anchor": [eye_center.x, eye_center.y, front_z],
+        "nose_anchor": [center.x, nose_y, nose_surface_z],
+        "mouth_anchor": [center.x, mouth_y, mouth_surface_z]
     }
 
 
@@ -759,10 +1044,37 @@ func _export_character_appearance(payload: Dictionary) -> Dictionary:
         if face_mesh_count < int(face_result.get("mesh_count", 0)) or not face_attachment_verified:
             DirAccess.remove_absolute(output_path)
             return {"error_code": "appearance_face_verification_failed", "error": "Generated facial meshes or their Head-bone attachment did not survive GLB export and re-import."}
+        var verified_replaced_surfaces: Array[String] = []
+        for replaced_surface in face_result.get("replaced_surfaces", []):
+            var surface_verified := false
+            var replaced_mesh_name := str(replaced_surface.get("mesh_name", ""))
+            var replaced_surface_index := int(replaced_surface.get("surface_index", -1))
+            for mesh_record in verification.get("mesh_inventory", []):
+                if str(mesh_record.get("node_name", "")) != replaced_mesh_name:
+                    continue
+                var material_names: Array = mesh_record.get("material_names", [])
+                var material_properties: Array = mesh_record.get("material_properties", [])
+                if replaced_surface_index < 0 or replaced_surface_index >= material_names.size() or replaced_surface_index >= material_properties.size():
+                    continue
+                var exported_material_name := str(material_names[replaced_surface_index])
+                var exported_material_properties: Dictionary = material_properties[replaced_surface_index]
+                var exported_color: Array = exported_material_properties.get("color", [])
+                if exported_material_name.begins_with("CartoonStudio_Hidden_") and exported_color.size() >= 4 and float(exported_color[3]) <= 0.01:
+                    surface_verified = true
+                    verified_replaced_surfaces.append(replaced_mesh_name + ":" + str(replaced_surface_index) + ":" + str(replaced_surface.get("surface_name", "")))
+                    break
+            if not surface_verified:
+                DirAccess.remove_absolute(output_path)
+                return {"error_code": "appearance_face_replacement_verification_failed", "error": "An imported facial surface remained visible after replacement export and re-import: " + str(replaced_surface.get("surface_name", "unknown"))}
         verification["face_features_verified"] = true
         verification["face_attachment_bone"] = str(face_result.get("attachment_bone", ""))
         verification["face_front_direction"] = float(face_result.get("front_direction", 1.0))
         verification["face_fit_basis"] = str(face_result.get("fit_basis", ""))
+        verification["face_replaced_surfaces"] = verified_replaced_surfaces
+        verification["face_replaced_surface_count"] = verified_replaced_surfaces.size()
+        verification["face_eye_anchor"] = face_result.get("eye_anchor", [])
+        verification["face_nose_anchor"] = face_result.get("nose_anchor", [])
+        verification["face_mouth_anchor"] = face_result.get("mouth_anchor", [])
     else:
         verification["face_features_verified"] = false
         verification["face_attachment_bone"] = ""
@@ -3423,6 +3735,8 @@ func _export_episode_scenes(payload: Dictionary) -> Dictionary:
             "scene_reopened": true,
             "reopened_character_count": reopened_character_count,
             "animation_track_count": timeline_result["animation_track_count"],
+            "skeletal_animation_track_count": timeline_result["skeletal_animation_track_count"],
+            "skeletal_animation_keyframe_count": timeline_result["skeletal_animation_keyframe_count"],
             "action_cue_count": timeline_result["action_cue_count"],
             "expression_cue_count": timeline_result["expression_cue_count"],
             "speech_cue_count": timeline_result["speech_cue_count"],

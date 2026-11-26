@@ -236,14 +236,29 @@ class GodotEngineAdapter:
             raise EnginePathError("Face feature enabled must be a boolean.")
         validated_face_features: dict[str, Any] = {"enabled": face_enabled}
         if face_enabled:
+            skin_color_auto = face_recipe.get("skin_color_auto", True)
+            nose_color_auto = face_recipe.get("nose_color_auto", True)
+            moustache_enabled = face_recipe.get("moustache_enabled", False)
+            if not isinstance(skin_color_auto, bool):
+                raise EnginePathError("Face skin color auto-match must be a boolean.")
+            if not isinstance(nose_color_auto, bool):
+                raise EnginePathError("Face nose color auto-match must be a boolean.")
+            if not isinstance(moustache_enabled, bool):
+                raise EnginePathError("Face moustache enabled must be a boolean.")
+            validated_face_features["skin_color_auto"] = skin_color_auto
+            validated_face_features["nose_color_auto"] = nose_color_auto
+            validated_face_features["moustache_enabled"] = moustache_enabled
             face_defaults = {
                 "skin_color": "#c98768", "eye_color": "#ffffff",
                 "iris_color": "#4b83b8", "brow_color": "#38251c",
                 "mouth_color": "#612b2b", "nose_color": "#c98768",
+                "moustache_color": "#38251c",
                 "face_width": 1.0, "cheek_fullness": 1.0,
                 "jaw_width": 1.0, "chin_length": 1.0,
                 "eye_scale": 1.0, "eye_spacing": 1.0,
                 "smile": 0.35, "mouth_open": 0.0, "brow_angle": 0.0,
+                "ear_size": 1.0, "nose_width": 1.0,
+                "nose_height": 1.0, "mouth_width": 1.0, "moustache_size": 1.0,
             }
             for field, default in face_defaults.items():
                 value = face_recipe.get(field, default)
@@ -278,6 +293,12 @@ class GodotEngineAdapter:
                         lower, upper = 0.65, 1.4
                     elif field == "mouth_open":
                         lower, upper = 0.0, 1.0
+                    elif field == "ear_size":
+                        lower, upper = 0.6, 1.5
+                    elif field == "moustache_size":
+                        lower, upper = 0.6, 1.5
+                    elif field in {"nose_width", "nose_height", "mouth_width"}:
+                        lower, upper = 0.65, 1.5
                     else:
                         lower, upper = -0.5, 0.5
                     if not lower <= number <= upper:
