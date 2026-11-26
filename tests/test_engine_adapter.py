@@ -798,3 +798,33 @@ def test_world_scene_export_rejects_output_path_escape(tmp_path):
             {"objects": []}, tmp_path / "outside.tscn", allowed_root=project_root
         )
 
+
+
+def test_pinned_godot_worker_exports_and_reopens_a_real_world_scene(tmp_path):
+    adapter = _real_godot_adapter(tmp_path)
+    project_root = tmp_path / "world-scene-project"
+    project_root.mkdir()
+    output = project_root / "assets" / "worlds" / "market-town.tscn"
+    world = {
+        "name": "Market Town",
+        "theme": "market",
+        "ground_color": "#789b58",
+        "sky": "sunset",
+        "objects": [
+            {"id": "road-1", "kind": "road", "label": "Main Road", "x": 50, "y": 50, "width": 80, "height": 12, "rotation": 0, "color": "#4b4d50"},
+            {"id": "shop-1", "kind": "shop", "label": "Bakery", "x": 30, "y": 40, "width": 18, "height": 16, "rotation": 0, "color": "#d9a46b"},
+            {"id": "tree-1", "kind": "tree", "label": "Town Tree", "x": 70, "y": 25, "width": 10, "height": 12, "rotation": 0, "color": "#4c9850"},
+            {"id": "car-1", "kind": "vehicle", "label": "Car", "x": 55, "y": 50, "width": 12, "height": 8, "rotation": 0, "color": "#477fa8"},
+            {"id": "lamp-1", "kind": "lamp", "label": "Street Lamp", "x": 20, "y": 70, "width": 5, "height": 8, "rotation": 0, "color": "#e9d27a"},
+            {"id": "park-1", "kind": "park", "label": "Green Park", "x": 80, "y": 80, "width": 20, "height": 18, "rotation": 0, "color": "#70a35b"},
+            {"id": "house-1", "kind": "building", "label": "Town House", "x": 20, "y": 20, "width": 16, "height": 14, "rotation": 0, "color": "#c89b67"},
+        ],
+    }
+    result = adapter.export_world_scene(world, output, allowed_root=project_root)
+    assert result["ok"] is True
+    assert result["object_count"] == 7
+    assert result["scene_reopened"] is True
+    assert result["lighting_preset"] == "sunset"
+    assert output.is_file()
+    assert output.stat().st_size > 0
+
