@@ -701,36 +701,44 @@ def test_episode_production_endpoint_persists_scene_build_manifest(tmp_path, mon
     assert world_export.status_code == 200
 
     now = "2026-11-26T00:00:00+00:00"
-    asset_id = str(uuid.uuid4())
-    relative = f"assets/characters/{asset_id}.glb"
-    asset_path = main.resolve_project_relative(main.DATA_DIR, project_id, relative)
-    asset_path.parent.mkdir(parents=True, exist_ok=True)
-    asset_path.write_bytes(b"test-glb")
-    asset_data = {
-        "original_filename": "Ali.glb",
-        "relative_path": relative,
-        "rig_ready": True,
-        "animation_ready": True,
-    }
-    asset_doc = main.make_envelope("character_asset", asset_id, asset_data, now, now)
-    asset_manifest = main.resolve_project_relative(
-        main.DATA_DIR, project_id, f"assets/characters/{asset_id}.json"
-    )
-    digest = main.write_json_atomic(asset_manifest, asset_doc)
-    with main.connect_db() as connection:
-        main.upsert_document_index(
-            connection, project_id, asset_doc,
-            f"assets/characters/{asset_id}.json", digest,
-        )
 
+    def register_asset(filename):
+        asset_id = str(uuid.uuid4())
+        relative = f"assets/characters/{asset_id}.glb"
+        asset_path = main.resolve_project_relative(main.DATA_DIR, project_id, relative)
+        asset_path.parent.mkdir(parents=True, exist_ok=True)
+        asset_path.write_bytes(b"test-glb")
+        asset_data = {
+            "original_filename": filename,
+            "relative_path": relative,
+            "rig_ready": True,
+            "animation_ready": True,
+        }
+        asset_doc = main.make_envelope(
+            "character_asset", asset_id, asset_data, now, now
+        )
+        asset_manifest = main.resolve_project_relative(
+            main.DATA_DIR, project_id, f"assets/characters/{asset_id}.json"
+        )
+        digest = main.write_json_atomic(asset_manifest, asset_doc)
+        with main.connect_db() as connection:
+            main.upsert_document_index(
+                connection, project_id, asset_doc,
+                f"assets/characters/{asset_id}.json", digest,
+            )
+        return asset_id
+
+    ali_asset_id = register_asset("Ali.glb")
+    bilu_asset_id = register_asset("Bilu.glb")
     plan = valid_episode_plan()
     plan["world_id"] = world.json()["id"]
-    plan["characters"][0]["asset_id"] = asset_id
+    plan["characters"][0]["asset_id"] = ali_asset_id
+    plan["characters"][1]["asset_id"] = bilu_asset_id
     saved = client.put(f"/api/projects/{project_id}/story", json=plan)
     assert saved.status_code == 200
 
     generated = client.post(f"/api/projects/{project_id}/story/production")
-    assert generated.status_code == 200
+    assert generated.status_code == 200, generated.text
     assert generated.json()["scene_count"] == 5
     assert generated.json()["total_duration_seconds"] == 300
     reopened = client.get(f"/api/projects/{project_id}/story/production")
