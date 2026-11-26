@@ -8,6 +8,7 @@ import pytest
 from app.character_foundry import (
     MASTER_TEMPLATE_ID,
     MORPH_TARGETS,
+    RIG_PROFILE_ID,
     build_master_character_glb,
     default_character_recipe,
     validate_character_recipe,
@@ -66,6 +67,13 @@ def test_generated_master_glb_contains_real_morph_geometry() -> None:
     assert len(document["accessors"]) == 2 + len(MORPH_TARGETS)
     assert document["asset"]["extras"]["masterTemplate"] == MASTER_TEMPLATE_ID
     assert document["nodes"][0]["name"] == "CartoonStudio_StylizedAdult"
+    assert document["nodes"][0]["skin"] == 0
+    assert len(document["skins"][0]["joints"]) == 19
+    assert document["skins"][0]["skeleton"] == 1
+    attributes = primitive["attributes"]
+    assert {"JOINTS_0", "WEIGHTS_0"} <= set(attributes)
+    assert document["accessors"][attributes["JOINTS_0"]]["componentType"] == 5123
+    assert document["accessors"][attributes["WEIGHTS_0"]]["componentType"] == 5126
 
 
 def test_generated_morph_targets_have_nonzero_vertex_deltas() -> None:
@@ -89,4 +97,6 @@ def test_master_export_writes_replayable_recipe(tmp_path) -> None:
     assert recipe["generated_asset"]["filename"] == "hero.glb"
     assert recipe["generated_asset"]["sha256"]
     assert recipe["generated_asset"]["morph_targets"] == list(MORPH_TARGETS)
+    assert recipe["generated_asset"]["rig_profile_id"] == RIG_PROFILE_ID
+    assert len(recipe["generated_asset"]["bone_names"]) == 19
     assert validate_character_recipe(recipe)["character_id"] == "character-foundry-preview"
