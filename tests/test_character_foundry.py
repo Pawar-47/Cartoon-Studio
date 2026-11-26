@@ -5,6 +5,8 @@ import struct
 
 import pytest
 
+from scripts import generate_foundry_master
+
 from app.character_foundry import (
     CLOTHING_ASSET_ID,
     MASTER_TEMPLATE_ID,
@@ -158,6 +160,37 @@ def test_master_export_preserves_custom_recipe_parameters(tmp_path) -> None:
     assert saved["character_id"] == "custom-export"
     assert saved["parameters"] == recipe["parameters"]
     assert saved["generated_asset"]["morph_weights"] == expected
+
+
+
+def test_generator_cli_loads_and_exports_saved_recipe(tmp_path, monkeypatch) -> None:
+    recipe = default_character_recipe("cli-hero")
+    recipe["parameters"]["head_width"] = 0.55
+    recipe["parameters"]["torso_width"] = -0.25
+    recipe["clothing_asset_ids"] = []
+    input_path = tmp_path / "input.recipe.json"
+    input_path.write_text(json.dumps(recipe), encoding="utf-8")
+    output_path = tmp_path / "cli-hero.glb"
+    recipe_output = tmp_path / "cli-hero.saved.json"
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "generate_foundry_master",
+            "--output", str(output_path),
+            "--recipe", str(recipe_output),
+            "--recipe-input", str(input_path),
+        ],
+    )
+
+    assert generate_foundry_master.main() == 0
+
+    generated = _read_glb(output_path.read_bytes())
+    saved_recipe = json.loads(recipe_output.read_text(encoding="utf-8"))
+    expected_weights = [recipe["parameters"][name] for name in MORPH_TARGETS]
+    assert generated["meshes"][0]["weights"] == expected_weights
+    assert len(generated["meshes"][0]["primitives"]) == 1
+    assert saved_recipe["character_id"] == "cli-hero"
+    assert saved_recipe["parameters"] == recipe["parameters"]
 
 
 def test_recipe_can_disable_fitted_clothing() -> None:

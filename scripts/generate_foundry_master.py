@@ -12,8 +12,14 @@ def main() -> int:
         description="Generate the original Cartoon Studio stylized adult master GLB."
     )
     parser.add_argument("--output", default="artifacts/foundry/stylized-adult.glb")
-    parser.add_argument("--recipe", default=None, help="Output path for the editable recipe sidecar.")
-    parser.add_argument("--recipe-input", default=None, help="Existing editable recipe JSON to generate.")
+    parser.add_argument(
+        "--recipe", default=None,
+        help="Output path for the editable recipe sidecar.",
+    )
+    parser.add_argument(
+        "--recipe-input", default=None,
+        help="Existing editable recipe JSON to generate.",
+    )
     parser.add_argument("--character-id", default="character-foundry-preview")
     args = parser.parse_args()
     recipe = (
