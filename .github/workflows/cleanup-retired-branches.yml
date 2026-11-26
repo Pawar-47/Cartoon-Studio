@@ -1,38 +1,69 @@
 name: Retired Branch Cleanup
 
 on:
-  workflow_run:
-    workflows: ["Cartoon Studio CI"]
-    types: [completed]
-    branches: [main]
+  workflow_dispatch:
+    inputs:
+      branches_to_delete:
+        description: "Comma-separated exact branch names to delete. Only these branches will be considered."
+        required: true
+        type: string
+      confirmation:
+        description: "Type DELETE LISTED BRANCHES to authorize deletion."
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 jobs:
   cleanup:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ inputs.confirmation == 'DELETE LISTED BRANCHES' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - name: Delete retired branches and preserve main
+      - name: Delete only explicitly listed retired branches
         uses: actions/github-script@v7
         with:
           script: |
             const { owner, repo } = context.repo;
+            const protectedBranches = new Set([
+              "main",
+              "feature/cartoon-character-foundry",
+            ]);
+            const requested = [...new Set(
+              (core.getInput("branches_to_delete") || "")
+                .split(",")
+                .map((name) => name.trim())
+                .filter(Boolean)
+            )];
+
+            if (requested.length === 0) {
+              core.setFailed("No branch names were supplied; nothing was deleted.");
+              return;
+            }
+
             const branches = await github.paginate(
               github.rest.repos.listBranches,
               { owner, repo, per_page: 100 }
             );
-            const retired = branches.filter((branch) => branch.name !== "main");
-            core.info(`Found ${retired.length} non-main branch(es).`);
-            for (const branch of retired) {
+            const existing = new Set(branches.map((branch) => branch.name));
+
+            for (const name of requested) {
+              if (protectedBranches.has(name)) {
+                core.warning(`Refusing to delete protected branch: ${name}`);
+                continue;
+              }
+              if (!existing.has(name)) {
+                core.warning(`Branch does not exist; skipped: ${name}`);
+                continue;
+              }
               await github.rest.git.deleteRef({
                 owner,
                 repo,
-                ref: `heads/${branch.name}`,
+                ref: `heads/${name}`,
               });
-              core.info(`Deleted ${branch.name}`);
+              core.info(`Deleted explicitly requested branch: ${name}`);
             }
-            core.info("Preserved main.");
+
+            core.info("Cleanup finished. main and feature/cartoon-character-foundry were protected.");
