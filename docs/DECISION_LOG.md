@@ -71,3 +71,12 @@ Date: 2026-11-25. The hosted proof successfully converted AVI to MP4 using MPEG-
 **Boundaries:** pin the asset-hosting commit and every model's byte size/Git blob SHA-1; cache downloads locally; use only the CC0 model files. Do not reuse the unlicensed host repository's application code. Configura was evaluated but not adopted as a runtime dependency because it is an unstable editor-time Godot plugin and the app's control plane is browser-first.
 
 **Acceptance:** Godot verifies representative models; a later batch assembles four selected parts onto one skeleton, preserves all clips, exports/reopens GLB, and persists a versioned creation recipe. P2.2 remains PARTIAL until the creator UI and save/reopen flow pass.
+
+
+## D-018 — Retired-branch deletion is manual-only
+
+Date: 2026-11-27. The previous `cleanup-retired-branches.yml` ran on every successful `main` CI and deleted every non-`main` branch, including open feature branches. That conflicts with the owner's instruction to leave feature branches untouched and with the repository rule against destructive resets. The workflow now runs only on explicit `workflow_dispatch`, deletes only the exact branch names supplied by a maintainer, and always preserves `main`. Branch cleanup is an intentional maintainer action, never a side effect of CI success.
+
+## D-019 — Generated-face replacement fails fast on rigs without a separable skin surface
+
+Date: 2026-11-27. Generated-face replacement suppresses the imported head's replaceable surfaces and fits a generated head/eyes/nose/mouth to the detected skin bounds. Commit `3c57d1f` tightened this path to require a separable `Skin` surface, preventing a duplicate, misaligned imported face. When the surface is missing, the worker returns `face_template_skin_surface_missing` instead of silently producing broken geometry. Tests use the pinned CC0 Adventurer (which has `Skin`/`Eyebrows`/`Eye` surfaces) for positive coverage and RobotExpressive for the rejection contract. A future UX batch may map this structured code to HTTP 422 and guide the user to a compatible character; the current API surfaces the explanatory message through `EngineError`.

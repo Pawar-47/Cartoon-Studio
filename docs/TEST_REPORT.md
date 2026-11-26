@@ -1,4 +1,20 @@
-# Test Report — 2026-11-26
+# Test Report — 2026-11-27
+
+## 2026-11-27 — Main CI repair and local proof
+
+- **Scope:** repair the failing main CI test without weakening generated-face coverage, and stop automatic deletion of non-main branches.
+- **Change 1:** `tests/test_engine_adapter.py::test_pinned_godot_worker_builds_episode_scenes_with_world_and_character_glb` now obtains the pinned CC0 Male Adventurer via `ensure_model_asset` and bakes the generated face onto it. The previous RobotExpressive fixture has no separable `Skin` surface, so commit `3c57d1f` correctly rejects generated-face replacement on it. Expression and speech tracks target baked `CartoonStudio_Face_*` nodes, so the episode test needs a face-capable character. The test also asserts `face_features_verified is True`.
+- **Change 2:** added `test_generated_face_replacement_rejects_rig_without_skin_surface`. It requests generated-face replacement on RobotExpressive, expects `EngineExecutionError` matching `separable skin surface`, and asserts the output GLB was not created. This pins the fail-fast contract introduced by `3c57d1f`.
+- **Change 3:** `.github/workflows/cleanup-retired-branches.yml` is now manual-dispatch only. It deletes only exact branch names supplied by a maintainer and always preserves `main`. Previously it ran after every successful main CI and deleted every non-main branch, including open feature work.
+- **Environment:** Windows, Python 3.12.10, pinned Godot `4.7.2-stable` (`build/godot-runtime/Godot_v4.7.2-stable_win64.exe`), pinned CC0 RobotExpressive fixture and cached CC0 Adventurer.
+- **Command:** `python -m pytest -q -rs` with `CARTOON_STUDIO_GODOT_PATH` set.
+- **Result:** **152 passed, 4 skipped, 0 failed**. Skips: `test_animation_clip_resolver`, `test_browser_retarget`, `test_character_expression_presets` (Node.js unavailable locally; CI runs them) and `test_engine_adapter.py:132` (symlink creation unavailable). One existing Starlette/httpx deprecation warning.
+- **Targeted reruns:** the repaired episode test and the new rejection test both passed with the pinned Godot runtime; the dedicated Adventurer generated-face test also passed.
+- **Static checks:** `python -m ruff check app tests scripts` passed; `python -m compileall -q app scripts` passed; all `.github/workflows/*.yml` parsed as valid YAML; `git diff --check` passed.
+- **Not claimed:** this is local proof, not GitHub Actions proof. The new CI run is pending. No visual browser acceptance, target-PC benchmark, installer rebuild or full episode render was performed in this batch.
+- **Follow-up:** the 171-row requirements registry and traceability matrix remain stale and require a dedicated reconciliation batch; do not treat this report as closing those rows.
+
+## Historical test reports — 2026-11-26 and earlier
 
 ## Current main regression and working-branch verification — 2026-11-26
 

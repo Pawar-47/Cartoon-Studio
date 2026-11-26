@@ -928,17 +928,15 @@ def test_pinned_godot_worker_builds_episode_scenes_with_world_and_character_glb(
         world_path,
         allowed_root=project_root,
     )
-    fixture = (
-        Path(__file__).resolve().parents[1]
-        / "tests"
-        / "fixtures"
-        / "third_party"
-        / "robot_expressive_cc0.glb"
+    source_character_path = ensure_model_asset(
+        project_root / "assets" / "character-library", "Male", "Adventurer"
     )
-    source_character_path = project_root / "assets" / "characters" / "ali-source.glb"
     character_path = project_root / "assets" / "characters" / "ali.glb"
     character_path.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(fixture, source_character_path)
+    # Expression and speech tracks target baked CartoonStudio_Face_* nodes, so the
+    # character must support generated-face replacement. The CC0 Adventurer has a
+    # separable Skin surface; the robot fixture does not and is intentionally
+    # rejected by the worker (covered by the regression test below).
     face_export = adapter.export_character_appearance(
         source_character_path,
         [],
@@ -948,6 +946,7 @@ def test_pinned_godot_worker_builds_episode_scenes_with_world_and_character_glb(
         face_features={"enabled": True},
     )
     assert face_export["ok"] is True
+    assert face_export["face_features_verified"] is True
     episode = {
         "title": "Five Scene Test",
         "characters": [{"id": "ali", "name": "Ali"}],
@@ -1056,3 +1055,33 @@ def test_pinned_godot_worker_builds_episode_scenes_with_world_and_character_glb(
         and scene["animation_track_count"] == 3
         for scene in result["scenes"][1:]
     )
+
+
+def test_generated_face_replacement_rejects_rig_without_skin_surface(tmp_path):
+    adapter = _real_godot_adapter(tmp_path)
+    project_root = tmp_path / "face-surface-project"
+    project_root.mkdir()
+    fixture = (
+        Path(__file__).resolve().parents[1]
+        / "tests"
+        / "fixtures"
+        / "third_party"
+        / "robot_expressive_cc0.glb"
+    )
+    if not fixture.is_file():
+        pytest.skip("The pinned CC0 facial-morph fixture is unavailable.")
+    source = project_root / "robot.glb"
+    shutil.copyfile(fixture, source)
+    output = project_root / "robot-with-generated-face.glb"
+
+    with pytest.raises(EngineExecutionError, match="separable skin surface"):
+        adapter.export_character_appearance(
+            source,
+            [],
+            [],
+            output,
+            allowed_root=project_root,
+            face_features={"enabled": True},
+        )
+
+    assert not output.exists()

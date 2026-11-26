@@ -1,10 +1,10 @@
 # Session-independent development checkpoint
 
-Updated: 2026-11-26
+Updated: 2026-11-27
 Repository: https://github.com/Pawar-47/Cartoon-Studio
-Source of truth: `main` at `062400e58cbbf491ec92869dc140b60a9b354d7f`.
-Active working branch: `work/mainline-followup`, created from that main commit.
-Latest main CI #471 failed because Godot could not parse a duplicate `action_cue_count` dictionary key in the episode worker. Commit `be169c4` on the pushed working branch fixes it; the cue regression test and full pytest pass locally (136 passed, 4 skipped). Post-fix CI is pending; the workflow requires a PR targeting `main`.
+Source of truth: `main` at `3c57d1f4afb5ad4f82b59a56562f14fe706a1d81` before the 2026-11-27 repair batch. Work is committed directly to `main`; no feature branch is checked out or modified.
+Latest state: the 2026-11-27 batch repairs the failing episode-scene test by baking generated faces onto the pinned CC0 Adventurer (RobotExpressive has no separable `Skin` surface), adds a regression test pinning the fail-fast generated-face contract, and makes retired-branch deletion manual-only so feature branches are preserved. Local proof: 152 passed, 4 skipped, 0 failed with pinned Godot 4.7.2; Ruff, compileall, workflow YAML parsing and whitespace checks passed. New CI result is pending the push.
+
 
 ## Mission and operating rules
 

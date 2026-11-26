@@ -1,4 +1,23 @@
-# Next Steps — 2026-11-26
+# Next Steps — 2026-11-27
+
+## Current checkpoint — 2026-11-27
+
+Main was at `3c57d1f4afb5ad4f82b59a56562f14fe706a1d81` with red CI. This batch repairs the single failing Godot test, adds a regression test for generated-face rejection on rigs without a separable skin surface, and makes retired-branch deletion manual-only so feature branches are not destroyed by a successful main run. Local proof: 152 passed, 4 skipped, 0 failed with pinned Godot 4.7.2; Ruff, compileall, workflow YAML parsing and whitespace checks passed. GitHub Actions verification is pending the push.
+
+Phase 2 remains ACTIVE and P2.2 remains PARTIAL. Phase 6/7 code exists out of order (Urdu audio, subtitles, mouth envelopes, Godot-AVI + FFmpeg MP4), but it is not phase acceptance.
+
+## Immediate next steps
+
+1. Push this batch to `main` and verify the new Windows CI run is green. Do not treat the local run as CI proof.
+2. Reconcile `REQUIREMENTS_REGISTRY.md` and `REQUIREMENT_TRACEABILITY.md` with the current code. They still describe an early FastAPI/SQLite shell, mark Character Studio absent, and claim Phase 6/7 are unimplemented. This is governance debt, not a feature claim.
+3. Continue Phase 2/P2.2 exit work: original face geometry, broader rig compatibility, and interactive visual acceptance of hairstyles, portraits, assembly, morphs and retarget preview.
+4. Only after P2.2 exit criteria are met, activate the planned Phase 3 batch. Preserve the existing out-of-order world/story/episode work without claiming phase completion.
+
+## Candidate next engineering batch — job reliability
+
+The highest-value cross-phase gap is the synchronous long-operation boundary. Audio generation, episode-scene production and MP4 rendering are one-shot HTTP requests with no durable queue, progress polling, resume, cancel or retry. The P0.6 SQLite lease prototype in `tools/sqlite_queue_proof.py` is deliberately isolated from `app/` and has not been productionized. A production queue batch should add migrations, bounded retries, durable event records, atomic output manifests, cancellation and recovery tests, then wire the audio/production/render endpoints to it. This should be planned against the phase gates rather than rushed into Phase 2.
+
+## Historical next steps — 2026-11-26
 
 ## Current checkpoint
 

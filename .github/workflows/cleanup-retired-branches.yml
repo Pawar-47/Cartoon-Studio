@@ -1,5 +1,8 @@
 name: Retired Branch Cleanup
 
+# Branch deletion is destructive, so it is never automatic. A maintainer must
+# dispatch this workflow with the exact branch names to remove. This protects
+# long-lived feature/work branches from being deleted by a successful CI run.
 on:
   workflow_dispatch:
     inputs:
@@ -24,6 +27,8 @@ jobs:
     steps:
       - name: Delete only explicitly listed retired branches
         uses: actions/github-script@v7
+        env:
+          BRANCHES: ${{ inputs.branches_to_delete }}
         with:
           script: |
             const { owner, repo } = context.repo;
@@ -31,12 +36,14 @@ jobs:
               "main",
               "feature/cartoon-character-foundry",
             ]);
-            const requested = [...new Set(
-              (core.getInput("branches_to_delete") || "")
-                .split(",")
-                .map((name) => name.trim())
-                .filter(Boolean)
-            )];
+            const requested = [
+              ...new Set(
+                (process.env.BRANCHES || "")
+                  .split(",")
+                  .map((name) => name.trim())
+                  .filter(Boolean)
+              ),
+            ];
 
             if (requested.length === 0) {
               core.setFailed("No branch names were supplied; nothing was deleted.");

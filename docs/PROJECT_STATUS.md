@@ -1,6 +1,16 @@
-# Project Status — 2026-11-26
+# Project Status — 2026-11-27
 
-## Live checkpoint
+## Live checkpoint — 2026-11-27 (main CI repair)
+
+- Repository: Pawar-47/Cartoon-Studio. Source of truth: `main` at `3c57d1f4afb5ad4f82b59a56562f14fe706a1d81` before this batch.
+- **CI root cause fixed.** `test_pinned_godot_worker_builds_episode_scenes_with_world_and_character_glb` requested generated-face replacement on the RobotExpressive fixture, whose head has no separable `Skin` surface (its materials are `Grey`, `Main`, `Black`). Commit `3c57d1f` deliberately tightened generated-face replacement to fail fast instead of leaving a duplicate, misaligned imported face. The episode test now bakes the generated face onto the pinned CC0 Male Adventurer, which has `Skin`/`Eyebrows`/`Eye` surfaces and is already used by the dedicated face test. Expression and speech tracks require baked `CartoonStudio_Face_*` nodes, so a face-capable character is the correct fixture.
+- Added `test_generated_face_replacement_rejects_rig_without_skin_surface`, which pins the fail-fast contract and asserts that no partial output GLB is left behind.
+- **Destructive automation neutralized.** `.github/workflows/cleanup-retired-branches.yml` previously ran on every successful `main` CI and deleted every non-`main` branch, including `feature/cartoon-character-foundry`. That violated the owner's instruction not to touch feature branches and the repository rule against destructive resets. The workflow is now manual-dispatch only and deletes only the exact branch names a maintainer lists; `main` is always preserved.
+- Local proof with the pinned Godot 4.7.2 runtime: **152 passed, 4 skipped, 0 failed** (`python -m pytest -q -rs`). Skips: three Node.js helper tests (Node unavailable locally) and one symlink-capability test. Ruff, `compileall`, workflow YAML parsing and `git diff --check` passed. GitHub Actions result is pending this push; do not treat local proof as CI proof.
+- Phase 2 remains ACTIVE. The 171-row `REQUIREMENTS_REGISTRY.md` and `REQUIREMENT_TRACEABILITY.md` are materially stale and still need a dedicated reconciliation batch; this repair batch does not claim they are current.
+- Chat-independent continuation record: `docs/SESSION_CHECKPOINT.md`.
+
+## Historical checkpoint — 2026-11-26
 
 - Repository: Pawar-47/Cartoon-Studio
 - Source-of-truth branch: `main`, at `062400e58cbbf491ec92869dc140b60a9b354d7f`. The active follow-up branch is `work/mainline-followup`, based on that commit.
@@ -57,8 +67,8 @@ Godot may normalize raw skin-joint ordering during import. The application uses 
 | Phase 3 — World Builder | PARTIAL / OUT-OF-ORDER | Persistent/editable worlds, Godot world-scene export and browser previews exist; multi-location reuse and phase acceptance remain open |
 | Phase 4 — Story and Scene Engine | PARTIAL / FROZEN, OUT-OF-ORDER WORK PRESENT | World-linked plans and cast binding exist; the canonical schema, integrated generation, approval and complete production mapping remain incomplete |
 | Phase 5 — Animation Engine | PARTIAL / OUT-OF-ORDER | Generated scenes contain procedural action-anchor and camera keyframes; no reusable clip library, animation editor, blending or visual acceptance |
-| Phase 6 — Urdu Voice and Lip-Sync | RESEARCH COMPLETE; IMPLEMENTATION NOT STARTED | No production TTS/lip-sync |
-| Phase 7 — Episode Generator | PARTIAL / OUT-OF-ORDER | Editable scene files and GLB previews are generated; no render queue, voice/lip-sync, audio mix or final 5–7 minute MP4 |
+| Phase 6 — Urdu Voice and Lip-Sync | PARTIAL / OUT-OF-ORDER | `app/audio.py` implements pinned Pakistani Urdu Piper voices, a mono WAV mix, SRT subtitles and RMS mouth envelopes; the envelope is heuristic, not phoneme/viseme alignment. Acceptance and visual/audio quality review remain open |
+| Phase 7 — Episode Generator | PARTIAL / OUT-OF-ORDER | Editable Godot scene files, dialogue audio, subtitles, mouth envelopes and a Godot-AVI + FFmpeg MP4 path exist (`app/render.py`); there is no durable render queue, and full 5–7 minute acceptance has not been performed |
 | Phase 8 — Optimization and Reliability | DEFERRED | Physical-PC benchmarks remain late-stage work |
 
 ## Next implementation batch
