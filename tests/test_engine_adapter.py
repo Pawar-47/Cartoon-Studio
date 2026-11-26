@@ -683,6 +683,73 @@ def test_pinned_godot_imports_original_foundry_master_and_morphs(tmp_path):
     assert recipe["generated_asset"]["filename"] == glb_path.name
 
 
+def test_foundry_humanoid_rig_drives_episode_action_tracks(tmp_path):
+    adapter = _real_godot_adapter(tmp_path)
+    project_root = tmp_path / "foundry-rig-animation-project"
+    project_root.mkdir()
+    world_path = project_root / "assets" / "worlds" / "town.tscn"
+    adapter.export_world_scene(
+        {
+            "name": "Town",
+            "theme": "small_town",
+            "ground_color": "#789b58",
+            "sky": "day",
+            "objects": [],
+        },
+        world_path,
+        allowed_root=project_root,
+    )
+    character_path, _ = write_master_character(
+        project_root / "assets" / "characters" / "hero.glb",
+        character_id="foundry-rig-hero",
+    )
+    episode = {
+        "title": "Foundry Rig Animation Proof",
+        "characters": [{"id": "hero", "name": "Hero"}],
+        "scenes": [
+            {
+                "id": f"scene-{index}",
+                "title": f"Scene {index}",
+                "duration_seconds": 8,
+                "location_id": "town-square",
+                "character_ids": ["hero"],
+                "dialogue": [],
+                "actions": (
+                    [
+                        {
+                            "character_id": "hero",
+                            "action_id": "wave",
+                            "start_seconds": 1,
+                            "duration_seconds": 3,
+                        }
+                    ]
+                    if index == 1
+                    else []
+                ),
+                "camera": [],
+                "audio": [],
+                "props": [],
+            }
+            for index in range(1, 6)
+        ],
+    }
+    result = adapter.export_episode_scenes(
+        episode,
+        world_path,
+        [{"id": "hero", "name": "Hero", "asset_path": str(character_path)}],
+        project_root / "assets" / "episodes" / "foundry-proof" / "scenes",
+        allowed_root=project_root,
+    )
+    assert result["ok"] is True
+    assert result["scene_count"] == 5
+    first_scene = result["scenes"][0]
+    assert first_scene["action_cue_count"] == 1
+    assert first_scene["skeletal_animation_track_count"] > 0
+    assert first_scene["skeletal_animation_keyframe_count"] > first_scene[
+        "skeletal_animation_track_count"
+    ]
+
+
 def test_pinned_godot_worker_reports_real_animated_morph_cube(tmp_path):
     adapter = _real_godot_adapter(tmp_path)
     fixture = (
