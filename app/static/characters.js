@@ -57,6 +57,10 @@ function updateProportionButton(){
  const unchanged=proportionFields.every(name=>Math.abs(Number($(name.replaceAll("_","-")).value)-Number(state.baseProportions[name]??1))<0.0001);
  $("apply-proportions").disabled=!activeProject||!importedAsset?.asset_id||!hasSingleRig||!hasHumanoidMap||unchanged;
 }
+function restoreAppearancePreview(){
+ applyCharacterAppearance(appearanceRecipe.materials||{});
+ applyCharacterMorphTargets(appearanceRecipe.morph_targets||{});
+}
 function updateHairButton(){
  const hasSingleRig=Number(importedAsset?.engine_inspection?.skeleton_count)===1;
  $("apply-hair").disabled=!activeProject||!importedAsset?.asset_id||!hasSingleRig;
@@ -72,6 +76,7 @@ async function applyHairStyle(){
   if(!assetResponse.ok)throw new Error("The hairstyle was exported, but its preview could not be loaded.");
   const loaded=await showCharacterPreview(await assetResponse.arrayBuffer(),"Character with "+style+" hair");
   if(!loaded)throw new Error("The hairstyle GLB was exported, but the browser preview could not be created.");
+  restoreAppearancePreview();
   importedAsset=result;rememberAssemblyAsset(result,style+" hairstyle");
   const proportionState=getBodyProportionState(result);
   for(const name of proportionFields){
@@ -98,6 +103,7 @@ async function applyBodyProportions(){
   const result=await response.json();if(!response.ok)throw new Error(result.detail||"Body-proportion editing failed.");
   importedAsset=result;rememberAssemblyAsset(result,"Proportioned character");
   await loadProportionPreview(result,"Proportioned character preview",proportions);
+  restoreAppearancePreview();
   $("body-proportions").value=JSON.stringify(proportions,null,2);
   $("save-character").disabled=false;
   $("proportion-status").textContent="Body geometry updated on "+result.geometry_edit.changed_bones.length+" rig bones. Animation clips and skin binding survived export. Original GLB preserved.";
