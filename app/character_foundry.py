@@ -523,26 +523,29 @@ def write_master_character(
     output_path: str | Path,
     recipe_path: str | Path | None = None,
     character_id: str = "character-foundry-preview",
+    recipe: dict[str, Any] | None = None,
 ) -> tuple[Path, Path]:
     output = Path(output_path)
     output.parent.mkdir(parents=True, exist_ok=True)
-    recipe = default_character_recipe(character_id)
-    glb_bytes = build_master_character_glb(recipe)
+    normalized_recipe = validate_character_recipe(
+        recipe if recipe is not None else default_character_recipe(character_id)
+    )
+    glb_bytes = build_master_character_glb(normalized_recipe)
     output.write_bytes(glb_bytes)
-    recipe["generated_asset"] = {
+    normalized_recipe["generated_asset"] = {
         "filename": output.name,
         "sha256": hashlib.sha256(glb_bytes).hexdigest(),
         "format": "glb",
         "generator_version": GENERATOR_VERSION,
         "morph_targets": list(MORPH_TARGETS),
-        "morph_weights": [recipe["parameters"][name] for name in MORPH_TARGETS],
+        "morph_weights": [normalized_recipe["parameters"][name] for name in MORPH_TARGETS],
         "rig_profile_id": RIG_PROFILE_ID,
         "bone_names": [bone[0] for bone in _BONES],
-        "clothing_asset_ids": recipe["clothing_asset_ids"],
+        "clothing_asset_ids": normalized_recipe["clothing_asset_ids"],
     }
     recipe_output = Path(recipe_path) if recipe_path else output.with_suffix(".recipe.json")
     recipe_output.parent.mkdir(parents=True, exist_ok=True)
     recipe_output.write_text(
-        json.dumps(recipe, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+        json.dumps(normalized_recipe, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
     )
     return output, recipe_output

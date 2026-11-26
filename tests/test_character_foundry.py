@@ -141,6 +141,25 @@ def test_recipe_morph_values_are_applied_to_body_and_clothing() -> None:
     assert all(len(primitive["targets"]) == len(MORPH_TARGETS) for primitive in mesh["primitives"])
 
 
+
+def test_master_export_preserves_custom_recipe_parameters(tmp_path) -> None:
+    recipe = default_character_recipe("custom-export")
+    recipe["parameters"]["head_width"] = 0.7
+    recipe["parameters"]["leg_length"] = -0.4
+    recipe["clothing_asset_ids"] = []
+    glb_path, recipe_path = write_master_character(
+        tmp_path / "custom.glb", recipe=recipe
+    )
+    document = _read_glb(glb_path.read_bytes())
+    saved = json.loads(recipe_path.read_text(encoding="utf-8"))
+    expected = [recipe["parameters"][name] for name in MORPH_TARGETS]
+    assert document["meshes"][0]["weights"] == expected
+    assert len(document["meshes"][0]["primitives"]) == 1
+    assert saved["character_id"] == "custom-export"
+    assert saved["parameters"] == recipe["parameters"]
+    assert saved["generated_asset"]["morph_weights"] == expected
+
+
 def test_recipe_can_disable_fitted_clothing() -> None:
     recipe = default_character_recipe()
     recipe["clothing_asset_ids"] = []
