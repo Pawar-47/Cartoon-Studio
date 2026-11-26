@@ -79,6 +79,41 @@ def _verify_ffmpeg_encoders(executable: Path) -> None:
         )
 
 
+def _verify_rendered_mp4(executable: Path, video_path: Path, timeout: float) -> None:
+    try:
+        result = subprocess.run(
+            [
+                str(executable),
+                "-v",
+                "error",
+                "-i",
+                str(video_path),
+                "-map",
+                "0:v:0",
+                "-map",
+                "0:a:0",
+                "-map",
+                "0:s:0",
+                "-f",
+                "null",
+                "-",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=max(1.0, timeout),
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise RenderExecutionError(
+            "FFmpeg could not verify the completed episode MP4."
+        ) from error
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout or "").strip()[-2500:]
+        raise RenderExecutionError(
+            f"The final MP4 failed its video/audio/subtitle decode check. {detail}".strip()
+        )
+
+
 def _write_render_project(project_directory: Path) -> None:
     (project_directory / "project.godot").write_text(
         """config_version=5
@@ -305,6 +340,15 @@ def render_episode_video(
             raise RenderExecutionError(
                 f"FFmpeg could not assemble the final MP4. {detail}".strip()
             )
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            output.unlink(missing_ok=True)
+            raise RenderExecutionError("The episode render exceeded its time budget.")
+        try:
+            _verify_rendered_mp4(ffmpeg, output, remaining)
+        except RenderExecutionError:
+            output.unlink(missing_ok=True)
+            raise
 
     return {
         "video_path": str(output),

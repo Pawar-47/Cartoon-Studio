@@ -50,10 +50,12 @@ def test_render_episode_video_uses_godot_movie_maker_and_muxes_audio_subtitles(
             return subprocess.CompletedProcess(
                 command, 0, stdout=encoders, stderr=""
             )
+        if command[0] == str(ffmpeg) and command[-2:] == ["null", "-"]:
+            return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
         if command[0] == str(godot):
             movie_path = Path(command[command.index("--write-movie") + 1])
             movie_path.write_bytes(b"fake-avi")
-        else:
+        elif command[0] == str(ffmpeg):
             Path(command[-1]).write_bytes(b"fake-mp4")
         return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
 
@@ -210,3 +212,58 @@ def test_render_rejects_ffmpeg_without_required_mp4_encoders_before_godot(
         )
     assert len(calls) == 1
     assert "-encoders" in calls[0]
+
+
+def test_render_removes_mp4_when_stream_decode_verification_fails(
+    tmp_path, monkeypatch
+):
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    scene_path = project_root / "scene.tscn"
+    scene_path.write_text("[gd_scene format=3]\\n", encoding="utf-8")
+    audio_path = project_root / "dialogue.wav"
+    _write_silent_wav(audio_path, 1)
+    subtitles_path = project_root / "subtitles.srt"
+    subtitles_path.write_text(
+        "1\\n00:00:00,000 --> 00:00:01,000\\nالسلام علیکم!\\n",
+        encoding="utf-8",
+    )
+    godot = tmp_path / "Godot.exe"
+    ffmpeg = tmp_path / "ffmpeg.exe"
+    godot.write_bytes(b"godot-test")
+    ffmpeg.write_bytes(b"ffmpeg-test")
+    output = project_root / "renders" / "episode.mp4"
+
+    def fake_run(command, **kwargs):
+        if command[0] == str(ffmpeg) and "-encoders" in command:
+            return subprocess.CompletedProcess(
+                command,
+                0,
+                stdout=" V..... libx264\\n A..... aac\\n S..... mov_text\\n",
+                stderr="",
+            )
+        if command[0] == str(godot):
+            Path(command[command.index("--write-movie") + 1]).write_bytes(b"fake-avi")
+            return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+        if command[0] == str(ffmpeg) and command[-2:] == ["null", "-"]:
+            return subprocess.CompletedProcess(
+                command, 1, stdout="", stderr="Could not find codec parameters"
+            )
+        output_path = Path(command[-1])
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_bytes(b"fake-mp4")
+        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+
+    monkeypatch.setattr("app.render.subprocess.run", fake_run)
+    with pytest.raises(RenderExecutionError, match="decode check"):
+        render_episode_video(
+            [scene_path],
+            [1],
+            audio_path,
+            subtitles_path,
+            output,
+            project_root,
+            godot,
+            ffmpeg_executable=ffmpeg,
+        )
+    assert not output.exists()
