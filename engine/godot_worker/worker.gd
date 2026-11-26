@@ -2278,14 +2278,17 @@ func _world_add_sphere(parent: Node3D, node_name: String, radius: float, positio
 func _export_world_scene(payload: Dictionary) -> Dictionary:
     var project_root := _normalise_path(str(payload.get("project_root", "")))
     var output_path := _normalise_path(str(payload.get("output_path", "")))
+    var output_glb_path := _normalise_path(str(payload.get("output_glb_path", "")))
     var world_value: Variant = payload.get("world", {})
     if project_root.is_empty() or not DirAccess.dir_exists_absolute(project_root):
         return {"error_code": "invalid_project_root", "error": "A valid project root is required."}
     var root_prefix := project_root.trim_suffix("/") + "/"
     if not output_path.to_lower().begins_with(root_prefix.to_lower()) or not output_path.to_lower().ends_with(".tscn"):
         return {"error_code": "path_outside_project", "error": "World scene output must be a project-local .tscn file."}
-    if FileAccess.file_exists(output_path):
-        return {"error_code": "output_exists", "error": "Refusing to overwrite an existing world scene."}
+    if not output_glb_path.to_lower().begins_with(root_prefix.to_lower()) or not output_glb_path.to_lower().ends_with(".glb"):
+        return {"error_code": "path_outside_project", "error": "World preview output must be a project-local .glb file."}
+    if FileAccess.file_exists(output_path) or FileAccess.file_exists(output_glb_path):
+        return {"error_code": "output_exists", "error": "Refusing to overwrite an existing world export."}
     if typeof(world_value) != TYPE_DICTIONARY:
         return {"error_code": "invalid_world", "error": "World layout must be a JSON object."}
     var world: Dictionary = world_value
@@ -2421,12 +2424,26 @@ func _export_world_scene(payload: Dictionary) -> Dictionary:
         root.free()
         return {"error_code": "scene_pack_failed", "error": "Godot could not pack the generated world scene.", "godot_error": pack_error}
     var save_error := ResourceSaver.save(packed, output_path)
-    root.free()
     if save_error != OK:
+        root.free()
         return {"error_code": "scene_save_failed", "error": "Godot could not save the generated world scene.", "godot_error": save_error}
+    var gltf_document := GLTFDocument.new()
+    var gltf_state := GLTFState.new()
+    var append_error := gltf_document.append_from_scene(root, gltf_state)
+    if append_error != OK:
+        root.free()
+        DirAccess.remove_absolute(output_path)
+        return {"error_code": "glb_build_failed", "error": "Godot could not convert the world scene to glTF.", "godot_error": append_error}
+    var glb_error := gltf_document.write_to_filesystem(gltf_state, output_glb_path)
+    root.free()
+    if glb_error != OK:
+        DirAccess.remove_absolute(output_path)
+        DirAccess.remove_absolute(output_glb_path)
+        return {"error_code": "glb_save_failed", "error": "Godot could not save the world preview GLB.", "godot_error": glb_error}
     var reopened := ResourceLoader.load(output_path) as PackedScene
     if reopened == null:
         DirAccess.remove_absolute(output_path)
+        DirAccess.remove_absolute(output_glb_path)
         return {"error_code": "scene_reopen_failed", "error": "The saved world scene could not be reopened."}
     var reopened_root := reopened.instantiate()
     var reopened_objects := reopened_root.get_children().size()
@@ -2434,6 +2451,8 @@ func _export_world_scene(payload: Dictionary) -> Dictionary:
     return {
         "ok": true,
         "output_path": output_path,
+        "output_glb_path": output_glb_path,
+        "glb_exported": FileAccess.file_exists(output_glb_path),
         "world_name": str(world.get("name", "Cartoon World")),
         "object_count": object_count,
         "scene_reopened": true,

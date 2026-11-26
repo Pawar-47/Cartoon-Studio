@@ -853,6 +853,12 @@ def test_pinned_godot_worker_exports_and_reopens_a_real_world_scene(tmp_path):
     assert result["object_count"] == 7
     assert result["scene_reopened"] is True
     assert result["lighting_preset"] == "sunset"
+    assert result["glb_exported"] is True
     assert output.is_file()
     assert output.stat().st_size > 0
+    preview = output.with_suffix(".glb")
+    assert preview.is_file()
+    inspection = adapter.inspect_glb(preview, allowed_root=project_root)
+    assert inspection["ok"] is True
+    assert inspection["mesh_count"] >= 10
 

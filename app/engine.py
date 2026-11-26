@@ -568,10 +568,18 @@ class GodotEngineAdapter:
                 or any(c not in "0123456789abcdefABCDEF" for c in color[1:])
             ):
                 raise EnginePathError("World object color must be a six-digit hexadecimal value.")
+        glb_output = output.with_suffix(".glb")
+        if glb_output == root or root not in glb_output.parents or glb_output.exists():
+            raise EnginePathError("World preview output must be a new project-local .glb file.")
         output.parent.mkdir(parents=True, exist_ok=True)
         return self._run(
             "export_world_scene",
-            {"project_root": str(root), "output_path": str(output), "world": world},
+            {
+                "project_root": str(root),
+                "output_path": str(output),
+                "output_glb_path": str(glb_output),
+                "world": world,
+            },
             timeout_seconds=timeout_seconds,
             cancel_event=cancel_event,
         )

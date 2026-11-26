@@ -916,7 +916,9 @@ def export_project_world(project_id: str, world_id: str) -> dict[str, Any]:
     document = read_json(world_path)
     export_id = str(uuid.uuid4())
     relative_scene = f"assets/worlds/{export_id}.tscn"
+    relative_preview = f"assets/worlds/{export_id}.glb"
     scene_path = resolve_project_relative(DATA_DIR, project_id, relative_scene)
+    preview_path = resolve_project_relative(DATA_DIR, project_id, relative_preview)
     project_root = project_directory(DATA_DIR, project_id)
     try:
         result = get_engine_adapter().export_world_scene(
@@ -935,11 +937,20 @@ def export_project_world(project_id: str, world_id: str) -> dict[str, Any]:
         raise HTTPException(
             status_code=502, detail=f"World scene export failed: {error}"
         ) from error
-    if not result.get("ok") or not scene_path.is_file():
+    if (
+        not result.get("ok")
+        or not scene_path.is_file()
+        or not preview_path.is_file()
+    ):
         scene_path.unlink(missing_ok=True)
-        raise HTTPException(status_code=502, detail="Godot did not produce a valid world scene.")
+        preview_path.unlink(missing_ok=True)
+        raise HTTPException(
+            status_code=502,
+            detail="Godot did not produce both the scene and its browser preview.",
+        )
     now = datetime.now(UTC).isoformat()
     document["data"]["scene_relative_path"] = relative_scene
+    document["data"]["preview_relative_path"] = relative_preview
     document["data"]["scene_exported_at"] = now
     document["data"]["scene_export"] = {
         "object_count": int(result.get("object_count", 0)),
@@ -956,8 +967,25 @@ def export_project_world(project_id: str, world_id: str) -> dict[str, Any]:
         "world_id": world_id,
         "scene_relative_path": relative_scene,
         "scene_url": f"/api/projects/{project_id}/worlds/{world_id}/scene",
+        "preview_url": f"/api/projects/{project_id}/worlds/{world_id}/preview",
         **document["data"]["scene_export"],
     }
+
+
+@app.get("/api/projects/{project_id}/worlds/{world_id}/preview")
+def preview_project_world(project_id: str, world_id: str) -> FileResponse:
+    world = get_project_world(project_id, world_id)
+    relative_path = str(world.get("preview_relative_path", ""))
+    if not relative_path.startswith("assets/worlds/") or not relative_path.endswith(".glb"):
+        raise HTTPException(status_code=404, detail="World preview has not been exported.")
+    preview_path = resolve_project_relative(DATA_DIR, project_id, relative_path)
+    if not preview_path.is_file():
+        raise HTTPException(status_code=404, detail="World preview file is missing.")
+    return FileResponse(
+        preview_path,
+        media_type="model/gltf-binary",
+        filename=f"world-{world_id}.glb",
+    )
 
 
 @app.get("/api/projects/{project_id}/worlds/{world_id}/scene")

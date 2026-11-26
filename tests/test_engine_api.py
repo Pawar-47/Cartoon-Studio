@@ -21,6 +21,7 @@ class _FakeEngineAdapter:
             '[gd_scene format=3]\n[node name="CartoonWorld" type="Node3D"]\n',
             encoding="utf-8",
         )
+        output_path.with_suffix(".glb").write_bytes(b"glTF-preview")
         return {
             "ok": True,
             "object_count": len(world.get("objects", [])),
@@ -586,6 +587,9 @@ def test_world_export_persists_and_serves_generated_godot_scene(tmp_path, monkey
     downloaded = client.get(result["scene_url"])
     assert downloaded.status_code == 200
     assert "CartoonWorld" in downloaded.text
+    preview = client.get(result["preview_url"])
+    assert preview.status_code == 200
+    assert preview.content == b"glTF-preview"
     reopened = client.get(f"/api/projects/{project_id}/worlds/{world_id}")
     assert reopened.json()["scene_relative_path"] == result["scene_relative_path"]
 
