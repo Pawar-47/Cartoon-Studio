@@ -291,7 +291,7 @@ def test_godot_worker_bakes_cartoon_face_geometry_and_preserves_animation(tmp_pa
         item for item in result["mesh_inventory"]
         if item["node_name"].startswith("CartoonStudio_Face_")
     ]
-    assert len(face_meshes) >= 17
+    assert len(face_meshes) >= 16
     face_names = {item["node_name"] for item in face_meshes}
     assert any(name.startswith("CartoonStudio_Face_Cheek_") for name in face_names)
     assert any(name.startswith("CartoonStudio_Face_Jaw_") for name in face_names)

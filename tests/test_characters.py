@@ -730,3 +730,50 @@ def test_customized_character_export_requires_saved_mesh_bindings(tmp_path, monk
     )
     assert response.status_code == 422
     assert "mesh/target bindings" in response.json()["detail"]
+
+
+def test_generated_face_geometry_recipe_persists_and_validates_all_controls(
+    tmp_path, monkeypatch
+):
+    client, project_id = setup_project(tmp_path, monkeypatch)
+    imported = import_asset(client, project_id)
+    created = client.post(
+        f"/api/projects/{project_id}/characters",
+        json=profile_payload(imported["relative_path"]),
+    )
+    character_id = created.json()["id"]
+    recipe = {
+        "face_features": {
+            "enabled": True,
+            "skin_color": "#bd8068",
+            "face_width": 1.12,
+            "cheek_fullness": 1.25,
+            "jaw_width": 0.88,
+            "chin_length": 1.18,
+            "mouth_open": 0.78,
+        }
+    }
+    saved = client.put(
+        f"/api/projects/{project_id}/characters/{character_id}/appearance",
+        json=recipe,
+    )
+    assert saved.status_code == 200
+    saved_face = saved.json()["data"]["appearance_recipe"]["face_features"]
+    assert saved_face["skin_color"] == "#bd8068"
+    assert saved_face["face_width"] == 1.12
+    assert saved_face["cheek_fullness"] == 1.25
+    assert saved_face["jaw_width"] == 0.88
+    assert saved_face["chin_length"] == 1.18
+    assert saved_face["mouth_open"] == 0.78
+
+    reopened = client.get(
+        f"/api/projects/{project_id}/characters/{character_id}"
+    )
+    assert reopened.status_code == 200
+    assert reopened.json()["data"]["appearance_recipe"]["face_features"] == saved_face
+
+    invalid = client.put(
+        f"/api/projects/{project_id}/characters/{character_id}/appearance",
+        json={"face_features": {"enabled": True, "mouth_open": 1.5}},
+    )
+    assert invalid.status_code == 422

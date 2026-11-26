@@ -237,10 +237,13 @@ class GodotEngineAdapter:
         validated_face_features: dict[str, Any] = {"enabled": face_enabled}
         if face_enabled:
             face_defaults = {
-                "eye_color": "#ffffff", "iris_color": "#4b83b8",
-                "brow_color": "#38251c", "mouth_color": "#612b2b",
-                "nose_color": "#c98768", "eye_scale": 1.0,
-                "eye_spacing": 1.0, "smile": 0.35, "brow_angle": 0.0,
+                "skin_color": "#c98768", "eye_color": "#ffffff",
+                "iris_color": "#4b83b8", "brow_color": "#38251c",
+                "mouth_color": "#612b2b", "nose_color": "#c98768",
+                "face_width": 1.0, "cheek_fullness": 1.0,
+                "jaw_width": 1.0, "chin_length": 1.0,
+                "eye_scale": 1.0, "eye_spacing": 1.0,
+                "smile": 0.35, "mouth_open": 0.0, "brow_angle": 0.0,
             }
             for field, default in face_defaults.items():
                 value = face_recipe.get(field, default)
@@ -265,6 +268,16 @@ class GodotEngineAdapter:
                         lower, upper = 0.65, 1.35
                     elif field == "smile":
                         lower, upper = -1.0, 1.0
+                    elif field == "face_width":
+                        lower, upper = 0.8, 1.25
+                    elif field == "cheek_fullness":
+                        lower, upper = 0.5, 1.5
+                    elif field == "jaw_width":
+                        lower, upper = 0.7, 1.3
+                    elif field == "chin_length":
+                        lower, upper = 0.65, 1.4
+                    elif field == "mouth_open":
+                        lower, upper = 0.0, 1.0
                     else:
                         lower, upper = -0.5, 0.5
                     if not lower <= number <= upper:

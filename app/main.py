@@ -197,14 +197,20 @@ class MorphBindingInput(BaseModel):
 
 class FaceFeatureInput(BaseModel):
     enabled: bool = False
+    skin_color: str = Field(default="#c98768", pattern=r"^#[0-9a-fA-F]{6}$")
     eye_color: str = Field(default="#ffffff", pattern=r"^#[0-9a-fA-F]{6}$")
     iris_color: str = Field(default="#4b83b8", pattern=r"^#[0-9a-fA-F]{6}$")
     brow_color: str = Field(default="#38251c", pattern=r"^#[0-9a-fA-F]{6}$")
     mouth_color: str = Field(default="#612b2b", pattern=r"^#[0-9a-fA-F]{6}$")
     nose_color: str = Field(default="#c98768", pattern=r"^#[0-9a-fA-F]{6}$")
+    face_width: float = Field(default=1.0, ge=0.8, le=1.25)
+    cheek_fullness: float = Field(default=1.0, ge=0.5, le=1.5)
+    jaw_width: float = Field(default=1.0, ge=0.7, le=1.3)
+    chin_length: float = Field(default=1.0, ge=0.65, le=1.4)
     eye_scale: float = Field(default=1.0, ge=0.65, le=1.5)
     eye_spacing: float = Field(default=1.0, ge=0.65, le=1.35)
     smile: float = Field(default=0.35, ge=-1, le=1)
+    mouth_open: float = Field(default=0.0, ge=0, le=1)
     brow_angle: float = Field(default=0.0, ge=-0.5, le=0.5)
 
 
