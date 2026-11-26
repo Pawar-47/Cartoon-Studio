@@ -777,3 +777,61 @@ def test_generated_face_geometry_recipe_persists_and_validates_all_controls(
         json={"face_features": {"enabled": True, "mouth_open": 1.5}},
     )
     assert invalid.status_code == 422
+
+
+
+def test_foundry_generation_creates_project_character_and_replayable_recipe(
+    tmp_path, monkeypatch
+):
+    client, project_id = setup_project(tmp_path, monkeypatch)
+    response = client.post(
+        f"/api/projects/{project_id}/foundry-characters",
+        json={
+            "name": "Foundry Ali",
+            "description": "An original editable hero.",
+            "parameters": {"head_width": 0.45, "torso_width": -0.2},
+        },
+    )
+    assert response.status_code == 201, response.text
+    result = response.json()
+    character_id = result["id"]
+    asset_id = result["asset_id"]
+    project_root = tmp_path / "projects" / project_id
+    recipe_path = project_root / result["recipe_path"]
+    asset_path = project_root / result["data"]["asset"]["relative_path"]
+
+    assert recipe_path.is_file()
+    saved_recipe = json.loads(recipe_path.read_text(encoding="utf-8"))
+    assert saved_recipe["character_id"] == character_id
+    assert saved_recipe["parameters"]["head_width"] == 0.45
+    assert saved_recipe["parameters"]["torso_width"] == -0.2
+    assert asset_path.read_bytes().startswith(b"glTF")
+    assert result["data"]["foundry_recipe"]["parameters"] == saved_recipe["parameters"]
+
+    listed = client.get(f"/api/projects/{project_id}/characters")
+    assert listed.status_code == 200
+    assert any(item["id"] == character_id for item in listed.json())
+    manifest = client.get(
+        f"/api/projects/{project_id}/character-assets/{asset_id}/manifest"
+    )
+    assert manifest.status_code == 200
+    assert manifest.json()["generator"]["template_id"] == saved_recipe["master_template_id"]
+    downloaded = client.get(result["asset_url"])
+    assert downloaded.status_code == 200
+    assert downloaded.content == asset_path.read_bytes()
+
+
+def test_foundry_generation_rejects_unknown_morph_and_missing_project(
+    tmp_path, monkeypatch
+):
+    client, project_id = setup_project(tmp_path, monkeypatch)
+    invalid = client.post(
+        f"/api/projects/{project_id}/foundry-characters",
+        json={"name": "Invalid", "parameters": {"tail_length": 0.5}},
+    )
+    assert invalid.status_code == 422
+    missing = client.post(
+        f"/api/projects/{'0' * 36}/foundry-characters",
+        json={"name": "Missing"},
+    )
+    assert missing.status_code == 404
