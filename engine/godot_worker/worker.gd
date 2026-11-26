@@ -2896,6 +2896,142 @@ func _add_dialogue_speech_tracks(
     }
 
 
+func _episode_bone_role(bone_name: String) -> String:
+    var token := bone_name.to_lower()
+    for prefix in ["mixamorig:", "mixamorig", "armature:", "armature|", "def-"]:
+        token = token.replace(prefix, "")
+    token = token.replace("_", "").replace("-", "").replace(" ", "").replace(".", "")
+    if token in ["leftarm", "leftupperarm", "upperarml", "arml", "armjointl1"] or token.ends_with("leftarm"):
+        return "left_upper_arm"
+    if token in ["rightarm", "rightupperarm", "upperarmr", "armr", "armjointr1"] or token.ends_with("rightarm"):
+        return "right_upper_arm"
+    if token in ["leftforearm", "leftlowerarm", "forearml", "lowerarml", "armjointl2"] or token.ends_with("leftforearm"):
+        return "left_lower_arm"
+    if token in ["rightforearm", "rightlowerarm", "forearmr", "lowerarmr", "armjointr2"] or token.ends_with("rightforearm"):
+        return "right_lower_arm"
+    if token in ["leftupleg", "leftupperleg", "leftthigh", "uplegl", "thighl", "upperlegl", "legjointl1"]:
+        return "left_upper_leg"
+    if token in ["rightupleg", "rightupperleg", "rightthigh", "uplegr", "thighr", "upperlegr", "legjointr1"]:
+        return "right_upper_leg"
+    if token in ["leftleg", "leftlowerleg", "leftcalf", "calfl", "lowerlegl", "shinl", "legjointl2"]:
+        return "left_lower_leg"
+    if token in ["rightleg", "rightlowerleg", "rightcalf", "calfr", "lowerlegr", "shinr", "legjointr2"]:
+        return "right_lower_leg"
+    if token in ["spine", "spine1", "spine2", "spine01", "spine001", "chest", "upperchest", "torsojoint2"]:
+        return "spine"
+    if token in ["head", "head2", "neckjoint2"]:
+        return "head"
+    return ""
+
+
+func _episode_action_bone_rotation(action_id: String, role: String, phase: float) -> Vector3:
+    var side := 1.0 if role.begins_with("left_") else -1.0
+    var cycle := sin(phase * TAU)
+    match action_id:
+        "walk", "walk_back", "run", "strafe_left", "strafe_right":
+            var intensity := 0.72 if action_id == "run" else 0.42
+            if role.ends_with("upper_leg"):
+                return Vector3(cycle * intensity * side, 0.0, 0.0)
+            if role.ends_with("lower_leg"):
+                return Vector3(maxf(0.0, -cycle * side) * intensity * 0.8, 0.0, 0.0)
+            if role.ends_with("upper_arm"):
+                return Vector3(-cycle * intensity * 0.72 * side, 0.0, 0.0)
+            if role.ends_with("lower_arm"):
+                return Vector3(0.0, 0.0, 0.08 * side)
+        "wave":
+            if role == "right_upper_arm":
+                return Vector3(0.0, 0.0, -1.05)
+            if role == "right_lower_arm":
+                return Vector3(-0.85, 0.0, 0.0)
+        "clap":
+            if role.ends_with("upper_arm"):
+                return Vector3(0.0, 0.0, 0.48 * side)
+            if role.ends_with("lower_arm"):
+                return Vector3(-0.95, 0.0, 0.0)
+        "jump_start", "jump_air", "jump_land", "jump_running":
+            if role.ends_with("upper_arm"):
+                return Vector3(0.0, 0.0, 0.82 * side)
+            if role.ends_with("upper_leg"):
+                return Vector3(-0.28, 0.0, 0.0)
+            if role == "spine":
+                return Vector3(-0.12, 0.0, 0.0)
+        "cheer", "thumbs_up":
+            if role.ends_with("upper_arm"):
+                return Vector3(0.0, 0.0, 1.0 * side)
+            if role.ends_with("lower_arm"):
+                return Vector3(-0.45, 0.0, 0.0)
+        "punch", "hit":
+            if role == "right_upper_arm":
+                return Vector3(-0.15, 0.0, -0.85)
+            if role == "right_lower_arm":
+                return Vector3(-0.25, 0.0, 0.0)
+        "dance_groove", "dance_bounce", "laugh":
+            if role.ends_with("upper_leg"):
+                return Vector3(cycle * 0.28 * side, 0.0, 0.0)
+            if role.ends_with("upper_arm"):
+                return Vector3(0.0, 0.0, cycle * 0.45 * side)
+            if role == "spine":
+                return Vector3(0.0, cycle * 0.12, 0.0)
+        "crouch", "pick_up", "put_down", "sweep":
+            if role.ends_with("upper_leg"):
+                return Vector3(0.45, 0.0, 0.0)
+            if role.ends_with("lower_leg"):
+                return Vector3(-0.62, 0.0, 0.0)
+            if role == "spine":
+                return Vector3(0.22, 0.0, 0.0)
+        "bow":
+            if role == "spine":
+                return Vector3(0.42, 0.0, 0.0)
+    return Vector3.ZERO
+
+
+func _add_episode_skeletal_action_tracks(
+    animation: Animation,
+    scene_root: Node3D,
+    character_anchor: Node3D,
+    action_id: String,
+    start_time: float,
+    end_time: float
+) -> Dictionary:
+    var skeleton_nodes := character_anchor.find_children("*", "Skeleton3D", true, false)
+    var track_count := 0
+    var keyframe_count := 0
+    var is_cyclic := action_id in ["walk", "walk_back", "run", "strafe_left", "strafe_right", "dance_groove", "dance_bounce"]
+    var sample_count := 5 if is_cyclic else 3
+    for skeleton_value in skeleton_nodes:
+        var skeleton := skeleton_value as Skeleton3D
+        if skeleton == null:
+            continue
+        var skeleton_path := str(scene_root.get_path_to(skeleton))
+        for bone_index in range(skeleton.get_bone_count()):
+            var role := _episode_bone_role(skeleton.get_bone_name(bone_index))
+            if role.is_empty():
+                continue
+            var rotations: Array[Quaternion] = []
+            var base_rotation := skeleton.get_bone_pose_rotation(bone_index)
+            var has_motion := false
+            for sample_index in range(sample_count):
+                var phase := float(sample_index) / float(sample_count - 1)
+                var delta := _episode_action_bone_rotation(action_id, role, phase)
+                if delta.length_squared() > 0.0001:
+                    has_motion = true
+                rotations.append(base_rotation * Basis.from_euler(delta).get_rotation_quaternion())
+            if not has_motion:
+                continue
+            var track := animation.add_track(Animation.TYPE_VALUE)
+            animation.track_set_path(
+                track,
+                NodePath(skeleton_path + ":bones/" + str(bone_index) + "/rotation")
+            )
+            for sample_index in range(sample_count):
+                var phase := float(sample_index) / float(sample_count - 1)
+                var key_time := lerpf(start_time, end_time, phase)
+                animation.track_insert_key(track, key_time, rotations[sample_index])
+                keyframe_count += 1
+            track_count += 1
+    return {"track_count": track_count, "keyframe_count": keyframe_count}
+
+
 func _build_episode_timeline(
     scene_root: Node3D,
     scene_data: Dictionary,
@@ -2911,6 +3047,8 @@ func _build_episode_timeline(
     var speech_mouth_keyframe_count := 0
     var audio_driven_speech_cue_count := 0
     var audio_envelope_keyframe_count := 0
+    var skeletal_animation_track_count := 0
+    var skeletal_animation_keyframe_count := 0
     var camera := Camera3D.new()
     camera.name = "EpisodeCamera"
     camera.position = Vector3(0.0, 7.0, 16.0)
@@ -2972,6 +3110,14 @@ func _build_episode_timeline(
             )
             animation.track_insert_key(rotation_track, end_time, base_rotation)
             track_count += 2
+            var skeletal_result := _add_episode_skeletal_action_tracks(
+                animation, scene_root, anchor, str(cue.get("action_id", "idle")),
+                start_time, end_time
+            )
+            var skeletal_tracks := int(skeletal_result.get("track_count", 0))
+            skeletal_animation_track_count += skeletal_tracks
+            skeletal_animation_keyframe_count += int(skeletal_result.get("keyframe_count", 0))
+            track_count += skeletal_tracks
             var expression_id := str(cue.get("expression", "neutral"))
             if expression_id != "neutral":
                 var expression_tracks := _add_episode_expression_tracks(
@@ -3113,6 +3259,8 @@ func _build_episode_timeline(
     return {
         "ok": true,
         "animation_track_count": track_count,
+        "skeletal_animation_track_count": skeletal_animation_track_count,
+        "skeletal_animation_keyframe_count": skeletal_animation_keyframe_count,
         "action_cue_count": action_count,
         "expression_cue_count": expression_cue_count,
         "speech_cue_count": speech_cue_count,
