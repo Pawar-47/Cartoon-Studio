@@ -376,7 +376,9 @@ func _add_character_face_features(scene: Node, recipe: Dictionary) -> Dictionary
         var bone_name := str(skeleton.get_bone_name(bone_index))
         var parts := bone_name.to_lower().split(":")
         var token := str(parts[parts.size() - 1]).replace("_", "").replace(" ", "")
-        if token == "head":
+        if token == "head" or (
+            token.begins_with("head") and token.substr(4).is_valid_int()
+        ):
             head_bone_name = bone_name
             head_bone_index = bone_index
             break
