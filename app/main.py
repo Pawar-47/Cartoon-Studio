@@ -823,6 +823,7 @@ def build_episode_production(project_id: str) -> dict[str, Any]:
             "character_count": item["character_count"],
             "dialogue_line_count": item["dialogue_line_count"],
             "action_cue_count": item["action_cue_count"],
+            "expression_cue_count": item.get("expression_cue_count", 0),
             "scene_relative_path": scene_relative,
             "preview_relative_path": preview_relative,
             "scene_reopened": item["scene_reopened"],

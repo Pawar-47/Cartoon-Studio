@@ -517,31 +517,31 @@ func _add_character_face_features(scene: Node, recipe: Dictionary) -> Dictionary
     var mouth_y := center.y - height * 0.30
     var mouth_half := width * 0.19 * mouth_width
     var mouth_depth := front_z + front_direction * eye_depth * 0.5
-    if mouth_open > 0.08:
-        _add_face_sphere(attachment, scene, "CartoonStudio_Face_MouthOpening",
-            Vector3(center.x, mouth_y, front_z + front_direction * eye_depth * 0.58),
-            Vector3(mouth_half, height * (0.018 + mouth_open * 0.11), eye_depth * 0.62), mouth_material)
+    var mouth_opening := _add_face_sphere(attachment, scene, "CartoonStudio_Face_MouthOpening",
+        Vector3(center.x, mouth_y, front_z + front_direction * eye_depth * 0.58),
+        Vector3(mouth_half, height * 0.13, eye_depth * 0.62), mouth_material)
+    mouth_opening.visible = mouth_open > 0.08
+    mesh_count += 1
+    var mouth_points := [
+        Vector3(center.x - mouth_half, mouth_y + smile * height * 0.075, mouth_depth),
+        Vector3(center.x - mouth_half * 0.5, mouth_y - smile * height * 0.07, mouth_depth),
+        Vector3(center.x + mouth_half * 0.5, mouth_y - smile * height * 0.07, mouth_depth),
+        Vector3(center.x + mouth_half, mouth_y + smile * height * 0.075, mouth_depth)
+    ]
+    var mouth_radius := maxf(width * 0.012, 0.003)
+    for segment_index in range(mouth_points.size() - 1):
+        var mouth_segment := _add_face_mouth_segment(attachment, scene,
+            "CartoonStudio_Face_Mouth_" + str(segment_index),
+            mouth_points[segment_index], mouth_points[segment_index + 1],
+            mouth_radius, mouth_material)
+        mouth_segment.visible = mouth_open <= 0.08
         mesh_count += 1
-        if mouth_open > 0.45:
-            var tongue_material := _face_material("#c65f72")
-            _add_face_sphere(attachment, scene, "CartoonStudio_Face_MouthTongue",
-                Vector3(center.x, mouth_y - height * 0.035, front_z + front_direction * eye_depth * 1.08),
-                Vector3(mouth_half * 0.52, height * 0.025, eye_depth * 0.2), tongue_material)
-            mesh_count += 1
-    else:
-        var mouth_points := [
-            Vector3(center.x - mouth_half, mouth_y + smile * height * 0.075, mouth_depth),
-            Vector3(center.x - mouth_half * 0.5, mouth_y - smile * height * 0.07, mouth_depth),
-            Vector3(center.x + mouth_half * 0.5, mouth_y - smile * height * 0.07, mouth_depth),
-            Vector3(center.x + mouth_half, mouth_y + smile * height * 0.075, mouth_depth)
-        ]
-        var mouth_radius := maxf(width * 0.012, 0.003)
-        for segment_index in range(mouth_points.size() - 1):
-            _add_face_mouth_segment(attachment, scene,
-                "CartoonStudio_Face_Mouth_" + str(segment_index),
-                mouth_points[segment_index], mouth_points[segment_index + 1],
-                mouth_radius, mouth_material)
-            mesh_count += 1
+    if mouth_open > 0.45:
+        var tongue_material := _face_material("#c65f72")
+        _add_face_sphere(attachment, scene, "CartoonStudio_Face_MouthTongue",
+            Vector3(center.x, mouth_y - height * 0.035, front_z + front_direction * eye_depth * 1.08),
+            Vector3(mouth_half * 0.52, height * 0.025, eye_depth * 0.2), tongue_material)
+        mesh_count += 1
 
     return {
         "ok": true,
@@ -2661,6 +2661,91 @@ func _episode_action_pose(action_id: String) -> Dictionary:
     return {"offset": offset, "rotation": rotation}
 
 
+func _episode_expression_values(expression_id: String) -> Dictionary:
+    match expression_id:
+        "happy":
+            return {"mouth_open": 0.22, "brow_angle": -0.08, "eye_scale": 1.05}
+        "laughing":
+            return {"mouth_open": 0.9, "brow_angle": -0.08, "eye_scale": 1.12}
+        "angry":
+            return {"mouth_open": 0.16, "brow_angle": 0.42, "eye_scale": 0.92}
+        "sad":
+            return {"mouth_open": 0.08, "brow_angle": 0.2, "eye_scale": 0.96}
+        "crying":
+            return {"mouth_open": 0.38, "brow_angle": 0.24, "eye_scale": 0.92}
+        "surprised":
+            return {"mouth_open": 0.86, "brow_angle": -0.42, "eye_scale": 1.35}
+        "afraid":
+            return {"mouth_open": 0.68, "brow_angle": -0.3, "eye_scale": 1.28}
+        "determined":
+            return {"mouth_open": 0.1, "brow_angle": 0.3, "eye_scale": 0.96}
+        _:
+            return {"mouth_open": 0.0, "brow_angle": 0.0, "eye_scale": 1.0}
+
+
+func _add_episode_expression_tracks(
+    animation: Animation,
+    scene_root: Node3D,
+    character_anchor: Node3D,
+    expression_id: String,
+    start_time: float,
+    middle_time: float,
+    end_time: float
+) -> int:
+    var expression := _episode_expression_values(expression_id)
+    var mouth_open := float(expression["mouth_open"])
+    var brow_angle := float(expression["brow_angle"])
+    var eye_scale := float(expression["eye_scale"])
+    var track_count := 0
+    var face_nodes := character_anchor.find_children("*", "MeshInstance3D", true, false)
+    for node_value in face_nodes:
+        var face_node := node_value as MeshInstance3D
+        var face_name := str(face_node.name)
+        var node_path := str(scene_root.get_path_to(face_node))
+        if face_name == "CartoonStudio_Face_MouthOpening":
+            var mouth_track := animation.add_track(Animation.TYPE_VALUE)
+            animation.track_set_path(mouth_track, NodePath(node_path + ":visible"))
+            animation.track_insert_key(mouth_track, start_time, face_node.visible)
+            animation.track_insert_key(mouth_track, middle_time, mouth_open > 0.08)
+            animation.track_insert_key(mouth_track, end_time, face_node.visible)
+            var mouth_scale_track := animation.add_track(Animation.TYPE_VALUE)
+            animation.track_set_path(mouth_scale_track, NodePath(node_path + ":scale"))
+            var closed_scale := face_node.scale
+            var open_scale := closed_scale
+            open_scale.y = closed_scale.y * clampf(mouth_open, 0.12, 1.0)
+            animation.track_insert_key(mouth_scale_track, start_time, closed_scale)
+            animation.track_insert_key(mouth_scale_track, middle_time, open_scale)
+            animation.track_insert_key(mouth_scale_track, end_time, closed_scale)
+            track_count += 2
+        elif face_name.begins_with("CartoonStudio_Face_Mouth_"):
+            var line_track := animation.add_track(Animation.TYPE_VALUE)
+            animation.track_set_path(line_track, NodePath(node_path + ":visible"))
+            animation.track_insert_key(line_track, start_time, face_node.visible)
+            animation.track_insert_key(line_track, middle_time, mouth_open <= 0.08)
+            animation.track_insert_key(line_track, end_time, face_node.visible)
+            track_count += 1
+        elif face_name.begins_with("CartoonStudio_Face_Brow_"):
+            var side := -1.0 if face_name.ends_with("-1") else 1.0
+            var brow_track := animation.add_track(Animation.TYPE_VALUE)
+            animation.track_set_path(brow_track, NodePath(node_path + ":rotation"))
+            var base_rotation := face_node.rotation
+            var expression_rotation := base_rotation
+            expression_rotation.z = -side * brow_angle
+            animation.track_insert_key(brow_track, start_time, base_rotation)
+            animation.track_insert_key(brow_track, middle_time, expression_rotation)
+            animation.track_insert_key(brow_track, end_time, base_rotation)
+            track_count += 1
+        elif face_name.begins_with("CartoonStudio_Face_EyeWhite_") or face_name.begins_with("CartoonStudio_Face_Iris_") or face_name.begins_with("CartoonStudio_Face_Pupil_"):
+            var eye_track := animation.add_track(Animation.TYPE_VALUE)
+            animation.track_set_path(eye_track, NodePath(node_path + ":scale"))
+            var base_eye_scale := face_node.scale
+            animation.track_insert_key(eye_track, start_time, base_eye_scale)
+            animation.track_insert_key(eye_track, middle_time, base_eye_scale * eye_scale)
+            animation.track_insert_key(eye_track, end_time, base_eye_scale)
+            track_count += 1
+    return track_count
+
+
 func _build_episode_timeline(
     scene_root: Node3D,
     scene_data: Dictionary,
@@ -2671,6 +2756,7 @@ func _build_episode_timeline(
     animation.length = duration
     var track_count := 0
     var action_count := 0
+    var expression_cue_count := 0
     var camera := Camera3D.new()
     camera.name = "EpisodeCamera"
     camera.position = Vector3(0.0, 7.0, 16.0)
@@ -2732,6 +2818,20 @@ func _build_episode_timeline(
             )
             animation.track_insert_key(rotation_track, end_time, base_rotation)
             track_count += 2
+            var expression_id := str(cue.get("expression", "neutral"))
+            if expression_id != "neutral":
+                var expression_tracks := _add_episode_expression_tracks(
+                    animation,
+                    scene_root,
+                    anchor,
+                    expression_id,
+                    start_time,
+                    middle_time,
+                    end_time
+                )
+                track_count += expression_tracks
+                if expression_tracks > 0:
+                    expression_cue_count += 1
             action_count += 1
     var camera_value: Variant = scene_data.get("camera", [])
     var camera_cue_count := 0
@@ -2800,6 +2900,7 @@ func _build_episode_timeline(
         "ok": true,
         "animation_track_count": track_count,
         "action_cue_count": action_count,
+        "expression_cue_count": expression_cue_count,
         "camera_cue_count": camera_cue_count
     }
 
@@ -2957,6 +3058,7 @@ func _export_episode_scenes(payload: Dictionary) -> Dictionary:
             "reopened_character_count": reopened_character_count,
             "animation_track_count": timeline_result["animation_track_count"],
             "action_cue_count": timeline_result["action_cue_count"],
+            "expression_cue_count": timeline_result["expression_cue_count"],
             "camera_cue_count": timeline_result["camera_cue_count"]
         })
     return {
