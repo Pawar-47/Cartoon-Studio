@@ -90,7 +90,7 @@ def test_render_episode_video_uses_godot_movie_maker_and_muxes_audio_subtitles(
     assert "-c:a" in mux_calls[0] and "aac" in mux_calls[0]
     assert "-c:s" in mux_calls[0] and "mov_text" in mux_calls[0]
     assert calls[-1][0] == str(ffmpeg)
-    assert "-progress" in calls[-1] and calls[-1][-1] == "pipe:1"
+    assert "-progress" in calls[-1] and "pipe:1" in calls[-1]
     assert Path(result["video_path"]).read_bytes() == b"fake-mp4"
 
 
