@@ -992,7 +992,10 @@ def test_pinned_godot_worker_builds_episode_scenes_with_world_and_character_glb(
     assert all(Path(scene["preview_path"]).is_file() for scene in result["scenes"])
     assert result["scenes"][0]["action_cue_count"] == 3
     assert result["scenes"][0]["skeletal_animation_track_count"] > 0
-    assert result["scenes"][0]["skeletal_animation_keyframe_count"] > result["scenes"][0]["skeletal_animation_track_count"]
+    assert (
+        result["scenes"][0]["skeletal_animation_keyframe_count"]
+        > result["scenes"][0]["skeletal_animation_track_count"]
+    )
     assert result["scenes"][0]["expression_cue_count"] == 1
     assert result["scenes"][0]["speech_cue_count"] == 1
     assert result["scenes"][0]["speech_mouth_keyframe_count"] > 0
