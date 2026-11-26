@@ -64,8 +64,14 @@ func _handle_request(request_value: Variant) -> Dictionary:
     if operation == "ping":
         response["ok"] = true
         response["capabilities"] = [
-            "ping", "glb_inspect", "scene_metrics", "skeleton_report", "retarget_glb_pair", "assemble_modular_character", "probe_glb_animation", "export_character_appearance", "customize_character_proportions", "add_character_hair"
+            "ping", "glb_inspect", "scene_metrics", "skeleton_report", "retarget_glb_pair", "assemble_modular_character", "probe_glb_animation", "export_character_appearance", "customize_character_proportions", "add_character_hair", "export_world_scene"
         ]
+        return response
+
+    if operation == "export_world_scene":
+        var world_result: Dictionary = _export_world_scene(payload)
+        for key in world_result:
+            response[key] = world_result[key]
         return response
 
     if operation == "inspect_glb":
@@ -2234,3 +2240,204 @@ func _set_scene_ownership(node: Node, owner_node: Node) -> void:
     for child in node.get_children():
         child.owner = owner_node
         _set_scene_ownership(child, owner_node)
+
+
+
+func _world_material(color_value: String, roughness: float = 0.86) -> StandardMaterial3D:
+    var material := StandardMaterial3D.new()
+    material.albedo_color = Color.from_string(color_value, Color.WHITE)
+    material.roughness = roughness
+    return material
+
+
+func _world_add_box(parent: Node3D, node_name: String, size: Vector3, position: Vector3, color_value: String) -> MeshInstance3D:
+    var mesh_node := MeshInstance3D.new()
+    mesh_node.name = node_name
+    var mesh := BoxMesh.new()
+    mesh.size = size
+    mesh_node.mesh = mesh
+    mesh_node.material_override = _world_material(color_value)
+    mesh_node.position = position
+    parent.add_child(mesh_node)
+    return mesh_node
+
+
+func _world_add_sphere(parent: Node3D, node_name: String, radius: float, position: Vector3, color_value: String) -> MeshInstance3D:
+    var mesh_node := MeshInstance3D.new()
+    mesh_node.name = node_name
+    var mesh := SphereMesh.new()
+    mesh.radius = radius
+    mesh.height = radius * 2.0
+    mesh_node.mesh = mesh
+    mesh_node.material_override = _world_material(color_value)
+    mesh_node.position = position
+    parent.add_child(mesh_node)
+    return mesh_node
+
+
+func _export_world_scene(payload: Dictionary) -> Dictionary:
+    var project_root := _normalise_path(str(payload.get("project_root", "")))
+    var output_path := _normalise_path(str(payload.get("output_path", "")))
+    var world_value: Variant = payload.get("world", {})
+    if project_root.is_empty() or not DirAccess.dir_exists_absolute(project_root):
+        return {"error_code": "invalid_project_root", "error": "A valid project root is required."}
+    var root_prefix := project_root.trim_suffix("/") + "/"
+    if not output_path.to_lower().begins_with(root_prefix.to_lower()) or not output_path.to_lower().ends_with(".tscn"):
+        return {"error_code": "path_outside_project", "error": "World scene output must be a project-local .tscn file."}
+    if FileAccess.file_exists(output_path):
+        return {"error_code": "output_exists", "error": "Refusing to overwrite an existing world scene."}
+    if typeof(world_value) != TYPE_DICTIONARY:
+        return {"error_code": "invalid_world", "error": "World layout must be a JSON object."}
+    var world: Dictionary = world_value
+    var objects_value: Variant = world.get("objects", [])
+    if typeof(objects_value) != TYPE_ARRAY or objects_value.size() > 100:
+        return {"error_code": "invalid_objects", "error": "World layout supports up to 100 objects."}
+    var sky_name := str(world.get("sky", "day"))
+    if not ["day", "sunset", "night"].has(sky_name):
+        return {"error_code": "invalid_sky", "error": "Unsupported world lighting preset."}
+    var ground_color := str(world.get("ground_color", "#789b58"))
+    var root := Node3D.new()
+    root.name = "CartoonWorld"
+    root.set_meta("world_name", str(world.get("name", "Cartoon World")))
+    root.set_meta("world_theme", str(world.get("theme", "small_town")))
+
+    var environment := Environment.new()
+    environment.background_mode = Environment.BG_COLOR
+    var sky_color := Color("#8bc9ed")
+    var light_color := Color("#fff1d1")
+    var ambient_color := Color("#a8bfd0")
+    var light_energy := 1.0
+    if sky_name == "sunset":
+        sky_color = Color("#ef9b72")
+        light_color = Color("#ffc18a")
+        ambient_color = Color("#c88979")
+        light_energy = 0.78
+    elif sky_name == "night":
+        sky_color = Color("#18243f")
+        light_color = Color("#9bb7ef")
+        ambient_color = Color("#53658b")
+        light_energy = 0.34
+    environment.background_color = sky_color
+    environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+    environment.ambient_light_color = ambient_color
+    environment.ambient_light_energy = 0.7
+    var world_environment := WorldEnvironment.new()
+    world_environment.name = "WorldEnvironment"
+    world_environment.environment = environment
+    root.add_child(world_environment)
+
+    var sunlight := DirectionalLight3D.new()
+    sunlight.name = "Sunlight"
+    sunlight.rotation_degrees = Vector3(-48.0, -32.0, 0.0)
+    sunlight.light_color = light_color
+    sunlight.light_energy = light_energy
+    sunlight.shadow_enabled = true
+    root.add_child(sunlight)
+
+    _world_add_box(root, "Ground", Vector3(100.0, 0.5, 100.0), Vector3(0.0, -0.28, 0.0), ground_color)
+    var object_count := 0
+    for object_value in objects_value:
+        if typeof(object_value) != TYPE_DICTIONARY:
+            continue
+        var item: Dictionary = object_value
+        var kind := str(item.get("kind", ""))
+        if not ["road", "building", "shop", "tree", "vehicle", "lamp", "park"].has(kind):
+            continue
+        var x := (float(item.get("x", 50.0)) - 50.0) * 0.9
+        var z := (float(item.get("y", 50.0)) - 50.0) * 0.9
+        var width := clampf(float(item.get("width", 12.0)) * 0.72, 1.5, 72.0)
+        var depth := clampf(float(item.get("height", 8.0)) * 0.72, 1.5, 44.0)
+        var rotation := float(item.get("rotation", 0.0))
+        var tint := str(item.get("color", "#c89b67"))
+        var anchor := Node3D.new()
+        anchor.name = "WorldObject_%03d_%s" % [object_count + 1, kind]
+        anchor.position = Vector3(x, 0.0, z)
+        anchor.rotation_degrees.y = -rotation
+        anchor.set_meta("label", str(item.get("label", kind.capitalize())))
+        root.add_child(anchor)
+
+        if kind == "road":
+            _world_add_box(anchor, "RoadSurface", Vector3(width, 0.12, depth), Vector3.ZERO, "#4b4d50")
+            _world_add_box(anchor, "RoadMarking", Vector3(maxf(0.15, width * 0.018), 0.025, depth * 0.82), Vector3(0.0, 0.075, 0.0), "#f5e7b2")
+        elif kind == "building" or kind == "shop":
+            var body_height := clampf(depth * 0.72, 2.8, 12.0)
+            _world_add_box(anchor, "BuildingBody", Vector3(width * 0.78, body_height, depth * 0.72), Vector3(0.0, body_height * 0.5, 0.0), tint)
+            _world_add_box(anchor, "Roof", Vector3(width * 0.9, 0.65, depth * 0.84), Vector3(0.0, body_height + 0.25, 0.0), "#854f3d")
+            _world_add_box(anchor, "Door", Vector3(width * 0.12, body_height * 0.42, 0.12), Vector3(0.0, body_height * 0.21, depth * 0.37), "#49352b")
+            for window_index in range(2):
+                var window_x := (float(window_index) - 0.5) * width * 0.38
+                _world_add_box(anchor, "Window_%d" % window_index, Vector3(width * 0.18, body_height * 0.2, 0.1), Vector3(window_x, body_height * 0.62, depth * 0.37), "#9dd8e8")
+            if kind == "shop":
+                _world_add_box(anchor, "ShopAwning", Vector3(width * 0.86, 0.38, depth * 0.2), Vector3(0.0, body_height * 0.72, depth * 0.45), "#d95d4f")
+        elif kind == "tree":
+            var trunk := MeshInstance3D.new()
+            trunk.name = "Trunk"
+            var trunk_mesh := CylinderMesh.new()
+            trunk_mesh.top_radius = 0.28
+            trunk_mesh.bottom_radius = 0.42
+            trunk_mesh.height = maxf(2.0, depth * 0.48)
+            trunk.mesh = trunk_mesh
+            trunk.material_override = _world_material("#795139")
+            trunk.position.y = trunk_mesh.height * 0.5
+            anchor.add_child(trunk)
+            _world_add_sphere(anchor, "Canopy", maxf(1.1, minf(width, depth) * 0.32), Vector3(0.0, trunk_mesh.height + 1.0, 0.0), tint)
+        elif kind == "vehicle":
+            _world_add_box(anchor, "VehicleBody", Vector3(width, 0.85, depth * 0.7), Vector3(0.0, 0.85, 0.0), tint)
+            _world_add_box(anchor, "Cabin", Vector3(width * 0.48, 0.75, depth * 0.58), Vector3(0.0, 1.55, 0.0), "#a9d9e8")
+            for wheel_x in [-width * 0.34, width * 0.34]:
+                for wheel_z in [-depth * 0.28, depth * 0.28]:
+                    var wheel := MeshInstance3D.new()
+                    wheel.name = "Wheel"
+                    var wheel_mesh := CylinderMesh.new()
+                    wheel_mesh.top_radius = 0.34
+                    wheel_mesh.bottom_radius = 0.34
+                    wheel_mesh.height = 0.22
+                    wheel.mesh = wheel_mesh
+                    wheel.material_override = _world_material("#24272a")
+                    wheel.position = Vector3(wheel_x, 0.38, wheel_z)
+                    wheel.rotation_degrees.z = 90.0
+                    anchor.add_child(wheel)
+        elif kind == "lamp":
+            var pole := MeshInstance3D.new()
+            pole.name = "LampPost"
+            var pole_mesh := CylinderMesh.new()
+            pole_mesh.top_radius = 0.09
+            pole_mesh.bottom_radius = 0.14
+            pole_mesh.height = maxf(3.0, depth)
+            pole.mesh = pole_mesh
+            pole.material_override = _world_material("#444b50")
+            pole.position.y = pole_mesh.height * 0.5
+            anchor.add_child(pole)
+            _world_add_sphere(anchor, "LampHead", 0.38, Vector3(0.0, pole_mesh.height + 0.25, 0.0), "#ffe6a1")
+        elif kind == "park":
+            _world_add_box(anchor, "ParkGrass", Vector3(width, 0.16, depth), Vector3(0.0, 0.08, 0.0), "#5eaa61")
+            _world_add_box(anchor, "ParkPath", Vector3(width * 0.16, 0.08, depth * 0.9), Vector3(0.0, 0.2, 0.0), "#d6c29c")
+        object_count += 1
+
+    var packed := PackedScene.new()
+    _set_scene_ownership(root, root)
+    var pack_error := packed.pack(root)
+    if pack_error != OK:
+        root.free()
+        return {"error_code": "scene_pack_failed", "error": "Godot could not pack the generated world scene.", "godot_error": pack_error}
+    var save_error := ResourceSaver.save(packed, output_path)
+    root.free()
+    if save_error != OK:
+        return {"error_code": "scene_save_failed", "error": "Godot could not save the generated world scene.", "godot_error": save_error}
+    var reopened := ResourceLoader.load(output_path) as PackedScene
+    if reopened == null:
+        DirAccess.remove_absolute(output_path)
+        return {"error_code": "scene_reopen_failed", "error": "The saved world scene could not be reopened."}
+    var reopened_root := reopened.instantiate()
+    var reopened_objects := reopened_root.get_children().size()
+    reopened_root.free()
+    return {
+        "ok": true,
+        "output_path": output_path,
+        "world_name": str(world.get("name", "Cartoon World")),
+        "object_count": object_count,
+        "scene_reopened": true,
+        "scene_child_count": reopened_objects,
+        "lighting_preset": sky_name
+    }
+

@@ -862,6 +862,83 @@ def update_project_world(
     }
 
 
+
+@app.post("/api/projects/{project_id}/worlds/{world_id}/export")
+def export_project_world(project_id: str, world_id: str) -> dict[str, Any]:
+    initialize_database()
+    with connect_db() as connection:
+        project = connection.execute(
+            "SELECT id FROM projects WHERE id = ?", (project_id,)
+        ).fetchone()
+        indexed = connection.execute(
+            """
+            SELECT * FROM project_documents
+            WHERE project_id = ? AND document_id = ? AND document_type = 'world'
+            """,
+            (project_id, world_id),
+        ).fetchone()
+    if project is None or indexed is None:
+        raise HTTPException(status_code=404, detail="World not found.")
+    world_path = resolve_project_relative(DATA_DIR, project_id, indexed["relative_path"])
+    if not world_path.is_file():
+        raise HTTPException(status_code=404, detail="World document not found.")
+    document = read_json(world_path)
+    export_id = str(uuid.uuid4())
+    relative_scene = f"assets/worlds/{export_id}.tscn"
+    scene_path = resolve_project_relative(DATA_DIR, project_id, relative_scene)
+    project_root = project_directory(DATA_DIR, project_id)
+    try:
+        result = get_engine_adapter().export_world_scene(
+            document["data"], scene_path, allowed_root=project_root
+        )
+    except EngineUnavailableError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    except EngineTimeoutError as error:
+        scene_path.unlink(missing_ok=True)
+        raise HTTPException(status_code=504, detail=str(error)) from error
+    except EnginePathError as error:
+        scene_path.unlink(missing_ok=True)
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    except EngineError as error:
+        scene_path.unlink(missing_ok=True)
+        raise HTTPException(status_code=502, detail=f"World scene export failed: {error}") from error
+    if not result.get("ok") or not scene_path.is_file():
+        scene_path.unlink(missing_ok=True)
+        raise HTTPException(status_code=502, detail="Godot did not produce a valid world scene.")
+    now = datetime.now(UTC).isoformat()
+    document["data"]["scene_relative_path"] = relative_scene
+    document["data"]["scene_exported_at"] = now
+    document["data"]["scene_export"] = {
+        "object_count": int(result.get("object_count", 0)),
+        "scene_reopened": bool(result.get("scene_reopened", False)),
+        "lighting_preset": str(result.get("lighting_preset", document["data"].get("sky", "day"))),
+    }
+    document["revision"] = int(document.get("revision", 1)) + 1
+    document["updated_at"] = now
+    digest = write_json_atomic(world_path, document)
+    with connect_db() as connection:
+        upsert_document_index(connection, project_id, document, indexed["relative_path"], digest)
+    _sync_world_reference(project_id, document)
+    return {
+        "world_id": world_id,
+        "scene_relative_path": relative_scene,
+        "scene_url": f"/api/projects/{project_id}/worlds/{world_id}/scene",
+        **document["data"]["scene_export"],
+    }
+
+
+@app.get("/api/projects/{project_id}/worlds/{world_id}/scene")
+def download_project_world_scene(project_id: str, world_id: str) -> FileResponse:
+    world = get_project_world(project_id, world_id)
+    relative_path = str(world.get("scene_relative_path", ""))
+    if not relative_path.startswith("assets/worlds/") or not relative_path.endswith(".tscn"):
+        raise HTTPException(status_code=404, detail="World scene has not been exported.")
+    scene_path = resolve_project_relative(DATA_DIR, project_id, relative_path)
+    if not scene_path.is_file():
+        raise HTTPException(status_code=404, detail="World scene file is missing.")
+    return FileResponse(scene_path, media_type="text/plain", filename=f"world-{world_id}.tscn")
+
+
 @app.get("/characters", include_in_schema=False)
 def character_studio() -> FileResponse:
     return FileResponse(STATIC_DIR / "characters.html")

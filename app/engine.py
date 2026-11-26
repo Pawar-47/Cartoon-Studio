@@ -524,6 +524,44 @@ class GodotEngineAdapter:
             cancel_event=cancel_event,
         )
 
+
+    def export_world_scene(
+        self,
+        world: dict[str, Any],
+        output_path: Path,
+        allowed_root: Path,
+        timeout_seconds: float | None = None,
+        cancel_event: threading.Event | None = None,
+    ) -> dict[str, Any]:
+        root = Path(allowed_root).resolve(strict=False)
+        output = Path(output_path).resolve(strict=False)
+        if not root.is_dir():
+            raise EnginePathError("The allowed project root does not exist.")
+        if output == root or root not in output.parents:
+            raise EnginePathError("World scene output escapes the allowed project directory.")
+        if output.suffix.lower() != ".tscn" or output.exists():
+            raise EnginePathError("World scene output must be a new .tscn file.")
+        if not isinstance(world, dict) or len(world.get("objects", [])) > 100:
+            raise EnginePathError("World layout must contain no more than 100 objects.")
+        allowed_kinds = {"road", "building", "shop", "tree", "vehicle", "lamp", "park"}
+        for item in world.get("objects", []):
+            if not isinstance(item, dict) or item.get("kind") not in allowed_kinds:
+                raise EnginePathError("World layout contains an unsupported object.")
+            for field, lower, upper in (("x", 0, 100), ("y", 0, 100), ("width", 2, 100), ("height", 2, 60), ("rotation", 0, 360)):
+                value = item.get(field, 0)
+                if isinstance(value, bool) or not isinstance(value, (int, float)) or not lower <= value <= upper:
+                    raise EnginePathError(f"World object {field} is outside its supported range.")
+            color = str(item.get("color", "#c89b67"))
+            if len(color) != 7 or color[0] != "#" or any(c not in "0123456789abcdefABCDEF" for c in color[1:]):
+                raise EnginePathError("World object color must be a six-digit hexadecimal value.")
+        output.parent.mkdir(parents=True, exist_ok=True)
+        return self._run(
+            "export_world_scene",
+            {"project_root": str(root), "output_path": str(output), "world": world},
+            timeout_seconds=timeout_seconds,
+            cancel_event=cancel_event,
+        )
+
     def _write_log(self, record: dict[str, Any]) -> None:
         log_dir = self.data_dir / "logs"
         log_dir.mkdir(parents=True, exist_ok=True)

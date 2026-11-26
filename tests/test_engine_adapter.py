@@ -754,3 +754,43 @@ def test_pinned_quaternius_modular_models_share_rig_and_animation_library(tmp_pa
         else:
             assert bone_names == expected_bone_names
         assert inspection["mesh_count"] >= 4
+
+
+def test_world_scene_export_validates_layout_and_builds_worker_request(tmp_path, monkeypatch):
+    adapter = _fake_adapter(tmp_path)
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    captured = {}
+
+    def fake_run(operation, payload, **kwargs):
+        captured["operation"] = operation
+        captured["payload"] = payload
+        return {"ok": True, "object_count": 1, "scene_reopened": True}
+
+    monkeypatch.setattr(adapter, "_run", fake_run)
+    output = project_root / "assets" / "worlds" / "sample.tscn"
+    world = {
+        "name": "Town",
+        "theme": "small_town",
+        "sky": "day",
+        "ground_color": "#789b58",
+        "objects": [
+            {"id": "tree-1", "kind": "tree", "label": "Tree", "x": 50, "y": 50, "width": 12, "height": 10, "rotation": 0, "color": "#4c9850"}
+        ],
+    }
+    result = adapter.export_world_scene(world, output, allowed_root=project_root)
+    assert result["ok"] is True
+    assert captured["operation"] == "export_world_scene"
+    assert captured["payload"]["world"] == world
+    assert output.parent.is_dir()
+
+
+def test_world_scene_export_rejects_output_path_escape(tmp_path):
+    adapter = _fake_adapter(tmp_path)
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    with pytest.raises(EnginePathError, match="escapes"):
+        adapter.export_world_scene(
+            {"objects": []}, tmp_path / "outside.tscn", allowed_root=project_root
+        )
+
