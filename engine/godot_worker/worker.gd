@@ -2565,6 +2565,186 @@ func _export_world_scene(payload: Dictionary) -> Dictionary:
 
 
 
+func _episode_action_pose(action_id: String) -> Dictionary:
+    var offset := Vector3.ZERO
+    var rotation := Vector3.ZERO
+    match action_id:
+        "walk", "walk_back", "run", "strafe_left", "strafe_right":
+            if action_id == "walk":
+                offset.z = -1.0
+            elif action_id == "walk_back":
+                offset.z = 0.8
+            elif action_id == "run":
+                offset.z = -1.8
+            elif action_id == "strafe_left":
+                offset.x = -1.0
+            else:
+                offset.x = 1.0
+        "jump_start", "jump_air", "jump_land", "jump_running":
+            offset.y = 1.2 if action_id == "jump_air" else 0.65
+        "fall", "stumble_recover":
+            rotation.z = 0.65
+        "wave", "talk_gestures", "point", "thumbs_up", "clap", "cheer":
+            rotation.y = 0.18
+            rotation.z = -0.16
+        "bow":
+            rotation.x = 0.35
+        "dance_groove", "dance_bounce", "laugh":
+            rotation.y = 0.3
+            rotation.z = 0.2
+        "crouch", "pick_up", "put_down", "sweep":
+            offset.y = -0.35
+            rotation.x = 0.18
+        "drive_car", "sit_passenger", "lean_wall", "phone_call", "texting":
+            rotation.x = -0.12
+        "open_door", "push", "use_press", "punch", "hit":
+            rotation.y = -0.22
+    return {"offset": offset, "rotation": rotation}
+
+
+func _build_episode_timeline(
+    scene_root: Node3D,
+    scene_data: Dictionary,
+    character_anchors: Dictionary
+) -> Dictionary:
+    var duration := float(scene_data.get("duration_seconds", 30))
+    var animation := Animation.new()
+    animation.length = duration
+    var track_count := 0
+    var action_count := 0
+    var camera := Camera3D.new()
+    camera.name = "EpisodeCamera"
+    camera.position = Vector3(0.0, 7.0, 16.0)
+    camera.look_at(Vector3(0.0, 1.0, 0.0), Vector3.UP)
+    camera.current = true
+    scene_root.add_child(camera)
+    var camera_position_track := animation.add_track(Animation.TYPE_VALUE)
+    animation.track_set_path(camera_position_track, NodePath("EpisodeCamera:position"))
+    animation.track_insert_key(camera_position_track, 0.0, camera.position)
+    var camera_rotation_track := animation.add_track(Animation.TYPE_VALUE)
+    animation.track_set_path(camera_rotation_track, NodePath("EpisodeCamera:rotation"))
+    animation.track_insert_key(camera_rotation_track, 0.0, camera.rotation)
+    var camera_fov_track := animation.add_track(Animation.TYPE_VALUE)
+    animation.track_set_path(camera_fov_track, NodePath("EpisodeCamera:fov"))
+    animation.track_insert_key(camera_fov_track, 0.0, camera.fov)
+    track_count += 3
+    var actions_value: Variant = scene_data.get("actions", [])
+    if typeof(actions_value) == TYPE_ARRAY:
+        for action_value in actions_value:
+            if typeof(action_value) != TYPE_DICTIONARY:
+                continue
+            var cue: Dictionary = action_value
+            var character_id := str(cue.get("character_id", ""))
+            if not character_anchors.has(character_id):
+                continue
+            var anchor: Node3D = character_anchors[character_id]
+            var pose := _episode_action_pose(str(cue.get("action_id", "idle")))
+            var start_time := clampf(float(cue.get("start_seconds", 0.0)), 0.0, duration)
+            var end_time := clampf(
+                start_time + float(cue.get("duration_seconds", 1.0)),
+                start_time,
+                duration
+            )
+            var middle_time := lerpf(start_time, end_time, 0.5)
+            var base_position := anchor.position
+            var base_rotation := anchor.rotation
+            var position_track := animation.add_track(Animation.TYPE_VALUE)
+            animation.track_set_path(
+                position_track,
+                NodePath("Cast/Character_" + character_id + ":position")
+            )
+            animation.track_insert_key(position_track, start_time, base_position)
+            animation.track_insert_key(
+                position_track,
+                middle_time,
+                base_position + pose["offset"]
+            )
+            animation.track_insert_key(position_track, end_time, base_position)
+            var rotation_track := animation.add_track(Animation.TYPE_VALUE)
+            animation.track_set_path(
+                rotation_track,
+                NodePath("Cast/Character_" + character_id + ":rotation")
+            )
+            animation.track_insert_key(rotation_track, start_time, base_rotation)
+            animation.track_insert_key(
+                rotation_track,
+                middle_time,
+                base_rotation + pose["rotation"]
+            )
+            animation.track_insert_key(rotation_track, end_time, base_rotation)
+            track_count += 2
+            action_count += 1
+    var camera_value: Variant = scene_data.get("camera", [])
+    var camera_cue_count := 0
+    if typeof(camera_value) == TYPE_ARRAY:
+        for camera_entry in camera_value:
+            if typeof(camera_entry) != TYPE_DICTIONARY:
+                continue
+            var cue: Dictionary = camera_entry
+            var shot := str(cue.get("shot", "wide"))
+            var movement := str(cue.get("movement", "locked"))
+            var target := Vector3(0.0, 1.0, 0.0)
+            var target_id := str(cue.get("target", "all"))
+            if character_anchors.has(target_id):
+                var target_anchor: Node3D = character_anchors[target_id]
+                target = target_anchor.position + Vector3(0.0, 1.2, 0.0)
+            var distance := 16.0
+            var height := 7.0
+            var field_of_view := 70.0
+            if shot == "medium":
+                distance = 10.0
+                height = 5.0
+                field_of_view = 55.0
+            elif shot == "close":
+                distance = 5.0
+                height = 2.5
+                field_of_view = 42.0
+            var start_position := target + Vector3(0.0, height, distance)
+            var end_position := start_position
+            if movement == "orbit":
+                end_position += Vector3(3.0, 0.0, -1.5)
+            elif movement == "dolly":
+                end_position += Vector3(0.0, 0.0, -3.0)
+            var start_rotation := Basis.looking_at(
+                target - start_position, Vector3.UP
+            ).get_euler()
+            var end_rotation := Basis.looking_at(
+                target - end_position, Vector3.UP
+            ).get_euler()
+            var start_time := clampf(float(cue.get("start_seconds", 0.0)), 0.0, duration)
+            var end_time := clampf(
+                start_time + float(cue.get("duration_seconds", 1.0)),
+                start_time,
+                duration
+            )
+            animation.track_insert_key(camera_position_track, start_time, start_position)
+            animation.track_insert_key(camera_position_track, end_time, end_position)
+            animation.track_insert_key(camera_rotation_track, start_time, start_rotation)
+            animation.track_insert_key(camera_rotation_track, end_time, end_rotation)
+            animation.track_insert_key(camera_fov_track, start_time, field_of_view)
+            animation.track_insert_key(camera_fov_track, end_time, field_of_view)
+            camera_cue_count += 1
+    var timeline_player := AnimationPlayer.new()
+    timeline_player.name = "EpisodeTimeline"
+    timeline_player.root_node = NodePath("..")
+    scene_root.add_child(timeline_player)
+    var library := AnimationLibrary.new()
+    var library_error := library.add_animation("EpisodeTimeline", animation)
+    if library_error != OK:
+        return {"ok": false, "error_code": "episode_timeline_library_failed", "godot_error": library_error}
+    var player_error := timeline_player.add_animation_library("", library)
+    if player_error != OK:
+        return {"ok": false, "error_code": "episode_timeline_player_failed", "godot_error": player_error}
+    timeline_player.autoplay = "EpisodeTimeline"
+    timeline_player.play("EpisodeTimeline")
+    return {
+        "ok": true,
+        "animation_track_count": track_count,
+        "action_cue_count": action_count,
+        "camera_cue_count": camera_cue_count
+    }
+
+
 func _export_episode_scenes(payload: Dictionary) -> Dictionary:
     var project_root := _normalise_path(str(payload.get("project_root", "")))
     var world_scene_path := _normalise_path(str(payload.get("world_scene_path", "")))
@@ -2640,6 +2820,7 @@ func _export_episode_scenes(payload: Dictionary) -> Dictionary:
             scene_root.free()
             return {"error_code": "invalid_scene_cast", "error": "Scene character IDs must be an array."}
         var placed_count := 0
+        var character_anchors: Dictionary = {}
         for character_id_value in scene_character_ids:
             var character_id := str(character_id_value)
             if not episode_characters.has(character_id) or not assets_by_id.has(character_id):
@@ -2663,9 +2844,16 @@ func _export_episode_scenes(payload: Dictionary) -> Dictionary:
             character_anchor.set_meta("character_name", str(character_data.get("name", character_id)))
             character_anchor.position = Vector3((float(placed_count) - float(scene_character_ids.size() - 1) * 0.5) * 2.8, 0.0, 4.0)
             cast_root.add_child(character_anchor)
+            character_anchors[character_id] = character_anchor
             character_scene.name = "Model"
             character_anchor.add_child(character_scene)
             placed_count += 1
+        var timeline_result := _build_episode_timeline(
+            scene_root, scene_data, character_anchors
+        )
+        if not bool(timeline_result.get("ok", false)):
+            scene_root.free()
+            return timeline_result
         var output_path := output_directory.path_join(scene_id + ".tscn")
         var output_glb_path := output_directory.path_join(scene_id + ".glb")
         if FileAccess.file_exists(output_path) or FileAccess.file_exists(output_glb_path):
@@ -2708,7 +2896,10 @@ func _export_episode_scenes(payload: Dictionary) -> Dictionary:
             "scene_path": output_path,
             "preview_path": output_glb_path,
             "scene_reopened": true,
-            "reopened_character_count": reopened_character_count
+            "reopened_character_count": reopened_character_count,
+            "animation_track_count": timeline_result["animation_track_count"],
+            "action_cue_count": timeline_result["action_cue_count"],
+            "camera_cue_count": timeline_result["camera_cue_count"]
         })
     return {
         "ok": true,
