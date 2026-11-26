@@ -472,7 +472,7 @@ function updateFaceFeaturePreview() {
  $("face-eye-scale-value").value=recipe.eye_scale.toFixed(2)+"×";$("face-eye-spacing-value").value=recipe.eye_spacing.toFixed(2)+"×";
  $("face-smile-value").value=recipe.smile.toFixed(2);$("face-brow-angle-value").value=recipe.brow_angle.toFixed(2);
  $("save-appearance").disabled=!activeCharacter;
- $("export-appearance").disabled=true;$("download-appearance").hidden=true;
+ $("export-appearance").disabled=!(Object.keys(appearanceRecipe.materials||{}).length||Object.keys(appearanceRecipe.morph_targets||{}).length||recipe.enabled);$("download-appearance").hidden=true;
  $("face-status").textContent=recipe.enabled?"Live 3D face preview updated. Save this recipe with the character; GLB geometry baking is a later step.":"Face preview is off. Enable it to add editable cartoon eyes, brows, nose and mouth.";
 }
 for(const id of ["face-enabled","face-eye-color","face-iris-color","face-brow-color","face-mouth-color","face-nose-color","face-eye-scale","face-eye-spacing","face-smile","face-brow-angle"])$(id).addEventListener("input",updateFaceFeaturePreview);
@@ -492,13 +492,12 @@ $("save-appearance").addEventListener("click",async()=>{
 $("export-appearance").addEventListener("click",async()=>{
  if(!activeCharacter||!activeProject)return;
  const button=$("export-appearance");button.disabled=true;
- if(appearanceRecipe.face_features?.enabled){$("appearance-status").textContent="Face-feature geometry is saved as a live 3D preview recipe but is not yet baked into GLB. Export a PNG preview to retain the designed face visually.";return;}
- $("appearance-status").textContent="Godot is baking material and imported morph edits into a new GLB, then re-importing it for verification…";
+ $("appearance-status").textContent="Godot is baking material, imported morph and generated face geometry into a new GLB, then re-importing it for verification…";
  try{
   const response=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/characters/"+encodeURIComponent(activeCharacter.id)+"/export",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(appearanceRecipe)});
   const result=await response.json();if(!response.ok)throw new Error(result.detail||"Could not export customized character.");
   const link=$("download-appearance");link.href=result.download_url;link.download=result.original_filename;link.hidden=false;
-  $("appearance-status").textContent="Customized GLB exported and verified · "+result.applied_material_count+" material edit(s), "+result.applied_morph_count+" facial morph(s). The original asset remains unchanged."; 
+  $("appearance-status").textContent="Customized GLB exported and verified · "+result.applied_material_count+" material edit(s), "+result.applied_morph_count+" imported morph(s), "+(result.applied_face_feature_count||0)+" generated face mesh(es). The original asset remains unchanged.";  
  }catch(error){$("appearance-status").textContent=error.message}
  finally{button.disabled=!(Object.keys(appearanceRecipe.materials).length||Object.keys(appearanceRecipe.morph_targets).length||appearanceRecipe.face_features?.enabled)}
 });

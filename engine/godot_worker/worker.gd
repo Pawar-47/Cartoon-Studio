@@ -295,6 +295,191 @@ func _inspect_glb(payload: Dictionary) -> Dictionary:
     return result
 
 
+
+func _face_material(color_value: String) -> StandardMaterial3D:
+    var material := StandardMaterial3D.new()
+    material.albedo_color = Color.from_string(color_value, Color.WHITE)
+    material.roughness = 0.78
+    return material
+
+
+func _add_face_sphere(
+    parent: Node,
+    scene_owner: Node,
+    mesh_name: String,
+    position: Vector3,
+    scale: Vector3,
+    material: StandardMaterial3D
+) -> MeshInstance3D:
+    var sphere := SphereMesh.new()
+    sphere.radial_segments = 20
+    sphere.rings = 12
+    var instance := MeshInstance3D.new()
+    instance.name = mesh_name
+    instance.mesh = sphere
+    instance.material_override = material
+    instance.position = position
+    instance.scale = scale
+    parent.add_child(instance)
+    instance.owner = scene_owner
+    return instance
+
+
+func _add_face_mouth_segment(
+    parent: Node,
+    scene_owner: Node,
+    mesh_name: String,
+    start: Vector3,
+    finish: Vector3,
+    radius: float,
+    material: StandardMaterial3D
+) -> MeshInstance3D:
+    var delta := finish - start
+    var capsule := CapsuleMesh.new()
+    capsule.radius = radius
+    capsule.height = maxf(delta.length() + radius * 2.0, radius * 2.0)
+    var instance := MeshInstance3D.new()
+    instance.name = mesh_name
+    instance.mesh = capsule
+    instance.material_override = material
+    instance.position = (start + finish) * 0.5
+    if delta.length_squared() > 0.000001:
+        instance.quaternion = Quaternion(Vector3.UP, delta.normalized())
+    parent.add_child(instance)
+    instance.owner = scene_owner
+    return instance
+
+
+func _add_character_face_features(scene: Node, recipe: Dictionary) -> Dictionary:
+    if not bool(recipe.get("enabled", false)):
+        return {"ok": true, "mesh_count": 0, "attachment_bone": ""}
+
+    var skeleton_nodes := scene.find_children("*", "Skeleton3D", true, false)
+    if skeleton_nodes.size() != 1:
+        return {"ok": false, "error_code": "face_skeleton_count", "error": "Generated face geometry requires exactly one Skeleton3D."}
+    var skeleton := skeleton_nodes[0] as Skeleton3D
+    var head_bone_name := ""
+    var head_bone_index := -1
+    for bone_index in range(skeleton.get_bone_count()):
+        var bone_name := str(skeleton.get_bone_name(bone_index))
+        var parts := bone_name.to_lower().split(":")
+        var token := str(parts[parts.size() - 1]).replace("_", "").replace(" ", "")
+        if token == "head":
+            head_bone_name = bone_name
+            head_bone_index = bone_index
+            break
+    if head_bone_index < 0:
+        return {"ok": false, "error_code": "face_head_bone_missing", "error": "The rig has no recognizable Head bone for generated facial geometry."}
+
+    var head_mesh: MeshInstance3D = null
+    var head_bounds := AABB()
+    var largest_volume := 0.0
+    for mesh_node in scene.find_children("*", "MeshInstance3D", true, false):
+        var mesh_instance := mesh_node as MeshInstance3D
+        if mesh_instance.mesh == null or mesh_instance.skin == null:
+            continue
+        var bound_skeleton := mesh_instance.get_node_or_null(mesh_instance.get_skeleton_path()) as Skeleton3D
+        if bound_skeleton != skeleton:
+            continue
+        var label := str(mesh_instance.name) + " " + str(mesh_instance.mesh.resource_name) + " " + str(scene.get_path_to(mesh_instance))
+        if _classify_mesh_slot(label) != "head":
+            continue
+        var candidate := _mesh_bounds_in_bone_space(mesh_instance, skeleton, head_bone_index)
+        if candidate.size.x <= 0.01 or candidate.size.y <= 0.01 or candidate.size.z <= 0.01:
+            continue
+        var volume := candidate.size.x * candidate.size.y * candidate.size.z
+        if volume <= largest_volume:
+            continue
+        largest_volume = volume
+        head_mesh = mesh_instance
+        head_bounds = candidate
+    if head_mesh == null:
+        return {"ok": false, "error_code": "face_head_mesh_missing", "error": "A skinned head mesh could not be identified for face placement."}
+
+    for attachment_node in scene.find_children("*", "BoneAttachment3D", true, false):
+        var old_attachment := attachment_node as BoneAttachment3D
+        if str(old_attachment.name) == "CartoonStudio_Face_Attachment":
+            old_attachment.queue_free()
+    await process_frame
+
+    var center := head_bounds.get_center()
+    var width := maxf(head_bounds.size.x * 0.56, head_bounds.size.y * 0.18, 0.035)
+    var height := maxf(head_bounds.size.y * 0.48, width * 0.55, 0.035)
+    var front_info := _head_front_direction(head_mesh, skeleton, head_bone_index, center)
+    var front_direction := float(front_info.get("direction", 1.0))
+    var front_z := head_bounds.end.z if front_direction > 0.0 else head_bounds.position.z
+    front_z += front_direction * maxf(head_bounds.size.z * 0.035, width * 0.025)
+    var eye_scale := clampf(float(recipe.get("eye_scale", 1.0)), 0.65, 1.5)
+    var eye_spacing := clampf(float(recipe.get("eye_spacing", 1.0)), 0.65, 1.35)
+    var smile := clampf(float(recipe.get("smile", 0.35)), -1.0, 1.0)
+    var brow_angle := clampf(float(recipe.get("brow_angle", 0.0)), -0.5, 0.5)
+    var eye_depth := maxf(width * 0.045, 0.008)
+    var eye_width := width * 0.105 * eye_scale
+    var eye_height := height * 0.17 * eye_scale
+    var eye_y := center.y + height * 0.10
+    var eye_offset := width * 0.245 * eye_spacing
+
+    var attachment := BoneAttachment3D.new()
+    attachment.name = "CartoonStudio_Face_Attachment"
+    attachment.bone_name = head_bone_name
+    skeleton.add_child(attachment)
+    attachment.owner = scene
+    var eye_material := _face_material(str(recipe.get("eye_color", "#ffffff")))
+    var iris_material := _face_material(str(recipe.get("iris_color", "#4b83b8")))
+    var pupil_material := _face_material("#17191d")
+    var brow_material := _face_material(str(recipe.get("brow_color", "#38251c")))
+    var nose_material := _face_material(str(recipe.get("nose_color", "#c98768")))
+    var mouth_material := _face_material(str(recipe.get("mouth_color", "#612b2b")))
+    var mesh_count := 0
+
+    for side in [-1.0, 1.0]:
+        var eye_x := center.x + side * eye_offset
+        _add_face_sphere(attachment, scene, "CartoonStudio_Face_EyeWhite_" + str(side),
+            Vector3(eye_x, eye_y, front_z),
+            Vector3(eye_width, eye_height, eye_depth), eye_material)
+        _add_face_sphere(attachment, scene, "CartoonStudio_Face_Iris_" + str(side),
+            Vector3(eye_x + width * 0.018, eye_y - height * 0.012, front_z + front_direction * eye_depth * 0.88),
+            Vector3(eye_width * 0.49, eye_height * 0.57, eye_depth * 0.42), iris_material)
+        _add_face_sphere(attachment, scene, "CartoonStudio_Face_Pupil_" + str(side),
+            Vector3(eye_x + width * 0.022, eye_y - height * 0.012, front_z + front_direction * eye_depth * 1.22),
+            Vector3(eye_width * 0.23, eye_height * 0.34, eye_depth * 0.22), pupil_material)
+        var brow := _add_face_sphere(attachment, scene, "CartoonStudio_Face_Brow_" + str(side),
+            Vector3(eye_x, eye_y + eye_height * 1.55, front_z + front_direction * eye_depth * 0.12),
+            Vector3(eye_width * 1.32, maxf(height * 0.035, 0.006), eye_depth * 0.38), brow_material)
+        brow.rotation.z = -side * brow_angle
+        mesh_count += 4
+
+    _add_face_sphere(attachment, scene, "CartoonStudio_Face_Nose",
+        Vector3(center.x, center.y - height * 0.08, front_z + front_direction * eye_depth * 0.6),
+        Vector3(width * 0.055, height * 0.075, eye_depth * 0.8), nose_material)
+    mesh_count += 1
+
+    var mouth_y := center.y - height * 0.30
+    var mouth_half := width * 0.19
+    var mouth_depth := front_z + front_direction * eye_depth * 0.5
+    var mouth_points := [
+        Vector3(center.x - mouth_half, mouth_y + smile * height * 0.075, mouth_depth),
+        Vector3(center.x - mouth_half * 0.5, mouth_y - smile * height * 0.07, mouth_depth),
+        Vector3(center.x + mouth_half * 0.5, mouth_y - smile * height * 0.07, mouth_depth),
+        Vector3(center.x + mouth_half, mouth_y + smile * height * 0.075, mouth_depth)
+    ]
+    var mouth_radius := maxf(width * 0.012, 0.003)
+    for segment_index in range(mouth_points.size() - 1):
+        _add_face_mouth_segment(attachment, scene,
+            "CartoonStudio_Face_Mouth_" + str(segment_index),
+            mouth_points[segment_index], mouth_points[segment_index + 1],
+            mouth_radius, mouth_material)
+        mesh_count += 1
+
+    return {
+        "ok": true,
+        "mesh_count": mesh_count,
+        "attachment_bone": head_bone_name,
+        "front_direction": front_direction,
+        "fit_basis": "head_mesh_bounds"
+    }
+
+
 func _export_character_appearance(payload: Dictionary) -> Dictionary:
     var project_root := _normalise_path(str(payload.get("project_root", "")))
     var source_path := _normalise_path(str(payload.get("source_path", "")))
@@ -311,11 +496,16 @@ func _export_character_appearance(payload: Dictionary) -> Dictionary:
         return {"error_code": "invalid_output_path", "error": "Appearance export must create a new GLB file."}
     var materials_value: Variant = payload.get("materials", [])
     var morphs_value: Variant = payload.get("morph_targets", [])
+    var face_features_value: Variant = payload.get("face_features", {})
+    if typeof(face_features_value) != TYPE_DICTIONARY:
+        return {"error_code": "invalid_face_features", "error": "Face features must be an object."}
+    var face_features: Dictionary = face_features_value
+    var face_enabled := bool(face_features.get("enabled", false))
     if typeof(materials_value) != TYPE_ARRAY or materials_value.size() > 256:
         return {"error_code": "invalid_material_edits", "error": "Material edits must be an array of at most 256 entries."}
     if typeof(morphs_value) != TYPE_ARRAY or morphs_value.size() > 512:
         return {"error_code": "invalid_morph_edits", "error": "Morph edits must be an array of at most 512 entries."}
-    if materials_value.is_empty() and morphs_value.is_empty():
+    if materials_value.is_empty() and morphs_value.is_empty() and not face_enabled:
         return {"error_code": "empty_appearance", "error": "There are no appearance edits to export."}
     var document := GLTFDocument.new()
     var state := GLTFState.new()
@@ -327,6 +517,7 @@ func _export_character_appearance(payload: Dictionary) -> Dictionary:
         return {"error_code": "appearance_scene_failed", "error": "Godot could not generate the appearance source scene."}
     root.add_child(scene)
     await process_frame
+    var source_animation_names := _scene_animation_names(scene)
     var mesh_nodes := scene.find_children("*", "MeshInstance3D", true, false)
     var applied_materials: Array[Dictionary] = []
     for material_value in materials_value:
@@ -397,6 +588,10 @@ func _export_character_appearance(payload: Dictionary) -> Dictionary:
         if not morph_export_meshes.has(morph_mesh):
             morph_export_meshes.append(morph_mesh)
         applied_morphs.append({"mesh_name": mesh_name, "target_index": target_index, "target_name": target_name, "value": weight})
+    var face_result := await _add_character_face_features(scene, face_features)
+    if not bool(face_result.get("ok", false)):
+        scene.queue_free()
+        return {"error_code": str(face_result.get("error_code", "face_generation_failed")), "error": str(face_result.get("error", "Godot could not generate face geometry."))}
     var export_document := GLTFDocument.new()
     var export_state := GLTFState.new()
     var export_error := export_document.append_from_scene(scene, export_state)
@@ -471,6 +666,34 @@ func _export_character_appearance(payload: Dictionary) -> Dictionary:
         if not material_verified:
             DirAccess.remove_absolute(output_path)
             return {"error_code": "appearance_material_verification_failed", "error": "Customized material PBR values were not found after GLB export/re-import."}
+    var exported_animation_names: Array = verification.get("animation_names", [])
+    if exported_animation_names.size() != source_animation_names.size():
+        DirAccess.remove_absolute(output_path)
+        return {"error_code": "appearance_animation_verification_failed", "error": "Animation clips were lost during appearance export."}
+    for animation_name in source_animation_names:
+        if not exported_animation_names.has(animation_name):
+            DirAccess.remove_absolute(output_path)
+            return {"error_code": "appearance_animation_verification_failed", "error": "An animation clip was lost during appearance export: " + str(animation_name)}
+    if face_enabled:
+        var face_mesh_count := 0
+        var face_attachment_verified := false
+        for mesh_record in verification.get("mesh_inventory", []):
+            if not str(mesh_record.get("node_name", "")).begins_with("CartoonStudio_Face_"):
+                continue
+            face_mesh_count += 1
+            if str(mesh_record.get("attachment_bone", "")) == str(face_result.get("attachment_bone", "")):
+                face_attachment_verified = true
+        if face_mesh_count < int(face_result.get("mesh_count", 0)) or not face_attachment_verified:
+            DirAccess.remove_absolute(output_path)
+            return {"error_code": "appearance_face_verification_failed", "error": "Generated facial meshes or their Head-bone attachment did not survive GLB export and re-import."}
+        verification["face_features_verified"] = true
+        verification["face_attachment_bone"] = str(face_result.get("attachment_bone", ""))
+        verification["face_front_direction"] = float(face_result.get("front_direction", 1.0))
+        verification["face_fit_basis"] = str(face_result.get("fit_basis", ""))
+    else:
+        verification["face_features_verified"] = false
+        verification["face_attachment_bone"] = ""
+        verification["face_front_direction"] = 0.0
     for edit in applied_morphs:
         var morph_verified := false
         for record in verification.get("morph_targets", []):
@@ -484,6 +707,7 @@ func _export_character_appearance(payload: Dictionary) -> Dictionary:
     verification["appearance_verified"] = true
     verification["applied_material_count"] = applied_materials.size()
     verification["applied_morph_count"] = applied_morphs.size()
+    verification["applied_face_feature_count"] = int(face_result.get("mesh_count", 0))
     verification["applied_materials"] = applied_materials
     verification["applied_morph_targets"] = applied_morphs
     return verification

@@ -236,6 +236,61 @@ def test_godot_worker_generates_attached_hair_and_preserves_animation(tmp_path):
     assert playback["skinned_mesh_count"] >= 1
 
 
+
+@pytest.mark.skipif(not HAS_GODOT, reason="Pinned Godot runtime is supplied by Windows CI.")
+def test_godot_worker_bakes_cartoon_face_geometry_and_preserves_animation(tmp_path):
+    adapter = GodotEngineAdapter(data_dir=tmp_path, timeout_seconds=180)
+    project_root = tmp_path / "face-feature-project"
+    project_root.mkdir()
+    source = ensure_model_asset(
+        project_root / "assets" / "character-library", "Male", "Adventurer"
+    )
+    output = project_root / "assets" / "adventurer-with-cartoon-face.glb"
+    original_bytes = source.read_bytes()
+    before = adapter.inspect_glb(source, allowed_root=project_root)
+    assert before["skeleton_count"] == 1
+    assert any(
+        item["slot_candidate"] == "head" and item["skin_bound"]
+        for item in before["mesh_inventory"]
+    )
+
+    result = adapter.export_character_appearance(
+        source,
+        [],
+        [],
+        output,
+        allowed_root=project_root,
+        face_features={
+            "enabled": True,
+            "eye_color": "#ffffff",
+            "iris_color": "#4b83b8",
+            "brow_color": "#38251c",
+            "mouth_color": "#612b2b",
+            "nose_color": "#c98768",
+            "eye_scale": 1.08,
+            "eye_spacing": 0.96,
+            "smile": 0.55,
+            "brow_angle": 0.08,
+        },
+        timeout_seconds=180,
+    )
+
+    assert result["appearance_verified"] is True
+    assert result["face_features_verified"] is True
+    assert result["face_attachment_bone"].lower().endswith("head")
+    assert result["applied_face_feature_count"] >= 12
+    assert result["skeleton_count"] == before["skeleton_count"]
+    assert result["animation_names"] == before["animation_names"]
+    face_meshes = [
+        item for item in result["mesh_inventory"]
+        if item["node_name"].startswith("CartoonStudio_Face_")
+    ]
+    assert len(face_meshes) >= 12
+    assert all(item["attachment_bone"].lower().endswith("head") for item in face_meshes)
+    assert source.read_bytes() == original_bytes
+    assert output.is_file()
+
+
 @pytest.mark.skipif(not HAS_GODOT, reason="Pinned Godot runtime is supplied by Windows CI.")
 def test_godot_worker_fits_hair_to_real_adventurer_head_and_keeps_source_unchanged(tmp_path):
     adapter = GodotEngineAdapter(data_dir=tmp_path, timeout_seconds=120)

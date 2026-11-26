@@ -277,6 +277,15 @@ def test_character_appearance_persists_facial_morph_weights(tmp_path, monkeypatc
                 "0:Face/0:Head:Smile": 0.75,
                 "0:Face/0:Head:Blink": -0.25,
             },
+            "face_features": {
+                "enabled": True,
+                "eye_color": "#ffffff",
+                "iris_color": "#4b83b8",
+                "eye_scale": 1.1,
+                "eye_spacing": 0.95,
+                "smile": 0.6,
+                "brow_angle": 0.1,
+            },
         },
     )
 
@@ -287,12 +296,17 @@ def test_character_appearance_persists_facial_morph_weights(tmp_path, monkeypatc
         "0:Face/0:Head:Smile": 0.75,
         "0:Face/0:Head:Blink": -0.25,
     }
+    assert saved["data"]["appearance_recipe"]["face_features"]["enabled"] is True
+    assert saved["data"]["appearance_recipe"]["face_features"]["eye_scale"] == 1.1
     reopened = client.get(
         f"/api/projects/{project_id}/characters/{character_id}"
     )
     assert reopened.status_code == 200
     assert reopened.json()["data"]["appearance_recipe"]["morph_targets"] == (
         saved["data"]["appearance_recipe"]["morph_targets"]
+    )
+    assert reopened.json()["data"]["appearance_recipe"]["face_features"] == (
+        saved["data"]["appearance_recipe"]["face_features"]
     )
 
     invalid = client.put(

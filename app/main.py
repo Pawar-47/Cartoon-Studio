@@ -1698,7 +1698,8 @@ def export_character_appearance(
                 detail="Morph edits must include their imported mesh/target bindings.",
             )
         morph_targets.append({"key": key, **binding, "value": value})
-    if not materials and not morph_targets:
+    face_features = appearance.get("face_features", {})
+    if not materials and not morph_targets and not face_features.get("enabled", False):
         raise HTTPException(status_code=422, detail="There are no appearance edits to export.")
     asset_id = str(uuid.uuid4())
     relative_path = f"assets/characters/{asset_id}.glb"
@@ -1706,7 +1707,12 @@ def export_character_appearance(
     destination.parent.mkdir(parents=True, exist_ok=True)
     try:
         inspection = get_engine_adapter().export_character_appearance(
-            source_path, materials, morph_targets, destination, allowed_root=project_root
+            source_path,
+            materials,
+            morph_targets,
+            destination,
+            allowed_root=project_root,
+            face_features=face_features,
         )
         if not inspection.get("appearance_verified"):
             raise HTTPException(
@@ -1746,6 +1752,7 @@ def export_character_appearance(
             "appearance_verified": True,
             "applied_material_count": inspection.get("applied_material_count", 0),
             "applied_morph_count": inspection.get("applied_morph_count", 0),
+            "applied_face_feature_count": inspection.get("applied_face_feature_count", 0),
         }
     except EngineUnavailableError as error:
         raise HTTPException(status_code=503, detail=str(error)) from error

@@ -164,6 +164,7 @@ class GodotEngineAdapter:
         self, source_path: Path, materials: list[dict[str, Any]],
         morph_targets: list[dict[str, Any]], output_path: Path, allowed_root: Path,
         timeout_seconds: float | None = None, cancel_event: threading.Event | None = None,
+        face_features: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         root = Path(allowed_root).resolve(strict=False)
         source = Path(source_path).resolve(strict=True)
@@ -229,14 +230,40 @@ class GodotEngineAdapter:
                 "mesh_name": mesh_name, "target_name": target_name,
                 "target_index": target_index, "value": float(value),
             })
-        if not validated_materials and not validated_morphs:
-            raise EnginePathError("There are no material or morph edits to export.")
+        face_recipe = dict(face_features or {})
+        face_enabled = face_recipe.get("enabled", False)
+        if not isinstance(face_enabled, bool):
+            raise EnginePathError("Face feature enabled must be a boolean.")
+        validated_face_features: dict[str, Any] = {"enabled": face_enabled}
+        if face_enabled:
+            face_defaults = {
+                "eye_color": "#ffffff", "iris_color": "#4b83b8",
+                "brow_color": "#38251c", "mouth_color": "#612b2b",
+                "nose_color": "#c98768", "eye_scale": 1.0,
+                "eye_spacing": 1.0, "smile": 0.35, "brow_angle": 0.0,
+            }
+            for field, default in face_defaults.items():
+                value = face_recipe.get(field, default)
+                if field.endswith("_color"):
+                    if not isinstance(value, str) or len(value) != 7 or value[0] != "#" or any(char not in "0123456789abcdefABCDEF" for char in value[1:]):
+                        raise EnginePathError(f"Face feature {field} must be a six-digit hexadecimal color.")
+                    validated_face_features[field] = value
+                else:
+                    if not isinstance(value, (int, float)):
+                        raise EnginePathError(f"Face feature {field} must be numeric.")
+                    number = float(value)
+                    lower, upper = (0.65, 1.5) if field == "eye_scale" else (0.65, 1.35) if field == "eye_spacing" else (-1.0, 1.0) if field == "smile" else (-0.5, 0.5)
+                    if not lower <= number <= upper:
+                        raise EnginePathError(f"Face feature {field} is outside its supported range.")
+                    validated_face_features[field] = number
+        if not validated_materials and not validated_morphs and not face_enabled:
+            raise EnginePathError("There are no material, morph or face edits to export.")
         output.parent.mkdir(parents=True, exist_ok=True)
         return self._run(
             "export_character_appearance",
             {"project_root": str(root), "source_path": str(source),
              "output_path": str(output), "materials": validated_materials,
-             "morph_targets": validated_morphs},
+             "morph_targets": validated_morphs, "face_features": validated_face_features},
             timeout_seconds=timeout_seconds, cancel_event=cancel_event,
         )
 
