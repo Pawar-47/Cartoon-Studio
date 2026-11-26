@@ -724,16 +724,26 @@ def build_episode_production(project_id: str) -> dict[str, Any]:
     episode_id = saved["episode_id"]
     world_id = plan.get("world_id")
     if not world_id:
-        raise HTTPException(status_code=422, detail="Select and export a 3D world before production.")
+        raise HTTPException(
+            status_code=422,
+            detail="Select and export a 3D world before production.",
+        )
     world = next(
         (item for item in _project_worlds(project_id) if item["id"] == world_id),
         None,
     )
     if world is None:
-        raise HTTPException(status_code=422, detail="The episode's saved world is unavailable.")
+        raise HTTPException(
+            status_code=422, detail="The episode's saved world is unavailable."
+        )
     world_relative = str(world.get("scene_relative_path", ""))
-    if not world_relative.startswith("assets/worlds/") or not world_relative.endswith(".tscn"):
-        raise HTTPException(status_code=422, detail="Export the selected world scene before production.")
+    if not world_relative.startswith("assets/worlds/") or not world_relative.endswith(
+        ".tscn"
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail="Export the selected world scene before production.",
+        )
     world_scene = resolve_project_relative(DATA_DIR, project_id, world_relative)
     if not world_scene.is_file():
         raise HTTPException(status_code=422, detail="The selected world scene file is missing.")
@@ -777,15 +787,22 @@ def build_episode_production(project_id: str) -> dict[str, Any]:
         raise HTTPException(status_code=422, detail=str(error)) from error
     except EngineError as error:
         shutil.rmtree(output_directory.parent, ignore_errors=True)
-        raise HTTPException(status_code=502, detail=f"Episode scene generation failed: {error}") from error
+            raise HTTPException(
+                status_code=502,
+                detail=f"Episode scene generation failed: {error}",
+            ) from error
     if not result.get("ok") or len(result.get("scenes", [])) != len(plan["scenes"]):
         shutil.rmtree(output_directory.parent, ignore_errors=True)
         raise HTTPException(status_code=502, detail="Godot did not generate every episode scene.")
     project_root = project_directory(DATA_DIR, project_id).resolve()
     scenes = []
     for item in result["scenes"]:
-        scene_relative = str(Path(item["scene_path"]).resolve().relative_to(project_root)).replace("\\", "/")
-        preview_relative = str(Path(item["preview_path"]).resolve().relative_to(project_root)).replace("\\", "/")
+        scene_relative = str(
+            Path(item["scene_path"]).resolve().relative_to(project_root)
+        ).replace("\\", "/")
+        preview_relative = str(
+            Path(item["preview_path"]).resolve().relative_to(project_root)
+        ).replace("\\", "/")
         scenes.append({
             "scene_id": item["scene_id"],
             "title": item["title"],
@@ -867,7 +884,11 @@ def download_episode_scene(
     )
     if scene is None:
         raise HTTPException(status_code=404, detail="Episode scene not found.")
-    relative_path = scene["scene_relative_path"] if file_format == "tscn" else scene["preview_relative_path"]
+    relative_path = (
+        scene["scene_relative_path"]
+        if file_format == "tscn"
+        else scene["preview_relative_path"]
+    )
     if not relative_path.startswith("assets/episodes/"):
         raise HTTPException(status_code=409, detail="Episode scene path is invalid.")
     scene_path = resolve_project_relative(DATA_DIR, project_id, relative_path)
