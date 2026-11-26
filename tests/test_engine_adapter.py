@@ -12,6 +12,7 @@ import pytest
 
 from app import engine
 from app.character_builder import ensure_model_asset
+from app.character_foundry import MORPH_TARGETS, write_master_character
 from app.engine import (
     EngineCancelledError,
     EngineExecutionError,
@@ -652,6 +653,29 @@ def test_node_morph_weights_override_mesh_defaults(tmp_path):
         entry["default_value_source"] == "gltf_node"
         for entry in response["morph_targets"]
     )
+
+
+def test_pinned_godot_imports_original_foundry_master_and_morphs(tmp_path):
+    adapter = _real_godot_adapter(tmp_path)
+    project_root = tmp_path / "foundry-master-project"
+    project_root.mkdir()
+    glb_path, recipe_path = write_master_character(
+        project_root / "stylized-adult.glb",
+        character_id="foundry-integration-hero",
+    )
+
+    inspection = adapter.inspect_glb(glb_path, allowed_root=project_root)
+
+    assert inspection["ok"] is True
+    assert inspection["mesh_count"] == 1
+    assert inspection["morph_target_count"] == len(MORPH_TARGETS)
+    assert {entry["name"] for entry in inspection["morph_targets"]} == set(
+        MORPH_TARGETS
+    )
+    assert all(entry["default_value"] == 0.0 for entry in inspection["morph_targets"])
+    recipe = json.loads(recipe_path.read_text(encoding="utf-8"))
+    assert recipe["character_id"] == "foundry-integration-hero"
+    assert recipe["generated_asset"]["filename"] == glb_path.name
 
 
 def test_pinned_godot_worker_reports_real_animated_morph_cube(tmp_path):
