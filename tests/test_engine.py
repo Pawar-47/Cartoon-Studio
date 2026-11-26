@@ -277,6 +277,10 @@ def test_godot_worker_bakes_cartoon_face_geometry_and_preserves_animation(tmp_pa
             "eye_spacing": 0.96,
             "smile": 0.55,
             "brow_angle": 0.08,
+            "ear_size": 1.2,
+            "nose_width": 1.25,
+            "nose_height": 0.9,
+            "mouth_width": 1.15,
         },
         timeout_seconds=180,
     )

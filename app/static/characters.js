@@ -467,15 +467,16 @@ function setFaceFeatureControls(recipe={}) {
  applyCharacterFaceFeatures(values);
 }
 function updateFaceFeaturePreview() {
- const recipe={enabled:$("face-enabled").checked,skin_color:$("face-skin-color").value,eye_color:$("face-eye-color").value,iris_color:$("face-iris-color").value,brow_color:$("face-brow-color").value,mouth_color:$("face-mouth-color").value,nose_color:$("face-nose-color").value,face_width:Number($("face-width").value),cheek_fullness:Number($("face-cheek-fullness").value),jaw_width:Number($("face-jaw-width").value),chin_length:Number($("face-chin-length").value),eye_scale:Number($("face-eye-scale").value),eye_spacing:Number($("face-eye-spacing").value),smile:Number($("face-smile").value),mouth_open:Number($("face-mouth-open").value),brow_angle:Number($("face-brow-angle").value)};
+ const recipe={enabled:$("face-enabled").checked,skin_color:$("face-skin-color").value,eye_color:$("face-eye-color").value,iris_color:$("face-iris-color").value,brow_color:$("face-brow-color").value,mouth_color:$("face-mouth-color").value,nose_color:$("face-nose-color").value,face_width:Number($("face-width").value),cheek_fullness:Number($("face-cheek-fullness").value),jaw_width:Number($("face-jaw-width").value),chin_length:Number($("face-chin-length").value),eye_scale:Number($("face-eye-scale").value),eye_spacing:Number($("face-eye-spacing").value),smile:Number($("face-smile").value),mouth_open:Number($("face-mouth-open").value),brow_angle:Number($("face-brow-angle").value),ear_size:Number($("face-ear-size").value),nose_width:Number($("face-nose-width").value),nose_height:Number($("face-nose-height").value),mouth_width:Number($("face-mouth-width").value)};
  appearanceRecipe.face_features=recipe;applyCharacterFaceFeatures(recipe);
  for(const key of ["face-width","face-cheek-fullness","face-jaw-width","face-chin-length","face-eye-scale","face-eye-spacing"]){$(key+"-value").value=Number($(key).value).toFixed(2)+"×";}
+ for(const key of ["face-ear-size","face-nose-width","face-nose-height","face-mouth-width"]){$(key+"-value").value=Number($(key).value).toFixed(2)+"×";}
  $("face-smile-value").value=recipe.smile.toFixed(2);$("face-mouth-open-value").value=recipe.mouth_open.toFixed(2);$("face-brow-angle-value").value=recipe.brow_angle.toFixed(2);
  $("save-appearance").disabled=!activeCharacter;
  $("export-appearance").disabled=!(Object.keys(appearanceRecipe.materials||{}).length||Object.keys(appearanceRecipe.morph_targets||{}).length||recipe.enabled);$("download-appearance").hidden=true;
  $("face-status").textContent=recipe.enabled?"Live face preview updated. Export a new GLB to bake the facial geometry onto the Head bone.":"Face preview is off. Enable it to add editable facial geometry.";
 }
-for(const id of ["face-enabled","face-skin-color","face-eye-color","face-iris-color","face-brow-color","face-mouth-color","face-nose-color","face-width","face-cheek-fullness","face-jaw-width","face-chin-length","face-eye-scale","face-eye-spacing","face-smile","face-mouth-open","face-brow-angle"])$(id).addEventListener("input",updateFaceFeaturePreview);
+for(const id of ["face-enabled","face-skin-color","face-eye-color","face-iris-color","face-brow-color","face-mouth-color","face-nose-color","face-width","face-cheek-fullness","face-jaw-width","face-chin-length","face-eye-scale","face-eye-spacing","face-smile","face-mouth-open","face-brow-angle","face-ear-size","face-nose-width","face-nose-height","face-mouth-width"])$(id).addEventListener("input",updateFaceFeaturePreview);
 function applyGeneratedFaceExpression(name) {
  if(!importedAsset){$("face-status").textContent="Import a character model before applying an expression.";return;}
  const next=buildGeneratedFaceExpression(name,appearanceRecipe.face_features||{});

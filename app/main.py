@@ -212,6 +212,10 @@ class FaceFeatureInput(BaseModel):
     smile: float = Field(default=0.35, ge=-1, le=1)
     mouth_open: float = Field(default=0.0, ge=0, le=1)
     brow_angle: float = Field(default=0.0, ge=-0.5, le=0.5)
+    ear_size: float = Field(default=1.0, ge=0.6, le=1.5)
+    nose_width: float = Field(default=1.0, ge=0.65, le=1.5)
+    nose_height: float = Field(default=1.0, ge=0.65, le=1.5)
+    mouth_width: float = Field(default=1.0, ge=0.65, le=1.5)
 
 
 class CharacterAppearanceInput(BaseModel):
