@@ -1520,7 +1520,12 @@ def create_character(
     data["name"] = payload.name.strip()
     data["description"] = payload.description.strip()
     data["asset"] = manifest["data"]
-    data["appearance_recipe"] = {"materials": {}, "morph_targets": {}, "morph_bindings": {}, "face_features": FaceFeatureInput().model_dump(mode="json")}
+    data["appearance_recipe"] = {
+        "materials": {},
+        "morph_targets": {},
+        "morph_bindings": {},
+        "face_features": FaceFeatureInput().model_dump(mode="json"),
+    }
     data["rig_status"] = (
         "ready" if manifest["data"].get("rig_ready") else "unrigged"
     )

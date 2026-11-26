@@ -145,6 +145,7 @@ async function editCharacterProfile(document){
    if(loaded){
     applyCharacterAppearance(appearanceRecipe.materials);
     applyCharacterMorphTargets(appearanceRecipe.morph_targets);
+    applyCharacterFaceFeatures(appearanceRecipe.face_features||{});
     previewCharacterBodyProportions(
      proportionDelta(effectiveProportions,proportionState.baseProportions),
      importedAsset?.rig_analysis?.bone_mapping||{},
@@ -182,7 +183,7 @@ async function loadProjects(){
  await selectProject(select.value);
 }
 async function selectProject(id){
- activeProject=id;assemblyAssets=[];assemblyAccessories=[];renderAssemblyAccessories();refreshAssemblyControls();$("library-import").disabled=!id||!selectedLibraryModel();importedAsset=null;activeCharacter=null;resetProfileEditor();appearanceRecipe={materials:{},morph_targets:{},morph_bindings:{},face_features:{enabled:false}};$("export-appearance").disabled=true;$("download-appearance").hidden=true;$("material-editor").hidden=true;$("morph-editor").hidden=true;$("save-appearance").disabled=true;$("asset-report").hidden=true;$("profile-status").textContent="";$("save-character").disabled=true;$("refresh-characters").disabled=!id;resetProportionControls();$("body-proportions").value="";$("proportion-status").textContent="Import or assemble a rigged character to edit its proportions.";updateProportionButton();$("hair-style").value="short";$("hair-color").value="#2b1b13";$("hair-status").textContent="Import or assemble a rigged character to add generated hair.";updateHairButton();
+ activeProject=id;assemblyAssets=[];assemblyAccessories=[];renderAssemblyAccessories();refreshAssemblyControls();$("library-import").disabled=!id||!selectedLibraryModel();importedAsset=null;activeCharacter=null;resetProfileEditor();appearanceRecipe={materials:{},morph_targets:{},morph_bindings:{},face_features:{enabled:false}};setFaceFeatureControls(appearanceRecipe.face_features);$("export-appearance").disabled=true;$("download-appearance").hidden=true;$("material-editor").hidden=true;$("morph-editor").hidden=true;$("save-appearance").disabled=true;$("asset-report").hidden=true;$("profile-status").textContent="";$("save-character").disabled=true;$("refresh-characters").disabled=!id;resetProportionControls();$("body-proportions").value="";$("proportion-status").textContent="Import or assemble a rigged character to edit its proportions.";updateProportionButton();$("hair-style").value="short";$("hair-color").value="#2b1b13";$("hair-status").textContent="Import or assemble a rigged character to add generated hair.";updateHairButton();
  $("project-status").textContent=id?"Project selected. Import a GLB model to begin.":"Choose a project to begin.";
  $("character-list").replaceChildren();
  if(!id){$("character-list").innerHTML='<div class="empty">Select a project to see its characters.</div>';return}
@@ -518,7 +519,7 @@ $("create-retarget").addEventListener("click",async()=>{
  finally{$("create-retarget").disabled=!$("retarget-source").value||!$("retarget-target").value||$("retarget-source").value===$("retarget-target").value}
 });
 $("project-select").addEventListener("change",event=>selectProject(event.target.value).catch(error=>$("project-status").textContent=error.message));
-$("model-file").addEventListener("change",()=>{if(editingCharacter)cancelProfileEdit();$("import-model").disabled=!activeProject||!$("model-file").files.length;importedAsset=null;$("save-character").disabled=true;$("asset-report").hidden=true;updateProportionButton();updateHairButton()});
+$("model-file").addEventListener("change",()=>{if(editingCharacter)cancelProfileEdit();activeCharacter=null;appearanceRecipe={materials:{},morph_targets:{},morph_bindings:{},face_features:{enabled:false}};setFaceFeatureControls(appearanceRecipe.face_features);$("import-model").disabled=!activeProject||!$("model-file").files.length;importedAsset=null;$("save-character").disabled=true;$("asset-report").hidden=true;updateProportionButton();updateHairButton()});
 $("import-model").addEventListener("click",async()=>{
  const file=$("model-file").files[0];if(!file||!activeProject)return;
  $("import-model").disabled=true;$("import-status").textContent="Uploading and inspecting with Godot…";
@@ -567,14 +568,14 @@ $("character-form").addEventListener("submit",async event=>{
   const editing=Boolean(editingCharacter),url="/api/projects/"+encodeURIComponent(activeProject)+"/characters"+(editing?"/"+encodeURIComponent(editingCharacter.id):"");
   const response=await fetch(url,{method:editing?"PUT":"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
   const data=await response.json();if(!response.ok)throw new Error(data.detail||"Could not save character.");
-  const hasAppearance=Object.keys(appearanceRecipe.materials||{}).length||Object.keys(appearanceRecipe.morph_targets||{}).length||Boolean(appearanceRecipe.face_features?.enabled);
+  const hasAppearance=Object.keys(appearanceRecipe.materials||{}).length||Object.keys(appearanceRecipe.morph_targets||{}).length||Boolean(appearanceRecipe.face_features);
   if(hasAppearance){
    const appearanceResponse=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/characters/"+encodeURIComponent(data.id)+"/appearance",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(appearanceRecipe)});
    const appearanceResult=await appearanceResponse.json();
    if(!appearanceResponse.ok)throw new Error("Profile saved, but its visual customizations could not be saved: "+(appearanceResult.detail||"appearance save failed."));
   }
   $("profile-status").textContent=(editing?"Character profile updated.":"Character saved.")+(hasAppearance?" Appearance recipe saved. ":" ")+"Revision "+data.revision+".";
-  importedAsset=null;editingCharacter=null;resetProfileEditor();resetProportionControls();updateProportionButton();updateHairButton();$("model-file").value="";$("asset-report").hidden=true;$("import-status").textContent="Import another model to create another character.";$("save-character").disabled=true;
+  importedAsset=null;activeCharacter=null;editingCharacter=null;resetProfileEditor();resetProportionControls();updateProportionButton();updateHairButton();$("model-file").value="";$("asset-report").hidden=true;$("import-status").textContent="Import another model to create another character.";$("save-character").disabled=true;
   await loadCharacters();
  }catch(error){$("profile-status").textContent=error.message;$("save-character").disabled=!importedAsset&&!editingCharacter}
 });

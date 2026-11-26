@@ -275,6 +275,7 @@ export function applyCharacterFaceFeatures(recipe = {}) {
     const size = bounds.getSize(new THREE.Vector3());
     head = new THREE.Box3(new THREE.Vector3(bounds.min.x,bounds.max.y-size.y*0.24,bounds.max.z-size.z*0.28),bounds.max.clone());
   }
+  head.translate(currentObject.position.clone().negate());
   const size=head.getSize(new THREE.Vector3()), center=head.getCenter(new THREE.Vector3());
   const width=Math.max(size.x*0.56,size.y*0.18,0.035), height=Math.max(size.y*0.48,width*0.55,0.035);
   const front=head.max.z+Math.max(size.z*0.035,width*0.025);
