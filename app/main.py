@@ -45,6 +45,12 @@ from app.storage import (
     write_json_atomic,
 )
 from app.storage import initialize_database as migrate_database
+from app.audio import (
+    SpeechEngineUnavailable,
+    SpeechGenerationError,
+    VOICE_CATALOG,
+    generate_episode_audio,
+)
 from app.story import EpisodePlan, StoryPromptRequest, build_story_prompt
 from app.version import APP_VERSION
 
@@ -850,6 +856,95 @@ def build_episode_production(project_id: str) -> dict[str, Any]:
             connection, project_id, manifest, relative_manifest, digest
         )
     return {"build_id": build_id, **data}
+
+
+@app.post("/api/projects/{project_id}/story/audio")
+def build_episode_audio(project_id: str) -> dict[str, Any]:
+    saved = get_story_plan(project_id)
+    plan = saved["plan"]
+    episode_id = saved["episode_id"]
+    build_id = str(uuid.uuid4())
+    relative_output = f"assets/episodes/{episode_id}/audio/builds/{build_id}"
+    output_directory = resolve_project_relative(DATA_DIR, project_id, relative_output)
+    try:
+        result = generate_episode_audio(
+            plan,
+            output_directory,
+            DATA_DIR,
+        )
+    except SpeechEngineUnavailable as error:
+        shutil.rmtree(output_directory, ignore_errors=True)
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    except SpeechGenerationError as error:
+        shutil.rmtree(output_directory, ignore_errors=True)
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    project_root = project_directory(DATA_DIR, project_id).resolve()
+    audio_relative = str(
+        Path(result["audio_path"]).resolve().relative_to(project_root)
+    ).replace("\\", "/")
+    clips = []
+    for clip in result["clips"]:
+        clip_path = output_directory / clip["relative_path"]
+        clips.append({**clip, "relative_path": str(
+            clip_path.resolve().relative_to(project_root)
+        ).replace("\\", "/")})
+    now = datetime.now(UTC).isoformat()
+    data = {
+        "episode_id": episode_id,
+        "episode_title": plan["title"],
+        "duration_seconds": result["duration_seconds"],
+        "sample_rate": result["sample_rate"],
+        "dialogue_line_count": result["dialogue_line_count"],
+        "voices": result["voices"],
+        "audio_relative_path": audio_relative,
+        "clips": clips,
+        "generated_at": now,
+    }
+    relative_manifest = f"{relative_output}/audio.json"
+    manifest = make_envelope("episode_audio", build_id, data, now, now, 1)
+    digest = write_json_atomic(
+        resolve_project_relative(DATA_DIR, project_id, relative_manifest),
+        manifest,
+    )
+    with connect_db() as connection:
+        upsert_document_index(
+            connection, project_id, manifest, relative_manifest, digest
+        )
+    return {
+        "build_id": build_id,
+        **data,
+        "audio_url": f"/api/projects/{project_id}/story/audio/{build_id}/wav",
+    }
+
+
+@app.get("/api/projects/{project_id}/story/audio/{build_id}/wav")
+def download_episode_audio(project_id: str, build_id: str) -> FileResponse:
+    initialize_database()
+    with connect_db() as connection:
+        row = connection.execute(
+            """
+            SELECT * FROM project_documents
+            WHERE project_id = ? AND document_id = ? AND document_type = 'episode_audio'
+            """,
+            (project_id, build_id),
+        ).fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Episode audio build not found.")
+    manifest_path = resolve_project_relative(DATA_DIR, project_id, row["relative_path"])
+    if not manifest_path.is_file():
+        raise HTTPException(status_code=404, detail="Episode audio manifest is missing.")
+    manifest = read_json(manifest_path)
+    relative_path = str(manifest.get("data", {}).get("audio_relative_path", ""))
+    if not relative_path.startswith("assets/episodes/") or not relative_path.endswith(".wav"):
+        raise HTTPException(status_code=409, detail="Episode audio path is invalid.")
+    audio_path = resolve_project_relative(DATA_DIR, project_id, relative_path)
+    if not audio_path.is_file():
+        raise HTTPException(status_code=404, detail="Episode audio file is missing.")
+    return FileResponse(
+        audio_path,
+        media_type="audio/wav",
+        filename=f"{build_id}-dialogue.wav",
+    )
 
 
 @app.get("/api/projects/{project_id}/story/production")
