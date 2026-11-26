@@ -508,6 +508,56 @@ def reconcile_project_files(data_dir: Path, db_path: Path) -> None:
                         (project_document["updated_at"], project["id"]),
                     )
 
+
+            # Recover world layouts independently of the SQLite document index.
+            world_dir = root / "worlds"
+            world_dir.mkdir(parents=True, exist_ok=True)
+            world_ids = project_document.setdefault("data", {}).setdefault(
+                "references", {}
+            ).setdefault("worlds", [])
+            world_references_changed = False
+            for world_path in sorted(world_dir.glob("*.json")):
+                world_document = read_json(world_path)
+                if (
+                    world_document.get("document_type") != "world"
+                    or not isinstance(world_document.get("data"), dict)
+                ):
+                    continue
+                if world_document.get("id") != world_path.stem:
+                    raise ValueError(f"World document identity mismatch: {world_path}")
+                relative_path = world_path.relative_to(root).as_posix()
+                upsert_document_index(
+                    connection,
+                    project["id"],
+                    world_document,
+                    relative_path,
+                    _file_digest(world_path),
+                )
+                if world_document["id"] not in world_ids:
+                    world_ids.append(world_document["id"])
+                    world_references_changed = True
+            if world_references_changed:
+                project_document["revision"] = int(project_document.get("revision", 1)) + 1
+                project_document["updated_at"] = max(
+                    [project_document.get("updated_at", "")]
+                    + [
+                        read_json(path).get("updated_at", "")
+                        for path in world_dir.glob("*.json")
+                    ]
+                )
+                project_digest = write_json_atomic(project_path, project_document)
+                upsert_document_index(
+                    connection,
+                    project["id"],
+                    project_document,
+                    "project.json",
+                    project_digest,
+                )
+                connection.execute(
+                    "UPDATE projects SET updated_at = ? WHERE id = ?",
+                    (project_document["updated_at"], project["id"]),
+                )
+
             episode_dir = root / "episodes"
             episode_dir.mkdir(parents=True, exist_ok=True)
             story_row = connection.execute(

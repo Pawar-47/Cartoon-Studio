@@ -144,6 +144,38 @@ def test_world_layout_create_edit_and_portable_reopen(tmp_path, monkeypatch):
     assert len(client.get(f"/api/projects/{project_id}/worlds").json()) == 1
 
 
+
+def test_world_layout_recovers_from_portable_documents_without_old_database(
+    tmp_path, monkeypatch
+):
+    from app import main
+
+    data_dir = tmp_path / "data"
+    monkeypatch.setattr(main, "DATA_DIR", data_dir)
+    monkeypatch.setattr(main, "DB_PATH", data_dir / "original.sqlite3")
+    main._INITIALIZED_DB_KEY = None
+    project = client.post("/api/projects", json={"name": "Recovered Town"})
+    project_id = project.json()["id"]
+    created = client.post(
+        f"/api/projects/{project_id}/worlds",
+        json={"name": "Old Town", "objects": []},
+    )
+    assert created.status_code == 201
+    world_id = created.json()["id"]
+
+    monkeypatch.setattr(main, "DB_PATH", data_dir / "rebuilt.sqlite3")
+    main._INITIALIZED_DB_KEY = None
+    recovered = client.get(f"/api/projects/{project_id}/worlds")
+    assert recovered.status_code == 200
+    assert [world["id"] for world in recovered.json()] == [world_id]
+    project_document = json.loads(
+        (data_dir / "projects" / project_id / "project.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert world_id in project_document["data"]["references"]["worlds"]
+
+
 def test_world_layout_rejects_out_of_bounds_objects_and_unknown_kinds(tmp_path, monkeypatch):
     from app import main
 

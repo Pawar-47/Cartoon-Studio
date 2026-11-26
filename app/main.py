@@ -109,7 +109,7 @@ class WorldObjectInput(BaseModel):
     label: str = Field(min_length=1, max_length=80)
     x: float = Field(ge=0, le=100)
     y: float = Field(ge=0, le=100)
-    width: float = Field(default=12, ge=2, le=60)
+    width: float = Field(default=12, ge=2, le=100)
     height: float = Field(default=8, ge=2, le=60)
     rotation: float = Field(default=0, ge=0, le=360)
     color: str = Field(default="#c89b67", pattern=r"^#[0-9a-fA-F]{6}$")

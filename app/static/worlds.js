@@ -26,7 +26,7 @@ function draw(){
  ctx.restore();ctx.fillStyle="#fff";ctx.font="12px system-ui";ctx.textAlign="center";ctx.shadowColor="#243020";ctx.shadowBlur=4;ctx.fillText(item.label,x,y+oh/2+16);ctx.shadowBlur=0;
  }
 }
-function point(event){const rect=canvas.getBoundingClientRect();return{x:(event.clientX-rect.left)/rect.width*100,y:(event.clientY-rect.top)/rect.height*100*canvas.height/canvas.width}}
+function point(event){const rect=canvas.getBoundingClientRect(),localX=(event.clientX-rect.left)/rect.width*canvas.width,localY=(event.clientY-rect.top)/rect.height*canvas.height;return{x:localX/canvas.width*100,y:(localY-90)/(canvas.height-110)*100}}
 function hitTest(p){for(let i=objects.length-1;i>=0;i--){const item=objects[i];if(Math.abs(p.x-item.x)<=item.width/2+1&&Math.abs(p.y-item.y)<=item.height/2+2)return item}return null}
 canvas.addEventListener("pointerdown",event=>{const p=point(event),hit=hitTest(p);selectedId=hit?.id||"";dragging=Boolean(hit);if(dragging)canvas.setPointerCapture(event.pointerId);renderSelection();draw()});
 canvas.addEventListener("pointermove",event=>{if(!dragging)return;const p=point(event),item=currentObject();if(!item)return;item.x=Math.max(item.width/2,Math.min(100-item.width/2,p.x));item.y=Math.max(item.height/2,Math.min(100-item.height/2,p.y));markDirty();draw()});
