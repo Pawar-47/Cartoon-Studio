@@ -344,7 +344,13 @@ def _build_geometry(
     padding = 0.12
     lower = [min(c[1][a] - c[2][a] for c in core) - padding for a in range(3)]
     upper = [max(c[1][a] + c[2][a] for c in core) + padding for a in range(3)]
-    axes = [[lower[a] + i * step for i in range(int(math.ceil((upper[a]-lower[a])/step))+1)] for a in range(3)]
+    axes = [
+        [
+            lower[a] + i * step
+            for i in range(int(math.ceil((upper[a] - lower[a]) / step)) + 1)
+        ]
+        for a in range(3)
+    ]
     nx, ny, nz = (len(axis) for axis in axes)
 
     def field(point: tuple[float, float, float]) -> float:
@@ -369,7 +375,14 @@ def _build_geometry(
     cube_offsets = ((0,0,0),(1,0,0),(0,1,0),(1,1,0),(0,0,1),(1,0,1),(0,1,1),(1,1,1))
     tetra_edges = ((0,1),(0,2),(0,3),(1,2),(1,3),(2,3))
 
-    def vertex_for(a: int, b: int, pa: tuple[float,float,float], pb: tuple[float,float,float], va: float, vb: float) -> int:
+    def vertex_for(
+        a: int,
+        b: int,
+        pa: tuple[float, float, float],
+        pb: tuple[float, float, float],
+        va: float,
+        vb: float,
+    ) -> int:
         key = (min(a,b),max(a,b))
         if key in edge_vertices:
             return edge_vertices[key]
@@ -451,7 +464,10 @@ def _build_geometry(
             _,group,center,_,_ = item
             for bone,bone_weight in _component_skin_weights(group,center,point):
                 blended[bone] = blended.get(bone,0.0) + weight*bone_weight/total
-        vertex_weights.append(tuple(sorted(blended.items(),key=lambda pair:pair[1],reverse=True)[:4]))
+        strongest = sorted(
+            blended.items(), key=lambda pair: pair[1], reverse=True
+        )[:4]
+        vertex_weights.append(tuple(strongest))
     return positions,indices,deltas,vertex_weights,normals
 
 
