@@ -840,5 +840,52 @@ $("library-import").addEventListener("click",async()=>{
  finally{button.disabled=!selectedLibraryModel()||!activeProject}
 });
 
+
+const foundryMorphs=["head_width","jaw_width","chin_length","cheek_fullness","eye_spacing","nose_width","mouth_width","torso_width","shoulder_width","leg_length"];
+function updateFoundryMorphLabels(){
+ for(const name of foundryMorphs){
+  const value=Number($("foundry-"+name.replaceAll("_","-")).value);
+  $("foundry-"+name.replaceAll("_","-")+"-value").textContent=value.toFixed(2);
+ }
+}
+function resetFoundryMorphs(){
+ for(const name of foundryMorphs)$("foundry-"+name.replaceAll("_","-")).value="0";
+ updateFoundryMorphLabels();
+}
+function updateFoundryAvailability(){
+ $("foundry-create").disabled=!activeProject||!$("foundry-name").value.trim();
+}
+async function createFoundryCharacter(){
+ if(!activeProject)return;
+ const button=$("foundry-create"),name=$("foundry-name").value.trim();
+ if(!name)return;
+ const parameters=Object.fromEntries(foundryMorphs.map(key=>[
+  key,Number($("foundry-"+key.replaceAll("_","-")).value)
+ ]));
+ button.disabled=true;$("foundry-status").textContent="Generating the editable Foundry recipe and rigged GLB…";
+ try{
+  const response=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/foundry-characters",{
+   method:"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({name,description:$("foundry-description").value.trim(),parameters})
+  });
+  const result=await response.json();
+  if(!response.ok)throw new Error(result.detail||"Foundry character generation failed.");
+  const assetResponse=await fetch(result.asset_url);
+  if(!assetResponse.ok)throw new Error("The character was saved, but its GLB preview could not be loaded.");
+  const loaded=await showCharacterPreview(await assetResponse.arrayBuffer(),name);
+  if(!loaded)throw new Error("The character was saved, but the browser preview could not be created.");
+  await loadCharacters();
+  $("foundry-status").textContent=name+" created and saved. Editable recipe: "+result.recipe_path+". GLB asset: "+result.asset_id+".";
+  $("character-list").scrollIntoView({behavior:"smooth",block:"nearest"});
+  document.querySelector(".preview-panel").scrollIntoView({behavior:"smooth",block:"center"});
+ }catch(error){$("foundry-status").textContent=error.message}
+ finally{updateFoundryAvailability()}
+}
+for(const name of foundryMorphs)$("foundry-"+name.replaceAll("_","-")).addEventListener("input",updateFoundryMorphLabels);
+$("foundry-name").addEventListener("input",updateFoundryAvailability);
+$("foundry-create").addEventListener("click",createFoundryCharacter);
+$("foundry-reset").addEventListener("click",resetFoundryMorphs);
+updateFoundryMorphLabels();
+
 loadCharacterLibrary();
 loadProjects().catch(error=>{$("project-status").textContent=error.message;$("character-list").textContent=error.message});

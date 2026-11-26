@@ -15,7 +15,29 @@
  <label>Active project<select id="project-select"><option value="">Loading projects…</option></select></label>
  <span id="project-status" class="inline-status">Choose a project to begin.</span>
 </section>
-<section class="panel library-panel">
+<section class="panel foundry-panel">
+  <span class="eyebrow">00B / CHARACTER FOUNDRY</span><h2>Create an original editable character</h2>
+  <p class="helper">Start from the original stylized adult master, adjust real mesh morph targets, and save both the editable recipe and generated rigged GLB directly to this project. Existing imported characters remain unchanged.</p>
+  <div class="form-grid">
+   <label>Character name<input id="foundry-name" maxlength="80" required placeholder="e.g. Ali"></label>
+   <label>Short description<input id="foundry-description" maxlength="1000" placeholder="A curious young inventor"></label>
+  </div>
+  <div class="proportion-grid">
+   <label>Head width <output id="foundry-head-width-value">0.00</output><input id="foundry-head-width" type="range" min="-1" max="1" step="0.01" value="0"></label>
+   <label>Jaw width <output id="foundry-jaw-width-value">0.00</output><input id="foundry-jaw-width" type="range" min="-1" max="1" step="0.01" value="0"></label>
+   <label>Chin length <output id="foundry-chin-length-value">0.00</output><input id="foundry-chin-length" type="range" min="-1" max="1" step="0.01" value="0"></label>
+   <label>Cheek fullness <output id="foundry-cheek-fullness-value">0.00</output><input id="foundry-cheek-fullness" type="range" min="-1" max="1" step="0.01" value="0"></label>
+   <label>Eye spacing <output id="foundry-eye-spacing-value">0.00</output><input id="foundry-eye-spacing" type="range" min="-1" max="1" step="0.01" value="0"></label>
+   <label>Nose width <output id="foundry-nose-width-value">0.00</output><input id="foundry-nose-width" type="range" min="-1" max="1" step="0.01" value="0"></label>
+   <label>Mouth width <output id="foundry-mouth-width-value">0.00</output><input id="foundry-mouth-width" type="range" min="-1" max="1" step="0.01" value="0"></label>
+   <label>Torso width <output id="foundry-torso-width-value">0.00</output><input id="foundry-torso-width" type="range" min="-1" max="1" step="0.01" value="0"></label>
+   <label>Shoulder width <output id="foundry-shoulder-width-value">0.00</output><input id="foundry-shoulder-width" type="range" min="-1" max="1" step="0.01" value="0"></label>
+   <label>Leg length <output id="foundry-leg-length-value">0.00</output><input id="foundry-leg-length" type="range" min="-1" max="1" step="0.01" value="0"></label>
+  </div>
+  <div class="appearance-actions"><button id="foundry-create" type="button" disabled>Create and preview character</button><button id="foundry-reset" class="secondary" type="button">Reset morphs</button></div>
+  <p id="foundry-status" class="inline-status" role="status">Choose a project to create a Foundry character.</p>
+ </section>
+ <section class="panel library-panel">
   <span class="eyebrow">00 / START FROM THE CC0 LIBRARY</span><h2>Character model library</h2>
   <p class="helper">Browse 21 pinned, integrity-verified modular character outfits. Preview a complete source model, then import it into this project. Use the assembly controls below to combine compatible head, body, legs and feet meshes.</p>
   <div class="library-controls">
