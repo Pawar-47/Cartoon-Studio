@@ -734,6 +734,42 @@ def save_story_plan(project_id: str, plan: EpisodePlan) -> dict[str, Any]:
     }
 
 
+def _latest_episode_speech_tracks(
+    project_id: str,
+    episode_id: str,
+) -> list[dict[str, Any]]:
+    with connect_db() as connection:
+        row = connection.execute(
+            """
+            SELECT relative_path FROM project_documents
+            WHERE project_id = ? AND document_type = 'episode_audio'
+            ORDER BY updated_at DESC LIMIT 1
+            """,
+            (project_id,),
+        ).fetchone()
+    if row is None:
+        return []
+    manifest_path = resolve_project_relative(DATA_DIR, project_id, row["relative_path"])
+    if not manifest_path.is_file():
+        return []
+    manifest = read_json(manifest_path)
+    data = manifest.get("data", {})
+    if data.get("episode_id") != episode_id:
+        return []
+    speech_tracks = []
+    for clip in data.get("clips", []):
+        envelope = clip.get("mouth_envelope")
+        if not isinstance(envelope, list) or not envelope:
+            continue
+        speech_tracks.append({
+            "scene_id": clip.get("scene_id", ""),
+            "line_index": clip.get("line_index"),
+            "duration_seconds": clip.get("duration_seconds", 0),
+            "mouth_envelope": envelope,
+        })
+    return speech_tracks
+
+
 @app.post("/api/projects/{project_id}/story/production")
 def build_episode_production(project_id: str) -> dict[str, Any]:
     saved = get_story_plan(project_id)
@@ -789,6 +825,7 @@ def build_episode_production(project_id: str) -> dict[str, Any]:
     build_id = str(uuid.uuid4())
     relative_output = f"assets/episodes/{episode_id}/builds/{build_id}/scenes"
     output_directory = resolve_project_relative(DATA_DIR, project_id, relative_output)
+    speech_tracks = _latest_episode_speech_tracks(project_id, episode_id)
     try:
         result = get_engine_adapter().export_episode_scenes(
             plan,
@@ -796,6 +833,7 @@ def build_episode_production(project_id: str) -> dict[str, Any]:
             character_assets,
             output_directory,
             allowed_root=project_directory(DATA_DIR, project_id),
+            speech_tracks=speech_tracks,
         )
     except EngineUnavailableError as error:
         raise HTTPException(status_code=503, detail=str(error)) from error
@@ -831,6 +869,12 @@ def build_episode_production(project_id: str) -> dict[str, Any]:
             "dialogue_line_count": item["dialogue_line_count"],
             "action_cue_count": item["action_cue_count"],
             "expression_cue_count": item.get("expression_cue_count", 0),
+            "audio_driven_speech_cue_count": item.get(
+                "audio_driven_speech_cue_count", 0
+            ),
+            "audio_envelope_keyframe_count": item.get(
+                "audio_envelope_keyframe_count", 0
+            ),
             "scene_relative_path": scene_relative,
             "preview_relative_path": preview_relative,
             "scene_reopened": item["scene_reopened"],

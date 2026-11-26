@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import array
 import hashlib
+import math
 import os
 import urllib.error
 import urllib.request
@@ -174,6 +175,38 @@ def _read_pcm(path: Path) -> tuple[int, array.array]:
     return sample_rate, samples
 
 
+def _build_mouth_envelope(samples: array.array, window_ms: int = 50) -> list[dict]:
+    window_frames = max(1, round(SAMPLE_RATE * window_ms / 1000))
+    levels = []
+    for start in range(0, len(samples), window_frames):
+        window = samples[start : start + window_frames]
+        if not window:
+            continue
+        mean_square = sum(sample * sample for sample in window) / len(window)
+        levels.append(math.sqrt(mean_square) / 32768.0)
+    if not levels:
+        return []
+    peak = max(levels)
+    threshold = max(0.006, peak * 0.12)
+    dynamic_range = max(peak - threshold, 0.001)
+    envelope = []
+    for index, level in enumerate(levels):
+        openness = max(0.0, min(1.0, (level - threshold) / dynamic_range))
+        if openness < 0.10:
+            openness = 0.0
+        envelope.append({
+            "time": round(index * window_frames / SAMPLE_RATE, 3),
+            "openness": round(openness, 3),
+        })
+    duration = len(samples) / SAMPLE_RATE
+    if envelope and envelope[-1]["time"] < duration:
+        envelope.append({
+            "time": round(duration, 3),
+            "openness": envelope[-1]["openness"],
+        })
+    return envelope
+
+
 def _write_episode_mix(path: Path, duration_seconds: int, clips: list[dict]) -> None:
     total_frames = duration_seconds * SAMPLE_RATE
     mixed = array.array("h", [0]) * total_frames
@@ -243,12 +276,14 @@ def generate_episode_audio(
             timeline_start = scene_offset + float(line.get("start_seconds", 0))
             clips.append({
                 "scene_id": scene["id"],
+                "line_index": line_index,
                 "character_id": character_id,
                 "text": text,
                 "voice_id": voice_id,
                 "start_seconds": float(line.get("start_seconds", 0)),
                 "timeline_start_seconds": timeline_start,
                 "duration_seconds": round(actual_duration, 3),
+                "mouth_envelope": _build_mouth_envelope(samples),
                 "relative_path": clip_path.relative_to(output_directory).as_posix(),
                 "path": str(clip_path),
             })

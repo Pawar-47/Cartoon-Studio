@@ -2767,7 +2767,74 @@ func _add_dialogue_speech_tracks(
         elif face_name.begins_with("CartoonStudio_Face_Mouth_"):
             mouth_lines.append(face_node)
     if mouth_opening == null or end_time - start_time <= 0.12:
-        return {"track_count": 0, "keyframe_count": 0}
+        return {"track_count": 0, "keyframe_count": 0, "audio_driven": false}
+
+    var audio_duration := maxf(
+        0.0,
+        float(line.get("audio_duration_seconds", end_time - start_time))
+    )
+    if audio_duration > 0.0:
+        end_time = minf(maxf(end_time, start_time + audio_duration), animation.length)
+    var mouth_node_path := str(scene_root.get_path_to(mouth_opening))
+    var visibility_track := animation.add_track(Animation.TYPE_VALUE)
+    animation.track_set_path(visibility_track, NodePath(mouth_node_path + ":visible"))
+    var scale_track := animation.add_track(Animation.TYPE_VALUE)
+    animation.track_set_path(scale_track, NodePath(mouth_node_path + ":scale"))
+    var closed_scale := mouth_opening.scale
+    closed_scale.y *= 0.08
+    var open_scale := mouth_opening.scale
+
+    var audio_envelope_value: Variant = line.get("audio_envelope", [])
+    if typeof(audio_envelope_value) == TYPE_ARRAY and not audio_envelope_value.is_empty():
+        var line_tracks: Array[int] = []
+        for mouth_line in mouth_lines:
+            var line_track := animation.add_track(Animation.TYPE_VALUE)
+            animation.track_set_path(
+                line_track,
+                NodePath(str(scene_root.get_path_to(mouth_line)) + ":visible")
+            )
+            line_tracks.append(line_track)
+            animation.track_insert_key(line_track, start_time, true)
+        animation.track_insert_key(visibility_track, start_time, false)
+        animation.track_insert_key(scale_track, start_time, closed_scale)
+        var keyframe_count := 2
+        var last_time := start_time
+        for point_value in audio_envelope_value:
+            if typeof(point_value) != TYPE_DICTIONARY:
+                continue
+            var point: Dictionary = point_value
+            var key_time := clampf(
+                start_time + float(point.get("time", 0.0)),
+                start_time,
+                end_time
+            )
+            if key_time <= last_time:
+                continue
+            var openness := clampf(float(point.get("openness", 0.0)), 0.0, 1.0)
+            var is_open := openness >= 0.10
+            animation.track_insert_key(visibility_track, key_time, is_open)
+            animation.track_insert_key(
+                scale_track,
+                key_time,
+                closed_scale.lerp(open_scale, openness)
+            )
+            for line_track in line_tracks:
+                animation.track_insert_key(line_track, key_time, not is_open)
+                keyframe_count += 1
+            keyframe_count += 2
+            last_time = key_time
+        animation.track_insert_key(visibility_track, end_time, false)
+        animation.track_insert_key(scale_track, end_time, closed_scale)
+        for line_track in line_tracks:
+            animation.track_insert_key(line_track, end_time, true)
+            keyframe_count += 1
+        keyframe_count += 2
+        return {
+            "track_count": 2 + line_tracks.size(),
+            "keyframe_count": keyframe_count,
+            "beat_count": audio_envelope_value.size(),
+            "audio_driven": true
+        }
 
     var text_value := str(line.get("text", "")).strip_edges()
     var delivery := str(line.get("delivery", "natural")).to_lower()
@@ -2784,14 +2851,6 @@ func _add_dialogue_speech_tracks(
     var active_start := start_time + lead_pause
     var active_end := maxf(active_start, end_time - tail_pause)
     var beat_period := (active_end - active_start) / float(beat_count)
-    var mouth_node_path := str(scene_root.get_path_to(mouth_opening))
-    var visibility_track := animation.add_track(Animation.TYPE_VALUE)
-    animation.track_set_path(visibility_track, NodePath(mouth_node_path + ":visible"))
-    var scale_track := animation.add_track(Animation.TYPE_VALUE)
-    animation.track_set_path(scale_track, NodePath(mouth_node_path + ":scale"))
-    var closed_scale := mouth_opening.scale
-    closed_scale.y *= 0.08
-    var open_scale := mouth_opening.scale
     animation.track_insert_key(visibility_track, start_time, false)
     animation.track_insert_key(scale_track, start_time, closed_scale)
     var keyframe_count := 2
@@ -2832,7 +2891,8 @@ func _add_dialogue_speech_tracks(
     return {
         "track_count": track_count,
         "keyframe_count": keyframe_count,
-        "beat_count": beat_count
+        "beat_count": beat_count,
+        "audio_driven": false
     }
 
 
@@ -2849,6 +2909,8 @@ func _build_episode_timeline(
     var expression_cue_count := 0
     var speech_cue_count := 0
     var speech_mouth_keyframe_count := 0
+    var audio_driven_speech_cue_count := 0
+    var audio_envelope_keyframe_count := 0
     var camera := Camera3D.new()
     camera.name = "EpisodeCamera"
     camera.position = Vector3(0.0, 7.0, 16.0)
@@ -2982,6 +3044,9 @@ func _build_episode_timeline(
             speech_mouth_keyframe_count += line_keyframes
             if line_keyframes > 0:
                 speech_cue_count += 1
+            if bool(speech_result.get("audio_driven", false)):
+                audio_driven_speech_cue_count += 1
+                audio_envelope_keyframe_count += line_keyframes
     var camera_value: Variant = scene_data.get("camera", [])
     var camera_cue_count := 0
     if typeof(camera_value) == TYPE_ARRAY:
@@ -3052,6 +3117,8 @@ func _build_episode_timeline(
         "expression_cue_count": expression_cue_count,
         "speech_cue_count": speech_cue_count,
         "speech_mouth_keyframe_count": speech_mouth_keyframe_count,
+        "audio_driven_speech_cue_count": audio_driven_speech_cue_count,
+        "audio_envelope_keyframe_count": audio_envelope_keyframe_count,
         "camera_cue_count": camera_cue_count
     }
 
@@ -3062,6 +3129,7 @@ func _export_episode_scenes(payload: Dictionary) -> Dictionary:
     var output_directory := _normalise_path(str(payload.get("output_directory", "")))
     var episode_value: Variant = payload.get("episode", {})
     var assets_value: Variant = payload.get("character_assets", [])
+    var speech_tracks_value: Variant = payload.get("speech_tracks", [])
     if project_root.is_empty() or not DirAccess.dir_exists_absolute(project_root):
         return {"error_code": "invalid_project_root", "error": "A valid episode project root is required."}
     var root_prefix := project_root.trim_suffix("/") + "/"
@@ -3075,6 +3143,14 @@ func _export_episode_scenes(payload: Dictionary) -> Dictionary:
     var scenes_value: Variant = episode.get("scenes", [])
     if typeof(scenes_value) != TYPE_ARRAY or scenes_value.size() < 5 or scenes_value.size() > 7:
         return {"error_code": "invalid_scenes", "error": "Episode must contain five to seven scenes."}
+    var speech_tracks_by_line: Dictionary = {}
+    if typeof(speech_tracks_value) == TYPE_ARRAY:
+        for speech_track_value in speech_tracks_value:
+            if typeof(speech_track_value) != TYPE_DICTIONARY:
+                continue
+            var speech_track: Dictionary = speech_track_value
+            var speech_key := str(speech_track.get("scene_id", "")) + ":" + str(speech_track.get("line_index", 0))
+            speech_tracks_by_line[speech_key] = speech_track
     var assets_by_id: Dictionary = {}
     for asset_value in assets_value:
         if typeof(asset_value) != TYPE_DICTIONARY:
@@ -3159,6 +3235,19 @@ func _export_episode_scenes(payload: Dictionary) -> Dictionary:
             character_scene.name = "Model"
             character_anchor.add_child(character_scene)
             placed_count += 1
+        var dialogue_value: Variant = scene_data.get("dialogue", [])
+        if typeof(dialogue_value) == TYPE_ARRAY:
+            for line_index in range(dialogue_value.size()):
+                if typeof(dialogue_value[line_index]) != TYPE_DICTIONARY:
+                    continue
+                var dialogue_line: Dictionary = dialogue_value[line_index].duplicate(true)
+                var speech_key := scene_id + ":" + str(line_index + 1)
+                if speech_tracks_by_line.has(speech_key):
+                    var speech_track: Dictionary = speech_tracks_by_line[speech_key]
+                    dialogue_line["audio_envelope"] = speech_track.get("mouth_envelope", [])
+                    dialogue_line["audio_duration_seconds"] = speech_track.get("duration_seconds", 0.0)
+                    dialogue_value[line_index] = dialogue_line
+            scene_data["dialogue"] = dialogue_value
         var timeline_result := _build_episode_timeline(
             scene_root, scene_data, character_anchors
         )
@@ -3212,6 +3301,8 @@ func _export_episode_scenes(payload: Dictionary) -> Dictionary:
             "expression_cue_count": timeline_result["expression_cue_count"],
             "speech_cue_count": timeline_result["speech_cue_count"],
             "speech_mouth_keyframe_count": timeline_result["speech_mouth_keyframe_count"],
+            "audio_driven_speech_cue_count": timeline_result["audio_driven_speech_cue_count"],
+            "audio_envelope_keyframe_count": timeline_result["audio_envelope_keyframe_count"],
             "camera_cue_count": timeline_result["camera_cue_count"]
         })
     return {

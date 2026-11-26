@@ -964,6 +964,19 @@ def test_pinned_godot_worker_builds_episode_scenes_with_world_and_character_glb(
         [{"id": "ali", "name": "Ali", "asset_path": str(character_path)}],
         output,
         allowed_root=project_root,
+        speech_tracks=[
+            {
+                "scene_id": "scene-1",
+                "line_index": 1,
+                "duration_seconds": 2.0,
+                "mouth_envelope": [
+                    {"time": 0.0, "openness": 0.0},
+                    {"time": 0.08, "openness": 0.8},
+                    {"time": 0.16, "openness": 0.25},
+                    {"time": 0.24, "openness": 0.0},
+                ],
+            }
+        ],
     )
     assert result["ok"] is True
     assert result["scene_count"] == 5
@@ -975,6 +988,8 @@ def test_pinned_godot_worker_builds_episode_scenes_with_world_and_character_glb(
     assert result["scenes"][0]["expression_cue_count"] == 1
     assert result["scenes"][0]["speech_cue_count"] == 1
     assert result["scenes"][0]["speech_mouth_keyframe_count"] > 0
+    assert result["scenes"][0]["audio_driven_speech_cue_count"] == 1
+    assert result["scenes"][0]["audio_envelope_keyframe_count"] > 0
     assert result["scenes"][0]["camera_cue_count"] == 1
     assert result["scenes"][0]["animation_track_count"] > 5
     assert all(
