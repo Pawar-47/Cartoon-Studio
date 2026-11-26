@@ -324,6 +324,9 @@ def build_story_prompt(request: StoryPromptRequest) -> str:
     continuity = request.continuity_notes or (
         "Preserve established character identities and relationships."
     )
+    world_context = request.world_context or (
+        "No saved world selected; choose a suitable catalog location."
+    )
     return f"""You are the story and scene director for an original 3D cartoon series.
 Create one complete, production-ready episode plan. Do not copy existing copyrighted
 characters, shows, stories, dialogue, names, branding or designs.
@@ -341,14 +344,12 @@ TONE: {request.tone}
 AUDIENCE: {request.audience}
 PREFERRED RECURRING CHARACTERS: {characters}
 CONTINUITY NOTES: {continuity}
-ESTABLISHED WORLD: {
-    request.world_context or "No saved world selected; choose a suitable catalog location."
-}
+ESTABLISHED WORLD: {world_context}
 WORLD ID: {request.world_id or "null"}
 
 PRODUCTION RULES:
 - Copy the exact WORLD ID above into the episode-level world_id field.
-- Use null only when no world ID is supplied.
+  Use null only when no world ID is supplied.
 - Produce 5 to 7 scenes, each 30 to 60 seconds.
 - Total scene duration must be 300 to 420 seconds and within 30 seconds of the target.
 - Use no more than 5 characters and keep their IDs stable throughout the episode.

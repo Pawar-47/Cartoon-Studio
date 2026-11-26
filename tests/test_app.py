@@ -516,6 +516,7 @@ def test_episode_can_be_bound_to_an_exported_world_in_its_project(tmp_path, monk
                 '[gd_scene format=3]\\n[node name="CartoonWorld" type="Node3D"]\\n',
                 encoding="utf-8",
             )
+            output_path.with_suffix(".glb").write_bytes(b"glTF-preview")
             return {
                 "ok": True,
                 "object_count": 0,

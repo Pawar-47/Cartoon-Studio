@@ -928,12 +928,15 @@ def export_project_world(project_id: str, world_id: str) -> dict[str, Any]:
         raise HTTPException(status_code=503, detail=str(error)) from error
     except EngineTimeoutError as error:
         scene_path.unlink(missing_ok=True)
+        preview_path.unlink(missing_ok=True)
         raise HTTPException(status_code=504, detail=str(error)) from error
     except EnginePathError as error:
         scene_path.unlink(missing_ok=True)
+        preview_path.unlink(missing_ok=True)
         raise HTTPException(status_code=422, detail=str(error)) from error
     except EngineError as error:
         scene_path.unlink(missing_ok=True)
+        preview_path.unlink(missing_ok=True)
         raise HTTPException(
             status_code=502, detail=f"World scene export failed: {error}"
         ) from error
