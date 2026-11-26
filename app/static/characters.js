@@ -547,7 +547,13 @@ $("character-form").addEventListener("submit",async event=>{
   const editing=Boolean(editingCharacter),url="/api/projects/"+encodeURIComponent(activeProject)+"/characters"+(editing?"/"+encodeURIComponent(editingCharacter.id):"");
   const response=await fetch(url,{method:editing?"PUT":"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
   const data=await response.json();if(!response.ok)throw new Error(data.detail||"Could not save character.");
-  $("profile-status").textContent=(editing?"Character profile updated.":"Character saved.")+" Revision "+data.revision+".";
+  const hasAppearance=Object.keys(appearanceRecipe.materials||{}).length||Object.keys(appearanceRecipe.morph_targets||{}).length;
+  if(hasAppearance){
+   const appearanceResponse=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/characters/"+encodeURIComponent(data.id)+"/appearance",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(appearanceRecipe)});
+   const appearanceResult=await appearanceResponse.json();
+   if(!appearanceResponse.ok)throw new Error("Profile saved, but its visual customizations could not be saved: "+(appearanceResult.detail||"appearance save failed."));
+  }
+  $("profile-status").textContent=(editing?"Character profile updated.":"Character saved.")+(hasAppearance?" Appearance recipe saved. ":" ")+"Revision "+data.revision+".";
   importedAsset=null;editingCharacter=null;resetProfileEditor();resetProportionControls();updateProportionButton();updateHairButton();$("model-file").value="";$("asset-report").hidden=true;$("import-status").textContent="Import another model to create another character.";$("save-character").disabled=true;
   await loadCharacters();
  }catch(error){$("profile-status").textContent=error.message;$("save-character").disabled=!importedAsset&&!editingCharacter}
