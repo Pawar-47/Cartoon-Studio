@@ -1,9 +1,10 @@
 # Session-independent development checkpoint
 
-Updated: 2026-11-25
+Updated: 2026-11-26
 Repository: https://github.com/Pawar-47/Cartoon-Studio
-Branch: `integration/branch-cleanup` in an isolated worktree; its tested integration has been pushed to `main`.
-Integrated source/test commit on `main`: `7d396e5b9e3b07033240b9f02fb1020003a58a36`; PRs #20 and #21 are merged. CI #431 found an import-order issue; the fix is pushed and CI #432 passed.
+Source of truth: `main` at `062400e58cbbf491ec92869dc140b60a9b354d7f`.
+Active working branch: `work/mainline-followup`, created from that main commit.
+Latest main CI #471 failed because Godot could not parse a duplicate `action_cue_count` dictionary key in the episode worker. Commit `be169c4` on the pushed working branch fixes it; the cue regression test and full pytest pass locally (136 passed, 4 skipped). Post-fix CI is pending; the workflow requires a PR targeting `main`.
 
 ## Mission and operating rules
 
@@ -18,7 +19,7 @@ Build the complete local-first Cartoon Studio desktop application defined by `MA
 
 ## Current phase
 
-Phase 2 — Character Studio is ACTIVE. Phase 0 and Phase 1 are complete. Do not skip ahead to World Builder or unfreeze the partial Story Generator.
+Phase 2 — Character Studio is ACTIVE; P2.2 remains PARTIAL. Phase 0 and Phase 1 are complete. Partial/out-of-order world, story-binding, timeline and episode-scene code is present on main, but it does not close the Phase 2 gate or establish phase acceptance.
 
 ## Latest merged work
 
@@ -89,11 +90,11 @@ Two real third-party assets have passed native Godot acceptance for tested scena
 
 ## Later phases
 
-- Phase 3 — World Builder: NOT STARTED.
-- Phase 4 — Story and Scene Engine: PARTIAL / FROZEN; preserve existing Story Generator work.
-- Phase 5 — Animation Engine: NOT STARTED.
+- Phase 3 — World Builder: PARTIAL / OUT-OF-ORDER; persistent/editable worlds, world-scene exports and browser previews exist, but multi-location acceptance remains.
+- Phase 4 — Story and Scene Engine: PARTIAL / FROZEN; out-of-order world linking, cast binding and scene generation exist but do not complete the phase.
+- Phase 5 — Animation Engine: PARTIAL / OUT-OF-ORDER; action-anchor and camera keyframes exist, but no real clip library, timeline editor or visual acceptance.
 - Phase 6 — Urdu Voice and Lip-Sync: research complete; implementation not started.
-- Phase 7 — Episode Generator: NOT STARTED.
+- Phase 7 — Episode Generator: PARTIAL / OUT-OF-ORDER; editable scene files and GLB previews exist, but no render queue or final episode pipeline.
 - Phase 8 — Optimization and Reliability: deferred, including physical-PC performance testing.
 
 Never claim the complete application is finished while Phases 2–7 remain incomplete.

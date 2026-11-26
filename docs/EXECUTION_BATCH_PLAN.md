@@ -43,8 +43,8 @@ P0.2 checkpoint: atomic registry and traceability were expanded on 2026-11-25. T
 
 | Batch | Scope | Deliverables | Exit evidence | State |
 |---|---|---|---|---|
-| P3.1 | Persistent world/location schema and asset registry | Versioned world model | Save/reopen, stable IDs and migrations | NOT STARTED |
-| P3.2 | Reusable town, streets, buildings, shops and interiors | Modular environment kits | Multi-location scene and visual inspection | NOT STARTED |
+| P3.1 | Persistent world/location schema and asset registry | Versioned world model | Save/reopen, stable IDs and migrations | PARTIAL / OUT-OF-ORDER — persistent/editable worlds and world-linked story plans exist; full registry/schema migration and Phase 3 acceptance remain |
+| P3.2 | Reusable town, streets, buildings, shops and interiors | Modular environment kits | Multi-location scene and visual inspection | PARTIAL / OUT-OF-ORDER — Godot world-scene export and browser previews exist; reusable multi-location production and visual acceptance remain |
 | P3.3 | Vegetation, props, lighting, weather and vehicle systems | Reusable asset/interaction kits | Vehicle movement/interactions and world persistence tests | NOT STARTED |
 
 ## Phase 4 — Story and Scene Engine
@@ -53,14 +53,14 @@ P0.2 checkpoint: atomic registry and traceability were expanded on 2026-11-25. T
 |---|---|---|---|---|
 | P4.1 | Engine-neutral versioned episode/scene schema; normalize existing early schema | Schema, migrations, validation and repair | Valid/invalid/repair tests; no engine-specific IDs in canonical data | PARTIAL — current Ara-derived catalogs need replacement |
 | P4.2 | Single-prompt story generation, Urdu dialogue, continuity and approval | Story provider adapters and editor workflow | Story edit/approve test in Urdu and English; persistent cast/location continuity | PARTIAL — manual external-AI handoff only |
-| P4.3 | Complete scene breakdown and production mapping | Scene planner | Every scene maps to persistent characters, world, props, camera, lighting and audio | NOT STARTED |
+| P4.3 | Complete scene breakdown and production mapping | Scene planner | Every scene maps to persistent characters, world, props, camera, lighting and audio | PARTIAL / OUT-OF-ORDER — world/cast binding and scene generation exist; complete production mapping remains |
 
 ## Phase 5 — Animation Engine
 
 | Batch | Scope | Deliverables | Exit evidence | State |
 |---|---|---|---|---|
-| P5.1 | Stable action/expression vocabulary and engine adapters | Animation catalog and adapters | Every accepted action maps to a real tested clip or explicit fallback | NOT STARTED — current IDs are validation-only |
-| P5.2 | Timeline, camera, blocking, blending, retargeting and transitions | Animation/timeline editor | Playable multi-scene animation test and inspected clip | NOT STARTED |
+| P5.1 | Stable action/expression vocabulary and engine adapters | Animation catalog and adapters | Every accepted action maps to a real tested clip or explicit fallback | PARTIAL / OUT-OF-ORDER — procedural action-cue blocking exists; real clip adapters, expressions and accepted vocabulary remain |
+| P5.2 | Timeline, camera, blocking, blending, retargeting and transitions | Animation/timeline editor | Playable multi-scene animation test and inspected clip | PARTIAL / OUT-OF-ORDER — generated scenes contain action-anchor and camera keyframes; no timeline editor, blending or visual acceptance |
 | P5.3 | Character interactions and facial/body animation | Reusable animation library | Motion quality and interaction tests | NOT STARTED |
 
 ## Phase 6 — Urdu Voice and Lip-Sync
@@ -77,7 +77,7 @@ P0.2 checkpoint: atomic registry and traceability were expanded on 2026-11-25. T
 | Batch | Scope | Deliverables | Exit evidence | State |
 |---|---|---|---|---|
 | P7.1 | Persistent render queue, sequential rendering, cache and recovery | Render orchestrator | Failure/retry/cancel/restart/cache-hit tests | NOT STARTED |
-| P7.2 | Scene-to-MP4 pipeline and editable project packaging | Renderer/media assembler | Real multi-scene MP4 with editable source project | NOT STARTED |
+| P7.2 | Scene-to-MP4 pipeline and editable project packaging | Renderer/media assembler | Real multi-scene MP4 with editable source project | PARTIAL / OUT-OF-ORDER — editable Godot scene files and GLB previews generate; rendering, audio assembly and MP4 export remain unimplemented |
 | P7.3 | Complete 5–7 minute Urdu episode | Sample episode and QA report | Full visual/audio/story/continuity review | NOT STARTED |
 
 ## Phase 8 — Optimization and Reliability

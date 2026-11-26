@@ -2892,7 +2892,6 @@ func _export_episode_scenes(payload: Dictionary) -> Dictionary:
             "duration_seconds": int(scene_data.get("duration_seconds", 0)),
             "character_count": placed_count,
             "dialogue_line_count": scene_data.get("dialogue", []).size(),
-            "action_cue_count": scene_data.get("actions", []).size(),
             "scene_path": output_path,
             "preview_path": output_glb_path,
             "scene_reopened": true,
