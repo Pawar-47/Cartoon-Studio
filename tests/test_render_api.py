@@ -1,4 +1,3 @@
-from pathlib import Path
 from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
@@ -15,7 +14,6 @@ def test_episode_render_endpoint_persists_and_serves_mp4(tmp_path, monkeypatch):
     assert project_response.status_code == 201
     project_id = project_response.json()["id"]
     episode_id = "episode-render-test"
-    project_root = main.project_directory(tmp_path, project_id)
     scene_relative = f"assets/episodes/{episode_id}/scenes/scene-01.tscn"
     audio_relative = f"assets/episodes/{episode_id}/audio/dialogue_mix.wav"
     subtitles_relative = f"assets/episodes/{episode_id}/audio/subtitles.srt"

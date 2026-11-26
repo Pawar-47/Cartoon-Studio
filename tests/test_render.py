@@ -1,3 +1,4 @@
+import os
 import subprocess
 import wave
 from pathlib import Path
@@ -6,6 +7,7 @@ import pytest
 
 from app.render import (
     RenderDependencyUnavailable,
+    _write_render_project,
     render_episode_video,
 )
 
@@ -104,3 +106,56 @@ def test_render_requires_ffmpeg_before_starting_godot(tmp_path, monkeypatch):
             project_root,
             godot,
         )
+
+
+@pytest.mark.skipif(
+    not os.environ.get("CARTOON_STUDIO_GODOT_PATH"),
+    reason="The pinned Godot runtime is only provisioned in engine-enabled CI.",
+)
+def test_godot_movie_maker_renders_an_episode_scene(tmp_path):
+    godot = Path(os.environ["CARTOON_STUDIO_GODOT_PATH"])
+    render_project = tmp_path / "render-project"
+    render_project.mkdir()
+    _write_render_project(render_project)
+    scene_path = tmp_path / "episode-scene.tscn"
+    scene_path.write_text(
+        "[gd_scene load_steps=2 format=3]\\n\\n"
+        "[sub_resource type=\\\"SphereMesh\\\" id=\\\"SphereMesh_test\\\"]\\n\\n"
+        "[node name=\\\"EpisodeScene\\\" type=\\\"Node3D\\\"]\\n\\n"
+        "[node name=\\\"EpisodeCamera\\\" type=\\\"Camera3D\\\" parent=\\\".\\\"]\\n"
+        "transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 5)\\n"
+        "current = true\\n\\n"
+        "[node name=\\\"Sphere\\\" type=\\\"MeshInstance3D\\\" parent=\\\"]\\n"
+        "mesh = SubResource(\\\"SphereMesh_test\\\")\\n",
+        encoding="utf-8",
+    )
+    output_path = tmp_path / "movie-smoke.avi"
+    command = [
+        str(godot),
+        "--path",
+        str(render_project),
+        "--write-movie",
+        str(output_path),
+        "--fixed-fps",
+        "24",
+        "--resolution",
+        "640x360",
+        "--rendering-method",
+        "gl_compatibility",
+        "--disable-vsync",
+        "--quit-after",
+        "24",
+        "--",
+        str(scene_path),
+    ]
+    result = subprocess.run(
+        command,
+        cwd=render_project,
+        capture_output=True,
+        text=True,
+        timeout=180,
+        check=False,
+    )
+    assert result.returncode == 0, (result.stdout + "\\n" + result.stderr)[-6000:]
+    assert output_path.is_file()
+    assert output_path.stat().st_size > 1024
