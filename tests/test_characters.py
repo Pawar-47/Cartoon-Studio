@@ -821,6 +821,32 @@ def test_foundry_generation_creates_project_character_and_replayable_recipe(
     assert downloaded.content == asset_path.read_bytes()
 
 
+
+def test_foundry_recipe_update_preserves_identity_and_original_asset(tmp_path, monkeypatch):
+    client, project_id = setup_project(tmp_path, monkeypatch)
+    created = client.post(f"/api/projects/{project_id}/foundry-characters",
+        json={"name": "Foundry Ali", "parameters": {"head_width": 0.2}})
+    assert created.status_code == 201, created.text
+    original = created.json()
+    old_path = tmp_path / "projects" / project_id / original["data"]["asset"]["relative_path"]
+    old_bytes = old_path.read_bytes()
+    response = client.put(f"/api/projects/{project_id}/foundry-characters/{original['id']}",
+        json={"name": "Ali Updated", "parameters": {"head_width": 0.75}})
+    assert response.status_code == 200, response.text
+    updated = response.json()
+    assert updated["id"] == original["id"]
+    assert updated["revision"] == original["revision"] + 1
+    assert updated["data"]["foundry_recipe"]["parameters"]["head_width"] == 0.75
+    assert updated["asset_id"] != original["asset_id"]
+    assert old_path.read_bytes() == old_bytes
+    recipe = json.loads((tmp_path / "projects" / project_id / updated["recipe_path"]).read_text())
+    assert recipe["character_id"] == original["id"]
+    assert recipe["parameters"]["head_width"] == 0.75
+    listed = client.get(f"/api/projects/{project_id}/characters").json()
+    assert len([item for item in listed if item["id"] == original["id"]]) == 1
+
+
+
 def test_foundry_generation_rejects_unknown_morph_and_missing_project(
     tmp_path, monkeypatch
 ):
