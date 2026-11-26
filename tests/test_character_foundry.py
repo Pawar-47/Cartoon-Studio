@@ -64,12 +64,15 @@ def test_generated_master_glb_contains_real_morph_geometry() -> None:
     assert len(primitive["targets"]) == len(MORPH_TARGETS)
     assert mesh["extras"]["targetNames"] == list(MORPH_TARGETS)
     assert primitive["attributes"]["POSITION"] < len(document["accessors"])
-    assert len(document["accessors"]) == 2 + len(MORPH_TARGETS)
+    assert len(document["accessors"]) == 5 + len(MORPH_TARGETS)
     assert document["asset"]["extras"]["masterTemplate"] == MASTER_TEMPLATE_ID
     assert document["nodes"][0]["name"] == "CartoonStudio_StylizedAdult"
     assert document["nodes"][0]["skin"] == 0
     assert len(document["skins"][0]["joints"]) == 19
     assert document["skins"][0]["skeleton"] == 1
+    inverse_bind = document["accessors"][document["skins"][0]["inverseBindMatrices"]]
+    assert inverse_bind["type"] == "MAT4"
+    assert inverse_bind["count"] == len(document["skins"][0]["joints"])
     attributes = primitive["attributes"]
     assert {"JOINTS_0", "WEIGHTS_0"} <= set(attributes)
     assert document["accessors"][attributes["JOINTS_0"]]["componentType"] == 5123
