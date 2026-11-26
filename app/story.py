@@ -347,7 +347,8 @@ ESTABLISHED WORLD: {
 WORLD ID: {request.world_id or "null"}
 
 PRODUCTION RULES:
-- Copy the exact WORLD ID above into the episode-level world_id field.\n  Use null only when no world ID is supplied.
+- Copy the exact WORLD ID above into the episode-level world_id field.
+- Use null only when no world ID is supplied.
 - Produce 5 to 7 scenes, each 30 to 60 seconds.
 - Total scene duration must be 300 to 420 seconds and within 30 seconds of the target.
 - Use no more than 5 characters and keep their IDs stable throughout the episode.
