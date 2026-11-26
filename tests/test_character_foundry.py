@@ -127,6 +127,20 @@ def test_fitted_clothing_has_real_body_refit_morph_targets() -> None:
         assert any(abs(value) > 1e-7 for value in values), name
 
 
+
+def test_recipe_morph_values_are_applied_to_body_and_clothing() -> None:
+    recipe = default_character_recipe("custom-hero")
+    recipe["parameters"]["head_width"] = 0.65
+    recipe["parameters"]["torso_width"] = -0.3
+    recipe["parameters"]["leg_length"] = 0.8
+    document = _read_glb(build_master_character_glb(recipe))
+    mesh = document["meshes"][0]
+    expected = [recipe["parameters"][name] for name in MORPH_TARGETS]
+    assert mesh["weights"] == expected
+    assert len(mesh["primitives"]) == 2
+    assert all(len(primitive["targets"]) == len(MORPH_TARGETS) for primitive in mesh["primitives"])
+
+
 def test_recipe_can_disable_fitted_clothing() -> None:
     recipe = default_character_recipe()
     recipe["clothing_asset_ids"] = []

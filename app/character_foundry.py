@@ -9,7 +9,7 @@ from typing import Any
 
 RECIPE_SCHEMA_VERSION = 1
 MASTER_TEMPLATE_ID = "cartoon-studio.stylized-adult.v1"
-GENERATOR_VERSION = "0.3.0"
+GENERATOR_VERSION = "0.4.0"
 
 
 RIG_PROFILE_ID = "cartoon-studio.humanoid.v1"
@@ -493,7 +493,7 @@ def build_master_character_glb(recipe: dict[str, Any] | None = None) -> bytes:
         }],
         "meshes": [{
             "name": "StylizedAdult_MasterMesh",
-            "weights": [0.0] * len(MORPH_TARGETS),
+            "weights": [normalized_recipe["parameters"][name] for name in MORPH_TARGETS],
             "extras": {
                 "targetNames": list(MORPH_TARGETS),
                 "clothingAssetIds": normalized_recipe["clothing_asset_ids"],
@@ -535,6 +535,7 @@ def write_master_character(
         "format": "glb",
         "generator_version": GENERATOR_VERSION,
         "morph_targets": list(MORPH_TARGETS),
+        "morph_weights": [recipe["parameters"][name] for name in MORPH_TARGETS],
         "rig_profile_id": RIG_PROFILE_ID,
         "bone_names": [bone[0] for bone in _BONES],
         "clothing_asset_ids": recipe["clothing_asset_ids"],
