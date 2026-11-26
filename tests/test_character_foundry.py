@@ -6,10 +6,10 @@ import struct
 import pytest
 
 from app.character_foundry import (
+    CLOTHING_ASSET_ID,
     MASTER_TEMPLATE_ID,
     MORPH_TARGETS,
     RIG_PROFILE_ID,
-    CLOTHING_ASSET_ID,
     build_master_character_glb,
     default_character_recipe,
     validate_character_recipe,

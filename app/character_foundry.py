@@ -266,7 +266,9 @@ def _morph_delta(
             dx = x * 0.15 * max(0.0, min(1.0, (y - 1.35) / 0.75))
         else:
             dx = math.copysign(0.075, center[0])
-    elif target == "leg_length" and group in {"thigh", "shin", "foot", "pants_thigh", "pants_shin", "pants_waist"}:
+    elif target == "leg_length" and group in {
+        "thigh", "shin", "foot", "pants_thigh", "pants_shin", "pants_waist"
+    }:
         pivot = 0.95
         dy = (y - pivot) * 0.13
     return (dx, dy, dz)
