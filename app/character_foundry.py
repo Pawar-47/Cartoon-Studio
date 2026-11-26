@@ -177,9 +177,13 @@ def _ellipsoid(
     radii: tuple[float, float, float],
     rings: int = 12,
     segments: int = 20,
-) -> tuple[list[tuple[float, float, float]], list[int], list[tuple[float, float, float]]]:
+) -> tuple[
+    list[tuple[float, float, float]], list[int],
+    list[tuple[float, float, float]], list[tuple[float, float, float]]
+]:
     vertices: list[tuple[float, float, float]] = []
     local: list[tuple[float, float, float]] = []
+    normals: list[tuple[float, float, float]] = []
     for ring in range(rings + 1):
         latitude = -math.pi / 2 + math.pi * ring / rings
         for segment in range(segments):
@@ -190,6 +194,9 @@ def _ellipsoid(
                 math.cos(latitude) * math.sin(longitude),
             )
             local.append(unit)
+            normal = tuple(unit[axis] / radii[axis] for axis in range(3))
+            normal_length = math.sqrt(sum(value * value for value in normal))
+            normals.append(tuple(value / normal_length for value in normal))
             vertices.append(tuple(
                 center[axis] + radii[axis] * unit[axis] for axis in range(3)
             ))
@@ -201,7 +208,7 @@ def _ellipsoid(
             c = (ring + 1) * segments + (segment + 1) % segments
             d = (ring + 1) * segments + segment
             indices.extend((a, d, b, b, d, c))
-    return vertices, indices, local
+    return vertices, indices, local, normals
 
 
 def _morph_delta(
@@ -247,28 +254,31 @@ def _morph_delta(
 
 def _build_geometry() -> tuple[
     list[tuple[float, float, float]], list[int],
-    dict[str, list[tuple[float, float, float]]], list[str]
+    dict[str, list[tuple[float, float, float]]], list[str],
+    list[tuple[float, float, float]]
 ]:
     positions: list[tuple[float, float, float]] = []
     indices: list[int] = []
     deltas = {name: [] for name in MORPH_TARGETS}
     vertex_bones: list[str] = []
+    normals: list[tuple[float, float, float]] = []
     for group, center, radii in _COMPONENTS:
-        component, component_indices, local = _ellipsoid(center, radii)
+        component, component_indices, local, component_normals = _ellipsoid(center, radii)
         offset = len(positions)
         positions.extend(component)
         vertex_bones.extend([_component_bone_name(group, center)] * len(component))
+        normals.extend(component_normals)
         indices.extend(offset + index for index in component_indices)
         for target in MORPH_TARGETS:
             deltas[target].extend(
                 _morph_delta(target, group, center, radii, unit, point)
                 for unit, point in zip(local, component, strict=True)
             )
-    return positions, indices, deltas, vertex_bones
+    return positions, indices, deltas, vertex_bones, normals
 
 
 def build_master_character_glb() -> bytes:
-    positions, indices, morphs, vertex_bones = _build_geometry()
+    positions, indices, morphs, vertex_bones, normals = _build_geometry()
     binary = bytearray()
     buffer_views: list[dict[str, Any]] = []
     accessors: list[dict[str, Any]] = []
@@ -314,6 +324,11 @@ def build_master_character_glb() -> bytes:
     maxs = [max(point[axis] for point in positions) for axis in range(3)]
     position_accessor = add_accessor(
         position_bytes, 5126, len(positions), "VEC3", 34962, (mins, maxs)
+    )
+    flat_normals = [coordinate for normal in normals for coordinate in normal]
+    normal_accessor = add_accessor(
+        struct.pack(f"<{len(flat_normals)}f", *flat_normals),
+        5126, len(normals), "VEC3", 34962
     )
     index_bytes = struct.pack(f"<{len(indices)}I", *indices)
     index_accessor = add_accessor(index_bytes, 5125, len(indices), "SCALAR", 34963)
@@ -407,6 +422,7 @@ def build_master_character_glb() -> bytes:
             "primitives": [{
                 "attributes": {
                     "POSITION": position_accessor,
+                    "NORMAL": normal_accessor,
                     "JOINTS_0": joints_accessor,
                     "WEIGHTS_0": weights_accessor,
                 },
