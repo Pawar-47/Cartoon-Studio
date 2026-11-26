@@ -1,5 +1,6 @@
 import array
 import wave
+from pathlib import Path
 
 import pytest
 
@@ -74,6 +75,10 @@ def test_generates_scene_timed_urdu_dialogue_clips_and_episode_mix(tmp_path):
         assert mixed.getframerate() == 22050
         assert mixed.getnframes() == 60 * 22050
         assert mixed.getnchannels() == 1
+    subtitles = Path(result["subtitles_path"]).read_text(encoding="utf-8")
+    assert "00:00:02,000 --> 00:00:02,200" in subtitles
+    assert "السلام علیکم!" in subtitles
+    assert "00:00:33,000 --> 00:00:33,200" in subtitles
 
 
 def test_rejects_non_urdu_episode_before_loading_speech_runtime(tmp_path):

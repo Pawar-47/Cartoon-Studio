@@ -776,11 +776,14 @@ def test_episode_audio_endpoint_saves_and_serves_the_dialogue_mix(
         output_directory.mkdir(parents=True, exist_ok=True)
         audio_path = output_directory / "dialogue_mix.wav"
         audio_path.write_bytes(b"RIFF-cartoon-studio-test")
+        subtitles_path = output_directory / "subtitles.srt"
+        subtitles_path.write_text("1\\n00:00:02,000 --> 00:00:03,000\\nالسلام علیکم!\\n", encoding="utf-8")
         clip_path = output_directory / "clips" / "scene-01-line-01.wav"
         clip_path.parent.mkdir(parents=True, exist_ok=True)
         clip_path.write_bytes(b"RIFF-test-clip")
         return {
             "audio_path": str(audio_path),
+            "subtitles_path": str(subtitles_path),
             "sample_rate": 22050,
             "duration_seconds": 300,
             "dialogue_line_count": 5,
@@ -813,3 +816,9 @@ def test_episode_audio_endpoint_saves_and_serves_the_dialogue_mix(
     assert downloaded.status_code == 200
     assert downloaded.headers["content-type"].startswith("audio/wav")
     assert downloaded.content == b"RIFF-cartoon-studio-test"
+    subtitles = client.get(
+        f"/api/projects/{project_id}/story/audio/{payload['build_id']}/subtitles"
+    )
+    assert subtitles.status_code == 200
+    assert "السلام علیکم!" in subtitles.text
+    assert "text/plain" in subtitles.headers["content-type"]

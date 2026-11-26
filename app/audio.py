@@ -229,6 +229,29 @@ def _write_episode_mix(path: Path, duration_seconds: int, clips: list[dict]) -> 
         output.writeframes(mixed.tobytes())
 
 
+def _srt_timestamp(seconds: float) -> str:
+    milliseconds = max(0, round(seconds * 1000))
+    hours, remainder = divmod(milliseconds, 3_600_000)
+    minutes, remainder = divmod(remainder, 60_000)
+    whole_seconds, millis = divmod(remainder, 1000)
+    return f"{hours:02d}:{minutes:02d}:{whole_seconds:02d},{millis:03d}"
+
+
+def _write_subtitles(path: Path, clips: list[dict]) -> None:
+    entries = []
+    for index, clip in enumerate(clips, start=1):
+        start = float(clip["timeline_start_seconds"])
+        end = start + float(clip["duration_seconds"])
+        text = str(clip["text"]).replace("\r", " ").replace("\n", " ").strip()
+        if not text or end <= start:
+            continue
+        entries.append(
+            f"{index}\n{_srt_timestamp(start)} --> {_srt_timestamp(end)}\n{text}"
+        )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n\n".join(entries) + ("\n" if entries else ""), encoding="utf-8")
+
+
 def generate_episode_audio(
     plan: dict,
     output_directory: Path,
@@ -290,10 +313,13 @@ def generate_episode_audio(
         scene_offset += int(scene["duration_seconds"])
     mix_path = output_directory / "dialogue_mix.wav"
     _write_episode_mix(mix_path, total_duration, clips)
+    subtitles_path = output_directory / "subtitles.srt"
+    _write_subtitles(subtitles_path, clips)
     for clip in clips:
         clip.pop("path", None)
     return {
         "audio_path": str(mix_path),
+        "subtitles_path": str(subtitles_path),
         "sample_rate": SAMPLE_RATE,
         "duration_seconds": total_duration,
         "dialogue_line_count": len(clips),

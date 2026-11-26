@@ -943,6 +943,9 @@ def build_episode_audio(project_id: str) -> dict[str, Any]:
     audio_relative = str(
         Path(result["audio_path"]).resolve().relative_to(project_root)
     ).replace("\\", "/")
+    subtitles_relative = str(
+        Path(result["subtitles_path"]).resolve().relative_to(project_root)
+    ).replace("\\", "/")
     clips = []
     for clip in result["clips"]:
         clip_path = output_directory / clip["relative_path"]
@@ -958,6 +961,7 @@ def build_episode_audio(project_id: str) -> dict[str, Any]:
         "dialogue_line_count": result["dialogue_line_count"],
         "voices": result["voices"],
         "audio_relative_path": audio_relative,
+        "subtitles_relative_path": subtitles_relative,
         "clips": clips,
         "generated_at": now,
     }
@@ -976,6 +980,36 @@ def build_episode_audio(project_id: str) -> dict[str, Any]:
         **data,
         "audio_url": f"/api/projects/{project_id}/story/audio/{build_id}/wav",
     }
+
+
+@app.get("/api/projects/{project_id}/story/audio/{build_id}/subtitles")
+def download_episode_subtitles(project_id: str, build_id: str) -> FileResponse:
+    initialize_database()
+    with connect_db() as connection:
+        row = connection.execute(
+            """
+            SELECT * FROM project_documents
+            WHERE project_id = ? AND document_id = ? AND document_type = 'episode_audio'
+            """,
+            (project_id, build_id),
+        ).fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Episode audio build not found.")
+    manifest_path = resolve_project_relative(DATA_DIR, project_id, row["relative_path"])
+    if not manifest_path.is_file():
+        raise HTTPException(status_code=404, detail="Episode audio manifest is missing.")
+    manifest = read_json(manifest_path)
+    relative_path = str(manifest.get("data", {}).get("subtitles_relative_path", ""))
+    if not relative_path.startswith("assets/episodes/"):
+        raise HTTPException(status_code=409, detail="Episode subtitle path is invalid.")
+    subtitles_path = resolve_project_relative(DATA_DIR, project_id, relative_path)
+    if not subtitles_path.is_file():
+        raise HTTPException(status_code=404, detail="Episode subtitles are missing.")
+    return FileResponse(
+        subtitles_path,
+        media_type="text/plain; charset=utf-8",
+        filename="cartoon-studio-subtitles.srt",
+    )
 
 
 @app.get("/api/projects/{project_id}/story/audio/{build_id}/wav")
