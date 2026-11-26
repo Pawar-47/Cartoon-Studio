@@ -284,7 +284,10 @@ def generate_episode_audio(
     for scene_index, scene in enumerate(scenes, start=1):
         scene_duration = int(scene.get("duration_seconds", 0))
         if scene_duration <= 0:
-            raise SpeechGenerationError(f"Scene {scene.get('id', scene_index)} has an invalid duration.")
+            scene_id = scene.get("id", scene_index)
+            raise SpeechGenerationError(
+                f"Scene {scene_id} has an invalid duration."
+            )
         for line_index, line in enumerate(scene.get("dialogue", []), start=1):
             text = str(line.get("text", "")).strip()
             if not text:
@@ -311,7 +314,7 @@ def generate_episode_audio(
             if actual_duration > remaining_scene_time + (1 / SAMPLE_RATE):
                 clip_path.unlink(missing_ok=True)
                 raise SpeechGenerationError(
-                    f"Dialogue in scene {scene.get('id', scene_index)} runs past the scene boundary. "
+                    f"Dialogue in scene {scene_id} runs past the scene boundary. "
                     "Shorten the line or move it earlier before generating audio."
                 )
             timeline_start = scene_offset + local_start
