@@ -546,6 +546,10 @@ class GodotEngineAdapter:
         allowed_kinds = {
             "road", "building", "shop", "tree", "vehicle", "lamp", "park"
         }
+        if world.get("theme", "small_town") not in {
+            "small_town", "village", "market", "park"
+        }:
+            raise EnginePathError("World layout contains an unsupported theme.")
         for item in world.get("objects", []):
             if not isinstance(item, dict) or item.get("kind") not in allowed_kinds:
                 raise EnginePathError("World layout contains an unsupported object.")

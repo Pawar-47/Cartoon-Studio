@@ -851,6 +851,8 @@ def test_pinned_godot_worker_exports_and_reopens_a_real_world_scene(tmp_path):
     result = adapter.export_world_scene(world, output, allowed_root=project_root)
     assert result["ok"] is True
     assert result["object_count"] == 7
+    assert result["theme_prop_count"] == 3
+    assert result["world_theme"] == "market"
     assert result["scene_reopened"] is True
     assert result["lighting_preset"] == "sunset"
     assert result["glb_exported"] is True

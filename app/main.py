@@ -957,6 +957,7 @@ def export_project_world(project_id: str, world_id: str) -> dict[str, Any]:
     document["data"]["scene_exported_at"] = now
     document["data"]["scene_export"] = {
         "object_count": int(result.get("object_count", 0)),
+        "theme_prop_count": int(result.get("theme_prop_count", 0)),
         "scene_reopened": bool(result.get("scene_reopened", False)),
         "lighting_preset": str(result.get("lighting_preset", document["data"].get("sky", "day"))),
     }

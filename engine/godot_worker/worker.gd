@@ -2275,6 +2275,21 @@ func _world_add_sphere(parent: Node3D, node_name: String, radius: float, positio
     return mesh_node
 
 
+
+
+func _world_add_cylinder(parent: Node3D, node_name: String, radius: float, height: float, position: Vector3, color_value: String) -> MeshInstance3D:
+    var mesh_node := MeshInstance3D.new()
+    mesh_node.name = node_name
+    var mesh := CylinderMesh.new()
+    mesh.top_radius = radius
+    mesh.bottom_radius = radius
+    mesh.height = height
+    mesh_node.mesh = mesh
+    mesh_node.material_override = _world_material(color_value)
+    mesh_node.position = position
+    parent.add_child(mesh_node)
+    return mesh_node
+
 func _export_world_scene(payload: Dictionary) -> Dictionary:
     var project_root := _normalise_path(str(payload.get("project_root", "")))
     var output_path := _normalise_path(str(payload.get("output_path", "")))
@@ -2298,6 +2313,9 @@ func _export_world_scene(payload: Dictionary) -> Dictionary:
     var sky_name := str(world.get("sky", "day"))
     if not ["day", "sunset", "night"].has(sky_name):
         return {"error_code": "invalid_sky", "error": "Unsupported world lighting preset."}
+    var theme_name := str(world.get("theme", "small_town"))
+    if not ["small_town", "village", "market", "park"].has(theme_name):
+        return {"error_code": "invalid_theme", "error": "Unsupported world theme."}
     var ground_color := str(world.get("ground_color", "#789b58"))
     var root := Node3D.new()
     root.name = "CartoonWorld"
@@ -2336,6 +2354,13 @@ func _export_world_scene(payload: Dictionary) -> Dictionary:
     sunlight.light_energy = light_energy
     sunlight.shadow_enabled = true
     root.add_child(sunlight)
+
+    var world_camera := Camera3D.new()
+    world_camera.name = "WorldCamera"
+    world_camera.position = Vector3(92.0, 76.0, 105.0)
+    world_camera.look_at(Vector3.ZERO, Vector3.UP)
+    world_camera.current = true
+    root.add_child(world_camera)
 
     _world_add_box(root, "Ground", Vector3(100.0, 0.5, 100.0), Vector3(0.0, -0.28, 0.0), ground_color)
     var object_count := 0
@@ -2417,6 +2442,67 @@ func _export_world_scene(payload: Dictionary) -> Dictionary:
             _world_add_box(anchor, "ParkPath", Vector3(width * 0.16, 0.08, depth * 0.9), Vector3(0.0, 0.2, 0.0), "#d6c29c")
         object_count += 1
 
+
+    var theme_prop_count := 0
+    if theme_name == "market":
+        for stall_index in range(3):
+            var stall := Node3D.new()
+            stall.name = "MarketStall_%02d" % (stall_index + 1)
+            stall.position = Vector3(-20.0 + float(stall_index) * 20.0, 0.0, -15.0)
+            root.add_child(stall)
+            _world_add_box(stall, "Counter", Vector3(7.0, 1.0, 3.2), Vector3(0.0, 0.75, 0.0), "#9a6846")
+            for post_x in [-3.1, 3.1]:
+                for post_z in [-1.25, 1.25]:
+                    _world_add_cylinder(stall, "CanopyPost", 0.12, 3.2, Vector3(post_x, 1.6, post_z), "#6d4b36")
+            var canopy_color := ["#d85f52", "#e2b34e", "#4f91a4"][stall_index]
+            _world_add_box(stall, "StripedCanopy", Vector3(7.8, 0.42, 4.0), Vector3(0.0, 3.25, 0.0), canopy_color)
+            _world_add_box(stall, "FrontSign", Vector3(4.2, 0.75, 0.18), Vector3(0.0, 2.35, 1.72), "#f4dfb6")
+        theme_prop_count = 3
+    elif theme_name == "village":
+        var village_well := Node3D.new()
+        village_well.name = "VillageWell"
+        village_well.position = Vector3(0.0, 0.0, -12.0)
+        root.add_child(village_well)
+        _world_add_cylinder(village_well, "StoneWell", 1.7, 1.5, Vector3(0.0, 0.75, 0.0), "#a69b83")
+        _world_add_cylinder(village_well, "WellOpening", 1.15, 0.16, Vector3(0.0, 1.55, 0.0), "#51483f")
+        _world_add_box(village_well, "WellRoof", Vector3(4.6, 0.28, 3.4), Vector3(0.0, 3.4, 0.0), "#81533a")
+        for fence_index in range(8):
+            var fence_angle := TAU * float(fence_index) / 8.0
+            var fence_post := Node3D.new()
+            fence_post.name = "VillageFence_%02d" % (fence_index + 1)
+            fence_post.position = Vector3(cos(fence_angle) * 13.0, 0.0, sin(fence_angle) * 13.0 + 18.0)
+            fence_post.rotation_degrees.y = -rad_to_deg(fence_angle)
+            root.add_child(fence_post)
+            _world_add_box(fence_post, "FencePost", Vector3(0.35, 1.6, 0.35), Vector3.ZERO, "#896344")
+            _world_add_box(fence_post, "FenceRail", Vector3(3.4, 0.22, 0.24), Vector3(0.0, 0.75, -1.5), "#b58a5e")
+        theme_prop_count = 9
+    elif theme_name == "park":
+        for bench_index in range(3):
+            var bench := Node3D.new()
+            bench.name = "ParkBench_%02d" % (bench_index + 1)
+            bench.position = Vector3(-16.0 + float(bench_index) * 16.0, 0.0, -10.0)
+            bench.rotation_degrees.y = float(bench_index) * 35.0
+            root.add_child(bench)
+            _world_add_box(bench, "Seat", Vector3(4.0, 0.28, 1.0), Vector3(0.0, 1.0, 0.0), "#9b6946")
+            _world_add_box(bench, "BackRest", Vector3(4.0, 1.1, 0.24), Vector3(0.0, 1.65, -0.38), "#b27b4e")
+            for leg_x in [-1.55, 1.55]:
+                _world_add_box(bench, "BenchLeg", Vector3(0.22, 0.95, 0.22), Vector3(leg_x, 0.48, 0.0), "#444b50")
+        for flower_index in range(8):
+            var flower_x := -24.0 + float(flower_index) * 6.8
+            _world_add_sphere(root, "ParkFlower_%02d" % flower_index, 0.42, Vector3(flower_x, 0.45, 18.0), ["#e7a2a4", "#f3d16c", "#a6a8dc"][flower_index % 3])
+        theme_prop_count = 11
+    else:
+        var bus_stop := Node3D.new()
+        bus_stop.name = "TownBusStop"
+        bus_stop.position = Vector3(0.0, 0.0, -16.0)
+        root.add_child(bus_stop)
+        for shelter_x in [-3.0, 3.0]:
+            _world_add_box(bus_stop, "ShelterPost", Vector3(0.22, 3.1, 0.22), Vector3(shelter_x, 1.55, 0.0), "#46535b")
+        _world_add_box(bus_stop, "ShelterRoof", Vector3(7.0, 0.35, 3.2), Vector3(0.0, 3.15, 0.0), "#477f94")
+        _world_add_box(bus_stop, "BusBench", Vector3(4.4, 0.35, 0.85), Vector3(0.0, 0.85, 0.0), "#9a6846")
+        _world_add_box(bus_stop, "StopSign", Vector3(1.8, 1.4, 0.16), Vector3(0.0, 2.35, 1.65), "#e4c65d")
+        theme_prop_count = 1
+
     var packed := PackedScene.new()
     _set_scene_ownership(root, root)
     var pack_error := packed.pack(root)
@@ -2455,6 +2541,8 @@ func _export_world_scene(payload: Dictionary) -> Dictionary:
         "glb_exported": FileAccess.file_exists(output_glb_path),
         "world_name": str(world.get("name", "Cartoon World")),
         "object_count": object_count,
+        "theme_prop_count": theme_prop_count,
+        "world_theme": theme_name,
         "scene_reopened": true,
         "scene_child_count": reopened_objects,
         "lighting_preset": sky_name
