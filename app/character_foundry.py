@@ -9,7 +9,7 @@ from typing import Any
 
 RECIPE_SCHEMA_VERSION = 1
 MASTER_TEMPLATE_ID = "cartoon-studio.stylized-adult.v1"
-GENERATOR_VERSION = "0.1.0"
+GENERATOR_VERSION = "0.2.0"
 
 
 RIG_PROFILE_ID = "cartoon-studio.humanoid.v1"
