@@ -297,6 +297,10 @@ export function applyCharacterFaceFeatures(recipe = {}) {
     mesh.name=name;mesh.position.copy(pos);mesh.scale.set(scale.x,scale.y,scale.z);mesh.renderOrder=30;group.add(mesh);return mesh;
   };
   const eyeY=center.y+height*0.10, offset=width*0.245*spacing, ew=width*0.105*eyeScale, eh=height*0.17*eyeScale;
+  const skinColor=recipe.skin_color||recipe.nose_color||"#c98768";
+  for(const side of [-1,1]){
+    ellipsoid("FaceEar",skinColor,new THREE.Vector3(center.x+side*size.x*0.43,center.y-height*0.02,front+depth*0.08),new THREE.Vector3(width*0.075,height*0.14,depth*0.72));
+  }
   for(const side of [-1,1]){
     const x=center.x+side*offset;
     ellipsoid("FaceEyeWhite",recipe.eye_color,new THREE.Vector3(x,eyeY,front),new THREE.Vector3(ew,eh,depth));
@@ -305,12 +309,12 @@ export function applyCharacterFaceFeatures(recipe = {}) {
     const brow=ellipsoid("FaceEyebrow",recipe.brow_color,new THREE.Vector3(x,eyeY+eh*1.55,front+depth*0.12),new THREE.Vector3(ew*1.32,Math.max(height*0.035,0.006),depth*0.38));
     brow.rotation.z=-side*browAngle;
   }
-  const skinColor=recipe.skin_color||recipe.nose_color||"#c98768";
   for(const side of [-1,1]){
     ellipsoid("FaceCheek",skinColor,new THREE.Vector3(center.x+side*width*0.255*jawWidth,center.y-height*0.19,front+depth*0.35),new THREE.Vector3(width*0.085*cheekFullness,height*0.065*cheekFullness,depth*0.62));
     ellipsoid("FaceJaw",skinColor,new THREE.Vector3(center.x+side*width*0.17*jawWidth,center.y-height*0.34,front+depth*0.24),new THREE.Vector3(width*0.115*jawWidth,height*0.075,depth*0.55));
   }
   ellipsoid("FaceChin",skinColor,new THREE.Vector3(center.x,center.y-height*(0.405+(chinLength-1)*0.025),front+depth*0.24),new THREE.Vector3(width*0.13*jawWidth,height*0.06*chinLength,depth*0.62));
+  ellipsoid("FaceNoseBridge",recipe.nose_color,new THREE.Vector3(center.x,center.y-height*0.015,front+depth*0.48),new THREE.Vector3(width*0.035,height*0.09,depth*0.72));
   ellipsoid("FaceNose",recipe.nose_color,new THREE.Vector3(center.x,center.y-height*0.08,front+depth*0.6),new THREE.Vector3(width*0.055,height*0.075,depth*0.8));
   const my=center.y-height*0.30,mw=width*0.19;
   if(mouthOpen>0.08){

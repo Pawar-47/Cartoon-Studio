@@ -452,6 +452,13 @@ func _add_character_face_features(scene: Node, recipe: Dictionary) -> Dictionary
 
     for side_index in range(2):
         var side: float = -1.0 if side_index == 0 else 1.0
+        _add_face_sphere(attachment, scene, "CartoonStudio_Face_Ear_" + str(side_index),
+            Vector3(center.x + side * head_bounds.size.x * 0.43, center.y - height * 0.02, front_z + front_direction * eye_depth * 0.08),
+            Vector3(width * 0.075, height * 0.14, eye_depth * 0.72), skin_material)
+        mesh_count += 1
+
+    for side_index in range(2):
+        var side: float = -1.0 if side_index == 0 else 1.0
         var eye_x: float = center.x + side * eye_offset
         _add_face_sphere(attachment, scene, "CartoonStudio_Face_EyeWhite_" + str(side),
             Vector3(eye_x, eye_y, front_z),
@@ -483,6 +490,10 @@ func _add_character_face_features(scene: Node, recipe: Dictionary) -> Dictionary
         Vector3(width * 0.13 * jaw_width, height * 0.06 * chin_length, eye_depth * 0.62), skin_material)
     mesh_count += 1
 
+    _add_face_sphere(attachment, scene, "CartoonStudio_Face_NoseBridge",
+        Vector3(center.x, center.y - height * 0.015, front_z + front_direction * eye_depth * 0.48),
+        Vector3(width * 0.035, height * 0.09, eye_depth * 0.72), nose_material)
+    mesh_count += 1
     _add_face_sphere(attachment, scene, "CartoonStudio_Face_Nose",
         Vector3(center.x, center.y - height * 0.08, front_z + front_direction * eye_depth * 0.6),
         Vector3(width * 0.055, height * 0.075, eye_depth * 0.8), nose_material)
