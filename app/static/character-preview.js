@@ -258,24 +258,71 @@ function removeFaceFeaturePreview() {
   });
   faceFeatureGroup = null;
 }
+
+function boxInCharacterSpace(worldBox) {
+  const points = [];
+  for (const x of [worldBox.min.x, worldBox.max.x]) {
+    for (const y of [worldBox.min.y, worldBox.max.y]) {
+      for (const z of [worldBox.min.z, worldBox.max.z]) {
+        points.push(currentObject.worldToLocal(new THREE.Vector3(x, y, z)));
+      }
+    }
+  }
+  return new THREE.Box3().setFromPoints(points);
+}
+
+function detectCharacterFaceDirection(headCenter) {
+  const featureTokens = ["eye", "brow", "mouth", "lip", "face"];
+  let featureZ = 0;
+  let featureSamples = 0;
+  const vertex = new THREE.Vector3();
+  currentObject.traverse((node) => {
+    if (!node.isMesh || !/(head|face|skull)/i.test(node.name || "") || !node.geometry?.attributes?.position) return;
+    const geometry = node.geometry;
+    const index = geometry.index;
+    const vertexCount = index ? index.count : geometry.attributes.position.count;
+    const groups = geometry.groups.length ? geometry.groups : [{ start: 0, count: vertexCount, materialIndex: 0 }];
+    for (const group of groups) {
+      const material = Array.isArray(node.material) ? node.material[group.materialIndex] : node.material;
+      const label = [geometry.name, material?.name].filter(Boolean).join(" ").toLowerCase();
+      if (!featureTokens.some((token) => label.includes(token))) continue;
+      const start = Math.max(0, group.start || 0);
+      const end = Math.min(vertexCount, start + (group.count ?? vertexCount));
+      const stride = Math.max(1, Math.floor((end - start) / 256));
+      for (let offset = start; offset < end; offset += stride) {
+        const vertexIndex = index ? index.getX(offset) : offset;
+        if (typeof node.getVertexPosition === "function") node.getVertexPosition(vertexIndex, vertex);
+        else vertex.fromBufferAttribute(geometry.attributes.position, vertexIndex);
+        node.localToWorld(vertex);
+        currentObject.worldToLocal(vertex);
+        featureZ += vertex.z;
+        featureSamples += 1;
+      }
+    }
+  });
+  if (!featureSamples) return 1;
+  return featureZ / featureSamples >= headCenter.z ? 1 : -1;
+}
+
 export function applyCharacterFaceFeatures(recipe = {}) {
   if (!currentObject) return false;
   removeFaceFeaturePreview();
   if (!recipe.enabled) return true;
   currentObject.updateMatrixWorld(true);
-  const bounds = new THREE.Box3().setFromObject(currentObject);
-  if (bounds.isEmpty()) return false;
+  const worldBounds = new THREE.Box3().setFromObject(currentObject);
+  if (worldBounds.isEmpty()) return false;
   let head = null;
   currentObject.traverse((node) => {
     if (!node.isMesh || !/(head|face|skull)/i.test(node.name || "")) return;
-    const box = new THREE.Box3().setFromObject(node);
-    if (!box.isEmpty() && (!head || box.getSize(new THREE.Vector3()).y > head.getSize(new THREE.Vector3()).y)) head = box;
+    const worldBox = new THREE.Box3().setFromObject(node);
+    const box = worldBox.isEmpty() ? null : boxInCharacterSpace(worldBox);
+    if (box && (!head || box.getSize(new THREE.Vector3()).y > head.getSize(new THREE.Vector3()).y)) head = box;
   });
   if (!head) {
+    const bounds = boxInCharacterSpace(worldBounds);
     const size = bounds.getSize(new THREE.Vector3());
     head = new THREE.Box3(new THREE.Vector3(bounds.min.x,bounds.max.y-size.y*0.24,bounds.max.z-size.z*0.28),bounds.max.clone());
   }
-  head.translate(currentObject.position.clone().negate());
   const size=head.getSize(new THREE.Vector3()), center=head.getCenter(new THREE.Vector3());
   const faceWidth=THREE.MathUtils.clamp(Number(recipe.face_width??1),0.8,1.25);
   const cheekFullness=THREE.MathUtils.clamp(Number(recipe.cheek_fullness??1),0.5,1.5);
@@ -287,7 +334,8 @@ export function applyCharacterFaceFeatures(recipe = {}) {
   const mouthWidth=THREE.MathUtils.clamp(Number(recipe.mouth_width??1),0.65,1.5);
   const width=Math.max(size.x*0.56,size.y*0.18,0.035)*faceWidth;
   const height=Math.max(size.y*0.48,width*0.55,0.035);
-  const front=head.max.z+Math.max(size.z*0.035,width*0.025);
+  const frontDirection=detectCharacterFaceDirection(center);
+  const front=(frontDirection>0?head.max.z:head.min.z)+frontDirection*Math.max(size.z*0.035,width*0.025);
   const eyeScale=THREE.MathUtils.clamp(Number(recipe.eye_scale??1),0.65,1.5);
   const spacing=THREE.MathUtils.clamp(Number(recipe.eye_spacing??1),0.65,1.35);
   const smile=THREE.MathUtils.clamp(Number(recipe.smile??0.35),-1,1);
@@ -303,39 +351,39 @@ export function applyCharacterFaceFeatures(recipe = {}) {
   const eyeY=center.y+height*0.10, offset=width*0.245*spacing, ew=width*0.105*eyeScale, eh=height*0.17*eyeScale;
   const skinColor=recipe.skin_color||recipe.nose_color||"#c98768";
   for(const side of [-1,1]){
-    ellipsoid("FaceEar",skinColor,new THREE.Vector3(center.x+side*size.x*0.43,center.y-height*0.02,front+depth*0.08),new THREE.Vector3(width*0.075*earSize,height*0.14*earSize,depth*0.72*earSize));
+    ellipsoid("FaceEar",skinColor,new THREE.Vector3(center.x+side*size.x*0.43,center.y-height*0.02,front+frontDirection*depth*0.08),new THREE.Vector3(width*0.075*earSize,height*0.14*earSize,depth*0.72*earSize));
   }
   for(const side of [-1,1]){
-    ellipsoid("FaceEarInner","#a96859",new THREE.Vector3(center.x+side*size.x*0.43,center.y-height*0.02,front+depth*0.69),new THREE.Vector3(width*0.027*earSize,height*0.085*earSize,depth*0.19*earSize));
+    ellipsoid("FaceEarInner","#a96859",new THREE.Vector3(center.x+side*size.x*0.43,center.y-height*0.02,front+frontDirection*depth*0.69),new THREE.Vector3(width*0.027*earSize,height*0.085*earSize,depth*0.19*earSize));
   }
   for(const side of [-1,1]){
     const x=center.x+side*offset;
     ellipsoid("FaceEyeWhite",recipe.eye_color,new THREE.Vector3(x,eyeY,front),new THREE.Vector3(ew,eh,depth));
-    ellipsoid("FaceIris",recipe.iris_color,new THREE.Vector3(x+width*0.018,eyeY-height*0.012,front+depth*0.88),new THREE.Vector3(ew*0.49,eh*0.57,depth*0.42),0.35);
-    ellipsoid("FacePupil","#17191d",new THREE.Vector3(x+width*0.022,eyeY-height*0.012,front+depth*1.22),new THREE.Vector3(ew*0.23,eh*0.34,depth*0.22),0.25);
-    const brow=ellipsoid("FaceEyebrow",recipe.brow_color,new THREE.Vector3(x,eyeY+eh*1.55,front+depth*0.12),new THREE.Vector3(ew*1.32,Math.max(height*0.035,0.006),depth*0.38));
+    ellipsoid("FaceIris",recipe.iris_color,new THREE.Vector3(x+width*0.018,eyeY-height*0.012,front+frontDirection*depth*0.88),new THREE.Vector3(ew*0.49,eh*0.57,depth*0.42),0.35);
+    ellipsoid("FacePupil","#17191d",new THREE.Vector3(x+width*0.022,eyeY-height*0.012,front+frontDirection*depth*1.22),new THREE.Vector3(ew*0.23,eh*0.34,depth*0.22),0.25);
+    const brow=ellipsoid("FaceEyebrow",recipe.brow_color,new THREE.Vector3(x,eyeY+eh*1.55,front+frontDirection*depth*0.12),new THREE.Vector3(ew*1.32,Math.max(height*0.035,0.006),depth*0.38));
     brow.rotation.z=-side*browAngle;
   }
   for(const side of [-1,1]){
-    ellipsoid("FaceCheek",skinColor,new THREE.Vector3(center.x+side*width*0.255*jawWidth,center.y-height*0.19,front+depth*0.35),new THREE.Vector3(width*0.085*cheekFullness,height*0.065*cheekFullness,depth*0.62));
-    ellipsoid("FaceJaw",skinColor,new THREE.Vector3(center.x+side*width*0.17*jawWidth,center.y-height*0.34,front+depth*0.24),new THREE.Vector3(width*0.115*jawWidth,height*0.075,depth*0.55));
+    ellipsoid("FaceCheek",skinColor,new THREE.Vector3(center.x+side*width*0.255*jawWidth,center.y-height*0.19,front+frontDirection*depth*0.35),new THREE.Vector3(width*0.085*cheekFullness,height*0.065*cheekFullness,depth*0.62));
+    ellipsoid("FaceJaw",skinColor,new THREE.Vector3(center.x+side*width*0.17*jawWidth,center.y-height*0.34,front+frontDirection*depth*0.24),new THREE.Vector3(width*0.115*jawWidth,height*0.075,depth*0.55));
   }
-  ellipsoid("FaceChin",skinColor,new THREE.Vector3(center.x,center.y-height*(0.405+(chinLength-1)*0.025),front+depth*0.24),new THREE.Vector3(width*0.13*jawWidth,height*0.06*chinLength,depth*0.62));
-  ellipsoid("FaceNoseBridge",recipe.nose_color,new THREE.Vector3(center.x,center.y-height*0.015,front+depth*0.48),new THREE.Vector3(width*0.035*noseWidth,height*0.09*noseHeight,depth*0.72));
-  ellipsoid("FaceNose",recipe.nose_color,new THREE.Vector3(center.x,center.y-height*0.08,front+depth*0.6),new THREE.Vector3(width*0.055*noseWidth,height*0.075*noseHeight,depth*0.8));
+  ellipsoid("FaceChin",skinColor,new THREE.Vector3(center.x,center.y-height*(0.405+(chinLength-1)*0.025),front+frontDirection*depth*0.24),new THREE.Vector3(width*0.13*jawWidth,height*0.06*chinLength,depth*0.62));
+  ellipsoid("FaceNoseBridge",recipe.nose_color,new THREE.Vector3(center.x,center.y-height*0.015,front+frontDirection*depth*0.48),new THREE.Vector3(width*0.035*noseWidth,height*0.09*noseHeight,depth*0.72));
+  ellipsoid("FaceNose",recipe.nose_color,new THREE.Vector3(center.x,center.y-height*0.08,front+frontDirection*depth*0.6),new THREE.Vector3(width*0.055*noseWidth,height*0.075*noseHeight,depth*0.8));
   for(const side of [-1,1]){
-    ellipsoid("FaceNostril","#633e36",new THREE.Vector3(center.x+side*width*0.027*noseWidth,center.y-height*0.112*noseHeight,front+depth*1.18),new THREE.Vector3(width*0.016*noseWidth,height*0.018*noseHeight,depth*0.19));
+    ellipsoid("FaceNostril","#633e36",new THREE.Vector3(center.x+side*width*0.027*noseWidth,center.y-height*0.112*noseHeight,front+frontDirection*depth*1.18),new THREE.Vector3(width*0.016*noseWidth,height*0.018*noseHeight,depth*0.19));
   }
   const my=center.y-height*0.30,mw=width*0.19*mouthWidth;
   if(mouthOpen>0.08){
-    ellipsoid("FaceMouthOpening",recipe.mouth_color,new THREE.Vector3(center.x,my,front+depth*0.58),new THREE.Vector3(mw,height*(0.018+mouthOpen*0.11),depth*0.62));
-    if(mouthOpen>0.45)ellipsoid("FaceMouthTongue","#c65f72",new THREE.Vector3(center.x,my-height*0.035,front+depth*1.08),new THREE.Vector3(mw*0.52,height*0.025,depth*0.2));
+    ellipsoid("FaceMouthOpening",recipe.mouth_color,new THREE.Vector3(center.x,my,front+frontDirection*depth*0.58),new THREE.Vector3(mw,height*(0.018+mouthOpen*0.11),depth*0.62));
+    if(mouthOpen>0.45)ellipsoid("FaceMouthTongue","#c65f72",new THREE.Vector3(center.x,my-height*0.035,front+frontDirection*depth*1.08),new THREE.Vector3(mw*0.52,height*0.025,depth*0.2));
   }else{
     const curve=new THREE.CatmullRomCurve3([
-      new THREE.Vector3(center.x-mw,my+smile*height*0.075,front+depth*0.5),
-      new THREE.Vector3(center.x-mw*0.5,my-smile*height*0.07,front+depth*0.55),
-      new THREE.Vector3(center.x+mw*0.5,my-smile*height*0.07,front+depth*0.55),
-      new THREE.Vector3(center.x+mw,my+smile*height*0.075,front+depth*0.5),
+      new THREE.Vector3(center.x-mw,my+smile*height*0.075,front+frontDirection*depth*0.5),
+      new THREE.Vector3(center.x-mw*0.5,my-smile*height*0.07,front+frontDirection*depth*0.55),
+      new THREE.Vector3(center.x+mw*0.5,my-smile*height*0.07,front+frontDirection*depth*0.55),
+      new THREE.Vector3(center.x+mw,my+smile*height*0.075,front+frontDirection*depth*0.5),
     ]);
     const mouth=new THREE.Mesh(new THREE.TubeGeometry(curve,20,Math.max(width*0.012,0.003),8,false),mat(recipe.mouth_color));
     mouth.name="FaceMouth";mouth.renderOrder=31;group.add(mouth);
