@@ -69,7 +69,8 @@ class FakeEngine:
         }
 
     def export_character_appearance(
-        self, source_path, materials, morph_targets, output_path, allowed_root
+        self, source_path, materials, morph_targets, output_path, allowed_root,
+        face_features=None,
     ):
         assert source_path.is_relative_to(allowed_root)
         assert materials and morph_targets

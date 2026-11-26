@@ -403,8 +403,8 @@ func _add_character_face_features(scene: Node, recipe: Dictionary) -> Dictionary
     await process_frame
 
     var center := head_bounds.get_center()
-    var width := maxf(head_bounds.size.x * 0.56, head_bounds.size.y * 0.18, 0.035)
-    var height := maxf(head_bounds.size.y * 0.48, width * 0.55, 0.035)
+    var width := maxf(maxf(head_bounds.size.x * 0.56, head_bounds.size.y * 0.18), 0.035)
+    var height := maxf(maxf(head_bounds.size.y * 0.48, width * 0.55), 0.035)
     var front_info := _head_front_direction(head_mesh, skeleton, head_bone_index, center)
     var front_direction := float(front_info.get("direction", 1.0))
     var front_z := head_bounds.end.z if front_direction > 0.0 else head_bounds.position.z
@@ -432,8 +432,9 @@ func _add_character_face_features(scene: Node, recipe: Dictionary) -> Dictionary
     var mouth_material := _face_material(str(recipe.get("mouth_color", "#612b2b")))
     var mesh_count := 0
 
-    for side in [-1.0, 1.0]:
-        var eye_x := center.x + side * eye_offset
+    for side_index in range(2):
+        var side: float = -1.0 if side_index == 0 else 1.0
+        var eye_x: float = center.x + side * eye_offset
         _add_face_sphere(attachment, scene, "CartoonStudio_Face_EyeWhite_" + str(side),
             Vector3(eye_x, eye_y, front_z),
             Vector3(eye_width, eye_height, eye_depth), eye_material)
