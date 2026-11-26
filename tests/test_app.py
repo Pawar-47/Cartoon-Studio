@@ -777,7 +777,10 @@ def test_episode_audio_endpoint_saves_and_serves_the_dialogue_mix(
         audio_path = output_directory / "dialogue_mix.wav"
         audio_path.write_bytes(b"RIFF-cartoon-studio-test")
         subtitles_path = output_directory / "subtitles.srt"
-        subtitles_path.write_text("1\\n00:00:02,000 --> 00:00:03,000\\nالسلام علیکم!\\n", encoding="utf-8")
+        subtitles_path.write_text(
+            "1\n00:00:02,000 --> 00:00:03,000\nالسلام علیکم!\n",
+            encoding="utf-8",
+        )
         clip_path = output_directory / "clips" / "scene-01-line-01.wav"
         clip_path.parent.mkdir(parents=True, exist_ok=True)
         clip_path.write_bytes(b"RIFF-test-clip")
