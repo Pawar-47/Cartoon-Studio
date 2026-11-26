@@ -36,6 +36,7 @@
  <span class="eyebrow">03 / PRODUCTION PLAN</span><h2>Paste the AI's JSON response</h2>
  <p class="helper">Paste the complete JSON object. The validator checks episode length, scene timing, character references, dialogue and animation cue timing.</p>
  <textarea id="plan-json" rows="14" spellcheck="false" placeholder='{"title":"...","synopsis":"...","language":"ur","target_duration_seconds":360,"characters":[...],"scenes":[...]} '></textarea>
+ <div id="character-asset-bindings" class="character-asset-bindings"><p class="helper">Choose a project to bind rigged character GLBs to the episode cast.</p></div>
  <div class="button-row"><button id="validate-plan">Validate plan</button><span id="validation-status" class="inline-status"></span></div>
  <div id="plan-summary" class="plan-summary" hidden></div>
  <div class="save-row"><label>Save to project<select id="project-select"><option value="">Choose a project…</option></select></label><button id="save-plan" disabled>Save episode plan</button></div>

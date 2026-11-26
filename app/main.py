@@ -603,6 +603,28 @@ def save_story_plan(project_id: str, plan: EpisodePlan) -> dict[str, Any]:
     initialize_database()
     now = datetime.now(UTC).isoformat()
     plan_data = plan.model_dump(mode="json")
+    for character in plan_data["characters"]:
+        asset_id = character.get("asset_id")
+        if not asset_id:
+            continue
+        selected_asset = next(
+            (
+                asset
+                for asset in _project_character_assets(project_id)
+                if asset["asset_id"] == asset_id
+            ),
+            None,
+        )
+        if selected_asset is None:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Character asset for {character['name']} is not in this project.",
+            )
+        if not selected_asset["rig_ready"]:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Character asset for {character['name']} is not rig-ready.",
+            )
     if plan_data.get("world_id"):
         selected_world = next(
             (
@@ -772,6 +794,52 @@ def _project_worlds(project_id: str) -> list[dict[str, Any]]:
                 **document["data"],
             })
     return worlds
+
+
+def _project_character_assets(project_id: str) -> list[dict[str, Any]]:
+    initialize_database()
+    with connect_db() as connection:
+        project = connection.execute(
+            "SELECT id FROM projects WHERE id = ?", (project_id,)
+        ).fetchone()
+        if project is None:
+            raise HTTPException(status_code=404, detail="Project not found.")
+        rows = connection.execute(
+            """
+            SELECT * FROM project_documents
+            WHERE project_id = ? AND document_type = 'character_asset'
+            ORDER BY updated_at DESC
+            """,
+            (project_id,),
+        ).fetchall()
+    assets = []
+    for row in rows:
+        manifest_path = resolve_project_relative(
+            DATA_DIR, project_id, row["relative_path"]
+        )
+        if not manifest_path.is_file():
+            continue
+        manifest = read_json(manifest_path)
+        data = manifest.get("data", {})
+        relative_path = str(data.get("relative_path", ""))
+        if (
+            manifest.get("document_type") != "character_asset"
+            or manifest.get("id") != row["document_id"]
+            or not relative_path.startswith("assets/characters/")
+            or not relative_path.endswith(".glb")
+        ):
+            continue
+        asset_path = resolve_project_relative(DATA_DIR, project_id, relative_path)
+        if not asset_path.is_file():
+            continue
+        assets.append({
+            "asset_id": manifest["id"],
+            "original_filename": str(data.get("original_filename", "Character GLB")),
+            "relative_path": relative_path,
+            "rig_ready": bool(data.get("rig_ready", False)),
+            "animation_ready": bool(data.get("animation_ready", False)),
+        })
+    return assets
 
 
 def _sync_world_reference(project_id: str, world_document: dict[str, Any]) -> None:
@@ -1133,6 +1201,11 @@ async def upload_character_asset(project_id: str, request: Request) -> dict[str,
         raise
     finally:
         temporary.unlink(missing_ok=True)
+
+
+@app.get("/api/projects/{project_id}/character-assets")
+def list_project_character_assets(project_id: str) -> list[dict[str, Any]]:
+    return _project_character_assets(project_id)
 
 
 @app.get("/api/projects/{project_id}/character-assets/{asset_id}")

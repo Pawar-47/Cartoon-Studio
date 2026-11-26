@@ -2,3 +2,9 @@
 .world-builder-link{margin:-4px 0 10px;font-size:11px}
 .world-builder-link a{color:var(--blue);text-decoration:none}
 #world-select{display:block;width:100%;margin-top:7px;padding:11px;border:1px solid #3a4b60;border-radius:8px;background:#101822;color:#fff;font:inherit}
+
+.character-asset-bindings{display:grid;gap:10px;margin:14px 0;padding:14px;border:1px solid #29384a;border-radius:10px;background:#111a25}
+.character-asset-bindings h3{margin:0;font-size:14px}
+.asset-binding-row{display:grid;grid-template-columns:minmax(100px,1fr) minmax(160px,1.4fr);gap:10px;align-items:center;font-size:12px}
+.asset-binding-row select{min-width:0;padding:9px;border:1px solid #3a4b60;border-radius:7px;background:#101822;color:#fff;font:inherit}
+@media(max-width:650px){.asset-binding-row{grid-template-columns:1fr;gap:5px}}

@@ -112,6 +112,7 @@ class CharacterSpec(StrictModel):
     name: str = Field(min_length=1, max_length=80)
     personality: str = Field(default="", max_length=500)
     voice_profile: str = Field(default="", max_length=80)
+    asset_id: str | None = Field(default=None, max_length=36, pattern=r"^[0-9a-fA-F-]{36}$")
     resting_expression: ExpressionId = "neutral"
     relationships: list[str] = Field(default_factory=list, max_length=12)
 

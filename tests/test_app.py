@@ -1,4 +1,5 @@
 import json
+import uuid
 
 from fastapi.testclient import TestClient
 
@@ -577,3 +578,63 @@ def test_episode_rejects_unexported_or_foreign_world_reference(tmp_path, monkeyp
     rejected = client.put(f"/api/projects/{project_id}/story", json=plan)
     assert rejected.status_code == 422
 
+
+
+def test_episode_character_assets_are_project_scoped_and_require_a_rig(tmp_path, monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "character-binding.sqlite3")
+    monkeypatch.setattr(main, "_INITIALIZED_DB_KEY", None)
+    project = client.post("/api/projects", json={"name": "Character Binding"})
+    project_id = project.json()["id"]
+    other = client.post("/api/projects", json={"name": "Other Character Project"})
+
+    def register_asset(owner_id, rig_ready):
+        now = "2026-11-26T00:00:00+00:00"
+        asset_id = str(uuid.uuid4())
+        relative = f"assets/characters/{asset_id}.glb"
+        asset_path = main.resolve_project_relative(main.DATA_DIR, owner_id, relative)
+        asset_path.parent.mkdir(parents=True, exist_ok=True)
+        asset_path.write_bytes(b"test-glb")
+        data = {
+            "original_filename": "Ali.glb",
+            "relative_path": relative,
+            "rig_ready": rig_ready,
+            "animation_ready": False,
+        }
+        manifest = main.make_envelope("character_asset", asset_id, data, now, now)
+        manifest_path = main.resolve_project_relative(
+            main.DATA_DIR, owner_id, f"assets/characters/{asset_id}.json"
+        )
+        digest = main.write_json_atomic(manifest_path, manifest)
+        with main.connect_db() as connection:
+            main.upsert_document_index(
+                connection, owner_id, manifest,
+                f"assets/characters/{asset_id}.json", digest,
+            )
+        return asset_id
+
+    rigged_asset = register_asset(project_id, True)
+    static_asset = register_asset(project_id, False)
+    foreign_asset = register_asset(other.json()["id"], True)
+
+    listed = client.get(f"/api/projects/{project_id}/character-assets")
+    assert listed.status_code == 200
+    assert {item["asset_id"] for item in listed.json()} == {
+        rigged_asset, static_asset
+    }
+
+    plan = valid_episode_plan()
+    plan["characters"][0]["asset_id"] = rigged_asset
+    saved = client.put(f"/api/projects/{project_id}/story", json=plan)
+    assert saved.status_code == 200
+    assert saved.json()["plan"]["characters"][0]["asset_id"] == rigged_asset
+
+    plan["characters"][0]["asset_id"] = static_asset
+    rejected_static = client.put(f"/api/projects/{project_id}/story", json=plan)
+    assert rejected_static.status_code == 422
+
+    plan["characters"][0]["asset_id"] = foreign_asset
+    rejected_foreign = client.put(f"/api/projects/{project_id}/story", json=plan)
+    assert rejected_foreign.status_code == 422
