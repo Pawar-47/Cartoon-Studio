@@ -48,7 +48,6 @@ from app.storage import initialize_database as migrate_database
 from app.audio import (
     SpeechEngineUnavailable,
     SpeechGenerationError,
-    VOICE_CATALOG,
     generate_episode_audio,
 )
 from app.story import EpisodePlan, StoryPromptRequest, build_story_prompt

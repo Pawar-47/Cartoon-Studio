@@ -8,7 +8,6 @@ import urllib.request
 import wave
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 
 
 class SpeechEngineUnavailable(RuntimeError):
@@ -131,7 +130,7 @@ class PiperEngine:
             from piper import PiperVoice
         except ImportError as error:
             raise SpeechEngineUnavailable(
-                'Urdu speech support is not installed. Install it with: pip install "cartoon-studio[speech]".'
+                'Urdu speech support is not installed. Install it with: pip install piper-tts.'
             ) from error
         voice = self._voices.get(voice_id)
         if voice is None:
