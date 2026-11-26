@@ -467,6 +467,14 @@ def _build_geometry(
         strongest = sorted(
             blended.items(), key=lambda pair: pair[1], reverse=True
         )[:4]
+        strongest_total = sum(weight for _, weight in strongest)
+        if strongest_total <= 0.0:
+            strongest = [("Hips", 1.0)]
+        else:
+            strongest = [
+                (bone, weight / strongest_total)
+                for bone, weight in strongest
+            ]
         vertex_weights.append(tuple(strongest))
     return positions,indices,deltas,vertex_weights,normals
 
