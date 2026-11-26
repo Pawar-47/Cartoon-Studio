@@ -1,0 +1,38 @@
+name: Retired Branch Cleanup
+
+on:
+  workflow_run:
+    workflows: ["Cartoon Studio CI"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Delete retired branches and preserve main
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const branches = await github.paginate(
+              github.rest.repos.listBranches,
+              { owner, repo, per_page: 100 }
+            );
+            const retired = branches.filter((branch) => branch.name !== "main");
+            core.info(`Found ${retired.length} non-main branch(es).`);
+            for (const branch of retired) {
+              await github.rest.git.deleteRef({
+                owner,
+                repo,
+                ref: `heads/${branch.name}`,
+              });
+              core.info(`Deleted ${branch.name}`);
+            }
+            core.info("Preserved main.");
