@@ -287,7 +287,14 @@ def test_render_removes_mp4_when_final_verification_fails(
             )
         if command[0] == str(godot):
             Path(command[command.index("--write-movie") + 1]).write_bytes(b"fake-avi")
-            return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+            frames = command[command.index("--quit-after") + 1]
+            fps = command[command.index("--fixed-fps") + 1]
+            return subprocess.CompletedProcess(
+                command,
+                0,
+                stdout=f"{frames} frames at {fps} FPS",
+                stderr="",
+            )
         if command[0] == str(ffmpeg) and "-progress" in command and "pipe:1" in command:
             return subprocess.CompletedProcess(
                 command,
