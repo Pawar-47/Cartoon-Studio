@@ -20,8 +20,8 @@ export function buildExpressionPreset(name, targets) {
 const GENERATED_FACE_EXPRESSIONS = Object.freeze({
   smile: Object.freeze({ enabled: true, smile: 0.82, brow_angle: -0.04, eye_scale: 1.08, eye_spacing: 1 }),
   frown: Object.freeze({ enabled: true, smile: -0.78, brow_angle: 0.16, eye_scale: 0.96 }),
-  surprise: Object.freeze({ enabled: true, smile: 0.05, brow_angle: -0.42, eye_scale: 1.38, eye_spacing: 1.08 }),
-  angry: Object.freeze({ enabled: true, smile: -0.45, brow_angle: 0.42, eye_scale: 0.92, eye_spacing: 0.96 }),
+  surprise: Object.freeze({ enabled: true, smile: 0.05, mouth_open: 0.82, brow_angle: -0.42, eye_scale: 1.38, eye_spacing: 1.08 }),
+  angry: Object.freeze({ enabled: true, smile: -0.45, mouth_open: 0.14, brow_angle: 0.42, eye_scale: 0.92, eye_spacing: 0.96 }),
 });
 
 export function buildGeneratedFaceExpression(name, current = {}) {

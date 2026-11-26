@@ -53,6 +53,7 @@ test("generated face smile preset enables face and sets a friendly expression", 
 test("generated face presets provide frown, surprise and angry expressions", () => {
   assert.equal(buildGeneratedFaceExpression("frown").smile, -0.78);
   assert.equal(buildGeneratedFaceExpression("surprise").eye_scale, 1.38);
+  assert.equal(buildGeneratedFaceExpression("surprise").mouth_open, 0.82);
   assert.equal(buildGeneratedFaceExpression("angry").brow_angle, 0.42);
 });
 test("generated face preset rejects unknown names", () => {

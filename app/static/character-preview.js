@@ -287,6 +287,7 @@ export function applyCharacterFaceFeatures(recipe = {}) {
   const eyeScale=THREE.MathUtils.clamp(Number(recipe.eye_scale??1),0.65,1.5);
   const spacing=THREE.MathUtils.clamp(Number(recipe.eye_spacing??1),0.65,1.35);
   const smile=THREE.MathUtils.clamp(Number(recipe.smile??0.35),-1,1);
+  const mouthOpen=THREE.MathUtils.clamp(Number(recipe.mouth_open??0),0,1);
   const browAngle=THREE.MathUtils.clamp(Number(recipe.brow_angle??0),-0.5,0.5);
   const depth=Math.max(width*0.045,0.008);
   const group=new THREE.Group();group.name="CartoonStudioFacePreview";
@@ -312,14 +313,19 @@ export function applyCharacterFaceFeatures(recipe = {}) {
   ellipsoid("FaceChin",skinColor,new THREE.Vector3(center.x,center.y-height*(0.405+(chinLength-1)*0.025),front+depth*0.24),new THREE.Vector3(width*0.13*jawWidth,height*0.06*chinLength,depth*0.62));
   ellipsoid("FaceNose",recipe.nose_color,new THREE.Vector3(center.x,center.y-height*0.08,front+depth*0.6),new THREE.Vector3(width*0.055,height*0.075,depth*0.8));
   const my=center.y-height*0.30,mw=width*0.19;
-  const curve=new THREE.CatmullRomCurve3([
-    new THREE.Vector3(center.x-mw,my+smile*height*0.075,front+depth*0.5),
-    new THREE.Vector3(center.x-mw*0.5,my-smile*height*0.07,front+depth*0.55),
-    new THREE.Vector3(center.x+mw*0.5,my-smile*height*0.07,front+depth*0.55),
-    new THREE.Vector3(center.x+mw,my+smile*height*0.075,front+depth*0.5),
-  ]);
-  const mouth=new THREE.Mesh(new THREE.TubeGeometry(curve,20,Math.max(width*0.012,0.003),8,false),mat(recipe.mouth_color));
-  mouth.name="FaceMouth";mouth.renderOrder=31;group.add(mouth);
+  if(mouthOpen>0.08){
+    ellipsoid("FaceMouthOpening",recipe.mouth_color,new THREE.Vector3(center.x,my,front+depth*0.58),new THREE.Vector3(mw,height*(0.018+mouthOpen*0.11),depth*0.62));
+    if(mouthOpen>0.45)ellipsoid("FaceMouthTongue","#c65f72",new THREE.Vector3(center.x,my-height*0.035,front+depth*1.08),new THREE.Vector3(mw*0.52,height*0.025,depth*0.2));
+  }else{
+    const curve=new THREE.CatmullRomCurve3([
+      new THREE.Vector3(center.x-mw,my+smile*height*0.075,front+depth*0.5),
+      new THREE.Vector3(center.x-mw*0.5,my-smile*height*0.07,front+depth*0.55),
+      new THREE.Vector3(center.x+mw*0.5,my-smile*height*0.07,front+depth*0.55),
+      new THREE.Vector3(center.x+mw,my+smile*height*0.075,front+depth*0.5),
+    ]);
+    const mouth=new THREE.Mesh(new THREE.TubeGeometry(curve,20,Math.max(width*0.012,0.003),8,false),mat(recipe.mouth_color));
+    mouth.name="FaceMouth";mouth.renderOrder=31;group.add(mouth);
+  }
   currentObject.add(group);faceFeatureGroup=group;return true;
 }
 export function getCharacterMorphTargets() {

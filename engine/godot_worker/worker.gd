@@ -428,6 +428,7 @@ func _add_character_face_features(scene: Node, recipe: Dictionary) -> Dictionary
     var eye_scale := clampf(float(recipe.get("eye_scale", 1.0)), 0.65, 1.5)
     var eye_spacing := clampf(float(recipe.get("eye_spacing", 1.0)), 0.65, 1.35)
     var smile := clampf(float(recipe.get("smile", 0.35)), -1.0, 1.0)
+    var mouth_open := clampf(float(recipe.get("mouth_open", 0.0)), 0.0, 1.0)
     var brow_angle := clampf(float(recipe.get("brow_angle", 0.0)), -0.5, 0.5)
     var eye_depth := maxf(width * 0.045, 0.008)
     var eye_width := width * 0.105 * eye_scale
@@ -490,19 +491,31 @@ func _add_character_face_features(scene: Node, recipe: Dictionary) -> Dictionary
     var mouth_y := center.y - height * 0.30
     var mouth_half := width * 0.19
     var mouth_depth := front_z + front_direction * eye_depth * 0.5
-    var mouth_points := [
-        Vector3(center.x - mouth_half, mouth_y + smile * height * 0.075, mouth_depth),
-        Vector3(center.x - mouth_half * 0.5, mouth_y - smile * height * 0.07, mouth_depth),
-        Vector3(center.x + mouth_half * 0.5, mouth_y - smile * height * 0.07, mouth_depth),
-        Vector3(center.x + mouth_half, mouth_y + smile * height * 0.075, mouth_depth)
-    ]
-    var mouth_radius := maxf(width * 0.012, 0.003)
-    for segment_index in range(mouth_points.size() - 1):
-        _add_face_mouth_segment(attachment, scene,
-            "CartoonStudio_Face_Mouth_" + str(segment_index),
-            mouth_points[segment_index], mouth_points[segment_index + 1],
-            mouth_radius, mouth_material)
+    if mouth_open > 0.08:
+        _add_face_sphere(attachment, scene, "CartoonStudio_Face_MouthOpening",
+            Vector3(center.x, mouth_y, front_z + front_direction * eye_depth * 0.58),
+            Vector3(mouth_half, height * (0.018 + mouth_open * 0.11), eye_depth * 0.62), mouth_material)
         mesh_count += 1
+        if mouth_open > 0.45:
+            var tongue_material := _face_material("#c65f72")
+            _add_face_sphere(attachment, scene, "CartoonStudio_Face_MouthTongue",
+                Vector3(center.x, mouth_y - height * 0.035, front_z + front_direction * eye_depth * 1.08),
+                Vector3(mouth_half * 0.52, height * 0.025, eye_depth * 0.2), tongue_material)
+            mesh_count += 1
+    else:
+        var mouth_points := [
+            Vector3(center.x - mouth_half, mouth_y + smile * height * 0.075, mouth_depth),
+            Vector3(center.x - mouth_half * 0.5, mouth_y - smile * height * 0.07, mouth_depth),
+            Vector3(center.x + mouth_half * 0.5, mouth_y - smile * height * 0.07, mouth_depth),
+            Vector3(center.x + mouth_half, mouth_y + smile * height * 0.075, mouth_depth)
+        ]
+        var mouth_radius := maxf(width * 0.012, 0.003)
+        for segment_index in range(mouth_points.size() - 1):
+            _add_face_mouth_segment(attachment, scene,
+                "CartoonStudio_Face_Mouth_" + str(segment_index),
+                mouth_points[segment_index], mouth_points[segment_index + 1],
+                mouth_radius, mouth_material)
+            mesh_count += 1
 
     return {
         "ok": true,

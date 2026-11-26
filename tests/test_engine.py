@@ -267,6 +267,7 @@ def test_godot_worker_bakes_cartoon_face_geometry_and_preserves_animation(tmp_pa
             "cheek_fullness": 1.25,
             "jaw_width": 0.88,
             "chin_length": 1.18,
+            "mouth_open": 0.78,
             "eye_color": "#ffffff",
             "iris_color": "#4b83b8",
             "brow_color": "#38251c",
@@ -283,7 +284,7 @@ def test_godot_worker_bakes_cartoon_face_geometry_and_preserves_animation(tmp_pa
     assert result["appearance_verified"] is True
     assert result["face_features_verified"] is True
     assert result["face_attachment_bone"].lower().endswith("head")
-    assert result["applied_face_feature_count"] >= 17
+    assert result["applied_face_feature_count"] >= 16
     assert result["skeleton_count"] == before["skeleton_count"]
     assert result["animation_names"] == before["animation_names"]
     face_meshes = [
@@ -295,6 +296,8 @@ def test_godot_worker_bakes_cartoon_face_geometry_and_preserves_animation(tmp_pa
     assert any(name.startswith("CartoonStudio_Face_Cheek_") for name in face_names)
     assert any(name.startswith("CartoonStudio_Face_Jaw_") for name in face_names)
     assert "CartoonStudio_Face_Chin" in face_names
+    assert "CartoonStudio_Face_MouthOpening" in face_names
+    assert "CartoonStudio_Face_MouthTongue" in face_names
     assert all(item["attachment_bone"].lower().endswith("head") for item in face_meshes)
     assert source.read_bytes() == original_bytes
     assert output.is_file()
