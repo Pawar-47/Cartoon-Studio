@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import struct
@@ -154,7 +155,7 @@ def _ellipsoid(
             b = ring * segments + (segment + 1) % segments
             c = (ring + 1) * segments + (segment + 1) % segments
             d = (ring + 1) * segments + segment
-            indices.extend((a, b, d, b, c, d))
+            indices.extend((a, d, b, b, d, c))
     return vertices, indices, local
 
 
@@ -338,7 +339,7 @@ def write_master_character(
     recipe = default_character_recipe(character_id)
     recipe["generated_asset"] = {
         "filename": output.name,
-        "sha256": __import__("hashlib").sha256(glb_bytes).hexdigest(),
+        "sha256": hashlib.sha256(glb_bytes).hexdigest(),
         "format": "glb",
         "generator_version": GENERATOR_VERSION,
         "morph_targets": list(MORPH_TARGETS),
