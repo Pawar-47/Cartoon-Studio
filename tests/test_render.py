@@ -7,6 +7,7 @@ import pytest
 
 from app.render import (
     RenderDependencyUnavailable,
+    RenderExecutionError,
     _write_render_project,
     render_episode_video,
 )
