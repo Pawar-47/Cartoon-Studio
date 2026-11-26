@@ -336,24 +336,123 @@ def _build_geometry(
     dict[str, list[tuple[float, float, float]]], list[tuple[tuple[str, float], ...]],
     list[tuple[float, float, float]]
 ]:
-    positions: list[tuple[float, float, float]] = []
+    # Build the torso, head, neck and limbs as one smooth implicit surface.
+    # Facial details remain separate meshes so their silhouettes stay crisp.
+    core = tuple(item for item in components if item[0] not in {"eye", "nose", "mouth"})
+    details = tuple(item for item in components if item[0] in {"eye", "nose", "mouth"})
+    step = 0.085
+    padding = 0.12
+    lower = [min(c[1][a] - c[2][a] for c in core) - padding for a in range(3)]
+    upper = [max(c[1][a] + c[2][a] for c in core) + padding for a in range(3)]
+    axes = [[lower[a] + i * step for i in range(int(math.ceil((upper[a]-lower[a])/step))+1)] for a in range(3)]
+    nx, ny, nz = (len(axis) for axis in axes)
+
+    def field(point: tuple[float, float, float]) -> float:
+        value = float("inf")
+        for _, center, radii in core:
+            q = math.sqrt(sum(((point[a]-center[a])/radii[a])**2 for a in range(3)))
+            distance = (q - 1.0) * min(radii)
+            k = 0.20
+            h = max(k - abs(value-distance), 0.0) / k if math.isfinite(value) else 0.0
+            value = min(value, distance) - h*h*k*0.25 if math.isfinite(value) else distance
+        return value
+
+    samples = [field((x,y,z)) for z in axes[2] for y in axes[1] for x in axes[0]]
+    def grid_id(x: int, y: int, z: int) -> int:
+        return (z * ny + y) * nx + x
+
+    positions: list[tuple[float,float,float]] = []
     indices: list[int] = []
-    deltas = {name: [] for name in MORPH_TARGETS}
-    vertex_weights: list[tuple[tuple[str, float], ...]] = []
-    normals: list[tuple[float, float, float]] = []
-    for group, center, radii in components:
-        component, component_indices, local, component_normals = _ellipsoid(center, radii)
+    normals: list[tuple[float,float,float]] = []
+    edge_vertices: dict[tuple[int,int],int] = {}
+    tetrahedra = ((0,5,1,6),(0,1,2,6),(0,2,3,6),(0,3,7,6),(0,7,4,6),(0,4,5,6))
+    cube_offsets = ((0,0,0),(1,0,0),(0,1,0),(1,1,0),(0,0,1),(1,0,1),(0,1,1),(1,1,1))
+    tetra_edges = ((0,1),(0,2),(0,3),(1,2),(1,3),(2,3))
+
+    def vertex_for(a: int, b: int, pa: tuple[float,float,float], pb: tuple[float,float,float], va: float, vb: float) -> int:
+        key = (min(a,b),max(a,b))
+        if key in edge_vertices:
+            return edge_vertices[key]
+        t = va / (va-vb) if abs(va-vb)>1e-12 else 0.5
+        point = tuple(pa[i] + t*(pb[i]-pa[i]) for i in range(3))
+        index = len(positions)
+        positions.append(point)
+        epsilon = 0.002
+        gradient = tuple(
+            (field(tuple(point[j] + (epsilon if j==i else 0.0) for j in range(3))) -
+             field(tuple(point[j] - (epsilon if j==i else 0.0) for j in range(3)))) / (2*epsilon)
+            for i in range(3)
+        )
+        length = math.sqrt(sum(v*v for v in gradient)) or 1.0
+        normals.append(tuple(v/length for v in gradient))
+        edge_vertices[key] = index
+        return index
+
+    for z in range(nz-1):
+        for y in range(ny-1):
+            for x in range(nx-1):
+                ids = [grid_id(x+o[0],y+o[1],z+o[2]) for o in cube_offsets]
+                vals = [samples[i] for i in ids]
+                if min(vals) > 0 or max(vals) < 0:
+                    continue
+                pts = [(axes[0][x+o[0]],axes[1][y+o[1]],axes[2][z+o[2]]) for o in cube_offsets]
+                for tet in tetrahedra:
+                    crossings = []
+                    for ea,eb in tetra_edges:
+                        ia,ib = tet[ea],tet[eb]
+                        if (vals[ia] < 0) != (vals[ib] < 0):
+                            crossings.append(vertex_for(ids[ia],ids[ib],pts[ia],pts[ib],vals[ia],vals[ib]))
+                    if len(crossings) == 3:
+                        indices.extend(crossings)
+                    elif len(crossings) == 4:
+                        center = tuple(sum(positions[i][a] for i in crossings)/4 for a in range(3))
+                        n = tuple(sum(normals[i][a] for i in crossings) for a in range(3))
+                        nl = math.sqrt(sum(v*v for v in n)) or 1.0
+                        n = tuple(v/nl for v in n)
+                        u = tuple(positions[crossings[0]][a]-center[a] for a in range(3))
+                        ul = math.sqrt(sum(v*v for v in u)) or 1.0
+                        u = tuple(v/ul for v in u)
+                        v = (n[1]*u[2]-n[2]*u[1],n[2]*u[0]-n[0]*u[2],n[0]*u[1]-n[1]*u[0])
+                        ordered = sorted(crossings,key=lambda i: math.atan2(
+                            sum((positions[i][a]-center[a])*v[a] for a in range(3)),
+                            sum((positions[i][a]-center[a])*u[a] for a in range(3))))
+                        indices.extend((ordered[0],ordered[1],ordered[2],ordered[0],ordered[2],ordered[3]))
+
+    # Retain distinct facial forms as conventional ellipsoids.
+    for group, center, radii in details:
+        component, faces, _, component_normals = _ellipsoid(center,radii)
         offset = len(positions)
         positions.extend(component)
-        vertex_weights.extend(_component_skin_weights(group, center, point) for point in component)
         normals.extend(component_normals)
-        indices.extend(offset + index for index in component_indices)
+        indices.extend(offset+i for i in faces)
+
+    deltas = {name: [] for name in MORPH_TARGETS}
+    vertex_weights = []
+    for point in positions:
+        candidates = []
+        for group, center, radii in components:
+            unit = tuple((point[a]-center[a])/radii[a] for a in range(3))
+            distance = abs(math.sqrt(sum(v*v for v in unit))-1.0)
+            candidates.append((distance,group,center,radii,unit))
+        candidates.sort(key=lambda item:item[0])
+        chosen = candidates[:3]
+        influence = [math.exp(-item[0]*8.0) for item in chosen]
+        total = sum(influence) or 1.0
         for target in MORPH_TARGETS:
-            deltas[target].extend(
-                _morph_delta(target, group, center, radii, unit, point)
-                for unit, point in zip(local, component, strict=True)
-            )
-    return positions, indices, deltas, vertex_weights, normals
+            delta = [0.0,0.0,0.0]
+            for weight,item in zip(influence,chosen,strict=True):
+                _,group,center,radii,unit = item
+                change = _morph_delta(target,group,center,radii,unit,point)
+                for axis in range(3):
+                    delta[axis] += change[axis]*weight/total
+            deltas[target].append(tuple(delta))
+        blended: dict[str,float] = {}
+        for weight,item in zip(influence,chosen,strict=True):
+            _,group,center,_,_ = item
+            for bone,bone_weight in _component_skin_weights(group,center,point):
+                blended[bone] = blended.get(bone,0.0) + weight*bone_weight/total
+        vertex_weights.append(tuple(sorted(blended.items(),key=lambda pair:pair[1],reverse=True)[:4]))
+    return positions,indices,deltas,vertex_weights,normals
 
 
 def build_master_character_glb(recipe: dict[str, Any] | None = None) -> bytes:
