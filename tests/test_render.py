@@ -51,7 +51,7 @@ def test_render_episode_video_uses_godot_movie_maker_and_muxes_audio_subtitles(
             return subprocess.CompletedProcess(
                 command, 0, stdout=encoders, stderr=""
             )
-        if command[0] == str(ffmpeg) and command[-2:] == ["pipe:1"]:
+        if command[0] == str(ffmpeg) and "-progress" in command and "pipe:1" in command:
             return subprocess.CompletedProcess(
                 command, 0, stdout="out_time_us=5000000\\nprogress=end\\n", stderr=""
             )
@@ -90,7 +90,7 @@ def test_render_episode_video_uses_godot_movie_maker_and_muxes_audio_subtitles(
     assert "-c:a" in mux_calls[0] and "aac" in mux_calls[0]
     assert "-c:s" in mux_calls[0] and "mov_text" in mux_calls[0]
     assert calls[-1][0] == str(ffmpeg)
-    assert calls[-1][-2:] == ["pipe:1"]
+    assert "-progress" in calls[-1] and calls[-1][-1] == "pipe:1"
     assert Path(result["video_path"]).read_bytes() == b"fake-mp4"
 
 
@@ -264,7 +264,7 @@ def test_render_removes_mp4_when_final_verification_fails(
         if command[0] == str(godot):
             Path(command[command.index("--write-movie") + 1]).write_bytes(b"fake-avi")
             return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
-        if command[0] == str(ffmpeg) and command[-2:] == ["pipe:1"]:
+        if command[0] == str(ffmpeg) and "-progress" in command and "pipe:1" in command:
             return subprocess.CompletedProcess(
                 command,
                 verification_returncode,

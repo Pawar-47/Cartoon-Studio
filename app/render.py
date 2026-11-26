@@ -100,11 +100,11 @@ def _verify_rendered_mp4(
                 "0:a:0",
                 "-map",
                 "0:s:0",
+                "-progress",
+                "pipe:1",
                 "-f",
                 "null",
                 "-",
-                "-progress",
-                "pipe:1",
             ],
             capture_output=True,
             text=True,
@@ -121,7 +121,7 @@ def _verify_rendered_mp4(
             f"The final MP4 failed its video/audio/subtitle decode check. {detail}".strip()
         )
 
-    timestamps = re.findall(r"^out_time_us=(\\d+)$", result.stdout, flags=re.MULTILINE)
+    timestamps = re.findall(r"^out_time_us=(\d+)$", result.stdout, flags=re.MULTILINE)
     if not timestamps:
         raise RenderExecutionError(
             "FFmpeg decoded the final MP4 but did not report its verified duration."
