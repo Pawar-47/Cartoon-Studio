@@ -109,6 +109,7 @@ function resetProfileEditor(){editingCharacter=null;$("character-form").reset();
 function cancelProfileEdit(){resetProfileEditor();$("profile-status").textContent="Profile editing cancelled. The saved character was not changed."}
 async function editCharacterProfile(document){
  const data=document.data||{};editingCharacter=document;
+ let effectiveProportions={...(data.body_proportions||{})};
  const savedAsset=data.asset||{},savedAssetId=(savedAsset.relative_path||"").split("/").pop().replace(/\.glb$/i,"");
  importedAsset=savedAssetId?{asset_id:savedAssetId,...savedAsset}:null;
  if(savedAssetId&&activeProject){
@@ -121,9 +122,9 @@ async function editCharacterProfile(document){
   }
   const savedProportions=data.body_proportions||{};
   const proportionState=getBodyProportionState(importedAsset);
-  const effectiveProportions=Object.keys(savedProportions).length
+  effectiveProportions=Object.keys(savedProportions).length
    ? {...proportionState.appliedProportions,...savedProportions}
-   : proportionState.appliedProportions;
+   : {...proportionState.appliedProportions};
   const previewId=proportionState.previewPath.split("/").pop().replace(/\.glb$/i,"");
   const modelResponse=previewId?await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(previewId)):null;
   if(modelResponse?.ok){
