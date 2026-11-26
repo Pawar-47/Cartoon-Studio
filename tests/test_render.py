@@ -81,10 +81,14 @@ def test_render_episode_video_uses_godot_movie_maker_and_muxes_audio_subtitles(
     assert len(godot_calls) == 5
     assert all("--write-movie" in call for call in godot_calls)
     assert all(call[call.index("--quit-after") + 1] == "24" for call in godot_calls)
+    mux_calls = [call for call in calls if "-c:v" in call]
+    assert len(mux_calls) == 1
+    assert mux_calls[0][0] == str(ffmpeg)
+    assert "libx264" in mux_calls[0]
+    assert "-c:a" in mux_calls[0] and "aac" in mux_calls[0]
+    assert "-c:s" in mux_calls[0] and "mov_text" in mux_calls[0]
     assert calls[-1][0] == str(ffmpeg)
-    assert "-c:v" in calls[-1] and "libx264" in calls[-1]
-    assert "-c:a" in calls[-1] and "aac" in calls[-1]
-    assert "-c:s" in calls[-1] and "mov_text" in calls[-1]
+    assert calls[-1][-2:] == ["null", "-"]
     assert Path(result["video_path"]).read_bytes() == b"fake-mp4"
 
 
