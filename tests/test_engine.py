@@ -305,6 +305,10 @@ def test_godot_worker_bakes_cartoon_face_geometry_and_preserves_animation(tmp_pa
     assert "CartoonStudio_Face_NoseBridge" in face_names
     assert "CartoonStudio_Face_Chin" in face_names
     assert "CartoonStudio_Face_MouthOpening" in face_names
+    assert all(
+        f"CartoonStudio_Face_Mouth_{index}" in face_names
+        for index in range(3)
+    ), "Closed-mouth line geometry must remain available for expression animation."
     assert "CartoonStudio_Face_MouthTongue" in face_names
     assert all(item["attachment_bone"].lower().endswith("head") for item in face_meshes)
     assert source.read_bytes() == original_bytes
