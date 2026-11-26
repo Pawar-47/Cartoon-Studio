@@ -175,8 +175,22 @@ class MorphBindingInput(BaseModel):
     target_name: str = Field(min_length=1, max_length=256)
 
 
+class FaceFeatureInput(BaseModel):
+    enabled: bool = False
+    eye_color: str = Field(default="#ffffff", pattern=r"^#[0-9a-fA-F]{6}$")
+    iris_color: str = Field(default="#4b83b8", pattern=r"^#[0-9a-fA-F]{6}$")
+    brow_color: str = Field(default="#38251c", pattern=r"^#[0-9a-fA-F]{6}$")
+    mouth_color: str = Field(default="#612b2b", pattern=r"^#[0-9a-fA-F]{6}$")
+    nose_color: str = Field(default="#c98768", pattern=r"^#[0-9a-fA-F]{6}$")
+    eye_scale: float = Field(default=1.0, ge=0.65, le=1.5)
+    eye_spacing: float = Field(default=1.0, ge=0.65, le=1.35)
+    smile: float = Field(default=0.35, ge=-1, le=1)
+    brow_angle: float = Field(default=0.0, ge=-0.5, le=0.5)
+
+
 class CharacterAppearanceInput(BaseModel):
     materials: dict[str, MaterialAppearanceInput] = Field(default_factory=dict, max_length=256)
+    face_features: FaceFeatureInput = Field(default_factory=FaceFeatureInput)
     morph_targets: dict[str, Annotated[float, Field(ge=-1, le=1)]] = Field(
         default_factory=dict, max_length=512
     )
@@ -1506,7 +1520,7 @@ def create_character(
     data["name"] = payload.name.strip()
     data["description"] = payload.description.strip()
     data["asset"] = manifest["data"]
-    data["appearance_recipe"] = {"materials": {}, "morph_targets": {}, "morph_bindings": {}}
+    data["appearance_recipe"] = {"materials": {}, "morph_targets": {}, "morph_bindings": {}, "face_features": FaceFeatureInput().model_dump(mode="json")}
     data["rig_status"] = (
         "ready" if manifest["data"].get("rig_ready") else "unrigged"
     )
@@ -1610,6 +1624,7 @@ def update_character_appearance(
         "materials": materials,
         "morph_targets": morph_targets,
         "morph_bindings": morph_bindings,
+        "face_features": appearance["face_features"],
     }
     updated = make_envelope(
         "character",
