@@ -884,10 +884,10 @@ def test_pinned_godot_worker_builds_episode_scenes_with_world_and_character_glb(
     )
     fixture = (
         Path(__file__).resolve().parents[1]
-        / "tools"
-        / "godot_engine_proof"
+        / "tests"
         / "fixtures"
-        / "proof_humanoid.glb"
+        / "third_party"
+        / "robot_expressive_cc0.glb"
     )
     source_character_path = project_root / "assets" / "characters" / "ali-source.glb"
     character_path = project_root / "assets" / "characters" / "ali.glb"
@@ -973,6 +973,8 @@ def test_pinned_godot_worker_builds_episode_scenes_with_world_and_character_glb(
     assert all(Path(scene["preview_path"]).is_file() for scene in result["scenes"])
     assert result["scenes"][0]["action_cue_count"] == 1
     assert result["scenes"][0]["expression_cue_count"] == 1
+    assert result["scenes"][0]["speech_cue_count"] == 1
+    assert result["scenes"][0]["speech_mouth_keyframe_count"] > 0
     assert result["scenes"][0]["camera_cue_count"] == 1
     assert result["scenes"][0]["animation_track_count"] > 5
     assert all(

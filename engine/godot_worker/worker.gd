@@ -2690,7 +2690,8 @@ func _add_episode_expression_tracks(
     expression_id: String,
     start_time: float,
     middle_time: float,
-    end_time: float
+    end_time: float,
+    animate_mouth: bool = true
 ) -> int:
     var expression := _episode_expression_values(expression_id)
     var mouth_open := float(expression["mouth_open"])
@@ -2702,7 +2703,7 @@ func _add_episode_expression_tracks(
         var face_node := node_value as MeshInstance3D
         var face_name := str(face_node.name)
         var node_path := str(scene_root.get_path_to(face_node))
-        if face_name == "CartoonStudio_Face_MouthOpening":
+        if animate_mouth and face_name == "CartoonStudio_Face_MouthOpening":
             var mouth_track := animation.add_track(Animation.TYPE_VALUE)
             animation.track_set_path(mouth_track, NodePath(node_path + ":visible"))
             animation.track_insert_key(mouth_track, start_time, face_node.visible)
@@ -2717,7 +2718,7 @@ func _add_episode_expression_tracks(
             animation.track_insert_key(mouth_scale_track, middle_time, open_scale)
             animation.track_insert_key(mouth_scale_track, end_time, closed_scale)
             track_count += 2
-        elif face_name.begins_with("CartoonStudio_Face_Mouth_"):
+        elif animate_mouth and face_name.begins_with("CartoonStudio_Face_Mouth_"):
             var line_track := animation.add_track(Animation.TYPE_VALUE)
             animation.track_set_path(line_track, NodePath(node_path + ":visible"))
             animation.track_insert_key(line_track, start_time, face_node.visible)
@@ -2746,6 +2747,94 @@ func _add_episode_expression_tracks(
     return track_count
 
 
+func _add_dialogue_speech_tracks(
+    animation: Animation,
+    scene_root: Node3D,
+    character_anchor: Node3D,
+    line: Dictionary,
+    start_time: float,
+    end_time: float
+) -> Dictionary:
+    var face_nodes := character_anchor.find_children("*", "MeshInstance3D", true, false)
+    var mouth_opening: MeshInstance3D = null
+    var mouth_lines: Array[MeshInstance3D] = []
+    for node_value in face_nodes:
+        var face_node := node_value as MeshInstance3D
+        var face_name := str(face_node.name)
+        if face_name == "CartoonStudio_Face_MouthOpening":
+            mouth_opening = face_node
+        elif face_name.begins_with("CartoonStudio_Face_Mouth_"):
+            mouth_lines.append(face_node)
+    if mouth_opening == null or end_time - start_time <= 0.12:
+        return {"track_count": 0, "keyframe_count": 0}
+
+    var text_value := str(line.get("text", "")).strip_edges()
+    var delivery := str(line.get("delivery", "natural")).to_lower()
+    var cadence := 1.0
+    if delivery in ["excited", "fast", "urgent", "shouting"]:
+        cadence = 0.72
+    elif delivery in ["slow", "calm", "sad", "whisper"]:
+        cadence = 1.3
+    var estimated_syllables := maxi(1, int(ceil(float(maxi(text_value.length(), 1)) / 3.0)))
+    var beat_count := clampi(int(ceil(float(estimated_syllables) / cadence)), 2, 28)
+    var line_duration := end_time - start_time
+    var lead_pause := minf(0.12, line_duration * 0.08)
+    var tail_pause := minf(0.12, line_duration * 0.08)
+    var active_start := start_time + lead_pause
+    var active_end := maxf(active_start, end_time - tail_pause)
+    var beat_period := (active_end - active_start) / float(beat_count)
+    var mouth_node_path := str(scene_root.get_path_to(mouth_opening))
+    var visibility_track := animation.add_track(Animation.TYPE_VALUE)
+    animation.track_set_path(visibility_track, NodePath(mouth_node_path + ":visible"))
+    var scale_track := animation.add_track(Animation.TYPE_VALUE)
+    animation.track_set_path(scale_track, NodePath(mouth_node_path + ":scale"))
+    var closed_scale := mouth_opening.scale
+    closed_scale.y *= 0.08
+    var open_scale := mouth_opening.scale
+    animation.track_insert_key(visibility_track, start_time, false)
+    animation.track_insert_key(scale_track, start_time, closed_scale)
+    var keyframe_count := 2
+    for beat_index in range(beat_count):
+        var beat_start := active_start + float(beat_index) * beat_period
+        var open_time := minf(beat_start + beat_period * 0.10, active_end)
+        var close_time := minf(beat_start + beat_period * 0.52, active_end)
+        if close_time <= open_time:
+            continue
+        animation.track_insert_key(visibility_track, open_time, true)
+        animation.track_insert_key(visibility_track, close_time, false)
+        animation.track_insert_key(scale_track, open_time, open_scale)
+        animation.track_insert_key(scale_track, close_time, closed_scale)
+        keyframe_count += 4
+    animation.track_insert_key(visibility_track, end_time, false)
+    animation.track_insert_key(scale_track, end_time, closed_scale)
+    keyframe_count += 2
+    var track_count := 2
+    for mouth_line in mouth_lines:
+        var line_track := animation.add_track(Animation.TYPE_VALUE)
+        animation.track_set_path(
+            line_track,
+            NodePath(str(scene_root.get_path_to(mouth_line)) + ":visible")
+        )
+        animation.track_insert_key(line_track, start_time, true)
+        for beat_index in range(beat_count):
+            var beat_start := active_start + float(beat_index) * beat_period
+            var open_time := minf(beat_start + beat_period * 0.10, active_end)
+            var close_time := minf(beat_start + beat_period * 0.52, active_end)
+            if close_time <= open_time:
+                continue
+            animation.track_insert_key(line_track, open_time, false)
+            animation.track_insert_key(line_track, close_time, true)
+            keyframe_count += 2
+        animation.track_insert_key(line_track, end_time, true)
+        keyframe_count += 2
+        track_count += 1
+    return {
+        "track_count": track_count,
+        "keyframe_count": keyframe_count,
+        "beat_count": beat_count
+    }
+
+
 func _build_episode_timeline(
     scene_root: Node3D,
     scene_data: Dictionary,
@@ -2757,6 +2846,8 @@ func _build_episode_timeline(
     var track_count := 0
     var action_count := 0
     var expression_cue_count := 0
+    var speech_cue_count := 0
+    var speech_mouth_keyframe_count := 0
     var camera := Camera3D.new()
     camera.name = "EpisodeCamera"
     camera.position = Vector3(0.0, 7.0, 16.0)
@@ -2857,11 +2948,39 @@ func _build_episode_timeline(
                 emotion_id,
                 dialogue_start,
                 dialogue_middle,
-                dialogue_end
+                dialogue_end,
+                false
             )
             track_count += dialogue_tracks
             if dialogue_tracks > 0:
                 expression_cue_count += 1
+    if typeof(dialogue_value) == TYPE_ARRAY:
+        for dialogue_entry in dialogue_value:
+            if typeof(dialogue_entry) != TYPE_DICTIONARY:
+                continue
+            var line: Dictionary = dialogue_entry
+            var speaker_id := str(line.get("character_id", ""))
+            if not character_anchors.has(speaker_id):
+                continue
+            var dialogue_start := clampf(float(line.get("start_seconds", 0.0)), 0.0, duration)
+            var dialogue_end := clampf(
+                dialogue_start + float(line.get("duration_seconds", 1.0)),
+                dialogue_start,
+                duration
+            )
+            var speech_result := _add_dialogue_speech_tracks(
+                animation,
+                scene_root,
+                character_anchors[speaker_id],
+                line,
+                dialogue_start,
+                dialogue_end
+            )
+            track_count += int(speech_result.get("track_count", 0))
+            var line_keyframes := int(speech_result.get("keyframe_count", 0))
+            speech_mouth_keyframe_count += line_keyframes
+            if line_keyframes > 0:
+                speech_cue_count += 1
     var camera_value: Variant = scene_data.get("camera", [])
     var camera_cue_count := 0
     if typeof(camera_value) == TYPE_ARRAY:
@@ -2930,6 +3049,8 @@ func _build_episode_timeline(
         "animation_track_count": track_count,
         "action_cue_count": action_count,
         "expression_cue_count": expression_cue_count,
+        "speech_cue_count": speech_cue_count,
+        "speech_mouth_keyframe_count": speech_mouth_keyframe_count,
         "camera_cue_count": camera_cue_count
     }
 
@@ -3088,6 +3209,8 @@ func _export_episode_scenes(payload: Dictionary) -> Dictionary:
             "animation_track_count": timeline_result["animation_track_count"],
             "action_cue_count": timeline_result["action_cue_count"],
             "expression_cue_count": timeline_result["expression_cue_count"],
+            "speech_cue_count": timeline_result["speech_cue_count"],
+            "speech_mouth_keyframe_count": timeline_result["speech_mouth_keyframe_count"],
             "camera_cue_count": timeline_result["camera_cue_count"]
         })
     return {
