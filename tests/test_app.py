@@ -750,3 +750,66 @@ def test_episode_production_endpoint_persists_scene_build_manifest(tmp_path, mon
         f"{generated.json()['build_id']}/scenes/{scene_id}/glb"
     )
     assert download.status_code == 200
+
+
+
+def test_episode_audio_endpoint_saves_and_serves_the_dialogue_mix(
+    tmp_path, monkeypatch
+):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "audio.sqlite3")
+    monkeypatch.setattr(main, "_INITIALIZED_DB_KEY", None)
+
+    project_response = client.post(
+        "/api/projects", json={"name": "Urdu Audio Project"}
+    )
+    assert project_response.status_code == 201
+    project_id = project_response.json()["id"]
+
+    plan = valid_episode_plan()
+    saved = client.put(f"/api/projects/{project_id}/story", json=plan)
+    assert saved.status_code == 200
+
+    def fake_audio_builder(episode, output_directory, data_dir):
+        output_directory.mkdir(parents=True, exist_ok=True)
+        audio_path = output_directory / "dialogue_mix.wav"
+        audio_path.write_bytes(b"RIFF-cartoon-studio-test")
+        clip_path = output_directory / "clips" / "scene-01-line-01.wav"
+        clip_path.parent.mkdir(parents=True, exist_ok=True)
+        clip_path.write_bytes(b"RIFF-test-clip")
+        return {
+            "audio_path": str(audio_path),
+            "sample_rate": 22050,
+            "duration_seconds": 300,
+            "dialogue_line_count": 5,
+            "voices": ["ur_PK-fasih-medium"],
+            "clips": [
+                {
+                    "scene_id": "scene-1",
+                    "character_id": "ali",
+                    "text": "السلام علیکم، یہ کتنے کا ہے؟",
+                    "voice_id": "ur_PK-fasih-medium",
+                    "start_seconds": 2.0,
+                    "timeline_start_seconds": 2.0,
+                    "duration_seconds": 1.0,
+                    "relative_path": "clips/scene-01-line-01.wav",
+                }
+            ],
+        }
+
+    monkeypatch.setattr(main, "generate_episode_audio", fake_audio_builder)
+    generated = client.post(f"/api/projects/{project_id}/story/audio")
+    assert generated.status_code == 200
+    payload = generated.json()
+    assert payload["dialogue_line_count"] == 5
+    assert payload["audio_relative_path"].endswith("/dialogue_mix.wav")
+    assert payload["clips"][0]["relative_path"].endswith(
+        "/clips/scene-01-line-01.wav"
+    )
+
+    downloaded = client.get(payload["audio_url"])
+    assert downloaded.status_code == 200
+    assert downloaded.headers["content-type"].startswith("audio/wav")
+    assert downloaded.content == b"RIFF-cartoon-studio-test"
