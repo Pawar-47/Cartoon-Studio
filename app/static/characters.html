@@ -114,6 +114,26 @@
      <button id="export-appearance" class="secondary" type="button" disabled>Export customized GLB</button>
     </div>
     <a id="download-appearance" class="appearance-download" hidden>Download verified customized GLB</a>
+
+   <section id="face-feature-editor" class="proportion-editor">
+    <div class="editor-heading"><strong>Cartoon face studio</strong><span>Editable 3D facial features</span></div>
+    <p class="helper">Add a stylized face to the live model preview even when the imported GLB has no facial blend shapes. The recipe is saved with the character and appears in PNG previews; baking the features into the downloadable GLB is a later step.</p>
+    <label><input id="face-enabled" type="checkbox"> Enable generated cartoon face</label>
+    <div class="form-grid">
+     <label>Eye white<input id="face-eye-color" type="color" value="#ffffff"></label>
+     <label>Iris colour<input id="face-iris-color" type="color" value="#4b83b8"></label>
+     <label>Eyebrow colour<input id="face-brow-color" type="color" value="#38251c"></label>
+     <label>Mouth colour<input id="face-mouth-color" type="color" value="#612b2b"></label>
+     <label>Nose colour<input id="face-nose-color" type="color" value="#c98768"></label>
+    </div>
+    <div class="proportion-grid">
+     <label>Eye size <output id="face-eye-scale-value">1.00×</output><input id="face-eye-scale" type="range" min="0.65" max="1.5" step="0.01" value="1"></label>
+     <label>Eye spacing <output id="face-eye-spacing-value">1.00×</output><input id="face-eye-spacing" type="range" min="0.65" max="1.35" step="0.01" value="1"></label>
+     <label>Smile <output id="face-smile-value">0.35</output><input id="face-smile" type="range" min="-1" max="1" step="0.01" value="0.35"></label>
+     <label>Brow angle <output id="face-brow-angle-value">0.00</output><input id="face-brow-angle" type="range" min="-0.5" max="0.5" step="0.01" value="0"></label>
+    </div>
+    <p id="face-status" class="inline-status" role="status">Enable the generated face to preview editable cartoon features.</p>
+   </section>
    <section id="morph-editor" class="morph-editor" hidden>
     <div class="editor-heading"><strong>Facial expression controls</strong><span>Imported GLB morph targets</span></div>
     <p id="morph-status" class="inline-status">No facial morph targets detected.</p>
