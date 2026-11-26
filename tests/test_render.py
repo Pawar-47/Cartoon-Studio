@@ -32,7 +32,7 @@ def test_render_episode_video_uses_godot_movie_maker_and_muxes_audio_subtitles(
         scene_path.write_text("[gd_scene format=3]\n", encoding="utf-8")
         scene_paths.append(scene_path)
     audio_path = project_root / "dialogue.wav"
-    _write_silent_wav(audio_path, 5)
+    _write_silent_wav(audio_path, 7)
     subtitles_path = project_root / "subtitles.srt"
     subtitles_path.write_text(
         "1\n00:00:00,000 --> 00:00:01,000\nالسلام علیکم!\n",
@@ -43,8 +43,10 @@ def test_render_episode_video_uses_godot_movie_maker_and_muxes_audio_subtitles(
     godot.write_bytes(b"godot-test")
     ffmpeg.write_bytes(b"ffmpeg-test")
     calls = []
+    concat_contents = ""
 
     def fake_run(command, **kwargs):
+        nonlocal concat_contents
         calls.append(command)
         if command[0] == str(ffmpeg) and "-encoders" in command:
             encoders = " V..... libx264\n A..... aac\n S..... mov_text\n"
@@ -58,14 +60,27 @@ def test_render_episode_video_uses_godot_movie_maker_and_muxes_audio_subtitles(
         if command[0] == str(godot):
             movie_path = Path(command[command.index("--write-movie") + 1])
             movie_path.write_bytes(b"fake-avi")
-        elif command[0] == str(ffmpeg):
+            frames = command[command.index("--quit-after") + 1]
+            fps = command[command.index("--fixed-fps") + 1]
+            return subprocess.CompletedProcess(
+                command,
+                0,
+                stdout=f"Movie Maker finished recording: {frames} frames at {fps} FPS",
+                stderr="",
+            )
+        if command[0] == str(ffmpeg) and "-c:v" in command:
+            concat_path = Path(command[command.index("-i") + 1])
+            concat_contents = concat_path.read_text(encoding="utf-8")
+            Path(command[-1]).write_bytes(b"fake-mp4")
+            return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+        if command[0] == str(ffmpeg):
             Path(command[-1]).write_bytes(b"fake-mp4")
         return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
 
     monkeypatch.setattr("app.render.subprocess.run", fake_run)
     result = render_episode_video(
         scene_paths,
-        [1, 1, 1, 1, 1],
+        [1, 2, 1, 2, 1],
         audio_path,
         subtitles_path,
         project_root / "renders" / "episode.mp4",
@@ -76,13 +91,16 @@ def test_render_episode_video_uses_godot_movie_maker_and_muxes_audio_subtitles(
         width=640,
         height=360,
     )
-    assert result["duration_seconds"] == 5
+    assert result["duration_seconds"] == 7
     assert result["fps"] == 24
     assert result["size_bytes"] == len(b"fake-mp4")
     godot_calls = [call for call in calls if call[0] == str(godot)]
     assert len(godot_calls) == 5
+    assert concat_contents == "".join(
+        f"file 'scene-{index:02d}.avi'\\n" for index in range(1, 6)
+    )
     assert all("--write-movie" in call for call in godot_calls)
-    assert all(call[call.index("--quit-after") + 1] == "24" for call in godot_calls)
+    assert [call[call.index("--quit-after") + 1] for call in godot_calls] == ["24", "48", "24", "48", "24"]
     mux_calls = [call for call in calls if "-c:v" in call]
     assert len(mux_calls) == 1
     assert mux_calls[0][0] == str(ffmpeg)

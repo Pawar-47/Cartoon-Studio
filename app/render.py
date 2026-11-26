@@ -284,14 +284,18 @@ def render_episode_video(
                 raise RenderExecutionError(
                     f"Godot timed out while rendering scene {index}."
                 ) from error
+            render_log = result.stdout + "\\n" + result.stderr
+            expected_frame_report = f"{frames} frames at {fps} FPS"
             if (
                 result.returncode != 0
                 or not scene_video.is_file()
                 or scene_video.stat().st_size == 0
+                or expected_frame_report not in render_log
             ):
-                detail = (result.stderr or result.stdout or "").strip()[-2500:]
+                detail = render_log.strip()[-2500:]
                 raise RenderExecutionError(
-                    f"Godot could not render scene {index}. {detail}".strip()
+                    f"Godot did not render scene {index} at its exact frame count "
+                    f"({expected_frame_report}). {detail}".strip()
                 )
             scene_videos.append(scene_video)
 
