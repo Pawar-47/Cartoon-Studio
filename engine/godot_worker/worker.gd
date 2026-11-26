@@ -390,7 +390,7 @@ func _add_character_face_features(scene: Node, recipe: Dictionary) -> Dictionary
     var largest_volume := 0.0
     for mesh_node in scene.find_children("*", "MeshInstance3D", true, false):
         var mesh_instance := mesh_node as MeshInstance3D
-        if mesh_instance.mesh == null or mesh_instance.skin == null:
+        if mesh_instance.mesh == null:
             continue
         var bound_skeleton := mesh_instance.get_node_or_null(mesh_instance.get_skeleton_path()) as Skeleton3D
         if bound_skeleton != skeleton:
