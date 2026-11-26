@@ -45,6 +45,11 @@ def test_render_episode_video_uses_godot_movie_maker_and_muxes_audio_subtitles(
 
     def fake_run(command, **kwargs):
         calls.append(command)
+        if command[0] == str(ffmpeg) and "-encoders" in command:
+            encoders = " V..... libx264\n A..... aac\n S..... mov_text\n"
+            return subprocess.CompletedProcess(
+                command, 0, stdout=encoders, stderr=""
+            )
         if command[0] == str(godot):
             movie_path = Path(command[command.index("--write-movie") + 1])
             movie_path.write_bytes(b"fake-avi")
@@ -166,3 +171,42 @@ mesh = SubResource("SphereMesh_test")
     assert "24 frames at 24 FPS" in output
     assert output_path.is_file()
     assert output_path.stat().st_size > 1024
+
+
+def test_render_rejects_ffmpeg_without_required_mp4_encoders_before_godot(
+    tmp_path, monkeypatch
+):
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    scene_path = project_root / "scene.tscn"
+    scene_path.write_text("[gd_scene format=3]\\n", encoding="utf-8")
+    audio_path = project_root / "dialogue.wav"
+    _write_silent_wav(audio_path, 1)
+    subtitles_path = project_root / "subtitles.srt"
+    subtitles_path.write_text("", encoding="utf-8")
+    godot = tmp_path / "Godot.exe"
+    ffmpeg = tmp_path / "ffmpeg.exe"
+    godot.write_bytes(b"godot-test")
+    ffmpeg.write_bytes(b"ffmpeg-test")
+    calls = []
+
+    def fake_run(command, **kwargs):
+        calls.append(command)
+        return subprocess.CompletedProcess(
+            command, 0, stdout=" A..... aac\\n S..... mov_text\\n", stderr=""
+        )
+
+    monkeypatch.setattr("app.render.subprocess.run", fake_run)
+    with pytest.raises(RenderDependencyUnavailable, match="libx264"):
+        render_episode_video(
+            [scene_path],
+            [1],
+            audio_path,
+            subtitles_path,
+            project_root / "renders" / "episode.mp4",
+            project_root,
+            godot,
+            ffmpeg_executable=ffmpeg,
+        )
+    assert len(calls) == 1
+    assert "-encoders" in calls[0]

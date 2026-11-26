@@ -54,6 +54,31 @@ def _find_ffmpeg(explicit_path: str | Path | None = None) -> Path:
     return executable
 
 
+def _verify_ffmpeg_encoders(executable: Path) -> None:
+    try:
+        result = subprocess.run(
+            [str(executable), "-hide_banner", "-encoders"],
+            capture_output=True,
+            text=True,
+            timeout=20,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise RenderDependencyUnavailable(
+            "FFmpeg could not be started to verify its MP4 encoding support."
+        ) from error
+    available = result.stdout + "\n" + result.stderr
+    required = ("libx264", "aac", "mov_text")
+    missing = [encoder for encoder in required if encoder not in available]
+    if result.returncode != 0 or missing:
+        missing_text = ", ".join(missing) if missing else "encoder listing"
+        raise RenderDependencyUnavailable(
+            "The configured FFmpeg build cannot create the required MP4. "
+            f"Missing encoders: {missing_text}. Install a full Windows build with "
+            "libx264, AAC and mov_text support."
+        )
+
+
 def _write_render_project(project_directory: Path) -> None:
     (project_directory / "project.godot").write_text(
         """config_version=5
@@ -133,6 +158,7 @@ def render_episode_video(
     if not godot.is_file():
         raise RenderDependencyUnavailable("The pinned Godot runtime is not installed.")
     ffmpeg = _find_ffmpeg(ffmpeg_executable)
+    _verify_ffmpeg_encoders(ffmpeg)
     output = Path(output_path).resolve(strict=False)
     if output == root or root not in output.parents or output.suffix.lower() != ".mp4":
         raise RenderPathError("The final MP4 must be saved inside the episode project.")
