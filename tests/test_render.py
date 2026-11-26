@@ -51,8 +51,10 @@ def test_render_episode_video_uses_godot_movie_maker_and_muxes_audio_subtitles(
             return subprocess.CompletedProcess(
                 command, 0, stdout=encoders, stderr=""
             )
-        if command[0] == str(ffmpeg) and command[-2:] == ["null", "-"]:
-            return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+        if command[0] == str(ffmpeg) and command[-2:] == ["pipe:1"]:
+            return subprocess.CompletedProcess(
+                command, 0, stdout="out_time_us=5000000\\nprogress=end\\n", stderr=""
+            )
         if command[0] == str(godot):
             movie_path = Path(command[command.index("--write-movie") + 1])
             movie_path.write_bytes(b"fake-avi")
@@ -88,7 +90,7 @@ def test_render_episode_video_uses_godot_movie_maker_and_muxes_audio_subtitles(
     assert "-c:a" in mux_calls[0] and "aac" in mux_calls[0]
     assert "-c:s" in mux_calls[0] and "mov_text" in mux_calls[0]
     assert calls[-1][0] == str(ffmpeg)
-    assert calls[-1][-2:] == ["null", "-"]
+    assert calls[-1][-2:] == ["pipe:1"]
     assert Path(result["video_path"]).read_bytes() == b"fake-mp4"
 
 
@@ -219,8 +221,20 @@ def test_render_rejects_ffmpeg_without_required_mp4_encoders_before_godot(
     assert "-encoders" in calls[0]
 
 
-def test_render_removes_mp4_when_stream_decode_verification_fails(
-    tmp_path, monkeypatch
+@pytest.mark.parametrize(
+    ("verification_returncode", "verification_stdout", "verification_stderr", "error_match"),
+    [
+        (1, "", "Could not find codec parameters", "decode check"),
+        (0, "out_time_us=4000000\\nprogress=end\\n", "", "duration does not match"),
+    ],
+)
+def test_render_removes_mp4_when_final_verification_fails(
+    tmp_path,
+    monkeypatch,
+    verification_returncode,
+    verification_stdout,
+    verification_stderr,
+    error_match,
 ):
     project_root = tmp_path / "project"
     project_root.mkdir()
@@ -250,9 +264,12 @@ def test_render_removes_mp4_when_stream_decode_verification_fails(
         if command[0] == str(godot):
             Path(command[command.index("--write-movie") + 1]).write_bytes(b"fake-avi")
             return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
-        if command[0] == str(ffmpeg) and command[-2:] == ["null", "-"]:
+        if command[0] == str(ffmpeg) and command[-2:] == ["pipe:1"]:
             return subprocess.CompletedProcess(
-                command, 1, stdout="", stderr="Could not find codec parameters"
+                command,
+                verification_returncode,
+                stdout=verification_stdout,
+                stderr=verification_stderr,
             )
         output_path = Path(command[-1])
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -260,7 +277,7 @@ def test_render_removes_mp4_when_stream_decode_verification_fails(
         return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
 
     monkeypatch.setattr("app.render.subprocess.run", fake_run)
-    with pytest.raises(RenderExecutionError, match="decode check"):
+    with pytest.raises(RenderExecutionError, match=error_match):
         render_episode_video(
             [scene_path],
             [1],

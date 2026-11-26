@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -79,7 +80,12 @@ def _verify_ffmpeg_encoders(executable: Path) -> None:
         )
 
 
-def _verify_rendered_mp4(executable: Path, video_path: Path, timeout: float) -> None:
+def _verify_rendered_mp4(
+    executable: Path,
+    video_path: Path,
+    timeout: float,
+    expected_duration: float,
+) -> None:
     try:
         result = subprocess.run(
             [
@@ -97,6 +103,8 @@ def _verify_rendered_mp4(executable: Path, video_path: Path, timeout: float) -> 
                 "-f",
                 "null",
                 "-",
+                "-progress",
+                "pipe:1",
             ],
             capture_output=True,
             text=True,
@@ -111,6 +119,19 @@ def _verify_rendered_mp4(executable: Path, video_path: Path, timeout: float) -> 
         detail = (result.stderr or result.stdout or "").strip()[-2500:]
         raise RenderExecutionError(
             f"The final MP4 failed its video/audio/subtitle decode check. {detail}".strip()
+        )
+
+    timestamps = re.findall(r"^out_time_us=(\\d+)$", result.stdout, flags=re.MULTILINE)
+    if not timestamps:
+        raise RenderExecutionError(
+            "FFmpeg decoded the final MP4 but did not report its verified duration."
+        )
+    actual_duration = int(timestamps[-1]) / 1_000_000
+    tolerance = max(0.25, 1 / RENDER_FPS)
+    if abs(actual_duration - expected_duration) > tolerance:
+        raise RenderExecutionError(
+            "The final MP4 duration does not match the episode timeline: "
+            f"expected {expected_duration:.3f}s, decoded {actual_duration:.3f}s."
         )
 
 
@@ -345,7 +366,7 @@ def render_episode_video(
             output.unlink(missing_ok=True)
             raise RenderExecutionError("The episode render exceeded its time budget.")
         try:
-            _verify_rendered_mp4(ffmpeg, output, remaining)
+            _verify_rendered_mp4(ffmpeg, output, remaining, total_duration)
         except RenderExecutionError:
             output.unlink(missing_ok=True)
             raise
