@@ -83,6 +83,23 @@ def test_generated_master_glb_contains_real_morph_geometry() -> None:
     assert document["materials"][1]["name"] == "FoundryCasualCloth"
     assert mesh["extras"]["clothingAssetIds"] == [CLOTHING_ASSET_ID]
 
+def test_generated_skin_weights_blend_across_multiple_joints() -> None:
+    data = build_master_character_glb()
+    document = _read_glb(data)
+    json_length = struct.unpack_from("<I", data, 12)[0]
+    binary_start = 20 + json_length + 8
+    primitives = document["meshes"][0]["primitives"]
+    assert len(primitives) == 2
+    for primitive in primitives:
+        accessor = document["accessors"][primitive["attributes"]["WEIGHTS_0"]]
+        view = document["bufferViews"][accessor["bufferView"]]
+        start = binary_start + view.get("byteOffset", 0)
+        values = struct.unpack_from("<{}f".format(accessor["count"] * 4), data, start)
+        rows = [values[index:index + 4] for index in range(0, len(values), 4)]
+        assert any(sum(weight > 1e-4 for weight in row) > 1 for row in rows)
+        assert all(abs(sum(row) - 1.0) < 1e-5 for row in rows)
+        assert all(0.0 <= weight <= 1.0 for row in rows for weight in row)
+
 
 def test_generated_morph_targets_have_nonzero_vertex_deltas() -> None:
     data = build_master_character_glb()

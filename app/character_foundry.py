@@ -62,6 +62,61 @@ def _component_bone_name(group: str, center: tuple[float, float, float]) -> str:
         "pants_shin": f"{side}LowerLeg",
     }[group]
 
+
+def _bone_global_positions() -> dict[str, tuple[float, float, float]]:
+    positions: dict[str, tuple[float, float, float]] = {}
+    for name, parent, translation in _BONES:
+        if parent is None:
+            positions[name] = translation
+        else:
+            parent_position = positions[parent]
+            positions[name] = tuple(
+                parent_position[axis] + translation[axis] for axis in range(3)
+            )
+    return positions
+
+
+_BONE_POSITIONS = _bone_global_positions()
+
+
+def _component_skin_weights(
+    group: str,
+    center: tuple[float, float, float],
+    point: tuple[float, float, float],
+) -> tuple[tuple[str, float], ...]:
+    side = "Left" if center[0] < 0.0 else "Right"
+    candidates = {
+        "torso": ("Hips", "Spine", "Chest"),
+        "neck": ("Chest", "Neck", "Head"),
+        "head": ("Head",),
+        "ear": ("Head",),
+        "eye": ("Head",),
+        "nose": ("Head",),
+        "mouth": ("Head",),
+        "upper_arm": (f"{side}Shoulder", f"{side}UpperArm", f"{side}LowerArm"),
+        "forearm": (f"{side}UpperArm", f"{side}LowerArm", f"{side}Hand"),
+        "hand": (f"{side}LowerArm", f"{side}Hand"),
+        "thigh": ("Hips", f"{side}UpperLeg", f"{side}LowerLeg"),
+        "shin": (f"{side}UpperLeg", f"{side}LowerLeg", f"{side}Foot"),
+        "foot": (f"{side}LowerLeg", f"{side}Foot"),
+        "shirt": ("Hips", "Spine", "Chest"),
+        "shirt_sleeve": (f"{side}Shoulder", f"{side}UpperArm", f"{side}LowerArm"),
+        "pants_waist": ("Hips", f"{side}UpperLeg"),
+        "pants_thigh": ("Hips", f"{side}UpperLeg", f"{side}LowerLeg"),
+        "pants_shin": (f"{side}UpperLeg", f"{side}LowerLeg", f"{side}Foot"),
+    }[group]
+    sigma = 0.42
+    weighted = []
+    for name in candidates:
+        joint = _BONE_POSITIONS[name]
+        distance_squared = sum(
+            (point[axis] - joint[axis]) ** 2 for axis in range(3)
+        )
+        weighted.append((name, math.exp(-distance_squared / (2.0 * sigma**2))))
+    total = sum(weight for _, weight in weighted)
+    normalized = [(name, weight / total) for name, weight in weighted]
+    return tuple(sorted(normalized, key=lambda item: item[1], reverse=True)[:4])
+
 MORPH_TARGETS = (
     "head_width",
     "jaw_width",
@@ -278,19 +333,19 @@ def _build_geometry(
     components: tuple[tuple[str, tuple[float, float, float], tuple[float, float, float]], ...]
 ) -> tuple[
     list[tuple[float, float, float]], list[int],
-    dict[str, list[tuple[float, float, float]]], list[str],
+    dict[str, list[tuple[float, float, float]]], list[tuple[tuple[str, float], ...]],
     list[tuple[float, float, float]]
 ]:
     positions: list[tuple[float, float, float]] = []
     indices: list[int] = []
     deltas = {name: [] for name in MORPH_TARGETS}
-    vertex_bones: list[str] = []
+    vertex_weights: list[tuple[tuple[str, float], ...]] = []
     normals: list[tuple[float, float, float]] = []
     for group, center, radii in components:
         component, component_indices, local, component_normals = _ellipsoid(center, radii)
         offset = len(positions)
         positions.extend(component)
-        vertex_bones.extend([_component_bone_name(group, center)] * len(component))
+        vertex_weights.extend(_component_skin_weights(group, center, point) for point in component)
         normals.extend(component_normals)
         indices.extend(offset + index for index in component_indices)
         for target in MORPH_TARGETS:
@@ -298,7 +353,7 @@ def _build_geometry(
                 _morph_delta(target, group, center, radii, unit, point)
                 for unit, point in zip(local, component, strict=True)
             )
-    return positions, indices, deltas, vertex_bones, normals
+    return positions, indices, deltas, vertex_weights, normals
 
 
 def build_master_character_glb(recipe: dict[str, Any] | None = None) -> bytes:
@@ -361,7 +416,7 @@ def build_master_character_glb(recipe: dict[str, Any] | None = None) -> bytes:
         ],
         material_index: int,
     ) -> dict[str, Any]:
-        positions, indices, morphs, vertex_bones, normals = geometry
+        positions, indices, morphs, vertex_weights, normals = geometry
         flat_positions = [coordinate for point in positions for coordinate in point]
         mins = [min(point[axis] for point in positions) for axis in range(3)]
         maxs = [max(point[axis] for point in positions) for axis in range(3)]
@@ -387,14 +442,13 @@ def build_master_character_glb(recipe: dict[str, Any] | None = None) -> bytes:
                     5126, len(positions), "VEC3", 34962
                 )
             })
-        joint_values = [
-            value
-            for name in vertex_bones
-            for value in (bone_indices[name], 0, 0, 0)
-        ]
-        weight_values = [
-            value for _ in positions for value in (1.0, 0.0, 0.0, 0.0)
-        ]
+        joint_values = []
+        weight_values = []
+        for influences in vertex_weights:
+            padded = list(influences[:4])
+            padded.extend([("Hips", 0.0)] * (4 - len(padded)))
+            joint_values.extend(bone_indices[name] for name, _ in padded)
+            weight_values.extend(weight for _, weight in padded)
         joints_accessor = add_accessor(
             struct.pack(f"<{len(joint_values)}H", *joint_values),
             5123, len(positions), "VEC4", 34962
