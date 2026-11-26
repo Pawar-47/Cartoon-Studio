@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import os
@@ -826,14 +827,29 @@ def build_episode_production(project_id: str) -> dict[str, Any]:
     relative_output = f"assets/episodes/{episode_id}/builds/{build_id}/scenes"
     output_directory = resolve_project_relative(DATA_DIR, project_id, relative_output)
     speech_tracks = _latest_episode_speech_tracks(project_id, episode_id)
+    episode_for_render = copy.deepcopy(plan)
+    for track in speech_tracks:
+        scene = next(
+            (
+                item
+                for item in episode_for_render["scenes"]
+                if item["id"] == track["scene_id"]
+            ),
+            None,
+        )
+        line_index = track["line_index"]
+        if scene is None or not 1 <= line_index <= len(scene["dialogue"]):
+            continue
+        dialogue_line = scene["dialogue"][line_index - 1]
+        dialogue_line["audio_envelope"] = track["mouth_envelope"]
+        dialogue_line["audio_duration_seconds"] = track["duration_seconds"]
     try:
         result = get_engine_adapter().export_episode_scenes(
-            plan,
+            episode_for_render,
             world_scene,
             character_assets,
             output_directory,
             allowed_root=project_directory(DATA_DIR, project_id),
-            speech_tracks=speech_tracks,
         )
     except EngineUnavailableError as error:
         raise HTTPException(status_code=503, detail=str(error)) from error

@@ -610,7 +610,6 @@ class GodotEngineAdapter:
         allowed_root: Path,
         timeout_seconds: float | None = None,
         cancel_event: threading.Event | None = None,
-        speech_tracks: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         root = Path(allowed_root).resolve(strict=False)
         world_scene = Path(world_scene_path).resolve(strict=True)
@@ -650,7 +649,6 @@ class GodotEngineAdapter:
                 "name": str(asset.get("name", character_id))[:80],
                 "asset_path": str(asset_path),
             })
-        scene_ids = {str(scene.get("id", "")) for scene in scenes}
         for scene in scenes:
             scene_id = str(scene.get("id", ""))
             if (
@@ -661,50 +659,6 @@ class GodotEngineAdapter:
                 raise EnginePathError("Episode contains an unsafe scene ID.")
             if not set(scene.get("character_ids", [])).issubset(seen_ids):
                 raise EnginePathError("Episode scene references a character without a GLB asset.")
-        validated_speech_tracks: list[dict[str, Any]] = []
-        for track in speech_tracks or []:
-            if not isinstance(track, dict):
-                raise EnginePathError("Audio speech tracks must be objects.")
-            scene_id = str(track.get("scene_id", ""))
-            line_index = track.get("line_index")
-            envelope = track.get("mouth_envelope", [])
-            if (
-                scene_id not in scene_ids
-                or isinstance(line_index, bool)
-                or not isinstance(line_index, int)
-                or not 1 <= line_index <= 60
-                or not isinstance(envelope, list)
-                or not 1 <= len(envelope) <= 1200
-            ):
-                raise EnginePathError("Audio speech track timing data is invalid.")
-            validated_envelope = []
-            previous_time = -1.0
-            for point in envelope:
-                if not isinstance(point, dict):
-                    raise EnginePathError("Audio mouth envelope points must be objects.")
-                timestamp = point.get("time")
-                openness = point.get("openness")
-                if (
-                    isinstance(timestamp, bool)
-                    or not isinstance(timestamp, (int, float))
-                    or timestamp < 0
-                    or timestamp <= previous_time
-                    or isinstance(openness, bool)
-                    or not isinstance(openness, (int, float))
-                    or not 0 <= openness <= 1
-                ):
-                    raise EnginePathError("Audio mouth envelope values are invalid.")
-                previous_time = float(timestamp)
-                validated_envelope.append({
-                    "time": float(timestamp),
-                    "openness": float(openness),
-                })
-            validated_speech_tracks.append({
-                "scene_id": scene_id,
-                "line_index": line_index,
-                "duration_seconds": float(track.get("duration_seconds", previous_time)),
-                "mouth_envelope": validated_envelope,
-            })
         output_dir.mkdir(parents=True, exist_ok=True)
         return self._run(
             "export_episode_scenes",
@@ -714,7 +668,6 @@ class GodotEngineAdapter:
                 "output_directory": str(output_dir),
                 "episode": episode,
                 "character_assets": validated_assets,
-                "speech_tracks": validated_speech_tracks,
             },
             timeout_seconds=timeout_seconds,
             cancel_event=cancel_event,

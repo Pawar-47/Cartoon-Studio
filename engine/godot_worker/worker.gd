@@ -3129,7 +3129,6 @@ func _export_episode_scenes(payload: Dictionary) -> Dictionary:
     var output_directory := _normalise_path(str(payload.get("output_directory", "")))
     var episode_value: Variant = payload.get("episode", {})
     var assets_value: Variant = payload.get("character_assets", [])
-    var speech_tracks_value: Variant = payload.get("speech_tracks", [])
     if project_root.is_empty() or not DirAccess.dir_exists_absolute(project_root):
         return {"error_code": "invalid_project_root", "error": "A valid episode project root is required."}
     var root_prefix := project_root.trim_suffix("/") + "/"
@@ -3143,14 +3142,6 @@ func _export_episode_scenes(payload: Dictionary) -> Dictionary:
     var scenes_value: Variant = episode.get("scenes", [])
     if typeof(scenes_value) != TYPE_ARRAY or scenes_value.size() < 5 or scenes_value.size() > 7:
         return {"error_code": "invalid_scenes", "error": "Episode must contain five to seven scenes."}
-    var speech_tracks_by_line: Dictionary = {}
-    if typeof(speech_tracks_value) == TYPE_ARRAY:
-        for speech_track_value in speech_tracks_value:
-            if typeof(speech_track_value) != TYPE_DICTIONARY:
-                continue
-            var speech_track: Dictionary = speech_track_value
-            var speech_key := str(speech_track.get("scene_id", "")) + ":" + str(speech_track.get("line_index", 0))
-            speech_tracks_by_line[speech_key] = speech_track
     var assets_by_id: Dictionary = {}
     for asset_value in assets_value:
         if typeof(asset_value) != TYPE_DICTIONARY:
@@ -3235,19 +3226,6 @@ func _export_episode_scenes(payload: Dictionary) -> Dictionary:
             character_scene.name = "Model"
             character_anchor.add_child(character_scene)
             placed_count += 1
-        var dialogue_value: Variant = scene_data.get("dialogue", [])
-        if typeof(dialogue_value) == TYPE_ARRAY:
-            for line_index in range(dialogue_value.size()):
-                if typeof(dialogue_value[line_index]) != TYPE_DICTIONARY:
-                    continue
-                var dialogue_line: Dictionary = dialogue_value[line_index].duplicate(true)
-                var speech_key := scene_id + ":" + str(line_index + 1)
-                if speech_tracks_by_line.has(speech_key):
-                    var speech_track: Dictionary = speech_tracks_by_line[speech_key]
-                    dialogue_line["audio_envelope"] = speech_track.get("mouth_envelope", [])
-                    dialogue_line["audio_duration_seconds"] = speech_track.get("duration_seconds", 0.0)
-                    dialogue_value[line_index] = dialogue_line
-            scene_data["dialogue"] = dialogue_value
         var timeline_result := _build_episode_timeline(
             scene_root, scene_data, character_anchors
         )
