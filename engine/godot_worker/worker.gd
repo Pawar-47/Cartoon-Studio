@@ -3423,6 +3423,8 @@ func _export_episode_scenes(payload: Dictionary) -> Dictionary:
             "scene_reopened": true,
             "reopened_character_count": reopened_character_count,
             "animation_track_count": timeline_result["animation_track_count"],
+            "skeletal_animation_track_count": timeline_result["skeletal_animation_track_count"],
+            "skeletal_animation_keyframe_count": timeline_result["skeletal_animation_keyframe_count"],
             "action_cue_count": timeline_result["action_cue_count"],
             "expression_cue_count": timeline_result["expression_cue_count"],
             "speech_cue_count": timeline_result["speech_cue_count"],
