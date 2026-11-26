@@ -17,8 +17,16 @@ class _FakeEngineAdapter:
 
     def export_world_scene(self, world, output_path, allowed_root, **kwargs):
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text("[gd_scene format=3]\\n[node name=\\"CartoonWorld\\" type=\\"Node3D\\"]\\n", encoding="utf-8")
-        return {"ok": True, "object_count": len(world.get("objects", [])), "scene_reopened": True, "lighting_preset": world.get("sky", "day")}
+        output_path.write_text(
+            '[gd_scene format=3]\n[node name="CartoonWorld" type="Node3D"]\n',
+            encoding="utf-8",
+        )
+        return {
+            "ok": True,
+            "object_count": len(world.get("objects", [])),
+            "scene_reopened": True,
+            "lighting_preset": world.get("sky", "day"),
+        }
 
     available = True
 
@@ -555,8 +563,16 @@ def test_world_export_persists_and_serves_generated_godot_scene(tmp_path, monkey
             "ground_color": "#789b58",
             "sky": "sunset",
             "objects": [
-                {"id": "road-1", "kind": "road", "label": "Main Road", "x": 50, "y": 50, "width": 80, "height": 12, "color": "#4b4d50"},
-                {"id": "shop-1", "kind": "shop", "label": "Bakery", "x": 30, "y": 40, "width": 18, "height": 16, "color": "#d9a46b"},
+                {
+                    "id": "road-1", "kind": "road", "label": "Main Road",
+                    "x": 50, "y": 50, "width": 80, "height": 12,
+                    "color": "#4b4d50",
+                },
+                {
+                    "id": "shop-1", "kind": "shop", "label": "Bakery",
+                    "x": 30, "y": 40, "width": 18, "height": 16,
+                    "color": "#d9a46b",
+                },
             ],
         },
     )

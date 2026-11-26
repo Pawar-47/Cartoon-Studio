@@ -901,7 +901,9 @@ def export_project_world(project_id: str, world_id: str) -> dict[str, Any]:
         raise HTTPException(status_code=422, detail=str(error)) from error
     except EngineError as error:
         scene_path.unlink(missing_ok=True)
-        raise HTTPException(status_code=502, detail=f"World scene export failed: {error}") from error
+        raise HTTPException(
+            status_code=502, detail=f"World scene export failed: {error}"
+        ) from error
     if not result.get("ok") or not scene_path.is_file():
         scene_path.unlink(missing_ok=True)
         raise HTTPException(status_code=502, detail="Godot did not produce a valid world scene.")

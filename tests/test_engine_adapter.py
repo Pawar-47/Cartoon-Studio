@@ -775,7 +775,11 @@ def test_world_scene_export_validates_layout_and_builds_worker_request(tmp_path,
         "sky": "day",
         "ground_color": "#789b58",
         "objects": [
-            {"id": "tree-1", "kind": "tree", "label": "Tree", "x": 50, "y": 50, "width": 12, "height": 10, "rotation": 0, "color": "#4c9850"}
+            {
+                "id": "tree-1", "kind": "tree", "label": "Tree",
+                "x": 50, "y": 50, "width": 12, "height": 10,
+                "rotation": 0, "color": "#4c9850",
+            }
         ],
     }
     result = adapter.export_world_scene(world, output, allowed_root=project_root)
