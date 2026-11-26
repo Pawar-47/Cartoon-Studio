@@ -277,19 +277,25 @@ export function applyCharacterFaceFeatures(recipe = {}) {
   }
   head.translate(currentObject.position.clone().negate());
   const size=head.getSize(new THREE.Vector3()), center=head.getCenter(new THREE.Vector3());
-  const width=Math.max(size.x*0.56,size.y*0.18,0.035), height=Math.max(size.y*0.48,width*0.55,0.035);
+  const faceWidth=THREE.MathUtils.clamp(Number(recipe.face_width??1),0.8,1.25);
+  const cheekFullness=THREE.MathUtils.clamp(Number(recipe.cheek_fullness??1),0.5,1.5);
+  const jawWidth=THREE.MathUtils.clamp(Number(recipe.jaw_width??1),0.7,1.3);
+  const chinLength=THREE.MathUtils.clamp(Number(recipe.chin_length??1),0.65,1.4);
+  const width=Math.max(size.x*0.56,size.y*0.18,0.035)*faceWidth;
+  const height=Math.max(size.y*0.48,width*0.55,0.035);
   const front=head.max.z+Math.max(size.z*0.035,width*0.025);
   const eyeScale=THREE.MathUtils.clamp(Number(recipe.eye_scale??1),0.65,1.5);
   const spacing=THREE.MathUtils.clamp(Number(recipe.eye_spacing??1),0.65,1.35);
   const smile=THREE.MathUtils.clamp(Number(recipe.smile??0.35),-1,1);
   const browAngle=THREE.MathUtils.clamp(Number(recipe.brow_angle??0),-0.5,0.5);
+  const depth=Math.max(width*0.045,0.008);
   const group=new THREE.Group();group.name="CartoonStudioFacePreview";
   const mat=(color,roughness=0.72)=>new THREE.MeshStandardMaterial({color:color||"#ffffff",roughness,metalness:0,depthTest:false,depthWrite:false});
   const ellipsoid=(name,color,pos,scale,roughness=0.72)=>{
     const mesh=new THREE.Mesh(new THREE.SphereGeometry(1,20,14),mat(color,roughness));
     mesh.name=name;mesh.position.copy(pos);mesh.scale.set(scale.x,scale.y,scale.z);mesh.renderOrder=30;group.add(mesh);return mesh;
   };
-  const eyeY=center.y+height*0.10, offset=width*0.245*spacing, ew=width*0.105*eyeScale, eh=height*0.17*eyeScale, depth=Math.max(width*0.045,0.008);
+  const eyeY=center.y+height*0.10, offset=width*0.245*spacing, ew=width*0.105*eyeScale, eh=height*0.17*eyeScale;
   for(const side of [-1,1]){
     const x=center.x+side*offset;
     ellipsoid("FaceEyeWhite",recipe.eye_color,new THREE.Vector3(x,eyeY,front),new THREE.Vector3(ew,eh,depth));
@@ -298,6 +304,12 @@ export function applyCharacterFaceFeatures(recipe = {}) {
     const brow=ellipsoid("FaceEyebrow",recipe.brow_color,new THREE.Vector3(x,eyeY+eh*1.55,front+depth*0.12),new THREE.Vector3(ew*1.32,Math.max(height*0.035,0.006),depth*0.38));
     brow.rotation.z=-side*browAngle;
   }
+  const skinColor=recipe.skin_color||recipe.nose_color||"#c98768";
+  for(const side of [-1,1]){
+    ellipsoid("FaceCheek",skinColor,new THREE.Vector3(center.x+side*width*0.255*jawWidth,center.y-height*0.19,front+depth*0.35),new THREE.Vector3(width*0.085*cheekFullness,height*0.065*cheekFullness,depth*0.62));
+    ellipsoid("FaceJaw",skinColor,new THREE.Vector3(center.x+side*width*0.17*jawWidth,center.y-height*0.34,front+depth*0.24),new THREE.Vector3(width*0.115*jawWidth,height*0.075,depth*0.55));
+  }
+  ellipsoid("FaceChin",skinColor,new THREE.Vector3(center.x,center.y-height*(0.405+(chinLength-1)*0.025),front+depth*0.24),new THREE.Vector3(width*0.13*jawWidth,height*0.06*chinLength,depth*0.62));
   ellipsoid("FaceNose",recipe.nose_color,new THREE.Vector3(center.x,center.y-height*0.08,front+depth*0.6),new THREE.Vector3(width*0.055,height*0.075,depth*0.8));
   const my=center.y-height*0.30,mw=width*0.19;
   const curve=new THREE.CatmullRomCurve3([
