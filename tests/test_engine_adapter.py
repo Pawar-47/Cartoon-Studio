@@ -882,10 +882,26 @@ def test_pinned_godot_worker_builds_episode_scenes_with_world_and_character_glb(
         world_path,
         allowed_root=project_root,
     )
-    fixture = Path(__file__).parent / "fixtures" / "third_party" / "animated_morph_cube_cc0.glb"
+    fixture = (
+        Path(__file__).resolve().parents[1]
+        / "tools"
+        / "godot_engine_proof"
+        / "fixtures"
+        / "proof_humanoid.glb"
+    )
+    source_character_path = project_root / "assets" / "characters" / "ali-source.glb"
     character_path = project_root / "assets" / "characters" / "ali.glb"
     character_path.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(fixture, character_path)
+    shutil.copyfile(fixture, source_character_path)
+    face_export = adapter.export_character_appearance(
+        source_character_path,
+        [],
+        [],
+        character_path,
+        allowed_root=project_root,
+        face_features={"enabled": True},
+    )
+    assert face_export["ok"] is True
     episode = {
         "title": "Five Scene Test",
         "characters": [{"id": "ali", "name": "Ali"}],
