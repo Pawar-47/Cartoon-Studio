@@ -9,10 +9,11 @@ from typing import Any
 
 RECIPE_SCHEMA_VERSION = 1
 MASTER_TEMPLATE_ID = "cartoon-studio.stylized-adult.v1"
-GENERATOR_VERSION = "0.2.0"
+GENERATOR_VERSION = "0.3.0"
 
 
 RIG_PROFILE_ID = "cartoon-studio.humanoid.v1"
+CLOTHING_ASSET_ID = "cartoon-studio.casual-outfit.v1"
 
 # Parent-first humanoid hierarchy. Local translations define the bind pose.
 _BONES = (
@@ -54,6 +55,11 @@ def _component_bone_name(group: str, center: tuple[float, float, float]) -> str:
         "thigh": f"{side}UpperLeg",
         "shin": f"{side}LowerLeg",
         "foot": f"{side}Foot",
+        "shirt": "Chest",
+        "shirt_sleeve": f"{side}UpperArm",
+        "pants_waist": "Hips",
+        "pants_thigh": f"{side}UpperLeg",
+        "pants_shin": f"{side}LowerLeg",
     }[group]
 
 MORPH_TARGETS = (
@@ -95,6 +101,17 @@ _COMPONENTS = (
     ("foot", (0.205, -0.39, -0.105), (0.17, 0.13, 0.28)),
 )
 
+_CLOTHING_COMPONENTS = (
+    ("shirt", (0.0, 1.48, 0.0), (0.505, 0.675, 0.325)),
+    ("shirt_sleeve", (-0.54, 1.66, 0.0), (0.185, 0.405, 0.185)),
+    ("shirt_sleeve", (0.54, 1.66, 0.0), (0.185, 0.405, 0.185)),
+    ("pants_waist", (0.0, 0.60, 0.0), (0.455, 0.205, 0.245)),
+    ("pants_thigh", (-0.205, 0.58, 0.0), (0.222, 0.445, 0.222)),
+    ("pants_thigh", (0.205, 0.58, 0.0), (0.222, 0.445, 0.222)),
+    ("pants_shin", (-0.205, -0.04, 0.0), (0.172, 0.375, 0.178)),
+    ("pants_shin", (0.205, -0.04, 0.0), (0.172, 0.375, 0.178)),
+)
+
 _RECIPE_PARAMETERS = {
     "head_width": (-1.0, 1.0),
     "jaw_width": (-1.0, 1.0),
@@ -119,7 +136,7 @@ def default_character_recipe(character_id: str = "character-foundry-preview") ->
         "generator_version": GENERATOR_VERSION,
         "parameters": {name: 0.0 for name in MORPH_TARGETS},
         "expression_weights": {},
-        "clothing_asset_ids": [],
+        "clothing_asset_ids": [CLOTHING_ASSET_ID],
         "hair_asset_id": None,
         "accessory_asset_ids": [],
         "rig_profile_id": RIG_PROFILE_ID,
@@ -159,6 +176,9 @@ def validate_character_recipe(recipe: Any) -> dict[str, Any]:
         ):
             raise ValueError(f"{key} must be a list of non-empty asset IDs.")
         normalized[key] = list(values)
+    unknown_clothing = set(normalized["clothing_asset_ids"]) - {CLOTHING_ASSET_ID}
+    if unknown_clothing:
+        raise ValueError(f"Unknown Foundry clothing assets: {', '.join(sorted(unknown_clothing))}.")
     for key in ("hair_asset_id", "rig_profile_id"):
         value = recipe.get(key)
         if value is not None and (not isinstance(value, str) or not value.strip()):
@@ -239,20 +259,22 @@ def _morph_delta(
         dx = x * 0.32
     elif target == "mouth_width" and group == "mouth":
         dx = x * 0.30
-    elif target == "torso_width" and group == "torso":
+    elif target == "torso_width" and group in {"torso", "shirt"}:
         dx = x * 0.18
-    elif target == "shoulder_width" and group in {"torso", "upper_arm"}:
-        if group == "torso":
+    elif target == "shoulder_width" and group in {"torso", "upper_arm", "shirt", "shirt_sleeve"}:
+        if group in {"torso", "shirt"}:
             dx = x * 0.15 * max(0.0, min(1.0, (y - 1.35) / 0.75))
         else:
             dx = math.copysign(0.075, center[0])
-    elif target == "leg_length" and group in {"thigh", "shin", "foot"}:
+    elif target == "leg_length" and group in {"thigh", "shin", "foot", "pants_thigh", "pants_shin", "pants_waist"}:
         pivot = 0.95
         dy = (y - pivot) * 0.13
     return (dx, dy, dz)
 
 
-def _build_geometry() -> tuple[
+def _build_geometry(
+    components: tuple[tuple[str, tuple[float, float, float], tuple[float, float, float]], ...]
+) -> tuple[
     list[tuple[float, float, float]], list[int],
     dict[str, list[tuple[float, float, float]]], list[str],
     list[tuple[float, float, float]]
@@ -262,7 +284,7 @@ def _build_geometry() -> tuple[
     deltas = {name: [] for name in MORPH_TARGETS}
     vertex_bones: list[str] = []
     normals: list[tuple[float, float, float]] = []
-    for group, center, radii in _COMPONENTS:
+    for group, center, radii in components:
         component, component_indices, local, component_normals = _ellipsoid(center, radii)
         offset = len(positions)
         positions.extend(component)
@@ -277,8 +299,16 @@ def _build_geometry() -> tuple[
     return positions, indices, deltas, vertex_bones, normals
 
 
-def build_master_character_glb() -> bytes:
-    positions, indices, morphs, vertex_bones, normals = _build_geometry()
+def build_master_character_glb(recipe: dict[str, Any] | None = None) -> bytes:
+    normalized_recipe = validate_character_recipe(
+        recipe if recipe is not None else default_character_recipe()
+    )
+    body = _build_geometry(_COMPONENTS)
+    clothing = (
+        _build_geometry(_CLOTHING_COMPONENTS)
+        if CLOTHING_ASSET_ID in normalized_recipe["clothing_asset_ids"]
+        else None
+    )
     binary = bytearray()
     buffer_views: list[dict[str, Any]] = []
     accessors: list[dict[str, Any]] = []
@@ -318,45 +348,75 @@ def build_master_character_glb() -> bytes:
         accessors.append(accessor)
         return len(accessors) - 1
 
-    flat_positions = [coordinate for point in positions for coordinate in point]
-    position_bytes = struct.pack(f"<{len(flat_positions)}f", *flat_positions)
-    mins = [min(point[axis] for point in positions) for axis in range(3)]
-    maxs = [max(point[axis] for point in positions) for axis in range(3)]
-    position_accessor = add_accessor(
-        position_bytes, 5126, len(positions), "VEC3", 34962, (mins, maxs)
-    )
-    flat_normals = [coordinate for normal in normals for coordinate in normal]
-    normal_accessor = add_accessor(
-        struct.pack(f"<{len(flat_normals)}f", *flat_normals),
-        5126, len(normals), "VEC3", 34962
-    )
-    index_bytes = struct.pack(f"<{len(indices)}I", *indices)
-    index_accessor = add_accessor(index_bytes, 5125, len(indices), "SCALAR", 34963)
-
-    target_accessors = []
-    for name in MORPH_TARGETS:
-        flat = [coordinate for point in morphs[name] for coordinate in point]
-        payload = struct.pack(f"<{len(flat)}f", *flat)
-        target_accessors.append({
-            "POSITION": add_accessor(payload, 5126, len(positions), "VEC3", 34962)
-        })
-
     bone_names = [bone[0] for bone in _BONES]
     bone_indices = {name: index for index, name in enumerate(bone_names)}
-    joint_values = [
-        value
-        for name in vertex_bones
-        for value in (bone_indices[name], 0, 0, 0)
-    ]
-    weight_values = [value for _ in positions for value in (1.0, 0.0, 0.0, 0.0)]
-    joints_accessor = add_accessor(
-        struct.pack(f"<{len(joint_values)}H", *joint_values),
-        5123, len(positions), "VEC4", 34962
-    )
-    weights_accessor = add_accessor(
-        struct.pack(f"<{len(weight_values)}f", *weight_values),
-        5126, len(positions), "VEC4", 34962
-    )
+
+    def make_primitive(
+        geometry: tuple[
+            list[tuple[float, float, float]], list[int],
+            dict[str, list[tuple[float, float, float]]], list[str],
+            list[tuple[float, float, float]]
+        ],
+        material_index: int,
+    ) -> dict[str, Any]:
+        positions, indices, morphs, vertex_bones, normals = geometry
+        flat_positions = [coordinate for point in positions for coordinate in point]
+        mins = [min(point[axis] for point in positions) for axis in range(3)]
+        maxs = [max(point[axis] for point in positions) for axis in range(3)]
+        position_accessor = add_accessor(
+            struct.pack(f"<{len(flat_positions)}f", *flat_positions),
+            5126, len(positions), "VEC3", 34962, (mins, maxs)
+        )
+        flat_normals = [coordinate for normal in normals for coordinate in normal]
+        normal_accessor = add_accessor(
+            struct.pack(f"<{len(flat_normals)}f", *flat_normals),
+            5126, len(normals), "VEC3", 34962
+        )
+        index_accessor = add_accessor(
+            struct.pack(f"<{len(indices)}I", *indices),
+            5125, len(indices), "SCALAR", 34963
+        )
+        target_accessors = []
+        for name in MORPH_TARGETS:
+            flat = [coordinate for point in morphs[name] for coordinate in point]
+            target_accessors.append({
+                "POSITION": add_accessor(
+                    struct.pack(f"<{len(flat)}f", *flat),
+                    5126, len(positions), "VEC3", 34962
+                )
+            })
+        joint_values = [
+            value
+            for name in vertex_bones
+            for value in (bone_indices[name], 0, 0, 0)
+        ]
+        weight_values = [
+            value for _ in positions for value in (1.0, 0.0, 0.0, 0.0)
+        ]
+        joints_accessor = add_accessor(
+            struct.pack(f"<{len(joint_values)}H", *joint_values),
+            5123, len(positions), "VEC4", 34962
+        )
+        weights_accessor = add_accessor(
+            struct.pack(f"<{len(weight_values)}f", *weight_values),
+            5126, len(positions), "VEC4", 34962
+        )
+        return {
+            "attributes": {
+                "POSITION": position_accessor,
+                "NORMAL": normal_accessor,
+                "JOINTS_0": joints_accessor,
+                "WEIGHTS_0": weights_accessor,
+            },
+            "indices": index_accessor,
+            "material": material_index,
+            "mode": 4,
+            "targets": target_accessors,
+        }
+
+    primitives = [make_primitive(body, 0)]
+    if clothing is not None:
+        primitives.append(make_primitive(clothing, 1))
 
     bone_node_start = 1
     bone_node_indices = {
@@ -374,11 +434,7 @@ def build_master_character_glb() -> bytes:
                 parent_position[axis] + translation[axis] for axis in range(3)
             )
             bone_children[parent].append(bone_node_indices[name])
-        node: dict[str, Any] = {"name": name, "translation": list(translation)}
-        if bone_children[name]:
-            node["children"] = bone_children[name]
-        bone_nodes.append(node)
-    # Parent nodes are emitted before children; populate child lists after the pass.
+        bone_nodes.append({"name": name, "translation": list(translation)})
     for name, _, _ in _BONES:
         children = bone_children[name]
         if children:
@@ -397,6 +453,24 @@ def build_master_character_glb() -> bytes:
         struct.pack(f"<{len(inverse_bind_values)}f", *inverse_bind_values),
         5126, len(bone_names), "MAT4"
     )
+
+    materials = [{
+        "name": "WarmCartoonSkin",
+        "pbrMetallicRoughness": {
+            "baseColorFactor": [0.82, 0.53, 0.37, 1.0],
+            "metallicFactor": 0.0,
+            "roughnessFactor": 0.82,
+        },
+    }]
+    if clothing is not None:
+        materials.append({
+            "name": "FoundryCasualCloth",
+            "pbrMetallicRoughness": {
+                "baseColorFactor": [0.12, 0.34, 0.72, 1.0],
+                "metallicFactor": 0.0,
+                "roughnessFactor": 0.92,
+            },
+        })
 
     gltf = {
         "asset": {
@@ -418,28 +492,13 @@ def build_master_character_glb() -> bytes:
         "meshes": [{
             "name": "StylizedAdult_MasterMesh",
             "weights": [0.0] * len(MORPH_TARGETS),
-            "extras": {"targetNames": list(MORPH_TARGETS)},
-            "primitives": [{
-                "attributes": {
-                    "POSITION": position_accessor,
-                    "NORMAL": normal_accessor,
-                    "JOINTS_0": joints_accessor,
-                    "WEIGHTS_0": weights_accessor,
-                },
-                "indices": index_accessor,
-                "material": 0,
-                "mode": 4,
-                "targets": target_accessors,
-            }],
-        }],
-        "materials": [{
-            "name": "WarmCartoonSkin",
-            "pbrMetallicRoughness": {
-                "baseColorFactor": [0.82, 0.53, 0.37, 1.0],
-                "metallicFactor": 0.0,
-                "roughnessFactor": 0.82,
+            "extras": {
+                "targetNames": list(MORPH_TARGETS),
+                "clothingAssetIds": normalized_recipe["clothing_asset_ids"],
             },
+            "primitives": primitives,
         }],
+        "materials": materials,
         "buffers": [{"byteLength": len(binary)}],
         "bufferViews": buffer_views,
         "accessors": accessors,
@@ -453,11 +512,9 @@ def build_master_character_glb() -> bytes:
     return b"".join((
         struct.pack("<4sII", b"glTF", 2, total_length),
         struct.pack("<I4s", len(json_chunk), b"JSON"),
-        json_chunk,
         struct.pack("<I4s", len(binary), b"BIN\x00"),
         bytes(binary),
     ))
-
 
 def write_master_character(
     output_path: str | Path,
@@ -466,9 +523,9 @@ def write_master_character(
 ) -> tuple[Path, Path]:
     output = Path(output_path)
     output.parent.mkdir(parents=True, exist_ok=True)
-    glb_bytes = build_master_character_glb()
-    output.write_bytes(glb_bytes)
     recipe = default_character_recipe(character_id)
+    glb_bytes = build_master_character_glb(recipe)
+    output.write_bytes(glb_bytes)
     recipe["generated_asset"] = {
         "filename": output.name,
         "sha256": hashlib.sha256(glb_bytes).hexdigest(),
@@ -477,6 +534,7 @@ def write_master_character(
         "morph_targets": list(MORPH_TARGETS),
         "rig_profile_id": RIG_PROFILE_ID,
         "bone_names": [bone[0] for bone in _BONES],
+        "clothing_asset_ids": recipe["clothing_asset_ids"],
     }
     recipe_output = Path(recipe_path) if recipe_path else output.with_suffix(".recipe.json")
     recipe_output.parent.mkdir(parents=True, exist_ok=True)

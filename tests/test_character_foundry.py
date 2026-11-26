@@ -9,6 +9,7 @@ from app.character_foundry import (
     MASTER_TEMPLATE_ID,
     MORPH_TARGETS,
     RIG_PROFILE_ID,
+    CLOTHING_ASSET_ID,
     build_master_character_glb,
     default_character_recipe,
     validate_character_recipe,
@@ -64,7 +65,6 @@ def test_generated_master_glb_contains_real_morph_geometry() -> None:
     assert len(primitive["targets"]) == len(MORPH_TARGETS)
     assert mesh["extras"]["targetNames"] == list(MORPH_TARGETS)
     assert primitive["attributes"]["POSITION"] < len(document["accessors"])
-    assert len(document["accessors"]) == 6 + len(MORPH_TARGETS)
     assert document["asset"]["extras"]["masterTemplate"] == MASTER_TEMPLATE_ID
     assert document["nodes"][0]["name"] == "CartoonStudio_StylizedAdult"
     assert document["nodes"][0]["skin"] == 0
@@ -77,6 +77,10 @@ def test_generated_master_glb_contains_real_morph_geometry() -> None:
     assert {"NORMAL", "JOINTS_0", "WEIGHTS_0"} <= set(attributes)
     assert document["accessors"][attributes["JOINTS_0"]]["componentType"] == 5123
     assert document["accessors"][attributes["WEIGHTS_0"]]["componentType"] == 5126
+    assert len(mesh["primitives"]) == 2
+    assert mesh["primitives"][1]["material"] == 1
+    assert document["materials"][1]["name"] == "FoundryCasualCloth"
+    assert mesh["extras"]["clothingAssetIds"] == [CLOTHING_ASSET_ID]
 
 
 def test_generated_morph_targets_have_nonzero_vertex_deltas() -> None:
@@ -102,4 +106,30 @@ def test_master_export_writes_replayable_recipe(tmp_path) -> None:
     assert recipe["generated_asset"]["morph_targets"] == list(MORPH_TARGETS)
     assert recipe["generated_asset"]["rig_profile_id"] == RIG_PROFILE_ID
     assert len(recipe["generated_asset"]["bone_names"]) == 19
+    assert recipe["generated_asset"]["clothing_asset_ids"] == [CLOTHING_ASSET_ID]
     assert validate_character_recipe(recipe)["character_id"] == "character-foundry-preview"
+
+
+
+def test_fitted_clothing_has_real_body_refit_morph_targets() -> None:
+    data = build_master_character_glb()
+    document = _read_glb(data)
+    json_length = struct.unpack_from("<I", data, 12)[0]
+    binary_start = 20 + json_length + 8
+    clothing = document["meshes"][0]["primitives"][1]
+    target_names = document["meshes"][0]["extras"]["targetNames"]
+    for name in ("torso_width", "shoulder_width", "leg_length"):
+        target = clothing["targets"][target_names.index(name)]
+        accessor = document["accessors"][target["POSITION"]]
+        view = document["bufferViews"][accessor["bufferView"]]
+        start = binary_start + view.get("byteOffset", 0)
+        values = struct.unpack_from(f"<{accessor['count'] * 3}f", data, start)
+        assert any(abs(value) > 1e-7 for value in values), name
+
+
+def test_recipe_can_disable_fitted_clothing() -> None:
+    recipe = default_character_recipe()
+    recipe["clothing_asset_ids"] = []
+    document = _read_glb(build_master_character_glb(recipe))
+    assert len(document["meshes"][0]["primitives"]) == 1
+    assert document["meshes"][0]["extras"]["clothingAssetIds"] == []
