@@ -108,7 +108,11 @@ async function applyBodyProportions(){
 function resetProfileEditor(){editingCharacter=null;$("character-form").reset();$("profile-heading").textContent="Save reusable profile";$("save-character").textContent="Save character profile";$("cancel-edit-profile").hidden=true;$("save-character").disabled=!importedAsset}
 function cancelProfileEdit(){resetProfileEditor();$("profile-status").textContent="Profile editing cancelled. The saved character was not changed."}
 async function editCharacterProfile(document){
- const data=document.data||{};editingCharacter=document;
+ const data=document.data||{};editingCharacter=document;activeCharacter=document;
+ appearanceRecipe=JSON.parse(JSON.stringify(data.appearance_recipe||{materials:{},morph_targets:{},morph_bindings:{}}));
+ appearanceRecipe.materials=appearanceRecipe.materials||{};
+ appearanceRecipe.morph_targets=appearanceRecipe.morph_targets||{};
+ appearanceRecipe.morph_bindings=appearanceRecipe.morph_bindings||{};
  let effectiveProportions={...(data.body_proportions||{})};
  const savedAsset=data.asset||{},savedAssetId=(savedAsset.relative_path||"").split("/").pop().replace(/\.glb$/i,"");
  importedAsset=savedAssetId?{asset_id:savedAssetId,...savedAsset}:null;
@@ -129,10 +133,14 @@ async function editCharacterProfile(document){
   const modelResponse=previewId?await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(previewId)):null;
   if(modelResponse?.ok){
    const loaded=await showCharacterPreview(await modelResponse.arrayBuffer(),data.name||"Saved character");
-   if(loaded)previewCharacterBodyProportions(
-    proportionDelta(effectiveProportions,proportionState.baseProportions),
-    importedAsset?.rig_analysis?.bone_mapping||{},
-   );
+   if(loaded){
+    applyCharacterAppearance(appearanceRecipe.materials);
+    applyCharacterMorphTargets(appearanceRecipe.morph_targets);
+    previewCharacterBodyProportions(
+     proportionDelta(effectiveProportions,proportionState.baseProportions),
+     importedAsset?.rig_analysis?.bone_mapping||{},
+    );
+   }
   }
  }
  $("character-name").value=data.name||"";$("character-description").value=data.description||"";
