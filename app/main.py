@@ -36,13 +36,13 @@ from app.engine import (
     EngineUnavailableError,
     GodotEngineAdapter,
 )
-from app.rig_analysis import analyze_rig
 from app.render import (
     RenderDependencyUnavailable,
     RenderExecutionError,
     RenderPathError,
     render_episode_video,
 )
+from app.rig_analysis import analyze_rig
 from app.storage import connect_db as open_database
 from app.storage import (
     default_data_dir,
@@ -979,7 +979,10 @@ def render_episode(project_id: str) -> dict[str, Any]:
         ):
             raise HTTPException(
                 status_code=422,
-                detail="Regenerate the 3D scenes after dialogue audio so mouth movement matches speech.",
+                detail=(
+                    "Regenerate the 3D scenes after dialogue audio so mouth movement "
+                    "matches speech."
+                ),
             )
     project_root = project_directory(DATA_DIR, project_id)
     scene_paths = [
