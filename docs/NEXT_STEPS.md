@@ -1,45 +1,51 @@
-# Next Steps — 2026-11-28
+# Next Steps — Master-Brief Consolidation (2026-11-28)
 
 ## Live checkpoint
 
 - Repository: `Pawar-47/Cartoon-Studio`
 - Active branch: `main`
-- World Builder alignment commit: `17d35ea4b6b87509ee2318bf26eb1078cd39351d`
-- CI at starting checkpoint: Windows CI #612 — SUCCESS (`46062289103`)
-- The Foundry branch remains frozen; do not merge or modify it.
-- Binding requirements: the complete 25-part `docs/MASTER_EXECUTION_PROMPT.md` and the 171-row registry/traceability set.
+- Current HEAD: `8647693ae6e1e28f225b810416f32ce62ec29ddb` (documentation-only consolidation report)
+- Latest code-bearing commit: `e0e288006c13347d2bbc99ff388948c16a9e6011`
+- Latest observed code CI: Windows CI #615 — SUCCESS (`46064317433`) on `e0e2880`
+- Binding source: `docs/MASTER_EXECUTION_PROMPT.md`, all 25 parts
+- Frozen Character Foundry branch remains untouched. Do not create or switch to another development branch.
 
-## Current phase direction
+## Current objective
 
-Phase 3 — World Builder remains the active development phase. Existing world persistence, schema migration, templates, Godot scene export, GLB preview and vehicle API contracts are preserved. The first alignment pass closes a browser-editor omission: all 17 supported object kinds are exposed, with position and rotation editing.
+Do not start new feature development yet. Consolidate the work already completed against the original Master Brief, correct confirmed defects and establish an evidence-backed baseline.
 
-## Newly confirmed adapter defect and correction\n\nThe first implementation audit also found that `app/engine.py` retained a seven-kind allowlist even after the API and Godot worker expanded to 17 kinds. This rejected valid saved worlds at export time. The adapter allowlist is now aligned with the Pydantic schema and worker; a regression test exercises all 17 kinds through the real adapter validation path.\n\n## Immediate next batch
+## Consolidation order
 
-1. Integrate verified CC0 environment models into a project-scoped reusable asset library; pin exact pack versions, checksums and license evidence, and use lazy download/cache rather than committing large asset packs.
-2. Upgrade World Builder placement from primitive blockout-only geometry to reusable road, building, vegetation, furniture and vehicle assets.
-3. Connect vehicle rig/movement/interaction state to actual scene-time animation and character actions.
-4. Keep the existing story/episode pipeline intact; next close world-linked production mapping and scene-level caching/recovery.
+1. Reconcile all 171 atomic requirement rows against live source files, tests, reports and exact CI runs. Preserve each status unless its evidence justifies a change.
+2. Validate traceability paths and architecture ownership against the current repository tree. Distinguish current modules from planned modules and historical source paths.
+3. Review delivered module behaviour for defects and incomplete wiring: project persistence/import/export; Character Studio; World Builder and GLB catalogue; story/scene generation; animation tracks; audio; queue; Godot render and FFmpeg assembly.
+4. Check cross-module IDs, schema versions, project-relative paths, asset provenance, round-trip persistence, cancellation/lease ownership and failure cleanup.
+5. Correct confirmed implementation defects in coherent batches. For code changes, run focused tests and then one CI checkpoint after the batch. Documentation-only corrections do not need CI.
+6. Freeze the baseline only after the registry, traceability, architecture crosswalk, status, test report and next steps agree on the same source commit and acceptance boundaries.
 
-## Verified foundation already present
+## Existing implementation to preserve
 
-- Versioned project/world/character/episode documents and SQLite migrations/index.
-- Godot 4.7.2 Compatibility worker, scene export, character processing and episode scene generation.
-- Browser Character Studio, Story Generator and World Builder.
-- Durable SQLite job records, leases, bounded attempts and cancellation/progress APIs for production, audio, world export and rendering.
-- Windows CI and a self-contained installer lifecycle proof; latest recorded full CI success for the implementation checkpoint is #612.
-- Existing modular character asset library and verified CC0 provenance must be preserved.
+- FastAPI local service, SQLite project persistence and versioned project documents.
+- Character import, modular CC0 assembly, profile/appearance editing, proportions, procedural hair/face operations, retargeting and browser GLB preview.
+- Persistent World Builder documents, templates, 17 object kinds, curated project-scoped CC0 GLB catalogue, integrity checks and Godot scene export.
+- Story prompt/schema validation, world/cast binding and editable episode-scene generation.
+- Urdu speech/audio/subtitles and heuristic mouth-envelope animation.
+- Godot scene rendering and FFmpeg MP4 assembly path.
+- Durable SQLite job records, leases, expiry reclaim, bounded attempts, cancellation and progress.
+- Windows CI, pinned dependencies, Godot worker and installer lifecycle proof.
 
-## Remaining acceptance work
+## Known acceptance boundaries — not automatically defects
 
-- World asset-library breadth and rendered visual quality.
-- Character and world browser visual acceptance.
-- Full Urdu pronunciation/voice review and phoneme/viseme lip-sync.
-- Reusable animation library, blending and timeline editor.
-- Integrated optional AI provider adapters; manual handoff remains supported.
-- Scene-level render cache and restart recovery of completed scenes.
-- Full 5–7 minute episode render inspected for visuals, dialogue, timing and audio.
-- Target-PC benchmarks, quality presets and final install/update acceptance in Phase 8.
+- The latest asset-library integration has not yet passed a real downloaded-GLB visual render acceptance test.
+- Vehicle state/API contracts exist, but complete scene-time movement, steering, wheel rotation, braking and character entry/exit playback remain incomplete.
+- Character visual signoff and broad arbitrary-rig compatibility remain incomplete.
+- Story-provider orchestration, reusable animation/blending/timeline, phoneme/viseme Urdu lip-sync, scene-level cache/restart recovery, full episode visual/audio acceptance and target-PC benchmarks remain open.
 
-## Operating policy
+## Operating rules
 
-Use main as the source of truth. Work in substantial batches, preserve all existing work, run focused tests, then one CI checkpoint. Do not start overlapping CI runs, do not rebuild the same feature, and do not call a requirement verified merely because source code exists.
+- GitHub `main` is the source of truth; re-fetch before every edit.
+- Preserve existing work; never rebuild an already working subsystem just to make it look new.
+- Keep future requirements pending rather than misclassifying them as defects.
+- Do not claim a requirement verified from code presence, compile success or unrelated CI.
+- Avoid parallel/redundant CI runs; use one CI checkpoint per substantial code batch.
+- Keep all responses and repository progress reports in English.

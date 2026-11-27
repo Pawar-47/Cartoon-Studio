@@ -3,7 +3,8 @@
 **Date:** 2026-11-28  
 **Repository:** `Pawar-47/Cartoon-Studio`  
 **Branch:** `main`  
-**Audited HEAD:** `e0e288006c13347d2bbc99ff388948c16a9e6011`  
+**Initial code-audit HEAD:** `e0e288006c13347d2bbc99ff388948c16a9e6011`
+**Current documentation HEAD at refresh:** `8647693ae6e1e28f225b810416f32ce62ec29ddb` (this report and subsequent consolidation metadata updates only)  
 **Latest observed CI:** #615 — SUCCESS on the audited HEAD  
 **Binding source:** `docs/MASTER_EXECUTION_PROMPT.md` (25 parts, 1,133 lines)  
 **Supporting source:** `docs/PROJECT_SPECIFICATION.md` (24 numbered sections)
@@ -32,13 +33,13 @@ The frozen Character Foundry feature branch is not an implementation source and 
 
 ### CONS-001 — Registry status summary contradicts its own rows
 **Severity:** High  
-The registry introduction states that no requirement is VERIFIED at the checkpoint, but the atomic rows include `PHASE-R002` with status `VERIFIED`. This is an internal contradiction. The status itself may be justified by the recorded Phase 1 installer lifecycle evidence, but the summary must be corrected and the verification scope must remain explicit.
+The registry introduction and `GOV-R004` evidence state that no requirement is VERIFIED, but the atomic rows include `PHASE-R002` with status `VERIFIED`. This is an internal contradiction. The status itself may be justified by the recorded Phase 1 installer lifecycle evidence, but the summary must be corrected and the verification scope must remain explicit.
 
 **Correction required:** Reconcile the registry summary against all 171 row statuses; retain VERIFIED only where the cited acceptance evidence directly proves the complete atomic requirement.
 
 ### CONS-002 — Traceability matrix contains obsolete source-of-truth claims
 **Severity:** High  
-The current `REQUIREMENT_TRACEABILITY.md` still says the original Master Brief is not committed and repeats an old 33,223-byte / historical-source-control-gap statement. The verbatim brief is now present at `docs/MASTER_EXECUTION_PROMPT.md`. The traceability document also carries historical HEAD/CI references (including `4171bb3`, `6823cdf`, CI #67/#68) as if they describe current evidence.
+The current `REQUIREMENT_TRACEABILITY.md` contains a closing historical claim that the exact original prompt is not committed, which is now false because `docs/MASTER_EXECUTION_PROMPT.md` is present on main. It also carries historical HEAD/CI references (including `4171bb3`, `6823cdf`, CI #67/#68) in current-looking evidence fields. The false prompt claim and selected current-checkpoint fields are being corrected; dated historical evidence is retained where useful.
 
 **Correction required:** Preserve historical evidence as dated history where useful, but replace current-state claims with the live source path, current hash/line count, and evidence tied to the relevant implementation commit and CI run.
 
@@ -139,4 +140,14 @@ Unless a current implementation is found to violate an already-delivered require
 - Preserve the exact Master Brief and its 25-part order.
 - Keep future requirements pending rather than disguising them as completed or treating them as regressions.
 
-**Audit state:** INITIAL CHECKPOINT — row-by-row evidence reconciliation and source-level defect review remain in progress.
+**Audit state:** INITIAL CHECKPOINT plus 2026-11-28 documentation reconciliation. Row-by-row evidence reconciliation and source-level defect review remain in progress. The 171-ID structural match is not proof that every row is current.
+
+
+## 2026-11-28 — Follow-up reconciliation checkpoint
+
+- Re-fetched live `main`; HEAD was `8647693ae6e1e28f225b810416f32ce62ec29ddb`.
+- Confirmed the latest code-bearing commit remains `e0e288006c13347d2bbc99ff388948c16a9e6011`; Windows CI #615 (run `46064317433`) passed on that exact commit. Its job ran locked dependency verification/install, pinned Godot and fixture setup, Ruff, browser JavaScript syntax, Python compilation and the test step.
+- Confirmed registry and traceability each contain 171 unique IDs with matching structural coverage. Confirmed one VERIFIED registry row: `PHASE-R002`, limited to the Phase 1 installer lifecycle gate. Corrected the contradictory registry summary.
+- Corrected the traceability document's false statement that the original prompt is not committed, and refreshed selected current-checkpoint metadata. The architecture crosswalk remains historical/planned and requires row-by-row source-path validation.
+- Refreshed `PROJECT_STATUS.md` and `NEXT_STEPS.md` to distinguish the current docs HEAD from the latest code-bearing CI checkpoint.
+- No application code was changed and no new CI run was triggered. The remaining work is the source/test/evidence reconciliation and implementation defect review described in the sequence above.

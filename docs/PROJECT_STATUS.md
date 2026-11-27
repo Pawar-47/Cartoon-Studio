@@ -1,16 +1,15 @@
 # Project Status — 2026-11-28
 
-## Live checkpoint — mainline master-brief alignment review
+## Live checkpoint — master-brief consolidation
 
-- World Builder alignment commit: `17d35ea4b6b87509ee2318bf26eb1078cd39351d`; Windows CI #612 passed on this exact commit.
-- The first-pass alignment audit is recorded in `docs/MAINLINE_ALIGNMENT_AUDIT.md`.
-- The World Builder browser palette was incomplete relative to its backend: 17 object kinds were accepted by the API/exporter but only 7 were addable in the UI. This batch exposes all supported kinds and adds X/Y/rotation controls with a regression test.
-- The Godot World Builder exporter currently generates procedural primitive blockout geometry. It is a real editable Godot scene and GLB preview, but not yet a production-quality reusable environment asset library.
-- Vehicle movement/rig/interaction APIs persist state/events; actual vehicle animation and character interaction playback remain incomplete.
-- The Story Generator remains a manual prompt/paste workflow. The Urdu audio path exists, but mouth movement is an RMS envelope heuristic rather than phoneme/viseme alignment.
-- The durable SQLite job queue is present and wired to episode production, audio, world export and rendering. Earlier status text claiming there is no durable render queue is stale; the current implementation uses in-process execution with durable job records, lease expiry/reclaim, bounded attempts and cooperative cancellation. A separately supervised multi-worker service and scene-level cache/restart-resume remain open.
-- No complete 5–7 minute episode has been visually/audio accepted. No target-PC performance benchmark or fresh installer lifecycle acceptance is claimed by this checkpoint.
-- Phase 0 and Phase 1 foundations are complete by recorded evidence. Phase 2 Character Studio and Phase 3 World Builder remain partial pending visual/rig/asset acceptance. Phases 4–7 contain useful out-of-order production slices but remain incomplete. Phase 8 is deferred.
+- **Current main HEAD:** `8647693ae6e1e28f225b810416f32ce62ec29ddb` (consolidation-report documentation commit).
+- **Latest code-bearing commit:** `e0e288006c13347d2bbc99ff388948c16a9e6011`; Windows CI #615 passed on that exact code commit (run `46064317433`).
+- The original 25-part Master Brief is committed at `docs/MASTER_EXECUTION_PROMPT.md`; it remains the binding source.
+- Registry and traceability contain 171 unique, matching requirement IDs. The registry currently has one VERIFIED requirement (`PHASE-R002`) for the defined Phase 1 installer lifecycle gate; that does not mean the product is complete.
+- The current consolidation pass is reconciling each completed implementation against source, tests and actual CI evidence. Registry/traceability rows still contain historical mappings and must not be treated as freshly audited merely because their IDs match.
+- Confirmed completed slices include Character Studio import/assembly/appearance operations, persistent World Builder documents and 17 object kinds, a curated project-scoped CC0 GLB catalogue connected to scene export, Godot scene generation, Urdu audio/subtitles, FFmpeg MP4 assembly path and durable SQLite job records.
+- Acceptance limits remain: actual downloaded GLB rendering/visual acceptance, full vehicle runtime behaviour, arbitrary-rig and character visual acceptance, integrated story-provider generation, reusable animation/blending/timeline, phoneme/viseme Urdu lip-sync, scene-level render cache/restart recovery, complete 5–7 minute episode inspection and target-PC benchmarking.
+- CI #615 validates its configured locked install, lint, JavaScript syntax, Python compilation and test steps on `e0e2880`; it does not validate the later documentation-only commit or prove visual/final-product acceptance.
 
 ## Current phase table
 
