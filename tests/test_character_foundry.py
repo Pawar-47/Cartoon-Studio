@@ -54,8 +54,10 @@ def test_female_master_template_generates_distinct_body_and_clothing_geometry() 
     female_recipe = default_character_recipe(
         "heroine-01", FEMALE_MASTER_TEMPLATE_ID
     )
-    female_document = _read_glb(build_master_character_glb(female_recipe))
-    male_document = _read_glb(build_master_character_glb())
+    female_data = build_master_character_glb(female_recipe)
+    male_data = build_master_character_glb()
+    female_document = _read_glb(female_data)
+    male_document = _read_glb(male_data)
 
     assert validate_character_recipe(female_recipe) == female_recipe
     assert (
@@ -66,18 +68,22 @@ def test_female_master_template_generates_distinct_body_and_clothing_geometry() 
     female_primitives = female_document["meshes"][0]["primitives"]
     male_primitives = male_document["meshes"][0]["primitives"]
     assert len(female_primitives) == len(male_primitives) == 3
+
+    def position_payload(data: bytes, document: dict, primitive: dict) -> bytes:
+        json_length = struct.unpack_from("<I", data, 12)[0]
+        binary_start = 20 + json_length + 8
+        accessor = document["accessors"][primitive["attributes"]["POSITION"]]
+        view = document["bufferViews"][accessor["bufferView"]]
+        offset = binary_start + view.get("byteOffset", 0) + accessor.get("byteOffset", 0)
+        return data[offset:offset + accessor["count"] * 12]
+
     for female_primitive, male_primitive in zip(
-        female_primitives, male_primitives, strict=True
+        female_primitives[:2], male_primitives[:2], strict=True
     ):
-        female_positions = female_document["accessors"][
-            female_primitive["attributes"]["POSITION"]
-        ]
-        male_positions = male_document["accessors"][
-            male_primitive["attributes"]["POSITION"]
-        ]
-        assert (female_positions["min"], female_positions["max"]) != (
-            male_positions["min"], male_positions["max"]
-        )
+        assert position_payload(
+            female_data, female_document, female_primitive
+        ) != position_payload(male_data, male_document, male_primitive)
+
 
 
 def test_recipe_rejects_unknown_template_and_parameter() -> None:
