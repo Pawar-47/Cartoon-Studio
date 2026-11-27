@@ -60,7 +60,7 @@ function ensureRenderer() {
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x111923);
   camera = new THREE.PerspectiveCamera(35, 1, 0.01, 1000);
-  camera.position.set(2.8, 2.1, 3.2);
+  camera.position.set(2.8, 2.1, -3.2);
 
   scene.add(new THREE.HemisphereLight(0xd9e8ff, 0x40352c, 2.0));
   const key = new THREE.DirectionalLight(0xfff1df, 3.0);
@@ -153,7 +153,7 @@ function frameCharacter(preset = "full") {
   if (!camera || !controls || !characterBounds || characterBounds.isEmpty()) return;
   const size = characterBounds.getSize(new THREE.Vector3());
   const center = characterBounds.getCenter(new THREE.Vector3());
-  const direction = new THREE.Vector3(0.9, 0.65, 1.15).normalize();
+  const direction = new THREE.Vector3(0.9, 0.65, -1.15).normalize();
   let targetY = center.y;
   let distance = cameraDistance;
   if (preset === "head") {
@@ -567,7 +567,7 @@ export async function exportCharacterTurnaround({ width = 1024, transparent = tr
   const previousBackground = scene.background;
   const previousClearColor = renderer.getClearColor(new THREE.Color()).clone();
   const previousClearAlpha = renderer.getClearAlpha();
-  const labels = ["3/4", "Side", "Back", "Opposite"];
+  const labels = ["Front 3/4", "Side", "Back 3/4", "Opposite side"];
   try {
     previewFrozen = true;
     controls.enabled = false;
