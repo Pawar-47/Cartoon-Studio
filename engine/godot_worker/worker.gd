@@ -2870,7 +2870,7 @@ func _export_world_scene(payload: Dictionary) -> Dictionary:
             continue
         var item: Dictionary = object_value
         var kind := str(item.get("kind", ""))
-        if not ["road", "building", "shop", "tree", "vehicle", "lamp", "park"].has(kind):
+        if not ["road", "building", "shop", "school", "hospital", "office", "police_station", "tree", "vehicle", "lamp", "park", "garage", "indoor_room", "playground"].has(kind):
             continue
         var x := (float(item.get("x", 50.0)) - 50.0) * 0.9
         var z := (float(item.get("y", 50.0)) - 50.0) * 0.9
@@ -2898,6 +2898,26 @@ func _export_world_scene(payload: Dictionary) -> Dictionary:
                 _world_add_box(anchor, "Window_%d" % window_index, Vector3(width * 0.18, body_height * 0.2, 0.1), Vector3(window_x, body_height * 0.62, depth * 0.37), "#9dd8e8")
             if kind == "shop":
                 _world_add_box(anchor, "ShopAwning", Vector3(width * 0.86, 0.38, depth * 0.2), Vector3(0.0, body_height * 0.72, depth * 0.45), "#d95d4f")
+        elif kind in ["school", "hospital", "office", "police_station"]:
+            var body_height := clampf(depth * 0.72, 2.8, 14.0)
+            _world_add_box(anchor, "BuildingBody", Vector3(width * 0.78, body_height, depth * 0.72), Vector3(0.0, body_height * 0.5, 0.0), tint)
+            _world_add_box(anchor, "Roof", Vector3(width * 0.92, 0.65, depth * 0.84), Vector3(0.0, body_height + 0.25, 0.0), "#6a5c4d")
+            _world_add_box(anchor, "Door", Vector3(width * 0.1, body_height * 0.42, 0.12), Vector3(0.0, body_height * 0.21, depth * 0.37), "#49352b")
+            for window_index in range(3):
+                var window_x := (float(window_index) - 1.0) * width * 0.3
+                _world_add_box(anchor, "Window_%d" % window_index, Vector3(width * 0.16, body_height * 0.18, 0.1), Vector3(window_x, body_height * 0.6, depth * 0.37), "#9dd8e8")
+        elif kind == "garage":
+            var body_height := clampf(depth * 0.6, 2.4, 10.0)
+            _world_add_box(anchor, "GarageBody", Vector3(width * 0.82, body_height, depth * 0.78), Vector3(0.0, body_height * 0.5, 0.0), tint)
+            _world_add_box(anchor, "GarageRoof", Vector3(width * 0.9, 0.5, depth * 0.86), Vector3(0.0, body_height + 0.2, 0.0), "#5a5a5a")
+            _world_add_box(anchor, "GarageDoor", Vector3(width * 0.62, body_height * 0.5, 0.12), Vector3(0.0, body_height * 0.25, depth * 0.4), "#8a7a6a")
+        elif kind == "indoor_room":
+            _world_add_box(anchor, "RoomFloor", Vector3(width, 0.12, depth), Vector3.ZERO, "#e8dcc8")
+            _world_add_box(anchor, "RoomWalls", Vector3(width * 0.98, clampf(depth * 0.5, 2.0, 6.0), depth * 0.98), Vector3(0.0, clampf(depth * 0.25, 1.0, 3.0), 0.0), "#f4ede0")
+        elif kind == "playground":
+            _world_add_box(anchor, "PlaygroundSurface", Vector3(width, 0.16, depth), Vector3(0.0, 0.08, 0.0), "#7aa85b")
+            _world_add_box(anchor, "Slide", Vector3(width * 0.3, body_height * 0.5, depth * 0.25), Vector3(-width * 0.2, body_height * 0.25, depth * 0.2), "#e85a4f")
+            _world_add_sphere(anchor, "ClimbingDome", maxf(1.2, minf(width, depth) * 0.25), Vector3(width * 0.2, maxf(1.2, depth * 0.2), -depth * 0.15), "#a8a8a8")
         elif kind == "tree":
             var trunk := MeshInstance3D.new()
             trunk.name = "Trunk"

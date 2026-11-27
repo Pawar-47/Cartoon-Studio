@@ -199,6 +199,59 @@ def test_world_layout_rejects_out_of_bounds_objects_and_unknown_kinds(tmp_path, 
     assert response.status_code == 422
 
 
+def test_world_layout_accepts_civic_and_indoor_object_kinds(tmp_path, monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "world-civic.sqlite3")
+    main._INITIALIZED_DB_KEY = None
+    project = client.post("/api/projects", json={"name": "Civic Project"})
+    project_id = project.json()["id"]
+    payload = {
+        "name": "Town Center",
+        "theme": "small_town",
+        "ground_color": "#789b58",
+        "sky": "day",
+        "objects": [
+            {"id": "school-1", "kind": "school", "label": "Elementary School",
+             "x": 10, "y": 10, "width": 18, "height": 22, "rotation": 0,
+             "color": "#8a9ba8"},
+            {"id": "hospital-1", "kind": "hospital", "label": "Clinic",
+             "x": 40, "y": 30, "width": 20, "height": 26, "rotation": 0,
+             "color": "#e8dcc8"},
+            {"id": "office-1", "kind": "office", "label": "Town Hall",
+             "x": 70, "y": 50, "width": 16, "height": 20, "rotation": 0,
+             "color": "#c8b8a8"},
+            {"id": "police-1", "kind": "police_station", "label": "Precinct",
+             "x": 85, "y": 15, "width": 14, "height": 18, "rotation": 0,
+             "color": "#5a6a7a"},
+            {"id": "garage-1", "kind": "garage", "label": "Repair Garage",
+             "x": 20, "y": 70, "width": 16, "height": 14, "rotation": 0,
+             "color": "#6a5a5a"},
+            {"id": "room-1", "kind": "indoor_room", "label": "Back Room",
+             "x": 50, "y": 80, "width": 12, "height": 10, "rotation": 0,
+             "color": "#e8dcc8"},
+            {"id": "play-1", "kind": "playground", "label": "Kids Park",
+             "x": 80, "y": 85, "width": 14, "height": 12, "rotation": 0,
+             "color": "#7aa85b"},
+        ],
+    }
+    created = client.post(f"/api/projects/{project_id}/worlds", json=payload)
+    assert created.status_code == 201
+    world_id = created.json()["id"]
+    world_path = tmp_path / "projects" / project_id / "worlds" / f"{world_id}.json"
+    document = json.loads(world_path.read_text(encoding="utf-8"))
+    assert document["document_type"] == "world"
+    kinds = {obj["kind"] for obj in document["data"]["objects"]}
+    expected = {"school", "hospital", "office", "police_station", "garage",
+                "indoor_room", "playground"}
+    assert kinds == expected
+    reopened = client.get(f"/api/projects/{project_id}/worlds/{world_id}")
+    assert reopened.status_code == 200
+    assert reopened.json()["revision"] == 1
+    assert len(client.get(f"/api/projects/{project_id}/worlds").json()) == 1
+
+
 def test_story_builder_is_served():
     response = client.get("/story")
     assert response.status_code == 200

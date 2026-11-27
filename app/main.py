@@ -119,7 +119,10 @@ class GlbInspectRequest(BaseModel):
 
 class WorldObjectInput(BaseModel):
     id: str = Field(min_length=1, max_length=64)
-    kind: Literal["road", "building", "shop", "tree", "vehicle", "lamp", "park"]
+    kind: Literal[
+        "road", "building", "shop", "school", "hospital", "office", "police_station",
+        "tree", "vehicle", "lamp", "park", "garage", "indoor_room", "playground"
+    ] = Field(...)
     label: str = Field(min_length=1, max_length=80)
     x: float = Field(ge=0, le=100)
     y: float = Field(ge=0, le=100)
