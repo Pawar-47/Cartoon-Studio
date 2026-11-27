@@ -863,7 +863,7 @@ function editFoundryCharacter(doc){
  $("foundry-name").value=data.name||"";$("foundry-description").value=data.description||"";
  $("foundry-template").value=recipe.master_template_id||"cartoon-studio.stylized-adult.v1";
  $("foundry-hair-style").value=recipe.hair_style||"short";$("foundry-hair-color").value=recipe.hair_color||"#2b1b13";
- for(const name of foundryMorphs{const v=Number(recipe.parameters?.[name]??0);$("foundry-"+name.replaceAll("_","-")).value=String(v)}
+ for(const name of foundryMorphs){const v=Number(recipe.parameters?.[name]??0);$("foundry-"+name.replaceAll("_","-")).value=String(v)}
  updateFoundryMorphLabels();$("foundry-create").textContent="Save Foundry changes";$("foundry-cancel").hidden=false;updateFoundryAvailability();
  $("foundry-status").textContent="Editing "+(data.name||"character")+". Saving preserves this character identity.";
  document.querySelector(".foundry-panel").scrollIntoView({behavior:"smooth",block:"start"});

@@ -59,3 +59,21 @@ jobs:
         env:
           CARTOON_STUDIO_GODOT_PATH: ${{ github.workspace }}/build/godot-runtime/Godot_v4.7.2-stable_win64.exe
         run: uv run --locked python -m pytest -q
+      - name: Install pinned Playwright browser
+        if: always()
+        run: |
+          npm install --no-save --no-package-lock playwright@1.56.1
+          npx playwright install chromium
+      - name: Launch Character Studio and perform browser visual acceptance
+        if: success()
+        env:
+          CARTOON_STUDIO_GODOT_PATH: ${{ github.workspace }}/build/godot-runtime/Godot_v4.7.2-stable_win64.exe
+        run: node scripts/character_studio_visual_acceptance.mjs
+      - name: Upload browser screenshots and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: character-studio-visual-acceptance
+          path: build/visual-acceptance/
+          if-no-files-found: warn
+          retention-days: 14
