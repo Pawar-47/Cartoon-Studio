@@ -183,10 +183,20 @@ try {
   await setInputValue(page, "#foundry-head-width", "0.6");
   await page.locator("#foundry-create").click();
   await page.waitForFunction(
-    () => document.querySelector("#foundry-status")?.textContent?.includes("saved."),
+    () => {
+      const status = document.querySelector("#foundry-status")?.textContent || "";
+      return status.includes("saved.") || status.startsWith("Preview unavailable:")
+        || status.includes("could not be previewed");
+    },
     null,
     { timeout: 120_000 },
   );
+  const editStatus = await page.locator("#foundry-status").textContent();
+  record("Foundry edit result: " + editStatus);
+  await page.screenshot({ path: path.join(output, "02-male-foundry-edit-result.png"), fullPage: true });
+  if (!editStatus?.includes("saved.")) {
+    throw new Error("Foundry edit did not finish successfully: " + editStatus);
+  }
   charactersResponse = await request.get(
     baseUrl + "/api/projects/" + project.id + "/characters",
   );
