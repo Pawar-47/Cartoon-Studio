@@ -65,7 +65,7 @@ def test_female_master_template_generates_distinct_body_and_clothing_geometry() 
     assert female_document["nodes"][0]["name"] == "CartoonStudio_StylizedAdultFemale"
     female_primitives = female_document["meshes"][0]["primitives"]
     male_primitives = male_document["meshes"][0]["primitives"]
-    assert len(female_primitives) == len(male_primitives) == 2
+    assert len(female_primitives) == len(male_primitives) == 3
     for female_primitive, male_primitive in zip(
         female_primitives, male_primitives, strict=True
     ):
@@ -110,8 +110,11 @@ def test_generated_master_glb_contains_real_morph_geometry() -> None:
     assert {"NORMAL", "JOINTS_0", "WEIGHTS_0"} <= set(attributes)
     assert document["accessors"][attributes["JOINTS_0"]]["componentType"] == 5123
     assert document["accessors"][attributes["WEIGHTS_0"]]["componentType"] == 5126
-    assert len(mesh["primitives"]) == 2
+    assert len(mesh["primitives"]) == 3
     assert mesh["primitives"][1]["material"] == 1
+    assert mesh["primitives"][2]["material"] == 2
+    assert document["materials"][2]["name"] == "FoundryHair"
+    assert mesh["extras"]["hairStyle"] == "short"
     assert document["materials"][1]["name"] == "FoundryCasualCloth"
     assert mesh["extras"]["clothingAssetIds"] == [CLOTHING_ASSET_ID]
 
@@ -160,7 +163,7 @@ def test_generated_skin_weights_blend_across_multiple_joints() -> None:
     json_length = struct.unpack_from("<I", data, 12)[0]
     binary_start = 20 + json_length + 8
     primitives = document["meshes"][0]["primitives"]
-    assert len(primitives) == 2
+    assert len(primitives) == 3
     for primitive in primitives:
         accessor = document["accessors"][primitive["attributes"]["WEIGHTS_0"]]
         view = document["bufferViews"][accessor["bufferView"]]
@@ -226,7 +229,7 @@ def test_recipe_morph_values_are_applied_to_body_and_clothing() -> None:
     mesh = document["meshes"][0]
     expected = [recipe["parameters"][name] for name in MORPH_TARGETS]
     assert mesh["weights"] == expected
-    assert len(mesh["primitives"]) == 2
+    assert len(mesh["primitives"]) == 3
     assert all(len(primitive["targets"]) == len(MORPH_TARGETS) for primitive in mesh["primitives"])
 
 
@@ -243,7 +246,7 @@ def test_master_export_preserves_custom_recipe_parameters(tmp_path) -> None:
     saved = json.loads(recipe_path.read_text(encoding="utf-8"))
     expected = [recipe["parameters"][name] for name in MORPH_TARGETS]
     assert document["meshes"][0]["weights"] == expected
-    assert len(document["meshes"][0]["primitives"]) == 1
+    assert len(document["meshes"][0]["primitives"]) == 2
     assert saved["character_id"] == "custom-export"
     assert saved["parameters"] == recipe["parameters"]
     assert saved["generated_asset"]["morph_weights"] == expected
@@ -275,7 +278,7 @@ def test_generator_cli_loads_and_exports_saved_recipe(tmp_path, monkeypatch) -> 
     saved_recipe = json.loads(recipe_output.read_text(encoding="utf-8"))
     expected_weights = [recipe["parameters"][name] for name in MORPH_TARGETS]
     assert generated["meshes"][0]["weights"] == expected_weights
-    assert len(generated["meshes"][0]["primitives"]) == 1
+    assert len(generated["meshes"][0]["primitives"]) == 2
     assert saved_recipe["character_id"] == "cli-hero"
     assert saved_recipe["parameters"] == recipe["parameters"]
 
@@ -286,3 +289,31 @@ def test_recipe_can_disable_fitted_clothing() -> None:
     document = _read_glb(build_master_character_glb(recipe))
     assert len(document["meshes"][0]["primitives"]) == 1
     assert document["meshes"][0]["extras"]["clothingAssetIds"] == []
+
+
+def test_foundry_hair_is_separate_head_skinned_glb_geometry() -> None:
+    recipe = default_character_recipe("hair-hero")
+    recipe["hair_style"] = "ponytail"
+    recipe["hair_color"] = "#a04b22"
+    document = _read_glb(build_master_character_glb(recipe))
+    mesh = document["meshes"][0]
+    hair = mesh["primitives"][2]
+    assert hair["material"] == 2
+    assert document["materials"][2]["pbrMetallicRoughness"]["baseColorFactor"] == [
+        160 / 255, 75 / 255, 34 / 255, 1.0
+    ]
+    assert mesh["extras"]["hairStyle"] == "ponytail"
+    assert mesh["extras"]["hairColor"] == "#a04b22"
+    assert len(hair["targets"]) == len(MORPH_TARGETS)
+    assert document["accessors"][hair["attributes"]["WEIGHTS_0"]]["count"] > 0
+
+
+def test_foundry_recipe_rejects_unknown_hair_style_and_invalid_color() -> None:
+    recipe = default_character_recipe()
+    recipe["hair_style"] = "rainbow"
+    with pytest.raises(ValueError, match="hairstyle"):
+        validate_character_recipe(recipe)
+    recipe = default_character_recipe()
+    recipe["hair_color"] = "brown"
+    with pytest.raises(ValueError, match="hair_color"):
+        validate_character_recipe(recipe)

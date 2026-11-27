@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import re
 import struct
 from pathlib import Path
 from typing import Any
@@ -11,7 +12,7 @@ RECIPE_SCHEMA_VERSION = 1
 MASTER_TEMPLATE_ID = "cartoon-studio.stylized-adult.v1"
 FEMALE_MASTER_TEMPLATE_ID = "cartoon-studio.stylized-adult-female.v1"
 MASTER_TEMPLATE_IDS = {MASTER_TEMPLATE_ID, FEMALE_MASTER_TEMPLATE_ID}
-GENERATOR_VERSION = "0.5.0"
+GENERATOR_VERSION = "0.6.0"
 
 
 RIG_PROFILE_ID = "cartoon-studio.humanoid.v1"
@@ -254,6 +255,8 @@ def default_character_recipe(
         "expression_weights": {},
         "clothing_asset_ids": [CLOTHING_ASSET_ID],
         "hair_asset_id": None,
+        "hair_style": "short",
+        "hair_color": "#2b1b13",
         "accessory_asset_ids": [],
         "rig_profile_id": RIG_PROFILE_ID,
         "generated_asset": None,
@@ -301,6 +304,14 @@ def validate_character_recipe(recipe: Any) -> dict[str, Any]:
         if value is not None and (not isinstance(value, str) or not value.strip()):
             raise ValueError(f"{key} must be null or a non-empty string.")
         normalized[key] = value
+    hair_style = recipe.get("hair_style", "short")
+    if hair_style not in {"short", "bob", "long", "ponytail", "spiky", "curly", "mohawk"}:
+        raise ValueError("Unsupported Foundry hairstyle.")
+    hair_color = recipe.get("hair_color", "#2b1b13")
+    if not isinstance(hair_color, str) or re.fullmatch(r"#[0-9a-fA-F]{6}", hair_color) is None:
+        raise ValueError("hair_color must be a six-digit hexadecimal color.")
+    normalized["hair_style"] = hair_style
+    normalized["hair_color"] = hair_color.lower()
     expression_weights = recipe.get("expression_weights", {})
     if not isinstance(expression_weights, dict):
         raise ValueError("expression_weights must be an object.")
@@ -592,6 +603,59 @@ def _build_geometry(
     return positions,indices,deltas,vertex_weights,normals
 
 
+def _build_hair_geometry(style: str) -> tuple[
+    list[tuple[float, float, float]], list[int],
+    dict[str, list[tuple[float, float, float]]],
+    list[tuple[tuple[str, float], ...]], list[tuple[float, float, float]]
+]:
+    """Build a separate, head-skinned hairstyle mesh from editable recipe data."""
+    shapes = [(0.0, 2.94, 0.015, 0.445, 0.245, 0.385)]
+    if style in {"short", "bob", "long", "ponytail", "curly"}:
+        shapes.extend(((-0.355, 2.72, 0.015, 0.105, 0.25, 0.14),
+                       (0.355, 2.72, 0.015, 0.105, 0.25, 0.14)))
+    if style == "bob":
+        shapes.extend(((-0.365, 2.43, 0.025, 0.12, 0.40, 0.16),
+                       (0.365, 2.43, 0.025, 0.12, 0.40, 0.16),
+                       (0.0, 2.40, 0.22, 0.36, 0.39, 0.16)))
+    elif style == "long":
+        shapes.extend(((-0.37, 2.15, 0.02, 0.115, 0.72, 0.15),
+                       (0.37, 2.15, 0.02, 0.115, 0.72, 0.15),
+                       (0.0, 2.12, 0.22, 0.35, 0.70, 0.15)))
+    elif style == "ponytail":
+        shapes.extend(((0.32, 2.48, 0.18, 0.16, 0.18, 0.16),
+                       (0.38, 2.02, 0.23, 0.14, 0.55, 0.14),
+                       (0.37, 2.68, 0.18, 0.17, 0.08, 0.17)))
+    elif style == "spiky":
+        for index in range(7):
+            x = (index - 3) * 0.105
+            shapes.append((x, 3.12 - abs(x) * 0.12, 0.0, 0.075, 0.22, 0.075))
+    elif style == "curly":
+        for row in range(2):
+            for index in range(5):
+                x = (index - 2) * 0.16
+                shapes.append((x, 3.02 - row * 0.13, 0.0, 0.105, 0.115, 0.11))
+    elif style == "mohawk":
+        shapes = [(0.0, 2.94, 0.015, 0.445, 0.245, 0.385)]
+        for index in range(5):
+            shapes.append((0.0, 3.10 + index * 0.015, 0.0, 0.115, 0.18, 0.16))
+    positions: list[tuple[float, float, float]] = []
+    indices: list[int] = []
+    normals: list[tuple[float, float, float]] = []
+    for x, y, z, rx, ry, rz in shapes:
+        vertices, faces, _, vertex_normals = _ellipsoid((x, y, z), (rx, ry, rz), 10, 16)
+        offset = len(positions)
+        positions.extend(vertices)
+        normals.extend(vertex_normals)
+        indices.extend(offset + index for index in faces)
+    morphs = {name: [] for name in MORPH_TARGETS}
+    weights = []
+    for point in positions:
+        for name in MORPH_TARGETS:
+            morphs[name].append((point[0] * 0.16, 0.0, 0.0) if name == "head_width" else (0.0, 0.0, 0.0))
+        weights.append((("Head", 1.0),))
+    return positions, indices, morphs, weights, normals
+
+
 def build_master_character_glb(recipe: dict[str, Any] | None = None) -> bytes:
     normalized_recipe = validate_character_recipe(
         recipe if recipe is not None else default_character_recipe()
@@ -600,6 +664,7 @@ def build_master_character_glb(recipe: dict[str, Any] | None = None) -> bytes:
         normalized_recipe["master_template_id"]
     )
     body = _build_geometry(body_components)
+    hair = _build_hair_geometry(normalized_recipe["hair_style"])
     clothing = (
         _build_geometry(clothing_components)
         if CLOTHING_ASSET_ID in normalized_recipe["clothing_asset_ids"]
@@ -712,6 +777,8 @@ def build_master_character_glb(recipe: dict[str, Any] | None = None) -> bytes:
     primitives = [make_primitive(body, 0)]
     if clothing is not None:
         primitives.append(make_primitive(clothing, 1))
+    hair_material_index = 2 if clothing is not None else 1
+    primitives.append(make_primitive(hair, hair_material_index))
 
     bone_node_start = 1
     bone_node_indices = {
@@ -766,6 +833,15 @@ def build_master_character_glb(recipe: dict[str, Any] | None = None) -> bytes:
                 "roughnessFactor": 0.92,
             },
         })
+    hair_color = normalized_recipe["hair_color"]
+    materials.append({
+        "name": "FoundryHair",
+        "pbrMetallicRoughness": {
+            "baseColorFactor": [int(hair_color[i:i + 2], 16) / 255 for i in (1, 3, 5)] + [1.0],
+            "metallicFactor": 0.0,
+            "roughnessFactor": 0.88,
+        },
+    })
 
     gltf = {
         "asset": {
@@ -799,6 +875,8 @@ def build_master_character_glb(recipe: dict[str, Any] | None = None) -> bytes:
             "extras": {
                 "targetNames": list(MORPH_TARGETS),
                 "clothingAssetIds": normalized_recipe["clothing_asset_ids"],
+                "hairStyle": normalized_recipe["hair_style"],
+                "hairColor": normalized_recipe["hair_color"],
             },
             "primitives": primitives,
         }],
@@ -844,6 +922,8 @@ def write_master_character(
         "rig_profile_id": RIG_PROFILE_ID,
         "bone_names": [bone[0] for bone in _BONES],
         "clothing_asset_ids": normalized_recipe["clothing_asset_ids"],
+        "hair_style": normalized_recipe["hair_style"],
+        "hair_color": normalized_recipe["hair_color"],
     }
     recipe_output = Path(recipe_path) if recipe_path else output.with_suffix(".recipe.json")
     recipe_output.parent.mkdir(parents=True, exist_ok=True)

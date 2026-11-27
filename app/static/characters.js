@@ -862,12 +862,13 @@ function editFoundryCharacter(doc){
  const data=doc.data||{},recipe=data.foundry_recipe||{};editingFoundryCharacterId=doc.id;
  $("foundry-name").value=data.name||"";$("foundry-description").value=data.description||"";
  $("foundry-template").value=recipe.master_template_id||"cartoon-studio.stylized-adult.v1";
- for(const name of foundryMorphs){const v=Number(recipe.parameters?.[name]??0);$("foundry-"+name.replaceAll("_","-")).value=String(v)}
+ $("foundry-hair-style").value=recipe.hair_style||"short";$("foundry-hair-color").value=recipe.hair_color||"#2b1b13";
+ for(const name of foundryMorphs{const v=Number(recipe.parameters?.[name]??0);$("foundry-"+name.replaceAll("_","-")).value=String(v)}
  updateFoundryMorphLabels();$("foundry-create").textContent="Save Foundry changes";$("foundry-cancel").hidden=false;updateFoundryAvailability();
  $("foundry-status").textContent="Editing "+(data.name||"character")+". Saving preserves this character identity.";
  document.querySelector(".foundry-panel").scrollIntoView({behavior:"smooth",block:"start"});
 }
-function cancelFoundryEdit(){editingFoundryCharacterId=null;$("foundry-create").textContent="Create and preview character";$("foundry-cancel").hidden=true;$("foundry-template").value="cartoon-studio.stylized-adult.v1";resetFoundryMorphs();updateFoundryAvailability()}
+function cancelFoundryEdit(){editingFoundryCharacterId=null;$("foundry-create").textContent="Create and preview character";$("foundry-cancel").hidden=true;$("foundry-template").value="cartoon-studio.stylized-adult.v1";$("foundry-hair-style").value="short";$("foundry-hair-color").value="#2b1b13";resetFoundryMorphs();updateFoundryAvailability()}
 async function createFoundryCharacter(){
  if(!activeProject)return;
  const button=$("foundry-create"),name=$("foundry-name").value.trim();
@@ -880,7 +881,7 @@ async function createFoundryCharacter(){
   const editing=Boolean(editingFoundryCharacterId);const endpoint="/api/projects/"+encodeURIComponent(activeProject)+"/foundry-characters"+(editing?"/"+encodeURIComponent(editingFoundryCharacterId):"");
   const response=await fetch(endpoint,{
    method:editing?"PUT":"POST",headers:{"Content-Type":"application/json"},
-   body:JSON.stringify({name,description:$("foundry-description").value.trim(),master_template_id:$("foundry-template").value,parameters})
+   body:JSON.stringify({name,description:$("foundry-description").value.trim(),master_template_id:$("foundry-template").value,hair_style:$("foundry-hair-style").value,hair_color:$("foundry-hair-color").value,parameters})
   });
   const result=await response.json();
   if(!response.ok)throw new Error(result.detail||"Foundry character generation failed.");
