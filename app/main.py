@@ -1704,13 +1704,15 @@ def update_foundry_character(
         print(f"[foundry-update] stage=generate-start character={character_id}", flush=True)
         write_master_character(temp_asset, recipe_path=temp_recipe, recipe=recipe)
         print(
-            f"[foundry-update] stage=generate-complete elapsed={time.monotonic() - stage_started:.2f}s "
+            "[foundry-update] stage=generate-complete "
+            f"elapsed={time.monotonic() - stage_started:.2f}s "
             f"bytes={temp_asset.stat().st_size}",
             flush=True,
         )
         container = _validate_glb_container(temp_asset)
         print(
-            f"[foundry-update] stage=container-validated elapsed={time.monotonic() - stage_started:.2f}s",
+            "[foundry-update] stage=container-validated "
+            f"elapsed={time.monotonic() - stage_started:.2f}s",
             flush=True,
         )
         try:
@@ -1718,7 +1720,8 @@ def update_foundry_character(
                 temp_asset, allowed_root=project_directory(DATA_DIR, project_id)
             )
             print(
-                f"[foundry-update] stage=godot-inspection-complete elapsed={time.monotonic() - stage_started:.2f}s",
+                "[foundry-update] stage=godot-inspection-complete "
+                f"elapsed={time.monotonic() - stage_started:.2f}s",
                 flush=True,
             )
         except EngineUnavailableError as error:
