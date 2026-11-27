@@ -106,7 +106,17 @@ app = FastAPI(
     version=APP_VERSION,
     lifespan=lifespan,
 )
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+class BrowserStaticFiles(StaticFiles):
+    """Serve browser modules with a standards-compliant JavaScript MIME type."""
+
+    async def get_response(self, path: str, scope: dict[str, Any]):
+        response = await super().get_response(path, scope)
+        if response.status_code < 400 and Path(path).suffix.lower() in {".js", ".mjs"}:
+            response.headers["content-type"] = "text/javascript; charset=utf-8"
+        return response
+
+
+app.mount("/static", BrowserStaticFiles(directory=STATIC_DIR), name="static")
 
 
 class ProjectCreate(BaseModel):
