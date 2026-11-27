@@ -699,6 +699,7 @@ func _replace_skin_surface_with_generated_face(
         "new_surface_index": new_surface_index,
         "vertex_count": vertex_count,
         "head_bone_index": head_bone_index,
+        "original_surface_count": surface_count,
     }
 
 
@@ -1179,20 +1180,21 @@ func _export_character_appearance(payload: Dictionary) -> Dictionary:
     if face_enabled:
         var face_mesh_count := 0
         var face_attachment_verified := false
-        var generated_face_surface_found := false
+        var head_surface_count_verified := false
+        var head_mesh_name := str(face_result.get("head_mesh_name", ""))
+        var expected_surface_count := int(face_result.get("original_surface_count", -1))
         for mesh_record in verification.get("mesh_inventory", []):
             if str(mesh_record.get("node_name", "")).begins_with("CartoonStudio_Face_"):
                 face_mesh_count += 1
                 if str(mesh_record.get("attachment_bone", "")) == str(face_result.get("attachment_bone", "")):
                     face_attachment_verified = true
-            var surface_names: Array = mesh_record.get("surface_names", [])
-            for surface_name in surface_names:
-                if str(surface_name) == "CartoonStudio_GeneratedFace":
-                    generated_face_surface_found = true
+            if not head_mesh_name.is_empty() and str(mesh_record.get("node_name", "")) == head_mesh_name:
+                if expected_surface_count > 0 and int(mesh_record.get("surface_count", -1)) == expected_surface_count:
+                    head_surface_count_verified = true
         if face_mesh_count < int(face_result.get("mesh_count", 0)) or not face_attachment_verified:
             DirAccess.remove_absolute(output_path)
             return {"error_code": "appearance_face_verification_failed", "error": "Generated facial meshes or their Head-bone attachment did not survive GLB export and re-import."}
-        if bool(face_result.get("skin_replaced", false)) and not generated_face_surface_found:
+        if bool(face_result.get("skin_replaced", false)) and not head_surface_count_verified:
             DirAccess.remove_absolute(output_path)
             return {"error_code": "appearance_face_replacement_verification_failed", "error": "Generated face surface was not found on the head mesh after export and re-import."}
         verification["face_features_verified"] = true
