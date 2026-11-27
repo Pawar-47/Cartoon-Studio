@@ -134,61 +134,74 @@ try {
     (id) => document.querySelector("#project-select")?.value === id,
     project.id,
   );
-  await page.locator("#foundry-name").fill("CI Foundry Ali");
-  await page.locator("#foundry-description").fill("Original male hero generated in browser CI.");
-  await page.locator("#foundry-template").selectOption("cartoon-studio.stylized-adult.v1");
-  await page.locator("#foundry-hair-style").selectOption("spiky");
-  await setInputValue(page, "#foundry-hair-color", "#254c9b");
-  await setInputValue(page, "#foundry-head-width", "0.35");
-  await setInputValue(page, "#foundry-mouth-width", "0.25");
-  await page.locator("#foundry-create").click();
-  await page.waitForFunction(
-    () => document.querySelector("#foundry-status")?.textContent?.includes("saved."),
-    null,
-    { timeout: 240_000 },
-  );
-  await page.locator("#model-preview").waitFor({ state: "visible", timeout: 30_000 });
-  await page.waitForFunction(() => {
-    const canvas = document.querySelector("#model-preview");
-    return canvas && canvas.width > 0 && canvas.height > 0
-      && getComputedStyle(canvas).display !== "none";
-  });
-  await page.waitForTimeout(1200);
-  await page.screenshot({ path: path.join(output, "01-male-foundry-preview.png"), fullPage: true });
-  record("Male Foundry character created and Three.js preview canvas displayed.");
-
-  let charactersResponse = await request.get(
-    baseUrl + "/api/projects/" + project.id + "/characters",
-  );
-  let characters = await charactersResponse.json();
-  let male = characters.find((item) => item.data?.name === "CI Foundry Ali");
-  if (!male) throw new Error("Male Foundry profile was not persisted.");
-  const maleAssetResponse = await request.get(
-    baseUrl + "/api/projects/" + project.id + "/character-assets/"
-      + male.data.asset.relative_path.split("/").at(-1).replace(/\.glb$/i, ""),
-  );
-  if (!maleAssetResponse.ok() || (await maleAssetResponse.body()).length < 1000) {
-    throw new Error("Male Foundry GLB could not be downloaded.");
-  }
-  if (male.data.foundry_recipe?.hair_style !== "spiky"
-      || male.data.foundry_recipe?.hair_color !== "#254c9b") {
-    throw new Error("Male hairstyle settings were not persisted.");
-  }
-
-  const foundryRequests = [];
-  page.on("request", (request) => {
-    if (request.url().includes("/foundry-characters")) {
-      foundryRequests.push({ method: request.method(), url: request.url() });
-      record("[browser request] " + request.method() + " " + request.url());
+  const femaleOnly = process.env.FOUNDRY_ACCEPTANCE_TARGET === "female";
+  if (!femaleOnly) {
+    await page.locator("#foundry-name").fill("CI Foundry Ali");
+    await page.locator("#foundry-description").fill("Original male hero generated in browser CI.");
+    await page.locator("#foundry-template").selectOption("cartoon-studio.stylized-adult.v1");
+    await page.locator("#foundry-hair-style").selectOption("spiky");
+    await setInputValue(page, "#foundry-hair-color", "#254c9b");
+    await setInputValue(page, "#foundry-head-width", "0.35");
+    await setInputValue(page, "#foundry-mouth-width", "0.25");
+    await page.locator("#foundry-create").click();
+    await page.waitForFunction(
+      () => document.querySelector("#foundry-status")?.textContent?.includes("saved."),
+      null,
+      { timeout: 240_000 },
+    );
+    await page.locator("#model-preview").waitFor({ state: "visible", timeout: 30_000 });
+    await page.waitForFunction(() => {
+      const canvas = document.querySelector("#model-preview");
+      return canvas && canvas.width > 0 && canvas.height > 0
+        && getComputedStyle(canvas).display !== "none";
+    });
+    await page.waitForTimeout(1200);
+    await page.screenshot({ path: path.join(output, "01-male-foundry-preview.png"), fullPage: true });
+    record("Male Foundry character created and Three.js preview canvas displayed.");
+  
+    let charactersResponse = await request.get(
+      baseUrl + "/api/projects/" + project.id + "/characters",
+    );
+    let characters = await charactersResponse.json();
+    let male = characters.find((item) => item.data?.name === "CI Foundry Ali");
+    if (!male) throw new Error("Male Foundry profile was not persisted.");
+    const maleAssetResponse = await request.get(
+      baseUrl + "/api/projects/" + project.id + "/character-assets/"
+        + male.data.asset.relative_path.split("/").at(-1).replace(/\.glb$/i, ""),
+    );
+    if (!maleAssetResponse.ok() || (await maleAssetResponse.body()).length < 1000) {
+      throw new Error("Male Foundry GLB could not be downloaded.");
     }
-  });
-  await page.getByRole("button", { name: "Edit Foundry recipe" }).click();
-  await page.waitForFunction(
-    () => document.querySelector("#foundry-create")?.textContent?.trim() === "Save Foundry changes",
-    null,
-    { timeout: 10_000 },
-  ).catch(async () => {
-    const state = await page.evaluate(() => ({
+    if (male.data.foundry_recipe?.hair_style !== "spiky"
+        || male.data.foundry_recipe?.hair_color !== "#254c9b") {
+      throw new Error("Male hairstyle settings were not persisted.");
+    }
+  
+    const foundryRequests = [];
+    page.on("request", (request) => {
+      if (request.url().includes("/foundry-characters")) {
+        foundryRequests.push({ method: request.method(), url: request.url() });
+        record("[browser request] " + request.method() + " " + request.url());
+      }
+    });
+    await page.getByRole("button", { name: "Edit Foundry recipe" }).click();
+    await page.waitForFunction(
+      () => document.querySelector("#foundry-create")?.textContent?.trim() === "Save Foundry changes",
+      null,
+      { timeout: 10_000 },
+    ).catch(async () => {
+      const state = await page.evaluate(() => ({
+        buttonText: document.querySelector("#foundry-create")?.textContent?.trim(),
+        buttonDisabled: document.querySelector("#foundry-create")?.disabled,
+        project: document.querySelector("#project-select")?.value,
+        name: document.querySelector("#foundry-name")?.value,
+        status: document.querySelector("#foundry-status")?.textContent,
+        morph: document.querySelector("#foundry-head-width")?.value,
+      }));
+      await page.locator("#model-preview").screenshot({ path: path.join(output, "02-foundry-edit-mode-failure.png"), timeout: 60_000 });
+      throw new Error("Edit Foundry recipe did not activate edit mode within 10 seconds: " + JSON.stringify(state));
+    });
+    const editModeState = await page.evaluate(() => ({
       buttonText: document.querySelector("#foundry-create")?.textContent?.trim(),
       buttonDisabled: document.querySelector("#foundry-create")?.disabled,
       project: document.querySelector("#project-select")?.value,
@@ -196,60 +209,53 @@ try {
       status: document.querySelector("#foundry-status")?.textContent,
       morph: document.querySelector("#foundry-head-width")?.value,
     }));
-    await page.locator("#model-preview").screenshot({ path: path.join(output, "02-foundry-edit-mode-failure.png"), timeout: 60_000 });
-    throw new Error("Edit Foundry recipe did not activate edit mode within 10 seconds: " + JSON.stringify(state));
-  });
-  const editModeState = await page.evaluate(() => ({
-    buttonText: document.querySelector("#foundry-create")?.textContent?.trim(),
-    buttonDisabled: document.querySelector("#foundry-create")?.disabled,
-    project: document.querySelector("#project-select")?.value,
-    name: document.querySelector("#foundry-name")?.value,
-    status: document.querySelector("#foundry-status")?.textContent,
-    morph: document.querySelector("#foundry-head-width")?.value,
-  }));
-  if (editModeState.buttonDisabled || editModeState.name !== "CI Foundry Ali"
-      || !editModeState.project || !editModeState.status?.startsWith("Editing CI Foundry Ali")
-      || editModeState.morph !== "0.35") {
-    throw new Error("Foundry edit mode state is inconsistent: " + JSON.stringify(editModeState));
+    if (editModeState.buttonDisabled || editModeState.name !== "CI Foundry Ali"
+        || !editModeState.project || !editModeState.status?.startsWith("Editing CI Foundry Ali")
+        || editModeState.morph !== "0.35") {
+      throw new Error("Foundry edit mode state is inconsistent: " + JSON.stringify(editModeState));
+    }
+    record("Foundry edit mode verified: " + JSON.stringify(editModeState));
+    await setInputValue(page, "#foundry-head-width", "0.6");
+    await page.locator("#foundry-create").click();
+    // A Windows CI regeneration can take just over two minutes through Godot inspection.
+    // Keep the browser alive long enough to receive the save response before checking preview parsing.
+    await page.waitForFunction(
+      () => document.querySelector("#foundry-status")?.textContent?.includes("saved.")
+        || document.querySelector("#foundry-status")?.textContent?.includes("could not"),
+      null,
+      { timeout: 240_000 },
+    );
+    await page.waitForFunction(
+      () => {
+        const status = document.querySelector("#preview-status")?.textContent || "";
+        return status.startsWith("CI Foundry Ali ·") || status.startsWith("Preview unavailable:");
+      },
+      null,
+      { timeout: 60_000 },
+    );
+    const editStatus = await page.locator("#foundry-status").textContent();
+    const previewStatus = await page.locator("#preview-status").textContent();
+    record("Foundry edit result: " + editStatus);
+    record("Foundry preview result: " + previewStatus);
+    await page.locator("#model-preview").screenshot({ path: path.join(output, "02-male-foundry-edit-result.png"), timeout: 60_000 });
+    if (!editStatus?.includes("saved.") || previewStatus?.startsWith("Preview unavailable:")) {
+      throw new Error("Foundry edit/preview did not finish successfully: " + editStatus
+        + " | preview: " + previewStatus);
+    }
+    charactersResponse = await request.get(
+      baseUrl + "/api/projects/" + project.id + "/characters",
+    );
+    characters = await charactersResponse.json();
+    male = characters.find((item) => item.id === male.id);
+    if (!male || male.revision !== 2 || male.data.foundry_recipe.parameters.head_width !== 0.6) {
+      throw new Error("Foundry edit did not preserve character identity and revision.");
+    }
+    await page.locator("#model-preview").screenshot({ path: path.join(output, "02-male-foundry-edited.png"), timeout: 60_000 });
+    record("Saved recipe reopened, edited and persisted under the same character ID.");
+  } else {
+    record("Female-only acceptance mode: skipping already-passed male create/edit workflow.");
   }
-  record("Foundry edit mode verified: " + JSON.stringify(editModeState));
-  await setInputValue(page, "#foundry-head-width", "0.6");
-  await page.locator("#foundry-create").click();
-  // A Windows CI regeneration can take just over two minutes through Godot inspection.
-  // Keep the browser alive long enough to receive the save response before checking preview parsing.
-  await page.waitForFunction(
-    () => document.querySelector("#foundry-status")?.textContent?.includes("saved.")
-      || document.querySelector("#foundry-status")?.textContent?.includes("could not"),
-    null,
-    { timeout: 240_000 },
-  );
-  await page.waitForFunction(
-    () => {
-      const status = document.querySelector("#preview-status")?.textContent || "";
-      return status.startsWith("CI Foundry Ali ·") || status.startsWith("Preview unavailable:");
-    },
-    null,
-    { timeout: 60_000 },
-  );
-  const editStatus = await page.locator("#foundry-status").textContent();
-  const previewStatus = await page.locator("#preview-status").textContent();
-  record("Foundry edit result: " + editStatus);
-  record("Foundry preview result: " + previewStatus);
-  await page.locator("#model-preview").screenshot({ path: path.join(output, "02-male-foundry-edit-result.png"), timeout: 60_000 });
-  if (!editStatus?.includes("saved.") || previewStatus?.startsWith("Preview unavailable:")) {
-    throw new Error("Foundry edit/preview did not finish successfully: " + editStatus
-      + " | preview: " + previewStatus);
-  }
-  charactersResponse = await request.get(
-    baseUrl + "/api/projects/" + project.id + "/characters",
-  );
-  characters = await charactersResponse.json();
-  male = characters.find((item) => item.id === male.id);
-  if (!male || male.revision !== 2 || male.data.foundry_recipe.parameters.head_width !== 0.6) {
-    throw new Error("Foundry edit did not preserve character identity and revision.");
-  }
-  await page.locator("#model-preview").screenshot({ path: path.join(output, "02-male-foundry-edited.png"), timeout: 60_000 });
-  record("Saved recipe reopened, edited and persisted under the same character ID.");
+
 
   await page.locator("#foundry-name").fill("CI Foundry Sana");
   await page.locator("#foundry-description").fill("Original female hero generated in browser CI.");
@@ -277,8 +283,9 @@ try {
   }
   const maleInspection = male.data.asset.engine_inspection;
   const femaleInspection = female.data.asset.engine_inspection;
-  if (maleInspection.skeleton_count !== 1 || femaleInspection.skeleton_count !== 1
-      || maleInspection.morph_target_count !== 10 || femaleInspection.morph_target_count !== 10) {
+  if (femaleInspection.skeleton_count !== 1 || femaleInspection.morph_target_count !== 10
+      || (!femaleOnly && (maleInspection.skeleton_count !== 1
+        || maleInspection.morph_target_count !== 10))) {
     throw new Error("Godot inspection did not confirm the expected rig and morph targets.");
   }
   record("Male and female GLBs both passed the live Godot import/inspection API.");

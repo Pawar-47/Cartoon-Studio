@@ -1829,22 +1829,64 @@ def create_foundry_character(
         DATA_DIR, project_id, f"assets/characters/{asset_id}.json"
     )
     asset_path.parent.mkdir(parents=True, exist_ok=True)
+    stage_started = time.monotonic()
+    stage = "generation"
+    print(
+        "[foundry-create] stage=generate-start "
+        f"character={character_id} template={recipe['master_template_id']}",
+        flush=True,
+    )
     try:
         write_master_character(asset_path, recipe_path=recipe_path, recipe=recipe)
+        print(
+            "[foundry-create] stage=generate-complete "
+            f"elapsed={time.monotonic() - stage_started:.2f}s "
+            f"bytes={asset_path.stat().st_size}",
+            flush=True,
+        )
+        stage = "container-validation"
         container = _validate_glb_container(asset_path)
+        print(
+            "[foundry-create] stage=container-validated "
+            f"elapsed={time.monotonic() - stage_started:.2f}s",
+            flush=True,
+        )
+        stage = "godot-inspection"
+        print(
+            "[foundry-create] stage=godot-inspection-start "
+            f"elapsed={time.monotonic() - stage_started:.2f}s",
+            flush=True,
+        )
         try:
             inspection = get_engine_adapter().inspect_glb(
                 asset_path, allowed_root=project_directory(DATA_DIR, project_id)
             )
         except EngineUnavailableError as error:
+            print(f"[foundry-create] stage=godot-inspection-unavailable error={error}", flush=True)
             raise HTTPException(status_code=503, detail=str(error)) from error
         except EngineTimeoutError as error:
+            print(
+                "[foundry-create] stage=godot-inspection-timeout "
+                f"elapsed={time.monotonic() - stage_started:.2f}s error={error}",
+                flush=True,
+            )
             raise HTTPException(status_code=504, detail=str(error)) from error
         except EngineError as error:
+            print(
+                "[foundry-create] stage=godot-inspection-error "
+                f"elapsed={time.monotonic() - stage_started:.2f}s error={error}",
+                flush=True,
+            )
             raise HTTPException(
                 status_code=422, detail=f"Godot could not import the Foundry character: {error}"
             ) from error
+        print(
+            "[foundry-create] stage=godot-inspection-complete "
+            f"elapsed={time.monotonic() - stage_started:.2f}s",
+            flush=True,
+        )
 
+        stage = "document-persistence"
         now = datetime.now(UTC).isoformat()
         asset_data = {
             "original_filename": f"{payload.name.strip()}.glb",
@@ -1909,13 +1951,24 @@ def create_foundry_character(
                 connection, project_id, document, character_relative, character_digest
             )
             sync_character_reference(connection, DATA_DIR, project_id, document)
+        print(
+            "[foundry-create] stage=persistence-complete "
+            f"elapsed={time.monotonic() - stage_started:.2f}s",
+            flush=True,
+        )
         return {
             **document,
             "asset_id": asset_id,
             "asset_url": f"/api/projects/{project_id}/character-assets/{asset_id}",
             "recipe_path": relative_recipe,
         }
-    except BaseException:
+    except BaseException as error:
+        print(
+            "[foundry-create] stage=failed "
+            f"stage={stage} elapsed={time.monotonic() - stage_started:.2f}s "
+            f"error={type(error).__name__}: {error}",
+            flush=True,
+        )
         asset_path.unlink(missing_ok=True)
         recipe_path.unlink(missing_ok=True)
         manifest_path.unlink(missing_ok=True)
