@@ -1,3 +1,4 @@
+import io
 import json
 import uuid
 
@@ -860,6 +861,111 @@ def test_project_update_increments_document_revision(tmp_path, monkeypatch):
     opened = client.get(f"/api/projects/{project_id}")
     assert opened.json()["document"]["revision"] == 2
     assert opened.json()["document"]["data"]["description"] == "Updated description"
+
+
+def test_project_export_returns_zip_package(tmp_path, monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "export.sqlite3")
+    created = client.post("/api/projects", json={"name": "Exportable Project"})
+    project_id = created.json()["id"]
+
+    exported = client.get(f"/api/projects/{project_id}/export")
+    assert exported.status_code == 200
+    assert exported.headers["content-type"] == "application/zip"
+    assert f'filename="project-{project_id}.zip"' in exported.headers.get(
+        "content-disposition", ""
+    )
+
+    import zipfile
+
+    with zipfile.ZipFile(io.BytesIO(exported.content)) as archive:
+        names = archive.namelist()
+        assert "project.json" in names
+        project_doc = json.loads(archive.read("project.json"))
+        assert project_doc["document_type"] == "project"
+        assert project_doc["id"] == project_id
+        assert project_doc["data"]["name"] == "Exportable Project"
+
+
+def test_project_import_round_trip(tmp_path, monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "import.sqlite3")
+    created = client.post(
+        "/api/projects", json={"name": "Original", "description": "Original desc"}
+    )
+    project_id = created.json()["id"]
+
+    # Add a world to the project
+    world = client.post(
+        f"/api/projects/{project_id}/worlds",
+        json={"name": "Imported Town", "theme": "small_town"},
+    )
+    assert world.status_code == 201
+    world_id = world.json()["id"]
+
+    # Export the project
+    exported = client.get(f"/api/projects/{project_id}/export")
+    assert exported.status_code == 200
+
+    # Import into a fresh data directory
+    import_tmp = tmp_path / "imported"
+    import_tmp.mkdir()
+    monkeypatch.setattr(main, "DATA_DIR", import_tmp)
+    monkeypatch.setattr(main, "DB_PATH", import_tmp / "imported.sqlite3")
+
+    imported = client.post(
+        "/api/projects/import",
+        files={"file": ("project.zip", exported.content, "application/zip")},
+    )
+    assert imported.status_code == 201
+    new_project_id = imported.json()["id"]
+    assert new_project_id != project_id
+    assert imported.json()["name"] == "Original"
+    assert imported.json()["description"] == "Original desc"
+
+    # Verify the imported project has the world
+    imported_worlds = client.get(f"/api/projects/{new_project_id}/worlds")
+    assert imported_worlds.status_code == 200
+    world_ids = [w["id"] for w in imported_worlds.json()]
+    assert world_id in world_ids
+
+
+def test_project_import_rejects_non_zip(tmp_path, monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "badimport.sqlite3")
+
+    response = client.post(
+        "/api/projects/import",
+        files={"file": ("notazip.txt", b"not a zip file", "text/plain")},
+    )
+    assert response.status_code == 422
+
+
+def test_project_import_rejects_missing_project_json(tmp_path, monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "badimport2.sqlite3")
+
+    import zipfile
+
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("readme.txt", "hello")
+    buffer.seek(0)
+
+    response = client.post(
+        "/api/projects/import",
+        files={"file": ("bad.zip", buffer.read(), "application/zip")},
+    )
+    assert response.status_code == 422
+    assert "project.json" in response.json()["detail"]
 
 
 def test_story_plan_is_saved_as_portable_episode_document(tmp_path, monkeypatch):

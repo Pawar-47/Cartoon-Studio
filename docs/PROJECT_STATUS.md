@@ -84,7 +84,8 @@ Phase 3 is now active per user direction. Work continues on:
 1. Multi-location world/location reuse and canonical world schema migration
 2. World-scene export quality and browser preview visual review (world export endpoint wired to job queue via `world_export` operation; queue endpoints cover export jobs)
 3. World-linked story plan production mapping (ties to Phase 4)
-4. P2.2 remaining visual acceptance items proceed in parallel: interactive browser acceptance of hairstyles, portraits, assembly, morphs and retarget preview; broad rig acceptance on representative models
+4. Project export/import (PROD-R005): GET /api/projects/{project_id}/export returns portable ZIP; POST /api/projects/import restores as new project; 4 unit tests
+5. P2.2 remaining visual acceptance items proceed in parallel: interactive browser acceptance of hairstyles, portraits, assembly, morphs and retarget preview; broad rig acceptance on representative models
 
 User visual acceptance for Phases 2–7 is scheduled for Phase 8 per project owner direction.
 

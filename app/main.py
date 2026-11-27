@@ -2,18 +2,20 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import io
 import json
 import os
 import shutil
 import uuid
+import zipfile
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -3261,3 +3263,128 @@ def update_project(project_id: str, payload: ProjectUpdate) -> ProjectRecord:
             "SELECT * FROM projects WHERE id = ?", (project_id,)
         ).fetchone()
     return _project_record(updated)
+
+
+@app.get("/api/projects/{project_id}/export")
+def export_project(project_id: str):
+    """Export a project as a portable ZIP package.
+
+    The package contains project.json, character profiles, world documents
+    and exported assets. It can be re-imported into any Cartoon Studio
+    instance to reopen and revise the project (PROD-R005).
+    """
+    initialize_database()
+    with connect_db() as connection:
+        row = connection.execute(
+            "SELECT * FROM projects WHERE id = ?", (project_id,)
+        ).fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    project_root = project_directory(DATA_DIR, project_id)
+    if not project_root.is_dir():
+        raise HTTPException(status_code=404, detail="Project directory not found.")
+
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        for file_path in sorted(project_root.rglob("*")):
+            if file_path.is_file():
+                arcname = file_path.relative_to(project_root).as_posix()
+                archive.write(file_path, arcname)
+    buffer.seek(0)
+    return StreamingResponse(
+        buffer,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f'attachment; filename="project-{project_id}.zip"'
+        },
+    )
+
+
+@app.post("/api/projects/import", response_model=ProjectRecord, status_code=201)
+def import_project(file: UploadFile = File(...)):
+    """Import a portable project ZIP package.
+
+    The package must contain project.json at its root. A new project is
+    created with a fresh ID, and all package contents are restored under
+    the new project directory (PROD-R005).
+    """
+    initialize_database()
+    if not file.filename or not file.filename.endswith(".zip"):
+        raise HTTPException(
+            status_code=422, detail="Only .zip project packages are accepted."
+        )
+    upload_data = file.file.read()
+    with zipfile.ZipFile(io.BytesIO(upload_data)) as archive:
+        names = archive.namelist()
+        if "project.json" not in names:
+            raise HTTPException(
+                status_code=422,
+                detail="Project package is missing project.json at its root.",
+            )
+        project_document = json.loads(archive.read("project.json"))
+        if not isinstance(project_document, dict):
+            raise HTTPException(
+                status_code=422, detail="project.json is not a JSON object."
+            )
+        if project_document.get("document_type") != "project":
+            raise HTTPException(
+                status_code=422,
+                detail="project.json is not a project document.",
+            )
+        old_project_id = project_document.get("id")
+        if not old_project_id:
+            raise HTTPException(
+                status_code=422,
+                detail="project.json is missing a project id.",
+            )
+        new_project_id = str(uuid.uuid4())
+        new_root = project_directory(DATA_DIR, new_project_id)
+        new_root.mkdir(parents=True, exist_ok=True)
+        for name in names:
+            if name.endswith("/"):
+                continue
+            target = new_root / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(archive.read(name))
+        project_path = new_root / "project.json"
+        document = read_json(project_path)
+        document["id"] = new_project_id
+        document["data"]["id"] = new_project_id
+        now = datetime.now(UTC).isoformat()
+        document["updated_at"] = now
+        document["data"]["updated_at"] = now
+        document["revision"] = int(document.get("revision", 1)) + 1
+        digest = write_json_atomic(project_path, document)
+        project_name = str(document["data"].get("name", "Imported Project"))
+        project_description = str(document["data"].get("description", ""))
+        with connect_db() as connection:
+            connection.execute(
+                """
+                INSERT INTO projects (
+                    id, name, description, created_at, updated_at, metadata_json
+                ) VALUES (?, ?, ?, ?, ?, '{}')
+                """,
+                (
+                    new_project_id,
+                    project_name,
+                    project_description,
+                    document.get("created_at", now),
+                    now,
+                ),
+            )
+            upsert_document_index(
+                connection,
+                new_project_id,
+                document,
+                "project.json",
+                digest,
+            )
+        reconcile_project_files(DATA_DIR, DB_PATH)
+    return ProjectRecord(
+        id=new_project_id,
+        name=project_name,
+        description=project_description,
+        created_at=document.get("created_at", now),
+        updated_at=now,
+        metadata={},
+    )

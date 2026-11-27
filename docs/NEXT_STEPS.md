@@ -22,6 +22,9 @@ Production SQLite job queue (`app/job_queue.py`) with bounded retries (MAX_ATTEM
 ### World export wired to job queue — DONE
 `/api/projects/{project_id}/worlds/{world_id}/export` enqueues a `world_export` job, claims it, runs `export_world_scene`, completes/fails through the queue; `/jobs`, `/jobs/{id}`, `/jobs/{id}/cancel` API endpoints cover world export jobs. World export endpoint test passes with job queue wired.
 
+### Project export/import (PROD-R005) — DONE
+GET /api/projects/{project_id}/export returns a portable ZIP package containing project.json, character profiles, world documents and exported assets. POST /api/projects/import restores a ZIP package as a new project with a fresh ID. 4 unit tests cover export/import round-trip, non-ZIP rejection and missing project.json rejection.
+
 ## Phase 3 World Builder batches
 
 ### P3.1 — Persistent world/location schema and asset registry — SCHEMA MIGRATION DONE
