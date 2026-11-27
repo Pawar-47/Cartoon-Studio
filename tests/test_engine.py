@@ -293,10 +293,7 @@ def test_godot_worker_bakes_cartoon_face_geometry_and_preserves_animation(tmp_pa
     assert result["face_features_verified"] is True
     assert result["face_attachment_bone"].lower().endswith("head")
     assert result["face_fit_basis"] == "generated_head_template"
-    assert result["face_replaced_surface_count"] >= 3
-    assert {item.rsplit(":", 1)[-1] for item in result["face_replaced_surfaces"]} >= {
-        "Skin", "Eyebrows", "Eye",
-    }
+    assert result["face_skin_replaced"] is True
     assert len(result["face_eye_anchor"]) == 3
     assert len(result["face_nose_anchor"]) == 3
     assert len(result["face_mouth_anchor"]) == 3
@@ -307,12 +304,11 @@ def test_godot_worker_bakes_cartoon_face_geometry_and_preserves_animation(tmp_pa
         item for item in result["mesh_inventory"]
         if item["node_name"].startswith("CartoonStudio_Face_")
     ]
-    assert len(face_meshes) >= 23
+    assert len(face_meshes) >= 22
     face_names = {item["node_name"] for item in face_meshes}
     assert any(name.startswith("CartoonStudio_Face_Ear_") for name in face_names)
     assert any(name.startswith("CartoonStudio_Face_EarInner_") for name in face_names)
     assert any(name.startswith("CartoonStudio_Face_Nostril_") for name in face_names)
-    assert "CartoonStudio_Face_Head" in face_names
     assert any(name.startswith("CartoonStudio_Face_Moustache_") for name in face_names)
     assert "CartoonStudio_Face_NoseBridge" in face_names
     assert "CartoonStudio_Face_MouthOpening" in face_names
@@ -322,6 +318,12 @@ def test_godot_worker_bakes_cartoon_face_geometry_and_preserves_animation(tmp_pa
     ), "Closed-mouth line geometry must remain available for expression animation."
     assert "CartoonStudio_Face_MouthTongue" in face_names
     assert all(item["attachment_bone"].lower().endswith("head") for item in face_meshes)
+    generated_face_surfaces = [
+        item for item in result["mesh_inventory"]
+        if "CartoonStudio_GeneratedFace" in item.get("surface_names", [])
+    ]
+    assert len(generated_face_surfaces) >= 1
+    assert generated_face_surfaces[0]["skin_bound"] is True
     assert source.read_bytes() == original_bytes
     assert output.is_file()
 

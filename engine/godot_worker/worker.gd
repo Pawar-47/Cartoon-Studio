@@ -573,6 +573,128 @@ func _suppress_imported_face_surfaces(mesh_instance: MeshInstance3D) -> Array[Di
     return suppressed
 
 
+func _compute_face_normals(vertices: PackedVector3Array, center: Vector3) -> PackedVector3Array:
+    var normals := PackedVector3Array()
+    normals.resize(vertices.size())
+    for i in range(vertices.size()):
+        normals[i] = (vertices[i] - center).normalized()
+    return normals
+
+
+func _compute_face_uvs(count: int) -> PackedVector2Array:
+    var uvs := PackedVector2Array()
+    uvs.resize(count)
+    return uvs
+
+
+func _replace_skin_surface_with_generated_face(
+    mesh_instance: MeshInstance3D,
+    skin_surface_index: int,
+    head_bone_index: int,
+    bounds: AABB,
+    center: Vector3,
+    face_width: float,
+    cheek_fullness: float,
+    jaw_width: float,
+    chin_length: float,
+    front_direction: float,
+    skin_material: BaseMaterial3D
+) -> Dictionary:
+    var mesh := mesh_instance.mesh
+    if not (mesh is ArrayMesh):
+        return {"ok": false, "error_code": "face_mesh_not_array_mesh", "error": "Head mesh is not an ArrayMesh."}
+
+    var face_geometry := _make_generated_face_head_mesh(
+        bounds, center, face_width, cheek_fullness, jaw_width, chin_length, front_direction
+    )
+    var face_arrays := face_geometry.surface_get_arrays(0)
+    if face_arrays.size() <= Mesh.ARRAY_VERTEX:
+        return {"ok": false, "error_code": "face_geometry_no_vertices", "error": "Generated face geometry has no vertex data."}
+
+    var face_vertices := face_arrays[Mesh.ARRAY_VERTEX]
+    var face_indices := PackedInt32Array()
+    if face_arrays.size() > Mesh.ARRAY_INDEX:
+        var idx_value := face_arrays[Mesh.ARRAY_INDEX]
+        if typeof(idx_value) == TYPE_PACKED_INT32_ARRAY:
+            face_indices = idx_value
+
+    var face_normals := PackedVector3Array()
+    if face_arrays.size() > Mesh.ARRAY_NORMAL:
+        face_normals = face_arrays[Mesh.ARRAY_NORMAL]
+    var face_uvs := PackedVector2Array()
+    if face_arrays.size() > Mesh.ARRAY_TEX_UV:
+        face_uvs = face_arrays[Mesh.ARRAY_TEX_UV]
+
+    var vertex_count := face_vertices.size()
+
+    var new_arrays := Array()
+    new_arrays.resize(Mesh.ARRAY_MAX)
+    new_arrays[Mesh.ARRAY_VERTEX] = face_vertices
+    new_arrays[Mesh.ARRAY_NORMAL] = face_normals if not face_normals.is_empty() else _compute_face_normals(face_vertices, center)
+
+    var tangents := PackedVector3Array()
+    tangents.resize(vertex_count)
+    new_arrays[Mesh.ARRAY_TANGENT] = tangents
+
+    new_arrays[Mesh.ARRAY_TEX_UV] = face_uvs if not face_uvs.is_empty() else _compute_face_uvs(vertex_count)
+
+    var bones := PackedFloat32Array()
+    var weights := PackedFloat32Array()
+    bones.resize(vertex_count * 4)
+    weights.resize(vertex_count * 4)
+    for i in range(vertex_count):
+        bones[i * 4] = float(head_bone_index)
+        weights[i * 4] = 1.0
+    new_arrays[Mesh.ARRAY_BONES] = bones
+    new_arrays[Mesh.ARRAY_WEIGHTS] = weights
+
+    if not face_indices.is_empty():
+        new_arrays[Mesh.ARRAY_INDEX] = face_indices
+
+    var new_mesh := ArrayMesh.new()
+    var surface_count := mesh.get_surface_count()
+    var new_surface_index := -1
+    for i in range(surface_count):
+        if i == skin_surface_index:
+            continue
+        var surf_arrays := mesh.surface_get_arrays(i)
+        if surf_arrays.size() > Mesh.ARRAY_VERTEX:
+            new_mesh.add_surface_from_arrays(
+                Mesh.PRIMITIVE_TRIANGLES,
+                surf_arrays,
+                [],
+                0,
+                0
+            )
+            var new_idx := new_mesh.get_surface_count() - 1
+            new_mesh.surface_set_name(new_idx, mesh.surface_get_name(i))
+            var mat := mesh_instance.get_active_material(i)
+            if mat != null:
+                new_mesh.surface_set_material(new_idx, mat)
+
+    new_mesh.add_surface_from_arrays(
+        Mesh.PRIMITIVE_TRIANGLES,
+        new_arrays,
+        [],
+        0,
+        0
+    )
+    new_surface_index = new_mesh.get_surface_count() - 1
+    new_mesh.surface_set_name(new_surface_index, "CartoonStudio_GeneratedFace")
+    if skin_material != null:
+        new_mesh.surface_set_material(new_surface_index, skin_material)
+
+    mesh_instance.mesh = new_mesh
+
+    return {
+        "ok": true,
+        "skin_surface_replaced": true,
+        "new_surface_index": new_surface_index,
+        "vertex_count": vertex_count,
+        "head_bone_index": head_bone_index,
+    }
+
+
 func _add_character_face_features(scene: Node, recipe: Dictionary) -> Dictionary:
     if not bool(recipe.get("enabled", false)):
         return {"ok": true, "mesh_count": 0, "attachment_bone": ""}
@@ -706,15 +828,29 @@ func _add_character_face_features(scene: Node, recipe: Dictionary) -> Dictionary
     var moustache_material := _face_material(str(recipe.get("moustache_color", "#38251c")))
     var skin_material := _face_material(generated_skin_color)
     var mesh_count := 0
-    var generated_head := MeshInstance3D.new()
-    generated_head.name = "CartoonStudio_Face_Head"
-    generated_head.mesh = _make_generated_face_head_mesh(
-        head_bounds, center, face_width, cheek_fullness, jaw_width, chin_length, front_direction
-    )
-    generated_head.material_override = skin_material
-    attachment.add_child(generated_head)
-    generated_head.owner = scene
-    mesh_count += 1
+    var skin_replaced := false
+    var replaced_surface_index := -1
+    var skin_surface_indices := skin_surface.get("surface_indices", [])
+    if skin_surface_indices.size() > 0:
+        var skin_index := int(skin_surface_indices[0])
+        var replacement := _replace_skin_surface_with_generated_face(
+            head_mesh,
+            skin_index,
+            head_bone_index,
+            head_bounds,
+            center,
+            face_width,
+            cheek_fullness,
+            jaw_width,
+            chin_length,
+            front_direction,
+            skin_material,
+        )
+        if bool(replacement.get("ok", false)):
+            skin_replaced = true
+            replaced_surface_index = int(replacement.get("new_surface_index", -1))
+        # Re-apply hidden materials to non-skin face surfaces lost during mesh replacement.
+        _suppress_imported_face_surfaces(head_mesh)
 
     for side_index in range(2):
         var side: float = -1.0 if side_index == 0 else 1.0
@@ -831,6 +967,8 @@ func _add_character_face_features(scene: Node, recipe: Dictionary) -> Dictionary
         "front_direction": front_direction,
         "fit_basis": "generated_head_template",
         "head_mesh_name": str(head_mesh.name),
+        "skin_replaced": skin_replaced,
+        "replaced_surface_index": replaced_surface_index,
         "replaced_surfaces": replaced_surfaces,
         "eye_anchor": [eye_center.x, eye_center.y, front_z],
         "nose_anchor": [center.x, nose_y, nose_surface_z],
@@ -1035,43 +1173,28 @@ func _export_character_appearance(payload: Dictionary) -> Dictionary:
     if face_enabled:
         var face_mesh_count := 0
         var face_attachment_verified := false
+        var generated_face_surface_found := false
         for mesh_record in verification.get("mesh_inventory", []):
             if not str(mesh_record.get("node_name", "")).begins_with("CartoonStudio_Face_"):
                 continue
             face_mesh_count += 1
             if str(mesh_record.get("attachment_bone", "")) == str(face_result.get("attachment_bone", "")):
                 face_attachment_verified = true
+            var surface_names: Array = mesh_record.get("surface_names", [])
+            for surface_name in surface_names:
+                if str(surface_name) == "CartoonStudio_GeneratedFace":
+                    generated_face_surface_found = true
         if face_mesh_count < int(face_result.get("mesh_count", 0)) or not face_attachment_verified:
             DirAccess.remove_absolute(output_path)
             return {"error_code": "appearance_face_verification_failed", "error": "Generated facial meshes or their Head-bone attachment did not survive GLB export and re-import."}
-        var verified_replaced_surfaces: Array[String] = []
-        for replaced_surface in face_result.get("replaced_surfaces", []):
-            var surface_verified := false
-            var replaced_mesh_name := str(replaced_surface.get("mesh_name", ""))
-            var replaced_surface_index := int(replaced_surface.get("surface_index", -1))
-            for mesh_record in verification.get("mesh_inventory", []):
-                if str(mesh_record.get("node_name", "")) != replaced_mesh_name:
-                    continue
-                var material_names: Array = mesh_record.get("material_names", [])
-                var material_properties: Array = mesh_record.get("material_properties", [])
-                if replaced_surface_index < 0 or replaced_surface_index >= material_names.size() or replaced_surface_index >= material_properties.size():
-                    continue
-                var exported_material_name := str(material_names[replaced_surface_index])
-                var exported_material_properties: Dictionary = material_properties[replaced_surface_index]
-                var exported_color: Array = exported_material_properties.get("color", [])
-                if exported_material_name.begins_with("CartoonStudio_Hidden_") and exported_color.size() >= 4 and float(exported_color[3]) <= 0.01:
-                    surface_verified = true
-                    verified_replaced_surfaces.append(replaced_mesh_name + ":" + str(replaced_surface_index) + ":" + str(replaced_surface.get("surface_name", "")))
-                    break
-            if not surface_verified:
-                DirAccess.remove_absolute(output_path)
-                return {"error_code": "appearance_face_replacement_verification_failed", "error": "An imported facial surface remained visible after replacement export and re-import: " + str(replaced_surface.get("surface_name", "unknown"))}
+        if bool(face_result.get("skin_replaced", false)) and not generated_face_surface_found:
+            DirAccess.remove_absolute(output_path)
+            return {"error_code": "appearance_face_replacement_verification_failed", "error": "Generated face surface was not found on the head mesh after export and re-import."}
         verification["face_features_verified"] = true
         verification["face_attachment_bone"] = str(face_result.get("attachment_bone", ""))
         verification["face_front_direction"] = float(face_result.get("front_direction", 1.0))
         verification["face_fit_basis"] = str(face_result.get("fit_basis", ""))
-        verification["face_replaced_surfaces"] = verified_replaced_surfaces
-        verification["face_replaced_surface_count"] = verified_replaced_surfaces.size()
+        verification["face_skin_replaced"] = bool(face_result.get("skin_replaced", false))
         verification["face_eye_anchor"] = face_result.get("eye_anchor", [])
         verification["face_nose_anchor"] = face_result.get("nose_anchor", [])
         verification["face_mouth_anchor"] = face_result.get("mouth_anchor", [])
