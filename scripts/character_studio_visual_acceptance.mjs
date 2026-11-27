@@ -145,7 +145,7 @@ try {
   await page.waitForFunction(
     () => document.querySelector("#foundry-status")?.textContent?.includes("saved."),
     null,
-    { timeout: 120_000 },
+    { timeout: 240_000 },
   );
   await page.locator("#model-preview").waitFor({ state: "visible", timeout: 30_000 });
   await page.waitForFunction(() => {
@@ -215,11 +215,13 @@ try {
   record("Foundry edit mode verified: " + JSON.stringify(editModeState));
   await setInputValue(page, "#foundry-head-width", "0.6");
   await page.locator("#foundry-create").click();
+  // A Windows CI regeneration can take just over two minutes through Godot inspection.
+  // Keep the browser alive long enough to receive the save response before checking preview parsing.
   await page.waitForFunction(
     () => document.querySelector("#foundry-status")?.textContent?.includes("saved.")
       || document.querySelector("#foundry-status")?.textContent?.includes("could not"),
     null,
-    { timeout: 120_000 },
+    { timeout: 240_000 },
   );
   await page.waitForFunction(
     () => {
@@ -259,7 +261,7 @@ try {
   await page.waitForFunction(
     () => document.querySelector("#foundry-status")?.textContent?.includes("saved."),
     null,
-    { timeout: 120_000 },
+    { timeout: 240_000 },
   );
   await page.waitForTimeout(1200);
   await page.screenshot({ path: path.join(output, "03-female-foundry-preview.png"), fullPage: true });
