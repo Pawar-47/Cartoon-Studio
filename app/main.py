@@ -1465,6 +1465,10 @@ def create_project_world(project_id: str, payload: WorldPlanInput) -> dict[str, 
         data.setdefault("sky", template_data.get("sky", "day"))
         if not data.get("objects"):
             data["objects"] = [dict(obj) for obj in template_data.get("objects", [])]
+    data.setdefault("theme", "small_town")
+    data.setdefault("ground_color", "#789b58")
+    data.setdefault("sky", "day")
+    data.setdefault("objects", [])
     with connect_db() as connection:
         project = connection.execute(
             "SELECT id, created_at FROM projects WHERE id = ?", (project_id,)

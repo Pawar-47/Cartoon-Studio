@@ -360,6 +360,31 @@ def test_world_template_instantiate_rejects_missing_template(tmp_path, monkeypat
     assert response.status_code == 404
 
 
+def test_world_create_with_minimal_fields_fills_defaults(tmp_path, monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "world-minimal.sqlite3")
+    main._INITIALIZED_DB_KEY = None
+    project = client.post("/api/projects", json={"name": "Minimal Project"})
+    project_id = project.json()["id"]
+    created = client.post(
+        f"/api/projects/{project_id}/worlds", json={"name": "Minimal Town"}
+    )
+    assert created.status_code == 201
+    world_id = created.json()["id"]
+    assert created.json()["theme"] == "small_town"
+    assert created.json()["ground_color"] == "#789b58"
+    assert created.json()["sky"] == "day"
+    assert created.json()["objects"] == []
+    reopened = client.get(f"/api/projects/{project_id}/worlds/{world_id}")
+    assert reopened.status_code == 200
+    assert reopened.json()["theme"] == "small_town"
+    assert reopened.json()["ground_color"] == "#789b58"
+    assert reopened.json()["sky"] == "day"
+    assert reopened.json()["objects"] == []
+
+
 def test_story_builder_is_served():
     response = client.get("/story")
     assert response.status_code == 200
