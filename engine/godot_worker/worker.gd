@@ -1222,7 +1222,11 @@ func _export_character_appearance(payload: Dictionary) -> Dictionary:
             face_mesh_count += 1
             if str(mesh_record.get("attachment_bone", "")) == str(face_result.get("attachment_bone", "")):
                 face_attachment_verified = true
-            if str(mesh_record.get("node_name", "")) == str(face_result.get("head_mesh_name", "")):
+            var same_head_node := (
+                str(mesh_record.get("node_name", "")) == str(face_result.get("head_mesh_name", ""))
+            )
+            var classified_head := str(mesh_record.get("slot_candidate", "")) == "head"
+            if same_head_node or classified_head:
                 var bounds: Dictionary = mesh_record.get("bounds", {})
                 var bounds_size: Array = bounds.get("size", [])
                 if int(mesh_record.get("surface_count", 0)) > 0 and bounds_size.size() >= 3:

@@ -28,3 +28,5 @@ Base: `c5631247b0b3d3144b2c6b3df9b9be318f6e9c1a`
 - Replaced the brittle name check with a post-import verification that the same head mesh survives with a non-empty surface and valid 3D bounds; generated face child meshes and Head-bone attachment remain independently verified.
 - Hardened Playwright controls to set range/color inputs using browser input/change events, and changed portrait/turnaround export acceptance to wait for actual downloads, save the PNG files and verify non-trivial file sizes.
 - Run #562 still failed at face replacement verification; the next run will verify the revised export contract before browser acceptance.
+
+- Run #563 confirmed the custom surface/material identifiers are not preserved and the imported mesh node may be renamed. Post-export replacement verification now resolves the retained head by its classified head slot as well as the original node name, and checks non-empty 3D bounds/surfaces.
