@@ -1,3 +1,15 @@
+## 2026-11-28 — World asset selection persistence correction
+
+- **Finding:** the browser installed a selected curated GLB and kept `asset_id`/`asset_path` in its object state, but `WorldObjectInput` omitted both fields. Pydantic therefore discarded them on create/update, so the selection did not persist to the world document.
+- **Correction:** commit `4b1ed4be6beaa3048588e169ff0ca6024a364328` adds the catalogue `asset_id` to the request model. The server validates the catalogue ID and object-kind category, verifies/installs the project-local asset and derives `asset_path` itself; browser-supplied paths are discarded.
+- **Regression tests:** create/save/reopen/update retains the selected asset reference; unknown and category-mismatched IDs are rejected; the engine adapter forwards a resolved project-local GLB path to the Godot worker.
+- **Windows CI #617:** [SUCCESS](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/46066598704) on `4b1ed4be6beaa3048588e169ff0ca6024a364328`. Locked dependency verification/install, pinned Godot/fixture setup, Ruff, JavaScript syntax, Python compile and full pytest step passed.
+- **Not claimed:** the API regression uses a deterministic fixture and adapter test uses a fake worker call. A real downloaded Kenney GLB has not yet passed Godot import/render visual acceptance. No full episode visual/audio acceptance or target-PC benchmark was performed.
+
+## 2026-11-28 — Documentation checkpoint correction
+
+- Commit `8c95fd5` updated the registry/traceability/status/next-step checkpoint metadata. GitHub Actions automatically ran CI #616 for that documentation push, and it passed. The earlier assumption that a documentation-only push would not trigger CI was incorrect; future documentation-only commits will use `[skip ci]` when no workflow validation is needed.
+
 # Test Report — 2026-11-28
 
 ## Main work-in-progress audit — 2026-11-28

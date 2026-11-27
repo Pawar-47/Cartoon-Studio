@@ -78,3 +78,8 @@ Dashboard, Story, Character and World workspaces exist. The complete brief's Ass
 5. Phase 8: visual/audio signoff, target-PC benchmarks, performance presets and final installation/reliability acceptance.
 
 Do not reopen the frozen Foundry branch, duplicate existing Character Studio work, or declare the application complete while major requirements remain partial.
+
+
+## 2026-11-28 — Consolidation addendum: catalogue persistence
+
+The first asset-library implementation connected catalogue downloads to the Godot exporter, but the WorldObjectInput schema silently dropped the selected asset fields during save/update. This was a delivered integration defect, not future scope. Commit `4b1ed4b` now persists the curated `asset_id`, validates category compatibility, derives a trusted project-local path server-side and forwards it through the adapter. Windows CI #617 passed the regression tests. A real downloaded GLB still needs a Godot visual import/render acceptance test.

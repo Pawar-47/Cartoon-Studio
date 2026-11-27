@@ -4,7 +4,7 @@
 **Repository:** `Pawar-47/Cartoon-Studio`  
 **Branch:** `main`  
 **Initial code-audit HEAD:** `e0e288006c13347d2bbc99ff388948c16a9e6011`
-**Current documentation HEAD at refresh:** `8647693ae6e1e28f225b810416f32ce62ec29ddb` (this report and subsequent consolidation metadata updates only)  
+**Current code HEAD at refresh:** `4b1ed4be6beaa3048588e169ff0ca6024a364328` (world-asset persistence correction; CI #617 passed)  
 **Latest observed CI:** #615 — SUCCESS on the audited HEAD  
 **Binding source:** `docs/MASTER_EXECUTION_PROMPT.md` (25 parts, 1,133 lines)  
 **Supporting source:** `docs/PROJECT_SPECIFICATION.md` (24 numbered sections)
@@ -140,7 +140,7 @@ Unless a current implementation is found to violate an already-delivered require
 - Preserve the exact Master Brief and its 25-part order.
 - Keep future requirements pending rather than disguising them as completed or treating them as regressions.
 
-**Audit state:** INITIAL CHECKPOINT plus 2026-11-28 documentation reconciliation. Row-by-row evidence reconciliation and source-level defect review remain in progress. The 171-ID structural match is not proof that every row is current.
+**Audit state:** INITIAL CHECKPOINT plus targeted 2026-11-28 source corrections through CI #617. Row-by-row evidence reconciliation and source-level defect review remain in progress. The 171-ID structural match is not proof that every row is current.
 
 
 ## 2026-11-28 — Follow-up reconciliation checkpoint
@@ -151,3 +151,15 @@ Unless a current implementation is found to violate an already-delivered require
 - Corrected the traceability document's false statement that the original prompt is not committed, and refreshed selected current-checkpoint metadata. The architecture crosswalk remains historical/planned and requires row-by-row source-path validation.
 - Refreshed `PROJECT_STATUS.md` and `NEXT_STEPS.md` to distinguish the current docs HEAD from the latest code-bearing CI checkpoint.
 - No application code was changed and no new CI run was triggered. The remaining work is the source/test/evidence reconciliation and implementation defect review described in the sequence above.
+
+
+### CONS-010 — World asset selection was dropped by the API schema
+
+**Severity:** High  
+The World Builder browser downloaded a curated model, then stored both `asset_id` and `asset_path` on its in-memory object. However, `WorldObjectInput` did not declare either field. Pydantic silently discarded these extras when create/update payloads were parsed, so a selected GLB could be cached but not survive a saved world document. The exporter already expected a project-local `asset_path`, so this broke the intended catalogue-to-export connection.
+
+**Correction committed:** `4b1ed4be6beaa3048588e169ff0ca6024a364328`. The API now accepts only the curated `asset_id`, checks that the selected asset category matches the world object kind, installs/verifies the asset in the project cache, discards any browser-supplied path, and derives the canonical project-relative `asset_path` server-side. Create/update persistence and adapter regression tests were added.
+
+**Evidence:** Windows CI #617 passed on the correction commit. The new API tests cover create → save → reopen → update persistence, forged client path rejection by derivation, unknown IDs and category mismatches. The adapter test confirms the validated project-local path is forwarded to the worker.
+
+**Remaining acceptance:** CI uses a test fixture for the API and a fake adapter invocation for path forwarding. It does not yet prove a real downloaded Kenney GLB imports and renders visibly in Godot. That remains a separate visual acceptance item, not a reason to disregard the persistence correction.

@@ -4,9 +4,9 @@
 
 - Repository: `Pawar-47/Cartoon-Studio`
 - Active branch: `main`
-- Current HEAD: `8647693ae6e1e28f225b810416f32ce62ec29ddb` (documentation-only consolidation report)
-- Latest code-bearing commit: `e0e288006c13347d2bbc99ff388948c16a9e6011`
-- Latest observed code CI: Windows CI #615 — SUCCESS (`46064317433`) on `e0e2880`
+- Current HEAD: `4b1ed4be6beaa3048588e169ff0ca6024a364328` (World Builder asset-selection persistence correction)
+- Latest code-bearing commit: `4b1ed4be6beaa3048588e169ff0ca6024a364328`
+- Latest observed code CI: Windows CI #617 — SUCCESS (`46066598704`) on `e0e2880`
 - Binding source: `docs/MASTER_EXECUTION_PROMPT.md`, all 25 parts
 - Frozen Character Foundry branch remains untouched. Do not create or switch to another development branch.
 
@@ -36,7 +36,7 @@ Do not start new feature development yet. Consolidate the work already completed
 
 ## Known acceptance boundaries — not automatically defects
 
-- The latest asset-library integration has not yet passed a real downloaded-GLB visual render acceptance test.
+- The asset-selection persistence defect is fixed and CI #617 passed the API save/reopen/update and adapter-path regressions. A real downloaded-GLB visual render acceptance test remains outstanding.
 - Vehicle state/API contracts exist, but complete scene-time movement, steering, wheel rotation, braking and character entry/exit playback remain incomplete.
 - Character visual signoff and broad arbitrary-rig compatibility remain incomplete.
 - Story-provider orchestration, reusable animation/blending/timeline, phoneme/viseme Urdu lip-sync, scene-level cache/restart recovery, full episode visual/audio acceptance and target-PC benchmarks remain open.

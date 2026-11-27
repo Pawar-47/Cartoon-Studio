@@ -335,3 +335,12 @@ The next P2.2 sub-phase is the **Modular Character Builder**:
 - Added a project-scoped export endpoint that creates a new versioned asset manifest and download URL. The original source GLB and character asset reference remain unchanged.
 - Added browser export controls and integration coverage using the pinned CC0 RobotExpressive facial-morph fixture.
 - This batch supports named imported morph targets and BaseMaterial3D surfaces; arbitrary shader materials and ambiguous duplicate mesh names are rejected rather than guessed.
+
+
+## 2026-11-28 — World asset catalogue integration and persistence correction
+
+The World Builder now has a curated 28-model Kenney CC0 catalogue connected to scene export: five road models, six suburban house models, five nature models, six vehicle models, three furniture models and three street fixtures. Models are pinned to a source repository commit and each file has a size and Git blob SHA-1 check; downloads are lazy and project-scoped.
+
+A source-level consolidation review found that the API schema dropped browser-supplied `asset_id`/`asset_path` fields. Commit `4b1ed4b` fixed this by accepting the catalogue ID, validating its category against the object kind, installing/verifying it in the project cache, and deriving the path server-side. CI #617 passed the save/reopen/update and adapter path regressions.
+
+This does not yet prove that a real downloaded model renders correctly in the final Godot scene. Real-asset import/render visual acceptance remains open.
