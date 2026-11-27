@@ -664,7 +664,6 @@ func _replace_skin_surface_with_generated_face(
                 surf_arrays,
                 [],
                 {},
-                0,
                 0
             )
             var new_idx := new_mesh.get_surface_count() - 1
@@ -678,7 +677,6 @@ func _replace_skin_surface_with_generated_face(
             new_arrays,
             [],
             {},
-            0,
             0
         )
     new_surface_index = new_mesh.get_surface_count() - 1
