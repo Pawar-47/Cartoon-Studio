@@ -611,10 +611,10 @@ func _replace_skin_surface_with_generated_face(
     if face_arrays.size() <= Mesh.ARRAY_VERTEX:
         return {"ok": false, "error_code": "face_geometry_no_vertices", "error": "Generated face geometry has no vertex data."}
 
-    var face_vertices := face_arrays[Mesh.ARRAY_VERTEX]
-    var face_indices := PackedInt32Array()
+    var face_vertices: PackedVector3Array := face_arrays[Mesh.ARRAY_VERTEX]
+    var face_indices: PackedInt32Array := PackedInt32Array()
     if face_arrays.size() > Mesh.ARRAY_INDEX:
-        var idx_value := face_arrays[Mesh.ARRAY_INDEX]
+        var idx_value := face_arrays[Mesh.ARRAY_INDEX] as PackedInt32Array
         if typeof(idx_value) == TYPE_PACKED_INT32_ARRAY:
             face_indices = idx_value
 
@@ -625,7 +625,7 @@ func _replace_skin_surface_with_generated_face(
     if face_arrays.size() > Mesh.ARRAY_TEX_UV:
         face_uvs = face_arrays[Mesh.ARRAY_TEX_UV]
 
-    var vertex_count := face_vertices.size()
+    var vertex_count: int := face_vertices.size()
 
     var new_arrays := Array()
     new_arrays.resize(Mesh.ARRAY_MAX)
@@ -662,7 +662,7 @@ func _replace_skin_surface_with_generated_face(
             new_mesh.add_surface_from_arrays(
                 Mesh.PRIMITIVE_TRIANGLES,
                 surf_arrays,
-                [],
+                {},
                 0,
                 0
             )
@@ -672,11 +672,11 @@ func _replace_skin_surface_with_generated_face(
             if mat != null:
                 new_mesh.surface_set_material(new_idx, mat)
 
-    new_mesh.add_surface_from_arrays(
-        Mesh.PRIMITIVE_TRIANGLES,
-        new_arrays,
-        [],
-        0,
+        new_mesh.add_surface_from_arrays(
+            Mesh.PRIMITIVE_TRIANGLES,
+            new_arrays,
+            {},
+            0,
         0
     )
     new_surface_index = new_mesh.get_surface_count() - 1
@@ -2914,18 +2914,19 @@ func _export_world_scene(payload: Dictionary) -> Dictionary:
             _world_add_box(anchor, "RoomFloor", Vector3(width, 0.12, depth), Vector3.ZERO, "#e8dcc8")
             _world_add_box(anchor, "RoomWalls", Vector3(width * 0.98, clampf(depth * 0.5, 2.0, 6.0), depth * 0.98), Vector3(0.0, clampf(depth * 0.25, 1.0, 3.0), 0.0), "#f4ede0")
         elif kind == "playground":
-            _world_add_box(anchor, "PlaygroundSurface", Vector3(width, 0.16, depth), Vector3(0.0, 0.08, 0.0), "#7aa85b")
+            var body_height := clampf(depth * 0.6, 2.4, 10.0)
+            _world_add_box(anchor, "PlaygroundSurface", Vector3(width, 0.16, depth), Vector3.ZERO, "#7aa85b")
             _world_add_box(anchor, "Slide", Vector3(width * 0.3, body_height * 0.5, depth * 0.25), Vector3(-width * 0.2, body_height * 0.25, depth * 0.2), "#e85a4f")
             _world_add_sphere(anchor, "ClimbingDome", maxf(1.2, minf(width, depth) * 0.25), Vector3(width * 0.2, maxf(1.2, depth * 0.2), -depth * 0.15), "#a8a8a8")
         elif kind == "furniture":
-            var seat_height := clampf(height * 0.45, 0.4, 0.9)
+            var seat_height := clampf(depth * 0.45, 0.4, 0.9)
             _world_add_box(anchor, "FurnitureBase", Vector3(width, seat_height, depth), Vector3(0.0, seat_height * 0.5, 0.0), tint)
             _world_add_box(anchor, "FurnitureTop", Vector3(width * 1.05, 0.1, depth * 1.05), Vector3(0.0, seat_height + 0.05, 0.0), "#8a7a6a")
         elif kind == "water_body":
             _world_add_box(anchor, "WaterSurface", Vector3(width, 0.06, depth), Vector3.ZERO, "#5b9bd5")
             _world_add_box(anchor, "WaterBank", Vector3(width * 1.1, 0.12, depth * 1.1), Vector3.ZERO, "#8a9ba8")
         elif kind == "streetlight":
-            var pole_height := clampf(height * 0.9, 3.0, 6.0)
+            var pole_height := clampf(depth * 0.9, 3.0, 6.0)
             var pole := MeshInstance3D.new()
             pole.name = "StreetlightPole"
             var pole_mesh := CylinderMesh.new()
