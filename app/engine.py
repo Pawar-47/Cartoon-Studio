@@ -578,7 +578,9 @@ class GodotEngineAdapter:
         if not isinstance(world, dict) or len(world.get("objects", [])) > 100:
             raise EnginePathError("World layout must contain no more than 100 objects.")
         allowed_kinds = {
-            "road", "building", "shop", "tree", "vehicle", "lamp", "park"
+            "road", "building", "shop", "school", "hospital", "office",
+            "police_station", "tree", "vehicle", "lamp", "park", "garage",
+            "indoor_room", "playground", "furniture", "water_body", "streetlight",
         }
         if world.get("theme", "small_town") not in {
             "small_town", "village", "market", "park"

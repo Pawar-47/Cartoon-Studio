@@ -13,7 +13,7 @@
 
 Phase 3 — World Builder remains the active development phase. Existing world persistence, schema migration, templates, Godot scene export, GLB preview and vehicle API contracts are preserved. The first alignment pass closes a browser-editor omission: all 17 supported object kinds are exposed, with position and rotation editing.
 
-## Immediate next batch
+## Newly confirmed adapter defect and correction\n\nThe first implementation audit also found that `app/engine.py` retained a seven-kind allowlist even after the API and Godot worker expanded to 17 kinds. This rejected valid saved worlds at export time. The adapter allowlist is now aligned with the Pydantic schema and worker; a regression test exercises all 17 kinds through the real adapter validation path.\n\n## Immediate next batch
 
 1. Integrate verified CC0 environment models into a project-scoped reusable asset library; pin exact pack versions, checksums and license evidence, and use lazy download/cache rather than committing large asset packs.
 2. Upgrade World Builder placement from primitive blockout-only geometry to reusable road, building, vegetation, furniture and vehicle assets.
