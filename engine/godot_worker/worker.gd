@@ -672,14 +672,16 @@ func _replace_skin_surface_with_generated_face(
             if mat != null:
                 new_mesh.surface_set_material(new_idx, mat)
 
-        new_mesh.add_surface_from_arrays(
+        var added_idx := new_mesh.add_surface_from_arrays(
             Mesh.PRIMITIVE_TRIANGLES,
             new_arrays,
             [],
             {},
             0
         )
-    new_surface_index = new_mesh.get_surface_count() - 1
+        if added_idx < 0:
+            return {"ok": false, "error_code": "face_surface_add_failed", "error": "add_surface_from_arrays() returned -1 for generated face surface."}
+        new_surface_index = added_idx
     new_mesh.surface_set_name(new_surface_index, "CartoonStudio_GeneratedFace")
     if skin_material != null:
         new_mesh.surface_set_material(new_surface_index, skin_material)
