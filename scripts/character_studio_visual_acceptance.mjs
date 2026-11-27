@@ -225,16 +225,19 @@ try {
     () => {
       const status = document.querySelector("#foundry-status")?.textContent || "";
       return status.includes("saved.") || status.startsWith("Preview unavailable:")
-        || status.includes("could not be previewed");
+        || status.includes("could not");
     },
     null,
     { timeout: 120_000 },
   );
   const editStatus = await page.locator("#foundry-status").textContent();
+  const previewStatus = await page.locator("#preview-status").textContent();
   record("Foundry edit result: " + editStatus);
+  record("Foundry preview result: " + previewStatus);
   await page.screenshot({ path: path.join(output, "02-male-foundry-edit-result.png"), fullPage: true });
   if (!editStatus?.includes("saved.")) {
-    throw new Error("Foundry edit did not finish successfully: " + editStatus);
+    throw new Error("Foundry edit did not finish successfully: " + editStatus
+      + " | preview: " + previewStatus);
   }
   charactersResponse = await request.get(
     baseUrl + "/api/projects/" + project.id + "/characters",
