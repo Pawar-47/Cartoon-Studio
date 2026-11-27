@@ -573,6 +573,40 @@ func _suppress_imported_face_surfaces(mesh_instance: MeshInstance3D) -> Array[Di
     return suppressed
 
 
+func _largest_surface_bounds_in_bone_space(
+    mesh_instance: MeshInstance3D,
+    skeleton: Skeleton3D,
+    bone_index: int
+) -> Dictionary:
+    var mesh_to_bone := _mesh_to_bone_transform(mesh_instance, skeleton, bone_index)
+    var largest_volume := 0.0
+    var largest_bounds := AABB()
+    var largest_index := -1
+    for surface_index in range(mesh_instance.mesh.get_surface_count()):
+        var arrays := mesh_instance.mesh.surface_get_arrays(surface_index)
+        if arrays.size() <= Mesh.ARRAY_VERTEX:
+            continue
+        var vertex_value: Variant = arrays[Mesh.ARRAY_VERTEX]
+        if typeof(vertex_value) != TYPE_PACKED_VECTOR3_ARRAY:
+            continue
+        var vertices: PackedVector3Array = vertex_value
+        if vertices.is_empty():
+            continue
+        var bounds := AABB(mesh_to_bone * vertices[0], Vector3.ZERO)
+        for vertex_index in range(1, vertices.size()):
+            bounds = bounds.expand(mesh_to_bone * vertices[vertex_index])
+        var volume := bounds.size.x * bounds.size.y * bounds.size.z
+        if volume > largest_volume:
+            largest_volume = volume
+            largest_bounds = bounds
+            largest_index = surface_index
+    return {
+        "bounds": largest_bounds,
+        "surface_indices": [largest_index] if largest_index >= 0 else [],
+        "found": largest_index >= 0,
+    }
+
+
 func _compute_face_normals(vertices: PackedVector3Array, center: Vector3) -> PackedVector3Array:
     var normals := PackedVector3Array()
     normals.resize(vertices.size())
@@ -638,12 +672,12 @@ func _replace_skin_surface_with_generated_face(
 
     new_arrays[Mesh.ARRAY_TEX_UV] = face_uvs if not face_uvs.is_empty() else _compute_face_uvs(vertex_count)
 
-    var bones := PackedFloat32Array()
+    var bones := PackedInt32Array()
     var weights := PackedFloat32Array()
     bones.resize(vertex_count * 4)
     weights.resize(vertex_count * 4)
     for i in range(vertex_count):
-        bones[i * 4] = float(head_bone_index)
+        bones[i * 4] = head_bone_index
         weights[i * 4] = 1.0
     new_arrays[Mesh.ARRAY_BONES] = bones
     new_arrays[Mesh.ARRAY_WEIGHTS] = weights
@@ -752,7 +786,14 @@ func _add_character_face_features(scene: Node, recipe: Dictionary) -> Dictionary
         head_mesh, skeleton, head_bone_index, ["skin"]
     )
     if not bool(skin_surface.get("found", false)):
-        return {"ok": false, "error_code": "face_template_skin_surface_missing", "error": "The imported head does not have a separable skin surface to replace with the generated face template."}
+        # Some valid imported GLBs expose generic surface/material names.
+        # In that case, use the largest surface on the already-identified
+        # head mesh as the skin surface; keep the other smaller surfaces intact.
+        skin_surface = _largest_surface_bounds_in_bone_space(
+            head_mesh, skeleton, head_bone_index
+        )
+    if not bool(skin_surface.get("found", false)):
+        return {"ok": false, "error_code": "face_template_skin_surface_missing", "error": "The imported head does not contain a usable skin surface for the generated face template."}
     head_bounds = skin_surface["bounds"]
     var eye_surface := _named_surface_bounds_in_bone_space(
         head_mesh, skeleton, head_bone_index, ["eye"]
