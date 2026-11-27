@@ -203,8 +203,12 @@ class CharacterProfileInput(BaseModel):
 class FoundryCharacterInput(BaseModel):
     name: str = Field(min_length=1, max_length=80)
     description: str = Field(default="", max_length=1000)
-    master_template_id: str = Field(default=MASTER_TEMPLATE_ID, min_length=1, max_length=128)
-    hair_style: str = Field(default="short", pattern=r"^(short|bob|long|ponytail|spiky|curly|mohawk)$")
+    master_template_id: str = Field(
+        default=MASTER_TEMPLATE_ID, min_length=1, max_length=128
+    )
+    hair_style: str = Field(
+        default="short", pattern=r"^(short|bob|long|ponytail|spiky|curly|mohawk)$"
+    )
     hair_color: str = Field(default="#2b1b13", pattern=r"^#[0-9a-fA-F]{6}$")
     parameters: dict[str, Annotated[float, Field(ge=-1, le=1)]] = Field(
         default_factory=dict, max_length=32

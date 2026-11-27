@@ -305,10 +305,14 @@ def validate_character_recipe(recipe: Any) -> dict[str, Any]:
             raise ValueError(f"{key} must be null or a non-empty string.")
         normalized[key] = value
     hair_style = recipe.get("hair_style", "short")
-    if hair_style not in {"short", "bob", "long", "ponytail", "spiky", "curly", "mohawk"}:
+    allowed_hair_styles = {"short", "bob", "long", "ponytail", "spiky", "curly", "mohawk"}
+    if not isinstance(hair_style, str) or hair_style not in allowed_hair_styles:
         raise ValueError("Unsupported Foundry hairstyle.")
     hair_color = recipe.get("hair_color", "#2b1b13")
-    if not isinstance(hair_color, str) or re.fullmatch(r"#[0-9a-fA-F]{6}", hair_color) is None:
+    if (
+        not isinstance(hair_color, str)
+        or re.fullmatch(r"#[0-9a-fA-F]{6}", hair_color) is None
+    ):
         raise ValueError("hair_color must be a six-digit hexadecimal color.")
     normalized["hair_style"] = hair_style
     normalized["hair_color"] = hair_color.lower()
@@ -651,7 +655,8 @@ def _build_hair_geometry(style: str) -> tuple[
     weights = []
     for point in positions:
         for name in MORPH_TARGETS:
-            morphs[name].append((point[0] * 0.16, 0.0, 0.0) if name == "head_width" else (0.0, 0.0, 0.0))
+            delta = (point[0] * 0.16, 0.0, 0.0) if name == "head_width" else (0.0, 0.0, 0.0)
+            morphs[name].append(delta)
         weights.append((("Head", 1.0),))
     return positions, indices, morphs, weights, normals
 
@@ -837,7 +842,9 @@ def build_master_character_glb(recipe: dict[str, Any] | None = None) -> bytes:
     materials.append({
         "name": "FoundryHair",
         "pbrMetallicRoughness": {
-            "baseColorFactor": [int(hair_color[i:i + 2], 16) / 255 for i in (1, 3, 5)] + [1.0],
+            "baseColorFactor": [
+                int(hair_color[i:i + 2], 16) / 255 for i in (1, 3, 5)
+            ] + [1.0],
             "metallicFactor": 0.0,
             "roughnessFactor": 0.88,
         },

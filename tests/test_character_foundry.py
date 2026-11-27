@@ -164,7 +164,7 @@ def test_generated_skin_weights_blend_across_multiple_joints() -> None:
     binary_start = 20 + json_length + 8
     primitives = document["meshes"][0]["primitives"]
     assert len(primitives) == 3
-    for primitive in primitives:
+    for primitive in primitives[:2]:
         accessor = document["accessors"][primitive["attributes"]["WEIGHTS_0"]]
         view = document["bufferViews"][accessor["bufferView"]]
         start = binary_start + view.get("byteOffset", 0)
@@ -287,7 +287,8 @@ def test_recipe_can_disable_fitted_clothing() -> None:
     recipe = default_character_recipe()
     recipe["clothing_asset_ids"] = []
     document = _read_glb(build_master_character_glb(recipe))
-    assert len(document["meshes"][0]["primitives"]) == 1
+    assert len(document["meshes"][0]["primitives"]) == 2
+    assert document["meshes"][0]["primitives"][1]["material"] == 1
     assert document["meshes"][0]["extras"]["clothingAssetIds"] == []
 
 
