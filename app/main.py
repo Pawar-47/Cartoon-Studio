@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import shutil
+import time
 import uuid
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -1699,11 +1700,26 @@ def update_foundry_character(
     temp_asset = asset_path.with_name(f".{asset_id}.tmp.glb")
     temp_recipe = recipe_path.with_name(f".{asset_id}.tmp.json")
     try:
+        stage_started = time.monotonic()
+        print(f"[foundry-update] stage=generate-start character={character_id}", flush=True)
         write_master_character(temp_asset, recipe_path=temp_recipe, recipe=recipe)
+        print(
+            f"[foundry-update] stage=generate-complete elapsed={time.monotonic() - stage_started:.2f}s "
+            f"bytes={temp_asset.stat().st_size}",
+            flush=True,
+        )
         container = _validate_glb_container(temp_asset)
+        print(
+            f"[foundry-update] stage=container-validated elapsed={time.monotonic() - stage_started:.2f}s",
+            flush=True,
+        )
         try:
             inspection = get_engine_adapter().inspect_glb(
                 temp_asset, allowed_root=project_directory(DATA_DIR, project_id)
+            )
+            print(
+                f"[foundry-update] stage=godot-inspection-complete elapsed={time.monotonic() - stage_started:.2f}s",
+                flush=True,
             )
         except EngineUnavailableError as error:
             raise HTTPException(status_code=503, detail=str(error)) from error
