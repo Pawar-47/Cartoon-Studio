@@ -439,6 +439,25 @@ def _build_geometry(
         normals.extend(component_normals)
         indices.extend(offset+i for i in faces)
 
+    # Marching-tetrahedra edge order is not a winding guarantee. Orient every
+    # triangle against its interpolated vertex normals for reliable GLB culling.
+    for face_offset in range(0, len(indices), 3):
+        first, second, third = indices[face_offset:face_offset + 3]
+        a, b, c = positions[first], positions[second], positions[third]
+        ab = tuple(b[axis] - a[axis] for axis in range(3))
+        ac = tuple(c[axis] - a[axis] for axis in range(3))
+        face_normal = (
+            ab[1] * ac[2] - ab[2] * ac[1],
+            ab[2] * ac[0] - ab[0] * ac[2],
+            ab[0] * ac[1] - ab[1] * ac[0],
+        )
+        expected = tuple(
+            normals[first][axis] + normals[second][axis] + normals[third][axis]
+            for axis in range(3)
+        )
+        if sum(face_normal[axis] * expected[axis] for axis in range(3)) < 0.0:
+            indices[face_offset + 1], indices[face_offset + 2] = third, second
+
     deltas = {name: [] for name in MORPH_TARGETS}
     vertex_weights = []
     for point in positions:

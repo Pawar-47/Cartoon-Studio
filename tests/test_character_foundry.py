@@ -83,6 +83,41 @@ def test_generated_master_glb_contains_real_morph_geometry() -> None:
     assert document["materials"][1]["name"] == "FoundryCasualCloth"
     assert mesh["extras"]["clothingAssetIds"] == [CLOTHING_ASSET_ID]
 
+def test_generated_triangles_follow_outward_vertex_normals() -> None:
+    data = build_master_character_glb()
+    document = _read_glb(data)
+    json_length = struct.unpack_from("<I", data, 12)[0]
+    binary_start = 20 + json_length + 8
+    primitive = document["meshes"][0]["primitives"][0]
+
+    def accessor_values(index: int, fmt: str, width: int) -> list[tuple[float, ...]]:
+        accessor = document["accessors"][index]
+        view = document["bufferViews"][accessor["bufferView"]]
+        start = binary_start + view.get("byteOffset", 0) + accessor.get("byteOffset", 0)
+        flat = struct.unpack_from(f"{accessor['count'] * width}{fmt}", data, start)
+        return [tuple(flat[offset:offset + width]) for offset in range(0, len(flat), width)]
+
+    positions = accessor_values(primitive["attributes"]["POSITION"], "f", 3)
+    normals = accessor_values(primitive["attributes"]["NORMAL"], "f", 3)
+    indices = [value[0] for value in accessor_values(primitive["indices"], "I", 1)]
+    assert len(indices) % 3 == 0
+    for offset in range(0, len(indices), 3):
+        first, second, third = (int(value) for value in indices[offset:offset + 3])
+        a, b, c = positions[first], positions[second], positions[third]
+        ab = tuple(b[axis] - a[axis] for axis in range(3))
+        ac = tuple(c[axis] - a[axis] for axis in range(3))
+        face_normal = (
+            ab[1] * ac[2] - ab[2] * ac[1],
+            ab[2] * ac[0] - ab[0] * ac[2],
+            ab[0] * ac[1] - ab[1] * ac[0],
+        )
+        expected = tuple(
+            normals[first][axis] + normals[second][axis] + normals[third][axis]
+            for axis in range(3)
+        )
+        assert sum(face_normal[axis] * expected[axis] for axis in range(3)) > 0.0
+
+
 def test_generated_skin_weights_blend_across_multiple_joints() -> None:
     data = build_master_character_glb()
     document = _read_glb(data)
