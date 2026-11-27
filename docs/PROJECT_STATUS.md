@@ -1,9 +1,16 @@
 # Project Status — 2026-11-27
 
+## Live checkpoint — 2026-11-27 (main CI repair: generated face surface marker)
+
+- `main` CI run [#591](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/46043255274) failed in `Test` with `EngineExecutionError: Generated face surface was not found on the head mesh after export and re-import.` in `tests/test_engine.py::test_godot_worker_bakes_cartoon_face_geometry_and_preserves_animation` and `tests/test_engine_adapter.py::test_pinned_godot_worker_builds_episode_scenes_with_world_and_character_glb`.
+- **Cause:** glTF has no per-primitive name, and Godot's importer never calls `surface_set_name` (`GLTFDocument::_parse_meshes` in the pinned 4.7.2 source). Every surface of a re-imported GLB therefore has an empty name, so verification by surface name could never pass. glTF does store material names, and the importer restores them into the material `resource_name`.
+- **Fix:** the generated face surface now carries the marker on its own duplicated material named `CartoonStudio_GeneratedFace`; `_replace_skin_surface_with_generated_face` also keeps the head mesh resource name, fails fast when Godot rejects the generated surface arrays, and clears the stale surface override at the new index. Verification and the face test accept the marker surface name *or* the marker material name.
+- **Verified:** static review only in this batch. The next GitHub Actions run on `main` is the proof; nothing is claimed as passing before it completes.
+
 ## Live checkpoint — 2026-11-27 (P2.2 original face geometry)
 
 - Repository: Pawar-47/Cartoon-Studio. Source of truth: `main` at `1fdae47`.
-- **P2.2 original face geometry implemented.** The Godot worker now replaces the separable Skin surface on the head mesh with procedurally generated face geometry skinned to the Head bone (vertex/normal/tangent/UV/bone-weight arrays), instead of only hiding the surface with a transparent material. New `_replace_skin_surface_with_generated_face` function in `engine/godot_worker/worker.gd`; verification checks for `CartoonStudio_GeneratedFace` surface after GLB export/re-import; saved hair style/color restoration assertions added to `tests/test_characters.py`.
+- **P2.2 original face geometry implemented.** The Godot worker now replaces the separable Skin surface on the head mesh with procedurally generated face geometry skinned to the Head bone (vertex/normal/tangent/UV/bone-weight arrays), instead of only hiding the surface with a transparent material. New `_replace_skin_surface_with_generated_face` function in `engine/godot_worker/worker.gd`; verification confirms the generated face surface survived GLB export/re-import by its marker material name (glTF stores no surface names); saved hair style/color restoration assertions added to `tests/test_characters.py`.
 - **Local proof with pinned Godot 4.7.2 runtime:** **122 passed, 34 skipped, 0 failed** (`python -m pytest -q -rs`). Skips: three Node.js helper tests and one symlink-capability test. Ruff all checks passed.
 - Phase 2 remains ACTIVE. P2.2 code-testable work is complete (assembly, morphs, retarget, appearance bake, saved-profile restoration, original face geometry all have test coverage). Remaining P2.2 items require manual/visual acceptance and additional rig models, not code changes alone.
 - The 171-row `REQUIREMENTS_REGISTRY.md` and `REQUIREMENT_TRACEABILITY.md` were reconciled in two batches; CHAR-R003 and CHAR-R005 now document generated-face geometry replacing the Skin surface.
