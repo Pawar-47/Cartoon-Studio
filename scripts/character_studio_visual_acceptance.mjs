@@ -135,6 +135,11 @@ try {
     project.id,
   );
   const femaleOnly = process.env.FOUNDRY_ACCEPTANCE_TARGET === "female";
+  // Keep the state shared across both acceptance paths. The female-only path
+  // intentionally has no male record, while the full path validates both.
+  let charactersResponse;
+  let characters;
+  let male;
   if (!femaleOnly) {
     await page.locator("#foundry-name").fill("CI Foundry Ali");
     await page.locator("#foundry-description").fill("Original male hero generated in browser CI.");
@@ -158,12 +163,12 @@ try {
     await page.waitForTimeout(1200);
     await page.screenshot({ path: path.join(output, "01-male-foundry-preview.png"), fullPage: true });
     record("Male Foundry character created and Three.js preview canvas displayed.");
-  
-    let charactersResponse = await request.get(
+
+    charactersResponse = await request.get(
       baseUrl + "/api/projects/" + project.id + "/characters",
     );
-    let characters = await charactersResponse.json();
-    let male = characters.find((item) => item.data?.name === "CI Foundry Ali");
+    characters = await charactersResponse.json();
+    male = characters.find((item) => item.data?.name === "CI Foundry Ali");
     if (!male) throw new Error("Male Foundry profile was not persisted.");
     const maleAssetResponse = await request.get(
       baseUrl + "/api/projects/" + project.id + "/character-assets/"
@@ -176,7 +181,7 @@ try {
         || male.data.foundry_recipe?.hair_color !== "#254c9b") {
       throw new Error("Male hairstyle settings were not persisted.");
     }
-  
+
     const foundryRequests = [];
     page.on("request", (request) => {
       if (request.url().includes("/foundry-characters")) {
@@ -256,7 +261,6 @@ try {
     record("Female-only acceptance mode: skipping already-passed male create/edit workflow.");
   }
 
-
   await page.locator("#foundry-name").fill("CI Foundry Sana");
   await page.locator("#foundry-description").fill("Original female hero generated in browser CI.");
   await page.locator("#foundry-template").selectOption("cartoon-studio.stylized-adult-female.v1");
@@ -281,14 +285,16 @@ try {
       || female.data.foundry_recipe?.hair_style !== "bob") {
     throw new Error("Female Foundry recipe or template was not persisted.");
   }
-  const maleInspection = male.data.asset.engine_inspection;
+  const maleInspection = male?.data?.asset?.engine_inspection;
   const femaleInspection = female.data.asset.engine_inspection;
   if (femaleInspection.skeleton_count !== 1 || femaleInspection.morph_target_count !== 10
-      || (!femaleOnly && (maleInspection.skeleton_count !== 1
+      || (!femaleOnly && (!maleInspection || maleInspection.skeleton_count !== 1
         || maleInspection.morph_target_count !== 10))) {
     throw new Error("Godot inspection did not confirm the expected rig and morph targets.");
   }
-  record("Male and female GLBs both passed the live Godot import/inspection API.");
+  record(femaleOnly
+    ? "Female GLB passed the live Godot import/inspection API."
+    : "Male and female GLBs both passed the live Godot import/inspection API.");
 
   const [portraitDownload] = await Promise.all([
     page.waitForEvent("download"),
