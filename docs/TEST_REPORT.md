@@ -1,5 +1,16 @@
 # Test Report — 2026-11-27
 
+## 2026-11-27 — Main CI repair: generated face surface marker
+
+- **Scope:** repair the failing `Test` step on `main` without weakening generated-face coverage. Single branch: `main`.
+- **Failure:** run [#591](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/46043255274) reported `app.engine.EngineExecutionError: Generated face surface was not found on the head mesh after export and re-import.` for `tests/test_engine.py::test_godot_worker_bakes_cartoon_face_geometry_and_preserves_animation` and `tests/test_engine_adapter.py::test_pinned_godot_worker_builds_episode_scenes_with_world_and_character_glb`. Every earlier step (lock check, uv sync, Godot fetch, lint, JS syntax, compileall) passed.
+- **Cause:** the verification compared `mesh_resource.surface_get_name()` on a re-imported GLB against `CartoonStudio_GeneratedFace`. glTF has no per-primitive name field and the pinned Godot 4.7.2 importer never calls `surface_set_name`, so imported surfaces always report an empty name. glTF does store material names and the importer restores them into the material `resource_name`, which is how the existing `Skin`/`Eye`/`Brow` surface detection already works.
+- **Change 1:** `_replace_skin_surface_with_generated_face` assigns the generated surface its own duplicated material named `CartoonStudio_GeneratedFace` (the ear spheres keep the plain skin material, so the marker stays unique to the head surface), preserves the head mesh `resource_name` for morph export mapping, fails fast with `face_surface_not_added` when Godot rejects the generated arrays, and clears the stale surface override at the new index.
+- **Change 2:** `_export_character_appearance` verification now accepts the marker on the surface name *or* the material name, and the marker string is a single `GENERATED_FACE_SURFACE_NAME` constant.
+- **Change 3:** `test_godot_worker_bakes_cartoon_face_geometry_and_preserves_animation` identifies the baked surface by the marker material name and still asserts it belongs to a skinned mesh.
+- **Result:** awaiting the next GitHub Actions run on `main`. No local pytest run was possible in this batch (no Godot runtime, no Windows host), so nothing is claimed as passing.
+- **Not claimed:** no visual browser acceptance, target-PC benchmark, installer rebuild or full episode render was performed in this batch.
+
 ## 2026-11-27 — P2.2 original face geometry implementation
 
 - **Scope:** Implemented original face geometry authoring by replacing the separable Skin surface on the head mesh with procedurally generated face geometry skinned to the Head bone. Added `_replace_skin_surface_with_generated_face` to `engine/godot_worker/worker.gd`; updated verification in `_export_character_appearance` to check for `CartoonStudio_GeneratedFace` surface; added `face_skin_replaced` flag; updated `test_godot_worker_bakes_cartoon_face_geometry_and_preserves_animation` to assert skin replacement and generated-face surface presence.

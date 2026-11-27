@@ -318,9 +318,11 @@ def test_godot_worker_bakes_cartoon_face_geometry_and_preserves_animation(tmp_pa
     ), "Closed-mouth line geometry must remain available for expression animation."
     assert "CartoonStudio_Face_MouthTongue" in face_names
     assert all(item["attachment_bone"].lower().endswith("head") for item in face_meshes)
+    # glTF has no per-surface names, so the generated face surface is identified on
+    # the re-imported GLB by the marker material name baked with it.
     generated_face_surfaces = [
         item for item in result["mesh_inventory"]
-        if "CartoonStudio_GeneratedFace" in item.get("surface_names", [])
+        if "CartoonStudio_GeneratedFace" in item.get("material_names", [])
     ]
     assert len(generated_face_surfaces) >= 1
     assert generated_face_surfaces[0]["skin_bound"] is True

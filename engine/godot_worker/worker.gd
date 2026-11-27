@@ -2,6 +2,10 @@ extends SceneTree
 
 const PROTOCOL_VERSION := 1
 
+# glTF stores no per-surface names, but it does store material names. The generated
+# face surface is therefore identified after export/re-import by this material name.
+const GENERATED_FACE_SURFACE_NAME := "CartoonStudio_GeneratedFace"
+
 
 func _initialize() -> void:
     var arguments := OS.get_cmdline_user_args()
@@ -658,6 +662,7 @@ func _replace_skin_surface_with_generated_face(
         new_arrays[Mesh.ARRAY_INDEX] = face_indices
 
     var new_mesh := ArrayMesh.new()
+    new_mesh.resource_name = mesh.resource_name
     var surface_count := mesh.get_surface_count()
     var new_surface_index := -1
     for i in range(surface_count):
@@ -679,6 +684,7 @@ func _replace_skin_surface_with_generated_face(
                 new_mesh.surface_set_material(new_idx, mat)
 
     # Add the generated face exactly once, after the original surfaces.
+    var surface_count_before_face := new_mesh.get_surface_count()
     new_mesh.add_surface_from_arrays(
         Mesh.PRIMITIVE_TRIANGLES,
         new_arrays,
@@ -686,12 +692,22 @@ func _replace_skin_surface_with_generated_face(
         {},
         0
     )
+    if new_mesh.get_surface_count() != surface_count_before_face + 1:
+        return {"ok": false, "error_code": "face_surface_not_added", "error": "Godot did not accept the generated face surface arrays for the head mesh."}
     new_surface_index = new_mesh.get_surface_count() - 1
-    new_mesh.surface_set_name(new_surface_index, "CartoonStudio_GeneratedFace")
+    new_mesh.surface_set_name(new_surface_index, GENERATED_FACE_SURFACE_NAME)
     if skin_material != null:
-        new_mesh.surface_set_material(new_surface_index, skin_material)
+        # The generated surface keeps its own material copy so the marker name is
+        # unique to the head surface (the ear spheres share the plain skin material).
+        var generated_face_material := skin_material.duplicate() as BaseMaterial3D
+        if generated_face_material != null:
+            generated_face_material.resource_name = GENERATED_FACE_SURFACE_NAME
+            new_mesh.surface_set_material(new_surface_index, generated_face_material)
 
     mesh_instance.mesh = new_mesh
+    # Drop any override left over from the pre-replacement surface at this index so
+    # the generated surface exports with its own marker material.
+    mesh_instance.set_surface_override_material(new_surface_index, null)
 
     return {
         "ok": true,
@@ -1191,6 +1207,10 @@ func _export_character_appearance(payload: Dictionary) -> Dictionary:
             if not head_mesh_name.is_empty() and str(mesh_record.get("node_name", "")) == head_mesh_name:
                 if expected_surface_count > 0 and int(mesh_record.get("surface_count", -1)) == expected_surface_count:
                     head_surface_count_verified = true
+                var material_names: Array = mesh_record.get("material_names", [])
+                for material_name in material_names:
+                    if str(material_name) == GENERATED_FACE_SURFACE_NAME:
+                        head_surface_count_verified = true
         if face_mesh_count < int(face_result.get("mesh_count", 0)) or not face_attachment_verified:
             DirAccess.remove_absolute(output_path)
             return {"error_code": "appearance_face_verification_failed", "error": "Generated facial meshes or their Head-bone attachment did not survive GLB export and re-import."}
