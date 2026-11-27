@@ -120,6 +120,13 @@ def _component_skin_weights(
     normalized = [(name, weight / total) for name, weight in weighted]
     return tuple(sorted(normalized, key=lambda item: item[1], reverse=True)[:4])
 
+# Six tetrahedra around the cube's 0–7 body diagonal. This split has
+# matching diagonals on neighboring cube faces and no internal boundary faces.
+_CUBE_TETRAHEDRA = (
+    (0, 1, 3, 7), (0, 3, 2, 7), (0, 2, 6, 7),
+    (0, 6, 4, 7), (0, 4, 5, 7), (0, 5, 1, 7),
+)
+
 MORPH_TARGETS = (
     "head_width",
     "jaw_width",
@@ -480,10 +487,7 @@ def _build_geometry(
     indices: list[int] = []
     normals: list[tuple[float,float,float]] = []
     edge_vertices: dict[tuple[int,int],int] = {}
-    # A conforming six-tetrahedron cube split around the 0–7 body diagonal.
-    # The previous list used a face diagonal and created internal boundary
-    # triangles, which appeared as repeating holes in the exported character.
-    tetrahedra = ((0,1,3,7),(0,3,2,7),(0,2,6,7),(0,6,4,7),(0,4,5,7),(0,5,1,7))
+    tetrahedra = _CUBE_TETRAHEDRA
     cube_offsets = ((0,0,0),(1,0,0),(0,1,0),(1,1,0),(0,0,1),(1,0,1),(0,1,1),(1,1,1))
     tetra_edges = ((0,1),(0,2),(0,3),(1,2),(1,3),(2,3))
 
