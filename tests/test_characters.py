@@ -313,7 +313,11 @@ def test_character_glb_import_profile_round_trip_and_project_reference(tmp_path,
     assert [item["id"] for item in listed.json()] == [character_id]
     reopened = client.get(f"/api/projects/{project_id}/characters/{character_id}")
     assert reopened.status_code == 200
-    assert reopened.json()["data"]["relationships"] == ["Bilu: best friend"]
+    data = reopened.json()["data"]
+    assert data["relationships"] == ["Bilu: best friend"]
+    assert data["hair"] == "Short dark hair"
+    assert data["face_design"] == "Round face, expressive eyebrows."
+    assert data["voice_profile"] == "Warm youthful Pakistani Urdu voice."
 
     updated_payload = profile_payload(imported["relative_path"])
     updated_payload["personality"] = "Brave, curious and kind."
