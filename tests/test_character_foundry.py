@@ -1,19 +1,19 @@
 from __future__ import annotations
 
-from collections import Counter
 import json
 import math
 import struct
+from collections import Counter
 
 import pytest
 
 from app.character_foundry import (
+    _CUBE_TETRAHEDRA,
     CLOTHING_ASSET_ID,
     FEMALE_MASTER_TEMPLATE_ID,
     MASTER_TEMPLATE_ID,
     MORPH_TARGETS,
     RIG_PROFILE_ID,
-    _CUBE_TETRAHEDRA,
     build_master_character_glb,
     default_character_recipe,
     validate_character_recipe,
