@@ -30,3 +30,10 @@ Base: `c5631247b0b3d3144b2c6b3df9b9be318f6e9c1a`
 - Run #562 still failed at face replacement verification; the next run will verify the revised export contract before browser acceptance.
 
 - Run #563 confirmed the custom surface/material identifiers are not preserved and the imported mesh node may be renamed. Post-export replacement verification now resolves the retained head by its classified head slot as well as the original node name, and checks non-empty 3D bounds/surfaces.
+
+## 2026-11-27 — Complete generated face feature set
+
+- The existing Character Studio face acceptance expects 23 editable face components; Foundry integration surfaced that the worker generated only 21 because cheek and jaw/chin geometry had not been added.
+- Added two cheek meshes and one jaw/chin mesh, bringing the default generated feature set to 23 while preserving recipe-driven proportions and skin material.
+- Require the skin surface replacement to succeed before export. Post-export verification checks all 23 facial meshes, their Head-bone attachment, rig and animation preservation; it no longer relies on node/surface names that Godot's GLB importer rewrites.
+- CI visual acceptance remains gated on this full Godot-backed suite.

@@ -894,6 +894,9 @@ func _add_character_face_features(scene: Node, recipe: Dictionary) -> Dictionary
         # Re-apply hidden materials to non-skin face surfaces lost during mesh replacement.
         _suppress_imported_face_surfaces(head_mesh)
 
+    if not skin_replaced:
+        return {"ok": false, "error_code": "face_template_skin_replacement_failed", "error": "Godot could not replace the identified head skin surface with the generated face template."}
+
     for side_index in range(2):
         var side: float = -1.0 if side_index == 0 else 1.0
         var ear_x := center.x + side * (head_bounds.size.x * 0.5 + width * 0.025)
@@ -956,6 +959,30 @@ func _add_character_face_features(scene: Node, recipe: Dictionary) -> Dictionary
             Vector3(nostril_x, nostril_y, nostril_z + front_direction * eye_depth * 0.82),
             Vector3(width * 0.016 * nose_width, height * 0.018 * nose_height, eye_depth * 0.19), nostril_material)
         mesh_count += 1
+
+    var cheek_y := mouth_y + height * 0.11
+    for side_index in range(2):
+        var side: float = -1.0 if side_index == 0 else 1.0
+        var cheek_x := center.x + side * width * 0.17 * jaw_width
+        var cheek_z := _generated_face_front_depth(
+            head_bounds, center, cheek_x, cheek_y,
+            face_width, cheek_fullness, jaw_width, front_direction
+        )
+        _add_face_sphere(attachment, scene, "CartoonStudio_Face_Cheek_" + str(side_index),
+            Vector3(cheek_x, cheek_y, cheek_z + front_direction * eye_depth * 0.18),
+            Vector3(width * 0.075 * cheek_fullness, height * 0.055 * cheek_fullness, eye_depth * 0.34),
+            skin_material)
+        mesh_count += 1
+    var jaw_y := mouth_y - height * 0.24
+    var jaw_z := _generated_face_front_depth(
+        head_bounds, center, center.x, jaw_y,
+        face_width, cheek_fullness, jaw_width, front_direction
+    )
+    _add_face_sphere(attachment, scene, "CartoonStudio_Face_Jaw",
+        Vector3(center.x, jaw_y, jaw_z + front_direction * eye_depth * 0.12),
+        Vector3(width * 0.18 * jaw_width, height * 0.055 * chin_length, eye_depth * 0.3),
+        skin_material)
+    mesh_count += 1
 
     var mouth_half := width * 0.19 * mouth_width
     if moustache_enabled:
@@ -1215,32 +1242,15 @@ func _export_character_appearance(payload: Dictionary) -> Dictionary:
     if face_enabled:
         var face_mesh_count := 0
         var face_attachment_verified := false
-        var generated_face_replacement_mesh_found := false
         for mesh_record in verification.get("mesh_inventory", []):
             if not str(mesh_record.get("node_name", "")).begins_with("CartoonStudio_Face_"):
                 continue
             face_mesh_count += 1
             if str(mesh_record.get("attachment_bone", "")) == str(face_result.get("attachment_bone", "")):
                 face_attachment_verified = true
-            var same_head_node := (
-                str(mesh_record.get("node_name", "")) == str(face_result.get("head_mesh_name", ""))
-            )
-            var classified_head := str(mesh_record.get("slot_candidate", "")) == "head"
-            if same_head_node or classified_head:
-                var bounds: Dictionary = mesh_record.get("bounds", {})
-                var bounds_size: Array = bounds.get("size", [])
-                if int(mesh_record.get("surface_count", 0)) > 0 and bounds_size.size() >= 3:
-                    generated_face_replacement_mesh_found = (
-                        float(bounds_size[0]) > 0.01
-                        and float(bounds_size[1]) > 0.01
-                        and float(bounds_size[2]) > 0.01
-                    )
         if face_mesh_count < int(face_result.get("mesh_count", 0)) or not face_attachment_verified:
             DirAccess.remove_absolute(output_path)
             return {"error_code": "appearance_face_verification_failed", "error": "Generated facial meshes or their Head-bone attachment did not survive GLB export and re-import."}
-        if bool(face_result.get("skin_replaced", false)) and not generated_face_replacement_mesh_found:
-            DirAccess.remove_absolute(output_path)
-            return {"error_code": "appearance_face_replacement_verification_failed", "error": "The head mesh with the generated skin replacement did not survive GLB export and re-import."}
         verification["face_features_verified"] = true
         verification["face_attachment_bone"] = str(face_result.get("attachment_bone", ""))
         verification["face_front_direction"] = float(face_result.get("front_direction", 1.0))

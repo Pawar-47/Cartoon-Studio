@@ -287,6 +287,7 @@ def test_godot_worker_bakes_cartoon_face_geometry_and_preserves_animation(tmp_pa
 
     assert result["appearance_verified"] is True
     assert result["face_features_verified"] is True
+    assert result["face_skin_replaced"] is True
     assert result["face_attachment_bone"].lower().endswith("head")
     assert result["applied_face_feature_count"] >= 23
     assert result["skeleton_count"] == before["skeleton_count"]
