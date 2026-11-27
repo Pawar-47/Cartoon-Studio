@@ -10,7 +10,7 @@
 - **Change 5 — bookkeeping cannot mask errors.** The routes record job failures through a helper that logs instead of raising a second exception, and a job is completed only after its documents are persisted.
 - **Change 6 — world document shape.** `migrate_world_document` runs every registered step and then fills the required object defaults; the world list, detail, create, update, vehicle and scene-export paths all go through it.
 - **Tests:** import tests rewritten for the body-based contract (round-trip, non-ZIP, missing project.json, path traversal), two job API tests, a world-defaults create/update test, and queue tests for attempt counting, lease ownership, lease reclaim and heartbeat. The legacy-migration test now expects schema version 4.
-- **Result:** awaiting the next GitHub Actions run on `main`. No local pytest run was possible in this batch (no Godot runtime, no Windows host), so nothing is claimed as passing.
+- **Result:** green. Windows CI on `main` at `c20ab8a` passed in 1m 48s (job `140713831551`): the lock check, uv sync, Godot fetch, lint, JS syntax, `compileall` and the full `Test` step all passed, including the Godot-backed generated-face, episode-scene and bundle tests the collection error had hidden. No local pytest run was possible in this batch (no Godot runtime, no Windows host).
 - **Not claimed:** no visual browser acceptance, target-PC benchmark, installer rebuild or full episode render was performed in this batch.
 
 ## 2026-11-27 — Main CI repair: generated face surface marker
@@ -21,7 +21,7 @@
 - **Change 1:** `_replace_skin_surface_with_generated_face` assigns the generated surface its own duplicated material named `CartoonStudio_GeneratedFace` (the ear spheres keep the plain skin material, so the marker stays unique to the head surface), preserves the head mesh `resource_name` for morph export mapping, fails fast with `face_surface_not_added` when Godot rejects the generated arrays, and clears the stale surface override at the new index.
 - **Change 2:** `_export_character_appearance` verification now accepts the marker on the surface name *or* the material name, and the marker string is a single `GENERATED_FACE_SURFACE_NAME` constant.
 - **Change 3:** `test_godot_worker_bakes_cartoon_face_geometry_and_preserves_animation` identifies the baked surface by the marker material name and still asserts it belongs to a skinned mesh.
-- **Result:** awaiting the next GitHub Actions run on `main`. No local pytest run was possible in this batch (no Godot runtime, no Windows host), so nothing is claimed as passing.
+- **Result:** green. Windows CI on `main` at `8ac27a0` passed in 2m 3s (job `140661860239`), including the two Godot-backed tests that had reported `Generated face surface was not found on the head mesh after export and re-import`. No local pytest run was possible in this batch (no Godot runtime, no Windows host).
 - **Not claimed:** no visual browser acceptance, target-PC benchmark, installer rebuild or full episode render was performed in this batch.
 
 ## 2026-11-27 — P2.2 original face geometry implementation

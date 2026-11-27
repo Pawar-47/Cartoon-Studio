@@ -14,7 +14,7 @@ Phase 3 — World Builder is now ACTIVE per user direction. Persistent/editable 
 ## Completed batches
 
 ### Job reliability queue — IN PROGRESS
-Production SQLite job queue (`app/job_queue.py`) with bounded retries counted in whole attempts (MAX_ATTEMPTS=3), durable event records, lease-based claiming with expiry-based reclaim, cancellation requests honoured at task boundaries, progress polling and persisted output; schema migrations 3 and 4 create and extend the job tables; production/audio/render/world-export endpoints wired to the queue and claiming for the budget of their own operation; `/jobs`, `/jobs/{id}`, `/jobs/{id}/cancel` API endpoints. 14 unit tests plus 2 API tests.
+Production SQLite job queue (`app/job_queue.py`) with bounded retries counted in whole attempts (MAX_ATTEMPTS=3), durable event records, lease-based claiming with expiry-based reclaim, cancellation requests honoured at task boundaries, progress polling and persisted output; schema migrations 3 and 4 create and extend the job tables; production/audio/render/world-export endpoints wired to the queue and claiming for the budget of their own operation; `/jobs`, `/jobs/{id}`, `/jobs/{id}/cancel` API endpoints. 15 unit tests plus 2 API tests.
 
 ### Canonical world schema migration — DONE
 `LATEST_WORLD_SCHEMA_VERSION = "1.0.1"` in `app/storage.py`; `WORLD_MIGRATIONS` with a 1.0.0→1.0.1 migration; `migrate_world_document()` upgrades a document and then fills the required object defaults, and every world read (list, detail) and every write (create, update, vehicle movement/interaction/rig, scene export) passes through it; 3 unit tests plus a create/update defaults test.

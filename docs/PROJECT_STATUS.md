@@ -2,21 +2,21 @@
 
 ## Live checkpoint — 2026-11-28 (main work-in-progress audit)
 
-- Main CI [#?](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/46058353281) on `201c6dd` failed in the `Test` step at collection: `RuntimeError: Form data requires "python-multipart" to be installed`, in every test module that imports `app.main`. The project-portability import endpoint was written with `UploadFile = File(...)`, a form dependency that is not in `pyproject.toml` or `requirements.lock`.
+- Main CI on `main` at `201c6dd` failed in the `Test` step at collection: `RuntimeError: Form data requires "python-multipart" to be installed`, in every test module that imports `app.main`. The project-portability import endpoint was written with `UploadFile = File(...)`, a form dependency that is not in `pyproject.toml` or `requirements.lock`.
 - **What was fixed in this audit batch:**
   - `POST /api/projects/import` now reads the ZIP from the request body (`Content-Type: application/zip`), so no form parser or new dependency is needed. Members are path-checked against absolute, traversal and drive-letter names, duplicates are rejected, the upload and its uncompressed total are bounded, and a rejected member discards the whole import. World, episode and character documents are repointed from the exporting project id to the new one, so imported asset and preview URLs resolve.
   - The queue's retry limit now counts whole attempts (`attempts`, migration 4) instead of overloading `progress`, and a job records a worker lease with an expiry that the next claim reclaims, so a job whose worker died cannot stay `running` forever. Each route claims for the budget of its own operation (180s scene generation and world export, an hour for audio, four hours for a render) so long work is not reclaimed mid-flight.
   - `_migration_3` created the queue tables twice over (once in storage, once in the queue module with a divergent definition). The queue module no longer defines any schema, and the missing `job_events` index is added in migration 3.
   - Job bookkeeping no longer masks the request's own error, and a job is marked completed only after its documents are persisted.
   - `migrate_world_document` now applies every registered step and then fills the schema's object defaults, and every world read (list and detail) and write (create, update, vehicle endpoints, scene export) passes through it, so a created world and a migrated world have the same shape.
-- **Verified:** static review only; CI is the proof and has not been re-run at the time of writing.
+- **Verified:** Windows CI on `main` at `c20ab8a` passed in 1m 48s (job `140713831551`), all steps green, including the Godot-backed engine, face-geometry, episode-scene and bundle tests the collection error had hidden. 8 tests were added (4 queue: attempt counting, lease reclaim, lease ownership, heartbeat; 4 API: path traversal, job list/detail/cancel, world object defaults) and 4 rewritten (retry semantics, the three import tests). Visual browser acceptance, target-PC benchmarking, an installer rebuild and a full episode render are still not performed.
 
 ## Live checkpoint — 2026-11-27 (main CI repair: generated face surface marker)
 
 - `main` CI run [#591](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/46043255274) failed in `Test` with `EngineExecutionError: Generated face surface was not found on the head mesh after export and re-import.` in `tests/test_engine.py::test_godot_worker_bakes_cartoon_face_geometry_and_preserves_animation` and `tests/test_engine_adapter.py::test_pinned_godot_worker_builds_episode_scenes_with_world_and_character_glb`.
 - **Cause:** glTF has no per-primitive name, and Godot's importer never calls `surface_set_name` (`GLTFDocument::_parse_meshes` in the pinned 4.7.2 source). Every surface of a re-imported GLB therefore has an empty name, so verification by surface name could never pass. glTF does store material names, and the importer restores them into the material `resource_name`.
 - **Fix:** the generated face surface now carries the marker on its own duplicated material named `CartoonStudio_GeneratedFace`; `_replace_skin_surface_with_generated_face` also keeps the head mesh resource name, fails fast when Godot rejects the generated surface arrays, and clears the stale surface override at the new index. Verification and the face test accept the marker surface name *or* the marker material name.
-- **Verified:** static review only in this batch. The next GitHub Actions run on `main` is the proof; nothing is claimed as passing before it completes.
+- **Verified:** Windows CI on `main` at `8ac27a0` passed in 2m 3s (job `140661860239`), including both Godot-backed face tests that had failed in run #591.
 
 ## Live checkpoint — 2026-11-27 (P2.2 original face geometry)
 
