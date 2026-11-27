@@ -223,20 +223,19 @@ try {
   );
   await page.waitForFunction(
     () => {
-      const status = document.querySelector("#foundry-status")?.textContent || "";
-      return status.includes("saved.") || status.startsWith("Preview unavailable:")
-        || status.includes("could not");
+      const status = document.querySelector("#preview-status")?.textContent || "";
+      return status.startsWith("CI Foundry Ali ·") || status.startsWith("Preview unavailable:");
     },
     null,
-    { timeout: 120_000 },
+    { timeout: 60_000 },
   );
   const editStatus = await page.locator("#foundry-status").textContent();
   const previewStatus = await page.locator("#preview-status").textContent();
   record("Foundry edit result: " + editStatus);
   record("Foundry preview result: " + previewStatus);
   await page.screenshot({ path: path.join(output, "02-male-foundry-edit-result.png"), fullPage: true });
-  if (!editStatus?.includes("saved.")) {
-    throw new Error("Foundry edit did not finish successfully: " + editStatus
+  if (!editStatus?.includes("saved.") || previewStatus?.startsWith("Preview unavailable:")) {
+    throw new Error("Foundry edit/preview did not finish successfully: " + editStatus
       + " | preview: " + previewStatus);
   }
   charactersResponse = await request.get(

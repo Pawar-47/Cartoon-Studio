@@ -450,6 +450,20 @@ export function applyCharacterBodyProportions(proportions = {}, boneMapping = {}
   currentObject.updateMatrixWorld(true);
 }
 
+async function parseCharacterGlb(buffer, timeoutMs = 45_000) {
+  let timer;
+  try {
+    return await Promise.race([
+      loader.parseAsync(buffer, ""),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error("GLB parsing exceeded " + timeoutMs / 1000 + " seconds.")), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 export async function showCharacterPreview(buffer, label = "Character", appearance = {}, options = {}) {
   const playAnimations = options.playAnimations !== false;
   canvas.style.display = "block";
@@ -460,7 +474,7 @@ export async function showCharacterPreview(buffer, label = "Character", appearan
     // scenes alive during GLB parsing can double peak CPU/GPU memory in the
     // browser, especially when a saved character is edited repeatedly.
     disposeCurrentObject();
-    const gltf = await loader.parseAsync(buffer, "");
+    const gltf = await parseCharacterGlb(buffer);
     currentObject = gltf.scene || gltf.scenes[0];
     if (!currentObject) throw new Error("The GLB contains no previewable scene.");
     scene.add(currentObject);

@@ -886,6 +886,7 @@ async function createFoundryCharacter(){
   });
   const result=await response.json();
   if(!response.ok)throw new Error(result.detail||"Foundry character generation failed.");
+  $("foundry-status").textContent="Character saved. Loading browser preview…";
   const assetResponse=await fetch(result.asset_url);
   if(!assetResponse.ok)throw new Error("The character was saved, but its GLB preview could not be loaded.");
   const loaded=await showCharacterPreview(await assetResponse.arrayBuffer(),name);
