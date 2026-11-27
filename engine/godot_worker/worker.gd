@@ -611,8 +611,8 @@ func _replace_skin_surface_with_generated_face(
     if face_arrays.size() <= Mesh.ARRAY_VERTEX:
         return {"ok": false, "error_code": "face_geometry_no_vertices", "error": "Generated face geometry has no vertex data."}
 
-    var face_vertices: PackedVector3Array := face_arrays[Mesh.ARRAY_VERTEX]
-    var face_indices: PackedInt32Array := PackedInt32Array()
+    var face_vertices: PackedVector3Array = face_arrays[Mesh.ARRAY_VERTEX]
+    var face_indices: PackedInt32Array = PackedInt32Array()
     if face_arrays.size() > Mesh.ARRAY_INDEX:
         var idx_value := face_arrays[Mesh.ARRAY_INDEX] as PackedInt32Array
         if typeof(idx_value) == TYPE_PACKED_INT32_ARRAY:
@@ -625,7 +625,7 @@ func _replace_skin_surface_with_generated_face(
     if face_arrays.size() > Mesh.ARRAY_TEX_UV:
         face_uvs = face_arrays[Mesh.ARRAY_TEX_UV]
 
-    var vertex_count: int := face_vertices.size()
+    var vertex_count: int = face_vertices.size()
 
     var new_arrays := Array()
     new_arrays.resize(Mesh.ARRAY_MAX)
