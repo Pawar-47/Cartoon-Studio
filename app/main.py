@@ -36,6 +36,7 @@ from app.engine import (
     EngineUnavailableError,
     GodotEngineAdapter,
 )
+from app.job_queue import JobQueue, JobQueueError
 from app.render import (
     RenderDependencyUnavailable,
     RenderExecutionError,
@@ -66,12 +67,24 @@ ROOT = Path(__file__).resolve().parent.parent
 _ENV_DATA_DIR = os.environ.get("CARTOON_STUDIO_DATA", "").strip()
 DATA_DIR = Path(_ENV_DATA_DIR).expanduser() if _ENV_DATA_DIR else default_data_dir()
 DB_PATH = DATA_DIR / "cartoon_studio.sqlite3"
+_JOB_QUEUE: JobQueue | None = None
+_JOB_QUEUE_KEY: tuple[str, str] | None = None
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 _INITIALIZED_DB_KEY: tuple[str, str] | None = None
 
 
 def connect_db():
     return open_database(DATA_DIR, DB_PATH)
+
+
+def get_job_queue() -> JobQueue:
+    global _JOB_QUEUE, _JOB_QUEUE_KEY
+    key = (str(DATA_DIR.resolve()), str(DB_PATH.resolve()))
+    if _JOB_QUEUE is not None and _JOB_QUEUE_KEY == key:
+        return _JOB_QUEUE
+    _JOB_QUEUE = JobQueue(DATA_DIR, DB_PATH)
+    _JOB_QUEUE_KEY = key
+    return _JOB_QUEUE
 
 
 def get_engine_adapter() -> GodotEngineAdapter:
@@ -885,6 +898,11 @@ def build_episode_production(project_id: str) -> dict[str, Any]:
         dialogue_line["audio_envelope"] = track["mouth_envelope"]
         dialogue_line["audio_duration_seconds"] = track["duration_seconds"]
     try:
+        queue = get_job_queue()
+        job_id = queue.enqueue(project_id, "episode_production", total_units=1)
+        claimed = queue.claim_specific(job_id, worker_id="api-server")
+        if claimed is None:
+            raise JobQueueError(f"Could not claim job {job_id}")
         result = get_engine_adapter().export_episode_scenes(
             episode_for_render,
             world_scene,
@@ -893,22 +911,43 @@ def build_episode_production(project_id: str) -> dict[str, Any]:
             allowed_root=project_directory(DATA_DIR, project_id),
         )
     except EngineUnavailableError as error:
+        shutil.rmtree(output_directory.parent, ignore_errors=True)
+        queue.fail(job_id, worker_id="api-server", error=str(error), retry=False)
         raise HTTPException(status_code=503, detail=str(error)) from error
     except EngineTimeoutError as error:
         shutil.rmtree(output_directory.parent, ignore_errors=True)
+        queue.fail(job_id, worker_id="api-server", error=str(error), retry=False)
         raise HTTPException(status_code=504, detail=str(error)) from error
     except EnginePathError as error:
         shutil.rmtree(output_directory.parent, ignore_errors=True)
+        queue.fail(job_id, worker_id="api-server", error=str(error), retry=False)
         raise HTTPException(status_code=422, detail=str(error)) from error
     except EngineError as error:
         shutil.rmtree(output_directory.parent, ignore_errors=True)
+        queue.fail(job_id, worker_id="api-server", error=str(error), retry=False)
         raise HTTPException(
             status_code=502,
             detail=f"Episode scene generation failed: {error}",
         ) from error
     if not result.get("ok") or len(result.get("scenes", [])) != len(plan["scenes"]):
         shutil.rmtree(output_directory.parent, ignore_errors=True)
-        raise HTTPException(status_code=502, detail="Godot did not generate every episode scene.")
+        queue.fail(
+            job_id,
+            worker_id="api-server",
+            error="Godot did not generate every episode scene.",
+            retry=False,
+        )
+        raise HTTPException(
+            status_code=502, detail="Godot did not generate every episode scene."
+        )
+    queue.complete(
+        job_id,
+        worker_id="api-server",
+        output={
+            "scene_count": len(result.get("scenes", [])),
+            "status": "ok",
+        },
+    )
     project_root = project_directory(DATA_DIR, project_id).resolve()
     scenes = []
     for item in result["scenes"]:
@@ -1036,6 +1075,11 @@ def render_episode(project_id: str) -> dict[str, Any]:
     output_directory = resolve_project_relative(DATA_DIR, project_id, relative_output)
     output_path = output_directory / "episode.mp4"
     try:
+        queue = get_job_queue()
+        job_id = queue.enqueue(project_id, "episode_render", total_units=1)
+        claimed = queue.claim_specific(job_id, worker_id="api-server")
+        if claimed is None:
+            raise JobQueueError(f"Could not claim job {job_id}")
         result = render_episode_video(
             scene_paths,
             scene_durations,
@@ -1047,13 +1091,27 @@ def render_episode(project_id: str) -> dict[str, Any]:
         )
     except RenderDependencyUnavailable as error:
         shutil.rmtree(output_directory, ignore_errors=True)
+        queue.fail(job_id, worker_id="api-server", error=str(error), retry=False)
         raise HTTPException(status_code=503, detail=str(error)) from error
     except RenderPathError as error:
         shutil.rmtree(output_directory, ignore_errors=True)
+        queue.fail(job_id, worker_id="api-server", error=str(error), retry=False)
         raise HTTPException(status_code=422, detail=str(error)) from error
     except RenderExecutionError as error:
         shutil.rmtree(output_directory, ignore_errors=True)
+        queue.fail(job_id, worker_id="api-server", error=str(error), retry=False)
         raise HTTPException(status_code=502, detail=str(error)) from error
+    queue.complete(
+        job_id,
+        worker_id="api-server",
+        output={
+            "duration_seconds": result.get("duration_seconds", 0),
+            "fps": result.get("fps", 0),
+            "width": result.get("width", 0),
+            "height": result.get("height", 0),
+            "status": "ok",
+        },
+    )
     video_relative = str(
         Path(result["video_path"]).resolve().relative_to(project_root.resolve())
     ).replace("\\", "/")
@@ -1084,6 +1142,68 @@ def render_episode(project_id: str) -> dict[str, Any]:
         "build_id": render_id,
         **data,
         "video_url": f"/api/projects/{project_id}/story/render/{render_id}/mp4",
+    }
+
+
+@app.get("/api/projects/{project_id}/jobs")
+def list_project_jobs(project_id: str, limit: int = 50, offset: int = 0):
+    """List jobs for a project, most recent first."""
+    initialize_database()
+    queue = get_job_queue()
+    jobs = queue.list_for_project(project_id, limit=limit, offset=offset)
+    return {"project_id": project_id, "jobs": jobs, "limit": limit, "offset": offset}
+
+
+@app.get("/api/projects/{project_id}/jobs/{job_id}")
+def get_project_job(project_id: str, job_id: str):
+    """Return the full job state including progress and event history."""
+    initialize_database()
+    queue = get_job_queue()
+    try:
+        snapshot = queue.snapshot(job_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Job not found.")
+    job = snapshot["job"]
+    if job["project_id"] != project_id:
+        raise HTTPException(status_code=404, detail="Job not found.")
+    return {
+        "job_id": job_id,
+        "operation": job["operation"],
+        "state": job["state"],
+        "progress": job["progress"],
+        "total": job["total"],
+        "cancel_requested": bool(job["cancel_requested"]),
+        "error": job["error"],
+        "created_at": job["created_at"],
+        "updated_at": job["updated_at"],
+        "output": json.loads(job["output_json"]) if job["output_json"] else None,
+        "events": snapshot["events"],
+    }
+
+
+@app.post("/api/projects/{project_id}/jobs/{job_id}/cancel")
+def cancel_project_job(project_id: str, job_id: str):
+    """Request cancellation of a job."""
+    initialize_database()
+    queue = get_job_queue()
+    try:
+        snapshot = queue.snapshot(job_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Job not found.")
+    job = snapshot["job"]
+    if job["project_id"] != project_id:
+        raise HTTPException(status_code=404, detail="Job not found.")
+    if job["state"] in ("completed", "failed", "cancelled"):
+        return {
+            "job_id": job_id,
+            "state": job["state"],
+            "cancel_requested": bool(job["cancel_requested"]),
+        }
+    queue.request_cancel(job_id)
+    return {
+        "job_id": job_id,
+        "state": "cancelling",
+        "cancel_requested": True,
     }
 
 
@@ -1126,6 +1246,11 @@ def build_episode_audio(project_id: str) -> dict[str, Any]:
     relative_output = f"assets/episodes/{episode_id}/audio/builds/{build_id}"
     output_directory = resolve_project_relative(DATA_DIR, project_id, relative_output)
     try:
+        queue = get_job_queue()
+        job_id = queue.enqueue(project_id, "episode_audio", total_units=1)
+        claimed = queue.claim_specific(job_id, worker_id="api-server")
+        if claimed is None:
+            raise JobQueueError(f"Could not claim job {job_id}")
         result = generate_episode_audio(
             plan,
             output_directory,
@@ -1133,10 +1258,21 @@ def build_episode_audio(project_id: str) -> dict[str, Any]:
         )
     except SpeechEngineUnavailable as error:
         shutil.rmtree(output_directory, ignore_errors=True)
+        queue.fail(job_id, worker_id="api-server", error=str(error), retry=False)
         raise HTTPException(status_code=503, detail=str(error)) from error
     except SpeechGenerationError as error:
         shutil.rmtree(output_directory, ignore_errors=True)
+        queue.fail(job_id, worker_id="api-server", error=str(error), retry=False)
         raise HTTPException(status_code=422, detail=str(error)) from error
+    queue.complete(
+        job_id,
+        worker_id="api-server",
+        output={
+            "duration_seconds": result.get("duration_seconds", 0),
+            "dialogue_line_count": result.get("dialogue_line_count", 0),
+            "status": "ok",
+        },
+    )
     project_root = project_directory(DATA_DIR, project_id).resolve()
     audio_relative = str(
         Path(result["audio_path"]).resolve().relative_to(project_root)

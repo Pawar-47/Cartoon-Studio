@@ -12,7 +12,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-LATEST_SCHEMA_VERSION = 2
+LATEST_SCHEMA_VERSION = 3
 
 
 def default_data_dir() -> Path:
@@ -97,9 +97,47 @@ def _migration_2_portable_document_index(connection: sqlite3.Connection) -> None
     )
 
 
+def _migration_3_job_queue_tables(connection: sqlite3.Connection) -> None:
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS jobs (
+            job_id TEXT PRIMARY KEY,
+            project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+            operation TEXT NOT NULL,
+            state TEXT NOT NULL,
+            cancel_requested INTEGER NOT NULL DEFAULT 0,
+            progress INTEGER NOT NULL DEFAULT 0,
+            total INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            error TEXT,
+            output_json TEXT
+        );
+        """
+    )
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS job_events (
+            event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            job_id TEXT NOT NULL REFERENCES jobs(job_id) ON DELETE CASCADE,
+            event_type TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            detail_json TEXT NOT NULL DEFAULT '{}'
+        );
+        """
+    )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_jobs_project_state
+        ON jobs(project_id, state, updated_at)
+        """
+    )
+
+
 MIGRATIONS = (
     (1, "legacy_project_tables", _migration_1_legacy_project_tables),
     (2, "portable_document_index", _migration_2_portable_document_index),
+    (3, "job_queue_tables", _migration_3_job_queue_tables),
 )
 
 

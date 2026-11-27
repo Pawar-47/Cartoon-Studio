@@ -887,7 +887,7 @@ def test_legacy_database_migrates_and_preserves_project_and_story(tmp_path, monk
         migrated_story = connection.execute(
             "SELECT plan_json FROM story_plans WHERE project_id = ?", (project_id,)
         ).fetchone()[0]
-    assert versions == 2
+    assert versions == 3
     assert preserved == "Legacy Project"
     assert json.loads(migrated_story)["title"] == "Market Mix-up"
     project_file = tmp_path / "projects" / project_id / "project.json"
