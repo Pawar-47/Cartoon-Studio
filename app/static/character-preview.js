@@ -456,8 +456,11 @@ export async function showCharacterPreview(buffer, label = "Character", appearan
   if (!ensureRenderer()) return false;
   status.textContent = "Loading 3D model…";
   try {
-    const gltf = await loader.parseAsync(buffer, "");
+    // Release the previous model before parsing its replacement. Keeping both
+    // scenes alive during GLB parsing can double peak CPU/GPU memory in the
+    // browser, especially when a saved character is edited repeatedly.
     disposeCurrentObject();
+    const gltf = await loader.parseAsync(buffer, "");
     currentObject = gltf.scene || gltf.scenes[0];
     if (!currentObject) throw new Error("The GLB contains no previewable scene.");
     scene.add(currentObject);
