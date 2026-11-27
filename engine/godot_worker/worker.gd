@@ -1174,11 +1174,10 @@ func _export_character_appearance(payload: Dictionary) -> Dictionary:
         var face_attachment_verified := false
         var generated_face_surface_found := false
         for mesh_record in verification.get("mesh_inventory", []):
-            if not str(mesh_record.get("node_name", "")).begins_with("CartoonStudio_Face_"):
-                continue
-            face_mesh_count += 1
-            if str(mesh_record.get("attachment_bone", "")) == str(face_result.get("attachment_bone", "")):
-                face_attachment_verified = true
+            if str(mesh_record.get("node_name", "")).begins_with("CartoonStudio_Face_"):
+                face_mesh_count += 1
+                if str(mesh_record.get("attachment_bone", "")) == str(face_result.get("attachment_bone", "")):
+                    face_attachment_verified = true
             var surface_names: Array = mesh_record.get("surface_names", [])
             for surface_name in surface_names:
                 if str(surface_name) == "CartoonStudio_GeneratedFace":
