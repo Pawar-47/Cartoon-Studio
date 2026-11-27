@@ -11,7 +11,7 @@
 
 ## Current phase direction
 
-Phase 3 — World Builder remains the active development phase. Existing world persistence, schema migration, templates, Godot scene export, GLB preview and vehicle API contracts are preserved. The first alignment pass closes a browser-editor omission: all 16 supported object kinds are exposed, with position and rotation editing.
+Phase 3 — World Builder remains the active development phase. Existing world persistence, schema migration, templates, Godot scene export, GLB preview and vehicle API contracts are preserved. The first alignment pass closes a browser-editor omission: all 17 supported object kinds are exposed, with position and rotation editing.
 
 ## Immediate next batch
 
@@ -26,7 +26,7 @@ Phase 3 — World Builder remains the active development phase. Existing world p
 - Godot 4.7.2 Compatibility worker, scene export, character processing and episode scene generation.
 - Browser Character Studio, Story Generator and World Builder.
 - Durable SQLite job records, leases, bounded attempts and cancellation/progress APIs for production, audio, world export and rendering.
-- Windows CI and a self-contained installer lifecycle proof; latest recorded full CI success at the starting checkpoint is #611.
+- Windows CI and a self-contained installer lifecycle proof; latest recorded full CI success for the implementation checkpoint is #612.
 - Existing modular character asset library and verified CC0 provenance must be preserved.
 
 ## Remaining acceptance work
