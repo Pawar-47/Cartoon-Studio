@@ -16,7 +16,7 @@ Do not start new feature development yet. Consolidate the work already completed
 ## Consolidation order
 
 1. Reconcile all 171 atomic requirement rows against live source files, tests, reports and exact CI runs. Preserve each status unless its evidence justifies a change.
-2. Validate traceability paths and architecture ownership against the current repository tree. Distinguish current modules from planned modules and historical source paths.
+2. Traceability path validation is complete: all 171 mapped source paths resolve in the current repository tree. Continue the semantic review of whether each path and cited test actually proves its requirement; distinguish current modules from planned modules and historical claims.
 3. Review delivered module behaviour for defects and incomplete wiring: project persistence/import/export; Character Studio; World Builder and GLB catalogue; story/scene generation; animation tracks; audio; queue; Godot render and FFmpeg assembly.
 4. Check cross-module IDs, schema versions, project-relative paths, asset provenance, round-trip persistence, cancellation/lease ownership and failure cleanup.
 5. Correct confirmed implementation defects in coherent batches. For code changes, run focused tests and then one CI checkpoint after the batch. Documentation-only corrections do not need CI.

@@ -186,3 +186,6 @@ The dashboard still presented World Builder as a future step and episode renderi
 A structural scan of the 171 traceability rows found stale path references such as `scripts/bootstrap` and `tests/test_story.py`, plus broad globs that obscured the actual browser workspace files. Some descriptions also claimed that engine adapters and canonical persistence contracts did not exist.
 
 **Correction:** the current traceability refresh replaces these with exact live paths (Godot runtime fetch/build scripts, installer smoke tests, actual static workspace files, current storage/engine/job modules and existing tests). ARCH-R003/R004 and GIT-R002 evidence was updated to reflect the integrated Godot worker and versioned storage/adapter code. Structural source-path scanning is now being used as a reconciliation aid; a matching path is not by itself proof of requirement acceptance.
+
+
+**Source-path scan result (2026-11-28):** all 171 traceability rows now reference paths that resolve in the live repository tree. This validates path existence only; requirement behavior and test sufficiency still need row-by-row review.
