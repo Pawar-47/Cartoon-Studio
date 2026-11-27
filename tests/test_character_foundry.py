@@ -8,6 +8,7 @@ import pytest
 
 from app.character_foundry import (
     CLOTHING_ASSET_ID,
+    FEMALE_MASTER_TEMPLATE_ID,
     MASTER_TEMPLATE_ID,
     MORPH_TARGETS,
     RIG_PROFILE_ID,
@@ -47,6 +48,34 @@ def test_recipe_rejects_invalid_morph_values(parameter: str, value: object) -> N
     recipe["parameters"][parameter] = value
     with pytest.raises(ValueError):
         validate_character_recipe(recipe)
+
+
+def test_female_master_template_generates_distinct_body_and_clothing_geometry() -> None:
+    female_recipe = default_character_recipe(
+        "heroine-01", FEMALE_MASTER_TEMPLATE_ID
+    )
+    female_document = _read_glb(build_master_character_glb(female_recipe))
+    male_document = _read_glb(build_master_character_glb())
+
+    assert validate_character_recipe(female_recipe) == female_recipe
+    assert (
+        female_document["asset"]["extras"]["masterTemplate"]
+        == FEMALE_MASTER_TEMPLATE_ID
+    )
+    assert female_document["nodes"][0]["name"] == "CartoonStudio_StylizedAdultFemale"
+    female_primitives = female_document["meshes"][0]["primitives"]
+    male_primitives = male_document["meshes"][0]["primitives"]
+    assert len(female_primitives) == len(male_primitives) == 2
+    for female_primitive, male_primitive in zip(
+        female_primitives, male_primitives, strict=True
+    ):
+        female_count = female_document["accessors"][
+            female_primitive["attributes"]["POSITION"]
+        ]["count"]
+        male_count = male_document["accessors"][
+            male_primitive["attributes"]["POSITION"]
+        ]["count"]
+        assert female_count != male_count
 
 
 def test_recipe_rejects_unknown_template_and_parameter() -> None:

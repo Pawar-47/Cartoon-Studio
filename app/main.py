@@ -30,6 +30,7 @@ from app.character_builder import (
     get_model_spec,
 )
 from app.character_foundry import (
+    MASTER_TEMPLATE_ID,
     default_character_recipe,
     validate_character_recipe,
     write_master_character,
@@ -202,6 +203,7 @@ class CharacterProfileInput(BaseModel):
 class FoundryCharacterInput(BaseModel):
     name: str = Field(min_length=1, max_length=80)
     description: str = Field(default="", max_length=1000)
+    master_template_id: str = Field(default=MASTER_TEMPLATE_ID, min_length=1, max_length=128)
     parameters: dict[str, Annotated[float, Field(ge=-1, le=1)]] = Field(
         default_factory=dict, max_length=32
     )
@@ -1662,6 +1664,7 @@ def update_foundry_character(
             status_code=409, detail="This character has no editable Foundry recipe."
         )
     recipe = dict(previous)
+    recipe["master_template_id"] = payload.master_template_id
     recipe["parameters"] = dict(payload.parameters)
     try:
         recipe = validate_character_recipe(recipe)
@@ -1772,7 +1775,7 @@ def create_foundry_character(
 
     character_id = str(uuid.uuid4())
     asset_id = str(uuid.uuid4())
-    recipe = default_character_recipe(character_id)
+    recipe = default_character_recipe(character_id, payload.master_template_id)
     recipe["parameters"].update(payload.parameters)
     try:
         recipe = validate_character_recipe(recipe)

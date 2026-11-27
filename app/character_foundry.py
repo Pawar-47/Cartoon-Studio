@@ -9,7 +9,9 @@ from typing import Any
 
 RECIPE_SCHEMA_VERSION = 1
 MASTER_TEMPLATE_ID = "cartoon-studio.stylized-adult.v1"
-GENERATOR_VERSION = "0.4.0"
+FEMALE_MASTER_TEMPLATE_ID = "cartoon-studio.stylized-adult-female.v1"
+MASTER_TEMPLATE_IDS = {MASTER_TEMPLATE_ID, FEMALE_MASTER_TEMPLATE_ID}
+GENERATOR_VERSION = "0.5.0"
 
 
 RIG_PROFILE_ID = "cartoon-studio.humanoid.v1"
@@ -167,6 +169,57 @@ _CLOTHING_COMPONENTS = (
     ("pants_shin", (0.205, -0.04, 0.0), (0.172, 0.375, 0.178)),
 )
 
+def _components_for_template(
+    template_id: str,
+) -> tuple[
+    tuple[tuple[str, tuple[float, float, float], tuple[float, float, float]], ...],
+    tuple[tuple[str, tuple[float, float, float], tuple[float, float, float]], ...],
+]:
+    if template_id == MASTER_TEMPLATE_ID:
+        return _COMPONENTS, _CLOTHING_COMPONENTS
+    if template_id != FEMALE_MASTER_TEMPLATE_ID:
+        raise ValueError("Unknown master character template.")
+
+    body = []
+    for group, center, radii in _COMPONENTS:
+        if group == "torso":
+            body.extend((
+                ("torso", (0.0, 1.58, 0.0), (0.405, 0.54, 0.275)),
+                ("torso", (0.0, 1.12, 0.0), (0.49, 0.34, 0.30)),
+            ))
+        elif group == "upper_arm":
+            side = -1.0 if center[0] < 0.0 else 1.0
+            body.append((group, (side * 0.51, center[1], center[2]),
+                         (0.155, radii[1], radii[2])))
+        elif group == "thigh":
+            side = -1.0 if center[0] < 0.0 else 1.0
+            body.append((group, (side * 0.22, center[1], center[2]),
+                         (0.22, 0.44, 0.21)))
+        else:
+            body.append((group, center, radii))
+
+    clothing = []
+    for group, center, radii in _CLOTHING_COMPONENTS:
+        if group == "shirt":
+            clothing.extend((
+                ("shirt", (0.0, 1.58, 0.0), (0.435, 0.57, 0.305)),
+                ("shirt", (0.0, 1.16, 0.0), (0.515, 0.36, 0.325)),
+            ))
+        elif group == "shirt_sleeve":
+            side = -1.0 if center[0] < 0.0 else 1.0
+            clothing.append((group, (side * 0.51, center[1], center[2]),
+                             (0.17, radii[1], radii[2])))
+        elif group == "pants_waist":
+            clothing.append((group, center, (0.505, 0.22, 0.265)))
+        elif group == "pants_thigh":
+            side = -1.0 if center[0] < 0.0 else 1.0
+            clothing.append((group, (side * 0.22, center[1], center[2]),
+                             (0.237, 0.455, 0.232)))
+        else:
+            clothing.append((group, center, radii))
+    return tuple(body), tuple(clothing)
+
+
 _RECIPE_PARAMETERS = {
     "head_width": (-1.0, 1.0),
     "jaw_width": (-1.0, 1.0),
@@ -181,13 +234,18 @@ _RECIPE_PARAMETERS = {
 }
 
 
-def default_character_recipe(character_id: str = "character-foundry-preview") -> dict[str, Any]:
+def default_character_recipe(
+    character_id: str = "character-foundry-preview",
+    master_template_id: str = MASTER_TEMPLATE_ID,
+) -> dict[str, Any]:
     if not isinstance(character_id, str) or not character_id.strip():
         raise ValueError("character_id must be a non-empty string.")
+    if master_template_id not in MASTER_TEMPLATE_IDS:
+        raise ValueError("Unknown master character template.")
     return {
         "schema_version": RECIPE_SCHEMA_VERSION,
         "character_id": character_id,
-        "master_template_id": MASTER_TEMPLATE_ID,
+        "master_template_id": master_template_id,
         "generator_version": GENERATOR_VERSION,
         "parameters": {name: 0.0 for name in MORPH_TARGETS},
         "expression_weights": {},
@@ -204,7 +262,8 @@ def validate_character_recipe(recipe: Any) -> dict[str, Any]:
         raise ValueError("Character recipe must be an object.")
     if recipe.get("schema_version") != RECIPE_SCHEMA_VERSION:
         raise ValueError("Unsupported character recipe schema version.")
-    if recipe.get("master_template_id") != MASTER_TEMPLATE_ID:
+    master_template_id = recipe.get("master_template_id")
+    if master_template_id not in MASTER_TEMPLATE_IDS:
         raise ValueError("Unknown master character template.")
     character_id = recipe.get("character_id")
     if not isinstance(character_id, str) or not character_id.strip():
@@ -215,7 +274,7 @@ def validate_character_recipe(recipe: Any) -> dict[str, Any]:
     unknown = set(parameters) - set(_RECIPE_PARAMETERS)
     if unknown:
         raise ValueError(f"Unknown character parameters: {', '.join(sorted(unknown))}.")
-    normalized = default_character_recipe(character_id)
+    normalized = default_character_recipe(character_id, master_template_id)
     for name, value in parameters.items():
         if isinstance(value, bool) or not isinstance(value, (int, float)):
             raise ValueError(f"Parameter {name} must be numeric.")
@@ -534,9 +593,12 @@ def build_master_character_glb(recipe: dict[str, Any] | None = None) -> bytes:
     normalized_recipe = validate_character_recipe(
         recipe if recipe is not None else default_character_recipe()
     )
-    body = _build_geometry(_COMPONENTS)
+    body_components, clothing_components = _components_for_template(
+        normalized_recipe["master_template_id"]
+    )
+    body = _build_geometry(body_components)
     clothing = (
-        _build_geometry(_CLOTHING_COMPONENTS)
+        _build_geometry(clothing_components)
         if CLOTHING_ASSET_ID in normalized_recipe["clothing_asset_ids"]
         else None
     )
@@ -706,12 +768,17 @@ def build_master_character_glb(recipe: dict[str, Any] | None = None) -> bytes:
         "asset": {
             "version": "2.0",
             "generator": f"Cartoon Studio Character Foundry {GENERATOR_VERSION}",
-            "extras": {"masterTemplate": MASTER_TEMPLATE_ID},
+            "extras": {"masterTemplate": normalized_recipe["master_template_id"]},
         },
         "scene": 0,
         "scenes": [{"nodes": [0, bone_node_start]}],
         "nodes": [{
-            "name": "CartoonStudio_StylizedAdult", "mesh": 0, "skin": 0
+            "name": (
+                "CartoonStudio_StylizedAdultFemale"
+                if normalized_recipe["master_template_id"] == FEMALE_MASTER_TEMPLATE_ID
+                else "CartoonStudio_StylizedAdultMale"
+            ),
+            "mesh": 0, "skin": 0
         }, *bone_nodes],
         "skins": [{
             "name": "CartoonStudio_Humanoid_v1",
@@ -720,7 +787,11 @@ def build_master_character_glb(recipe: dict[str, Any] | None = None) -> bytes:
             "joints": [bone_node_indices[name] for name in bone_names],
         }],
         "meshes": [{
-            "name": "StylizedAdult_MasterMesh",
+            "name": (
+                "StylizedAdultFemale_MasterMesh"
+                if normalized_recipe["master_template_id"] == FEMALE_MASTER_TEMPLATE_ID
+                else "StylizedAdultMale_MasterMesh"
+            ),
             "weights": [normalized_recipe["parameters"][name] for name in MORPH_TARGETS],
             "extras": {
                 "targetNames": list(MORPH_TARGETS),
