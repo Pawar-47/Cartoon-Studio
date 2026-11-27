@@ -64,21 +64,22 @@ Godot may normalize raw skin-joint ordering during import. The application uses 
 | Phase 0 — Specification/research/architecture | COMPLETE | Baseline, requirements, research and architecture documented |
 | Phase 1 — GitHub and CI/CD foundation | COMPLETE | Windows bootstrap and installer lifecycle verified |
 | Phase 2 — Character Studio | ACTIVE | Import, preview, profiles, appearance, body-proportion export, geometry-aware hairstyles, PNG portrait and four-view turnaround export are implemented; generated-face geometry now replaces the separable Skin surface on the head mesh; saved-profile hair style/color restoration verified by test; interactive visual acceptance and broad rig acceptance remain |
-| Phase 3 — World Builder | PARTIAL / OUT-OF-ORDER | Persistent/editable worlds, Godot world-scene export and browser previews exist; multi-location reuse and phase acceptance remain open |
+| Phase 3 — World Builder | ACTIVE | Persistent/editable worlds, Godot world-scene export and browser previews exist; multi-location reuse and phase acceptance remain open; per user direction, Phase 3 activated before P2.2 visual acceptance closure |
 | Phase 4 — Story and Scene Engine | PARTIAL / FROZEN, OUT-OF-ORDER WORK PRESENT | World-linked plans and cast binding exist; the canonical schema, integrated generation, approval and complete production mapping remain incomplete |
 | Phase 5 — Animation Engine | PARTIAL / OUT-OF-ORDER | Generated scenes contain procedural action-anchor and camera keyframes; no reusable clip library, animation editor, blending or visual acceptance |
 | Phase 6 — Urdu Voice and Lip-Sync | PARTIAL / OUT-OF-ORDER | `app/audio.py` implements pinned Pakistani Urdu Piper voices, a mono WAV mix, SRT subtitles and RMS mouth envelopes; the envelope is heuristic, not phoneme/viseme alignment. Acceptance and visual/audio quality review remain open |
 | Phase 7 — Episode Generator | PARTIAL / OUT-OF-ORDER | Editable Godot scene files, dialogue audio, subtitles, mouth envelopes and a Godot-AVI + FFmpeg MP4 path exist (`app/render.py`); there is no durable render queue, and full 5–7 minute acceptance has not been performed |
-| Phase 8 — Optimization and Reliability | DEFERRED | Physical-PC benchmarks remain late-stage work |
+| Phase 8 — Optimization and Reliability | DEFERRED | Physical-PC benchmarks remain late-stage work; user visual acceptance for Phases 2–7 shall be performed in Phase 8 per project owner direction |
 
-## Next implementation batch
+## Next implementation batch — Phase 3 World Builder
 
-1. Complete browser acceptance for procedural hairstyles and transparent PNG exports; verify saved-profile hair selection and output appearance (test assertion added; manual review pending).
-2. Extend acceptance to modular assembly, imported morph controls and baked appearance on representative, hierarchy-validated rigs.
-3. Resolve and document the body-edit compatibility boundary: the pinned Adventurer edit succeeded, but its import report still flags 13/15 humanoid names and a hierarchy needing review.
-4. Compare browser retarget preview against the authoritative saved Godot scene across accepted humanoid, bone-roll and RobotExpressive fixtures.
-5. Continue original face geometry authoring; generated-face geometry now replaces the Skin surface on the head mesh; arbitrary face-geometry authoring beyond generated templates remains open.
-6. Resume Phase 3 only after P2.2 exit criteria are met; preserve existing out-of-order world/episode work without claiming it is phase-complete.
+Phase 3 is now active per user direction. Work continues on:
+1. Multi-location world/location reuse and canonical world schema migration
+2. World-scene export quality and browser preview visual review
+3. World-linked story plan production mapping (ties to Phase 4)
+4. P2.2 remaining visual acceptance items proceed in parallel: interactive browser acceptance of hairstyles, portraits, assembly, morphs and retarget preview; broad rig acceptance on representative models
+
+User visual acceptance for Phases 2–7 is scheduled for Phase 8 per project owner direction.
 
 ## Frozen architecture and constraints
 
