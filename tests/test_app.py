@@ -385,6 +385,265 @@ def test_world_create_with_minimal_fields_fills_defaults(tmp_path, monkeypatch):
     assert reopened.json()["objects"] == []
 
 
+def test_vehicle_movement_steering_acceleration_braking(tmp_path, monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "world-vehicle.sqlite3")
+    main._INITIALIZED_DB_KEY = None
+    project = client.post("/api/projects", json={"name": "Vehicle Project"})
+    project_id = project.json()["id"]
+
+    world = client.post(
+        f"/api/projects/{project_id}/worlds",
+        json={
+            "name": "Street Scene",
+            "objects": [
+                {
+                    "id": "car-1",
+                    "kind": "vehicle",
+                    "label": "Sedan",
+                    "x": 50,
+                    "y": 50,
+                    "width": 12,
+                    "height": 8,
+                    "rotation": 0,
+                    "color": "#477fa8",
+                }
+            ],
+        },
+    )
+    assert world.status_code == 201
+    world_id = world.json()["id"]
+
+    movement = {
+        "vehicle_id": "car-1",
+        "steering_angle": 15.0,
+        "wheel_rotation": 30.0,
+        "acceleration": 0.8,
+        "braking": 0.0,
+        "turn_direction": "right",
+        "parking_state": "moving",
+    }
+    response = client.post(
+        f"/api/projects/{project_id}/worlds/{world_id}/vehicles/car-1/movement",
+        json=movement,
+    )
+    assert response.status_code == 200
+    data = response.json()
+    movement_data = next(
+        obj.get("movement", {})
+        for obj in data.get("objects", [])
+        if obj.get("id") == "car-1"
+    )
+    assert movement_data["steering_angle"] == 15.0
+    assert movement_data["acceleration"] == 0.8
+    assert movement_data["turn_direction"] == "right"
+    assert movement_data["parking_state"] == "moving"
+
+    reopened = client.get(f"/api/projects/{project_id}/worlds/{world_id}")
+    assert reopened.status_code == 200
+    assert reopened.json()["revision"] == 2
+
+
+def test_vehicle_interaction_door_and_enter(tmp_path, monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "world-vehicle-interact.sqlite3")
+    main._INITIALIZED_DB_KEY = None
+    project = client.post("/api/projects", json={"name": "Vehicle Interaction Project"})
+    project_id = project.json()["id"]
+
+    world = client.post(
+        f"/api/projects/{project_id}/worlds",
+        json={
+            "name": "Bus Stop",
+            "objects": [
+                {
+                    "id": "bus-1",
+                    "kind": "vehicle",
+                    "label": "City Bus",
+                    "x": 30,
+                    "y": 40,
+                    "width": 20,
+                    "height": 14,
+                    "rotation": 0,
+                    "color": "#d9a46b",
+                }
+            ],
+        },
+    )
+    assert world.status_code == 201
+    world_id = world.json()["id"]
+
+    open_door = {
+        "vehicle_id": "bus-1",
+        "action": "open_door",
+        "door_index": 0,
+        "character_id": None,
+    }
+    response = client.post(
+        f"/api/projects/{project_id}/worlds/{world_id}/vehicles/bus-1/interaction",
+        json=open_door,
+    )
+    assert response.status_code == 200
+    data = response.json()
+    interactions = next(
+        obj.get("interactions", [])
+        for obj in data.get("objects", [])
+        if obj.get("id") == "bus-1"
+    )
+    assert len(interactions) == 1
+    assert interactions[0]["action"] == "open_door"
+    assert interactions[0]["door_index"] == 0
+
+    enter = {
+        "vehicle_id": "bus-1",
+        "action": "enter",
+        "door_index": 0,
+        "character_id": "char-hero",
+    }
+    response = client.post(
+        f"/api/projects/{project_id}/worlds/{world_id}/vehicles/bus-1/interaction",
+        json=enter,
+    )
+    assert response.status_code == 200
+    data = response.json()
+    interactions = next(
+        obj.get("interactions", [])
+        for obj in data.get("objects", [])
+        if obj.get("id") == "bus-1"
+    )
+    assert len(interactions) == 2
+    assert interactions[1]["action"] == "enter"
+    assert interactions[1]["character_id"] == "char-hero"
+
+
+def test_vehicle_rig_registration(tmp_path, monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "world-vehicle-rig.sqlite3")
+    main._INITIALIZED_DB_KEY = None
+    project = client.post("/api/projects", json={"name": "Vehicle Rig Project"})
+    project_id = project.json()["id"]
+
+    world = client.post(
+        f"/api/projects/{project_id}/worlds",
+        json={
+            "name": "Fleet Yard",
+            "objects": [
+                {
+                    "id": "truck-1",
+                    "kind": "vehicle",
+                    "label": "Delivery Truck",
+                    "x": 10,
+                    "y": 20,
+                    "width": 16,
+                    "height": 14,
+                    "rotation": 0,
+                    "color": "#6a5a5a",
+                }
+            ],
+        },
+    )
+    assert world.status_code == 201
+    world_id = world.json()["id"]
+
+    rig = {
+        "vehicle_id": "truck-1",
+        "vehicle_class": "truck",
+        "rig_type": "four_wheel_drive",
+    }
+    response = client.post(
+        f"/api/projects/{project_id}/worlds/{world_id}/vehicles/truck-1/rig",
+        json=rig,
+    )
+    assert response.status_code == 200
+    data = response.json()
+    rig_data = next(
+        obj.get("rig", {})
+        for obj in data.get("objects", [])
+        if obj.get("id") == "truck-1"
+    )
+    assert rig_data["vehicle_class"] == "truck"
+    assert rig_data["rig_type"] == "four_wheel_drive"
+
+    reopened = client.get(f"/api/projects/{project_id}/worlds/{world_id}")
+    assert reopened.status_code == 200
+    assert reopened.json()["revision"] == 2
+
+
+def test_vehicle_movement_rejects_non_vehicle_object(tmp_path, monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "world-vehicle-bad.sqlite3")
+    main._INITIALIZED_DB_KEY = None
+    project = client.post("/api/projects", json={"name": "Bad Vehicle Project"})
+    project_id = project.json()["id"]
+
+    world = client.post(
+        f"/api/projects/{project_id}/worlds",
+        json={
+            "name": "No Vehicle",
+            "objects": [
+                {
+                    "id": "tree-1",
+                    "kind": "tree",
+                    "label": "Oak",
+                    "x": 50,
+                    "y": 50,
+                    "width": 10,
+                    "height": 12,
+                    "rotation": 0,
+                    "color": "#4c9850",
+                }
+            ],
+        },
+    )
+    assert world.status_code == 201
+    world_id = world.json()["id"]
+
+    movement = {
+        "vehicle_id": "tree-1",
+        "steering_angle": 15.0,
+    }
+    response = client.post(
+        f"/api/projects/{project_id}/worlds/{world_id}/vehicles/tree-1/movement",
+        json=movement,
+    )
+    assert response.status_code == 422
+
+
+def test_vehicle_endpoints_reject_missing_vehicle(tmp_path, monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "world-vehicle-missing.sqlite3")
+    main._INITIALIZED_DB_KEY = None
+    project = client.post("/api/projects", json={"name": "Missing Vehicle Project"})
+    project_id = project.json()["id"]
+
+    world = client.post(
+        f"/api/projects/{project_id}/worlds",
+        json={"name": "No Vehicle Here"},
+    )
+    assert world.status_code == 201
+    world_id = world.json()["id"]
+
+    movement = {
+        "vehicle_id": "ghost-1",
+        "steering_angle": 15.0,
+    }
+    response = client.post(
+        f"/api/projects/{project_id}/worlds/{world_id}/vehicles/ghost-1/movement",
+        json=movement,
+    )
+    assert response.status_code == 404
+
+
 def test_story_builder_is_served():
     response = client.get("/story")
     assert response.status_code == 200

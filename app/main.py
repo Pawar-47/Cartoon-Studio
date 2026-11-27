@@ -142,6 +142,31 @@ class WorldPlanInput(BaseModel):
     template_id: str | None = Field(default=None, max_length=64)
 
 
+class VehicleMovementInput(BaseModel):
+    vehicle_id: str = Field(min_length=1, max_length=64)
+    steering_angle: float = Field(default=0.0, ge=-45.0, le=45.0)
+    wheel_rotation: float = Field(default=0.0)
+    acceleration: float = Field(default=0.0, ge=-1.0, le=1.0)
+    braking: float = Field(default=0.0, ge=0.0, le=1.0)
+    turn_direction: Literal["left", "right", "none"] = "none"
+    parking_state: Literal["parked", "moving", "stopped"] = "stopped"
+
+
+class VehicleInteractionInput(BaseModel):
+    vehicle_id: str = Field(min_length=1, max_length=64)
+    action: Literal["open_door", "close_door", "enter", "exit"]
+    door_index: int = Field(default=0, ge=0, le=7)
+    character_id: str | None = Field(default=None, max_length=64)
+
+
+class VehicleRigInput(BaseModel):
+    vehicle_id: str = Field(min_length=1, max_length=64)
+    vehicle_class: Literal[
+        "car", "bus", "motorcycle", "scooter", "bicycle", "truck", "van", "emergency"
+    ]
+    rig_type: Literal["simple", "steering_axle", "four_wheel_drive"] = "simple"
+
+
 class CharacterHairInput(BaseModel):
     style: str = Field(pattern="^(short|bob|long|ponytail|spiky|curly|mohawk)$")
     color: str = Field(default="#2b1b13", pattern=r"^#[0-9a-fA-F]{6}$")
@@ -1553,6 +1578,198 @@ def update_project_world(
         **data,
     }
 
+
+def _apply_vehicle_movement(
+    world_document: dict[str, Any], vehicle_id: str, payload: VehicleMovementInput
+) -> dict[str, Any]:
+    now = datetime.now(UTC).isoformat()
+    data = world_document.setdefault("data", {})
+    objects: list[dict[str, Any]] = data.setdefault("objects", [])
+    for obj in objects:
+        if obj.get("id") != vehicle_id:
+            continue
+        if obj.get("kind") != "vehicle":
+            raise HTTPException(
+                status_code=422, detail=f"Object {vehicle_id} is not a vehicle."
+            )
+        movement = obj.setdefault("movement", {})
+        movement["steering_angle"] = payload.steering_angle
+        movement["wheel_rotation"] = payload.wheel_rotation
+        movement["acceleration"] = payload.acceleration
+        movement["braking"] = payload.braking
+        movement["turn_direction"] = payload.turn_direction
+        movement["parking_state"] = payload.parking_state
+        movement["updated_at"] = now
+        obj["movement"] = movement
+        break
+    else:
+        raise HTTPException(status_code=404, detail="Vehicle not found.")
+    return world_document
+
+
+def _apply_vehicle_interaction(
+    world_document: dict[str, Any], vehicle_id: str, payload: VehicleInteractionInput
+) -> dict[str, Any]:
+    now = datetime.now(UTC).isoformat()
+    data = world_document.setdefault("data", {})
+    objects: list[dict[str, Any]] = data.setdefault("objects", [])
+    for obj in objects:
+        if obj.get("id") != vehicle_id:
+            continue
+        if obj.get("kind") != "vehicle":
+            raise HTTPException(
+                status_code=422, detail=f"Object {vehicle_id} is not a vehicle."
+            )
+        interactions = obj.setdefault("interactions", [])
+        interactions.append(
+            {
+                "action": payload.action,
+                "door_index": payload.door_index,
+                "character_id": payload.character_id,
+                "timestamp": now,
+            }
+        )
+        obj["interactions"] = interactions
+        break
+    else:
+        raise HTTPException(status_code=404, detail="Vehicle not found.")
+    return world_document
+
+
+def _apply_vehicle_rig(
+    world_document: dict[str, Any], vehicle_id: str, payload: VehicleRigInput
+) -> dict[str, Any]:
+    now = datetime.now(UTC).isoformat()
+    data = world_document.setdefault("data", {})
+    objects: list[dict[str, Any]] = data.setdefault("objects", [])
+    for obj in objects:
+        if obj.get("id") != vehicle_id:
+            continue
+        if obj.get("kind") != "vehicle":
+            raise HTTPException(
+                status_code=422, detail=f"Object {vehicle_id} is not a vehicle."
+            )
+        obj["rig"] = {
+            "vehicle_class": payload.vehicle_class,
+            "rig_type": payload.rig_type,
+            "updated_at": now,
+        }
+        break
+    else:
+        raise HTTPException(status_code=404, detail="Vehicle not found.")
+    return world_document
+
+
+def _save_vehicle_world(
+    connection: Any, project_id: str, world_id: str, world_document: dict[str, Any]
+) -> dict[str, Any]:
+    now = datetime.now(UTC).isoformat()
+    indexed = connection.execute(
+        """
+        SELECT * FROM project_documents
+        WHERE project_id = ? AND document_id = ? AND document_type = 'world'
+        """,
+        (project_id, world_id),
+    ).fetchone()
+    if indexed is None:
+        raise HTTPException(status_code=404, detail="World not found.")
+    path = resolve_project_relative(DATA_DIR, project_id, indexed["relative_path"])
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="World document not found.")
+    document = read_json(path)
+    document["data"] = world_document.get("data", document.get("data", {}))
+    document["revision"] = int(document.get("revision", 1)) + 1
+    document["updated_at"] = now
+    digest = write_json_atomic(path, document)
+    upsert_document_index(connection, project_id, document, indexed["relative_path"], digest)
+    return document
+
+
+@app.post(
+    "/api/projects/{project_id}/worlds/{world_id}/vehicles/{vehicle_id}/movement",
+    status_code=200,
+)
+def vehicle_movement(
+    project_id: str, world_id: str, vehicle_id: str, payload: VehicleMovementInput
+) -> dict[str, Any]:
+    initialize_database()
+    world_path = resolve_project_relative(DATA_DIR, project_id, f"worlds/{world_id}.json")
+    if not world_path.is_file():
+        raise HTTPException(status_code=404, detail="World not found.")
+    world_document = read_json(world_path)
+    _apply_vehicle_movement(world_document, vehicle_id, payload)
+    with connect_db() as connection:
+        project = connection.execute(
+            "SELECT id FROM projects WHERE id = ?", (project_id,)
+        ).fetchone()
+        if project is None:
+            raise HTTPException(status_code=404, detail="Project not found.")
+        document = _save_vehicle_world(connection, project_id, world_id, world_document)
+    _sync_world_reference(project_id, document)
+    return {
+        "id": world_id,
+        "revision": document["revision"],
+        "updated_at": document["updated_at"],
+        **document.get("data", {}),
+    }
+
+
+@app.post(
+    "/api/projects/{project_id}/worlds/{world_id}/vehicles/{vehicle_id}/interaction",
+    status_code=200,
+)
+def vehicle_interaction(
+    project_id: str, world_id: str, vehicle_id: str, payload: VehicleInteractionInput
+) -> dict[str, Any]:
+    initialize_database()
+    world_path = resolve_project_relative(DATA_DIR, project_id, f"worlds/{world_id}.json")
+    if not world_path.is_file():
+        raise HTTPException(status_code=404, detail="World not found.")
+    world_document = read_json(world_path)
+    _apply_vehicle_interaction(world_document, vehicle_id, payload)
+    with connect_db() as connection:
+        project = connection.execute(
+            "SELECT id FROM projects WHERE id = ?", (project_id,)
+        ).fetchone()
+        if project is None:
+            raise HTTPException(status_code=404, detail="Project not found.")
+        document = _save_vehicle_world(connection, project_id, world_id, world_document)
+    _sync_world_reference(project_id, document)
+    return {
+        "id": world_id,
+        "revision": document["revision"],
+        "updated_at": document["updated_at"],
+        **document.get("data", {}),
+    }
+
+
+@app.post(
+    "/api/projects/{project_id}/worlds/{world_id}/vehicles/{vehicle_id}/rig",
+    status_code=200,
+)
+def vehicle_rig(
+    project_id: str, world_id: str, vehicle_id: str, payload: VehicleRigInput
+) -> dict[str, Any]:
+    initialize_database()
+    world_path = resolve_project_relative(DATA_DIR, project_id, f"worlds/{world_id}.json")
+    if not world_path.is_file():
+        raise HTTPException(status_code=404, detail="World not found.")
+    world_document = read_json(world_path)
+    _apply_vehicle_rig(world_document, vehicle_id, payload)
+    with connect_db() as connection:
+        project = connection.execute(
+            "SELECT id FROM projects WHERE id = ?", (project_id,)
+        ).fetchone()
+        if project is None:
+            raise HTTPException(status_code=404, detail="Project not found.")
+        document = _save_vehicle_world(connection, project_id, world_id, world_document)
+    _sync_world_reference(project_id, document)
+    return {
+        "id": world_id,
+        "revision": document["revision"],
+        "updated_at": document["updated_at"],
+        **document.get("data", {}),
+    }
 
 
 @app.post("/api/projects/{project_id}/worlds/{world_id}/export")
