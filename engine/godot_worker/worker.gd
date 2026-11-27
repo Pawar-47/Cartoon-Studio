@@ -978,7 +978,7 @@ func _add_character_face_features(scene: Node, recipe: Dictionary) -> Dictionary
         head_bounds, center, center.x, jaw_y,
         face_width, cheek_fullness, jaw_width, front_direction
     )
-    _add_face_sphere(attachment, scene, "CartoonStudio_Face_Jaw",
+    _add_face_sphere(attachment, scene, "CartoonStudio_Face_Jaw_0",
         Vector3(center.x, jaw_y, jaw_z + front_direction * eye_depth * 0.12),
         Vector3(width * 0.18 * jaw_width, height * 0.055 * chin_length, eye_depth * 0.3),
         skin_material)

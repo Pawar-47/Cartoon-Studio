@@ -37,3 +37,5 @@ Base: `c5631247b0b3d3144b2c6b3df9b9be318f6e9c1a`
 - Added two cheek meshes and one jaw/chin mesh, bringing the default generated feature set to 23 while preserving recipe-driven proportions and skin material.
 - Require the skin surface replacement to succeed before export. Post-export verification checks all 23 facial meshes, their Head-bone attachment, rig and animation preservation; it no longer relies on node/surface names that Godot's GLB importer rewrites.
 - CI visual acceptance remains gated on this full Godot-backed suite.
+
+- Run #566 passed the generated-face export/re-import, Head-bone attachment, rig/animation preservation, and 23+ component checks; the only remaining assertion was a naming convention (`CartoonStudio_Face_Jaw_`), now aligned by naming the jaw mesh `CartoonStudio_Face_Jaw_0`.
