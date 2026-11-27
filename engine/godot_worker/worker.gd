@@ -712,7 +712,12 @@ func _replace_skin_surface_with_generated_face(
     new_surface_index = new_mesh.get_surface_count() - 1
     new_mesh.surface_set_name(new_surface_index, "CartoonStudio_GeneratedFace")
     if skin_material != null:
-        new_mesh.surface_set_material(new_surface_index, skin_material)
+        var generated_face_material := skin_material.duplicate() as BaseMaterial3D
+        if generated_face_material != null:
+            generated_face_material.resource_name = "CartoonStudio_GeneratedFace"
+            new_mesh.surface_set_material(new_surface_index, generated_face_material)
+        else:
+            new_mesh.surface_set_material(new_surface_index, skin_material)
 
     mesh_instance.mesh = new_mesh
 
@@ -1218,8 +1223,11 @@ func _export_character_appearance(payload: Dictionary) -> Dictionary:
             if str(mesh_record.get("attachment_bone", "")) == str(face_result.get("attachment_bone", "")):
                 face_attachment_verified = true
             var surface_names: Array = mesh_record.get("surface_names", [])
-            for surface_name in surface_names:
-                if str(surface_name) == "CartoonStudio_GeneratedFace":
+            var material_names: Array = mesh_record.get("material_names", [])
+            for surface_index in range(surface_names.size()):
+                if str(surface_names[surface_index]) == "CartoonStudio_GeneratedFace":
+                    generated_face_surface_found = true
+                if surface_index < material_names.size() and str(material_names[surface_index]) == "CartoonStudio_GeneratedFace":
                     generated_face_surface_found = true
         if face_mesh_count < int(face_result.get("mesh_count", 0)) or not face_attachment_verified:
             DirAccess.remove_absolute(output_path)
