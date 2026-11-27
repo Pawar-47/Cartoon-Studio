@@ -44,10 +44,11 @@ from app.render import (
     render_episode_video,
 )
 from app.rig_analysis import analyze_rig
-from app.storage import connect_db as open_database
 from app.storage import (
+    LATEST_WORLD_SCHEMA_VERSION,
     default_data_dir,
     make_envelope,
+    migrate_world_document,
     project_directory,
     read_json,
     reconcile_project_files,
@@ -57,6 +58,7 @@ from app.storage import (
     upsert_document_index,
     write_json_atomic,
 )
+from app.storage import connect_db as open_database
 from app.storage import (
     initialize_database as migrate_database,
 )
@@ -1636,7 +1638,10 @@ def create_project_world(project_id: str, payload: WorldPlanInput) -> dict[str, 
         ).fetchone()
         if project is None:
             raise HTTPException(status_code=404, detail="Project not found.")
-        document = make_envelope("world", world_id, data, project["created_at"], now)
+        document = make_envelope(
+            "world", world_id, data, project["created_at"], now,
+            schema_version=LATEST_WORLD_SCHEMA_VERSION,
+        )
         relative_path = f"worlds/{world_id}.json"
         digest = write_json_atomic(
             resolve_project_relative(DATA_DIR, project_id, relative_path), document
@@ -1666,6 +1671,7 @@ def get_project_world(project_id: str, world_id: str) -> dict[str, Any]:
     if not path.is_file():
         raise HTTPException(status_code=404, detail="World document not found.")
     document = read_json(path)
+    document = migrate_world_document(document)
     return {
         "id": document["id"],
         "revision": document["revision"],

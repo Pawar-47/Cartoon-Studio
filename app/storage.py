@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 LATEST_SCHEMA_VERSION = 3
+LATEST_WORLD_SCHEMA_VERSION = "1.0.1"
 
 
 def default_data_dir() -> Path:
@@ -141,6 +142,53 @@ MIGRATIONS = (
 )
 
 
+def _migration_world_1_0_0_to_1_0_1(document: dict[str, Any]) -> dict[str, Any]:
+    """Migrate a world document from schema 1.0.0 to 1.0.1.
+
+    1.0.1 adds canonical location kind validation and defaults the
+    ``location_kind`` field on world objects that lack it.
+    """
+    data = document.setdefault("data", {})
+    objects = data.get("objects", [])
+    if not isinstance(objects, list):
+        return document
+    for obj in objects:
+        if not isinstance(obj, dict):
+            continue
+        if "location_kind" not in obj:
+            obj["location_kind"] = "generic"
+    document["schema_version"] = "1.0.1"
+    return document
+
+
+WORLD_MIGRATIONS = (
+    ("1.0.0", "1.0.1", _migration_world_1_0_0_to_1_0_1),
+)
+
+
+def migrate_world_document(document: dict[str, Any]) -> dict[str, Any]:
+    """Migrate a world document to the latest schema version.
+
+    Applies migrations in order until the document reaches
+    LATEST_WORLD_SCHEMA_VERSION. Idempotent: documents already at the
+    latest version are returned unchanged.
+    """
+    current = str(document.get("schema_version", "1.0.0"))
+    if current == LATEST_WORLD_SCHEMA_VERSION:
+        return document
+    for from_version, to_version, migration in WORLD_MIGRATIONS:
+        if current == from_version:
+            document = migration(document)
+            current = to_version
+            if current == LATEST_WORLD_SCHEMA_VERSION:
+                return document
+    raise ValueError(
+        f"Cannot migrate world document from schema {current} "
+        f"to {LATEST_WORLD_SCHEMA_VERSION}: no migration path found."
+    )
+
+
+
 def _existing_schema_version(db_path: Path) -> int:
     if not db_path.exists() or db_path.stat().st_size == 0:
         return 0
@@ -235,9 +283,10 @@ def make_envelope(
     created_at: str,
     updated_at: str,
     revision: int = 1,
+    schema_version: str = "1.0.0",
 ) -> dict[str, Any]:
     return {
-        "schema_version": "1.0.0",
+        "schema_version": schema_version,
         "document_type": document_type,
         "id": document_id,
         "revision": revision,

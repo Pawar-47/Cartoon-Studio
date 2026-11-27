@@ -8,19 +8,22 @@ Phase 3 — World Builder is now ACTIVE per user direction. Persistent/editable 
 
 ## Immediate next steps
 
-1. Reconcile REQUIREMENTS_REGISTRY.md and REQUIREMENT_TRACEABILITY.md with current code (partially done — CHAR-R003/CHAR-R005 updated; remaining rows already reconciled in prior batch).
-2. Phase 3 World Builder activation: continue multi-location world/location reuse, canonical world schema migration, world-scene export quality, browser preview visual review, and world-linked story production mapping.
-3. P2.2 remaining visual acceptance proceeds in parallel: interactive browser acceptance of hairstyles, portraits, assembly, morphs and retarget preview; broad rig acceptance on representative models. User visual acceptance for all phases is scheduled for Phase 8.
+1. Phase 3 World Builder activation: world schema migration complete (`migrate_world_document`, `LATEST_WORLD_SCHEMA_VERSION`, `WORLD_MIGRATIONS` in `app/storage.py`; auto-migration on `get_project_world` read). Multi-location reuse already works via `template_id`. Remaining: world-scene export quality, browser preview visual review, world-linked story production mapping (ties to Phase 4).
+2. P2.2 remaining visual acceptance proceeds in parallel: interactive browser acceptance of hairstyles, portraits, assembly, morphs and retarget preview; broad rig acceptance on representative models. User visual acceptance for all phases is scheduled for Phase 8.
 
-## Candidate next engineering batch — job reliability
+## Completed batches
 
-The highest-value cross-phase gap is the synchronous long-operation boundary. Audio generation, episode-scene production and MP4 rendering are one-shot HTTP requests with no durable queue, progress polling, resume, cancel or retry. The P0.6 SQLite lease prototype in `tools/sqlite_queue_proof.py` is deliberately isolated from `app/` and has not been productionized. A production queue batch should add migrations, bounded retries, durable event records, atomic output manifests, cancellation and recovery tests, then wire the audio/production/render endpoints to it. This should be planned against the phase gates rather than rushed into Phase 2.
+### Job reliability queue — DONE
+Production SQLite job queue (`app/job_queue.py`) with bounded retries (MAX_ATTEMPTS=3), durable event records, lease-based claiming, cancellation, progress polling, atomic output manifests; schema migration v3 added job tables; production/audio/render endpoints wired to queue; `/jobs`, `/jobs/{id}`, `/jobs/{id}/cancel` API endpoints added; 11 unit tests. CI green.
+
+### Canonical world schema migration — DONE
+`LATEST_WORLD_SCHEMA_VERSION = "1.0.1"` in `app/storage.py`; `WORLD_MIGRATIONS` with example 1.0.0→1.0.1 migration; `migrate_world_document()` auto-upgrades world documents on `get_project_world` read; world documents created with latest schema version; 3 unit tests.
 
 ## Phase 3 World Builder batches
 
-### P3.1 — Persistent world/location schema and asset registry
+### P3.1 — Persistent world/location schema and asset registry — SCHEMA MIGRATION DONE
 - Versioned world model: save/reopen, stable IDs and migrations
-- Multi-location reuse and canonical world schema migration
+- Multi-location reuse via template_id: implemented and tested
 
 ### P3.2 — Reusable town, streets, buildings, shops and interiors
 - Modular environment kits

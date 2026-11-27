@@ -360,6 +360,77 @@ def test_world_template_instantiate_rejects_missing_template(tmp_path, monkeypat
     assert response.status_code == 404
 
 
+def test_world_migration_is_noop_at_latest_version():
+    from app.storage import LATEST_WORLD_SCHEMA_VERSION, migrate_world_document
+    document = {
+        "schema_version": LATEST_WORLD_SCHEMA_VERSION,
+        "document_type": "world",
+        "id": "world-1",
+        "revision": 1,
+        "created_at": "2026-01-01T00:00:00Z",
+        "updated_at": "2026-01-01T00:00:00Z",
+        "data": {"name": "Test World", "objects": [{"location_kind": "park"}]},
+    }
+    migrated = migrate_world_document(document)
+    assert migrated["schema_version"] == LATEST_WORLD_SCHEMA_VERSION
+    assert migrated["data"]["objects"][0]["location_kind"] == "park"
+
+
+def test_world_migrates_from_1_0_0_to_1_0_1():
+    from app.storage import LATEST_WORLD_SCHEMA_VERSION, migrate_world_document
+    document = {
+        "schema_version": "1.0.0",
+        "document_type": "world",
+        "id": "world-1",
+        "revision": 1,
+        "created_at": "2026-01-01T00:00:00Z",
+        "updated_at": "2026-01-01T00:00:00Z",
+        "data": {
+            "name": "Old World",
+            "theme": "small_town",
+            "objects": [{"id": "obj-1", "kind": "tree"}],
+        },
+    }
+    migrated = migrate_world_document(document)
+    assert migrated["schema_version"] == LATEST_WORLD_SCHEMA_VERSION
+    assert migrated["data"]["objects"][0]["location_kind"] == "generic"
+
+
+def test_world_migration_rejects_unknown_version():
+    from app.storage import migrate_world_document
+    document = {
+        "schema_version": "9.9.9",
+        "document_type": "world",
+        "id": "world-1",
+        "revision": 1,
+        "created_at": "2026-01-01T00:00:00Z",
+        "updated_at": "2026-01-01T00:00:00Z",
+        "data": {"name": "Future World"},
+    }
+    try:
+        migrate_world_document(document)
+    except ValueError as error:
+        assert "no migration path found" in str(error)
+    else:
+        raise AssertionError("Expected ValueError for unknown schema version")
+
+
+def test_world_schema_version_stored_on_create(tmp_path, monkeypatch):
+    from app import main
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "world-schema.sqlite3")
+    main._INITIALIZED_DB_KEY = None
+    main.initialize_database()
+    project = client.post("/api/projects", json={"name": "Schema Project"})
+    project_id = project.json()["id"]
+    payload = {"name": "Schema World"}
+    created = client.post(f"/api/projects/{project_id}/worlds", json=payload)
+    assert created.status_code == 201
+    world_path = tmp_path / "projects" / project_id / "worlds" / f"{created.json()['id']}.json"
+    document = json.loads(world_path.read_text(encoding="utf-8"))
+    assert document["schema_version"] == "1.0.1"
+
+
 def test_world_create_with_minimal_fields_fills_defaults(tmp_path, monkeypatch):
     from app import main
 
