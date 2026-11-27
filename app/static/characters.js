@@ -316,6 +316,8 @@ async function loadCharacters(){
   const previewButton=document.createElement("button");previewButton.className="secondary preview-saved";previewButton.type="button";previewButton.textContent="Preview";
   previewButton.addEventListener("click",async()=>{try{const assetId=(asset.relative_path||"").split("/").pop().replace(/\.glb$/i,"");const response=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(assetId));if(!response.ok)throw new Error("Could not load the saved GLB asset.");const buffer=await response.arrayBuffer();await showCharacterPreview(buffer,data.name,data.appearance_recipe||{});document.querySelector(".preview-panel").scrollIntoView({behavior:"smooth",block:"center"})}catch(error){$("project-status").textContent=error.message}});
   const editButton=document.createElement("button");editButton.className="secondary preview-saved";editButton.type="button";editButton.textContent="Edit profile";
+  let editFoundryButton=null;
+  if(data.foundry_recipe){editFoundryButton=document.createElement("button");editFoundryButton.className="secondary preview-saved";editFoundryButton.type="button";editFoundryButton.textContent="Edit Foundry recipe";editFoundryButton.addEventListener("click",()=>editFoundryCharacter(characterDoc));}
   editButton.addEventListener("click",()=>editCharacterProfile(characterDoc).catch(error=>$("profile-status").textContent=error.message));
   const customizeButton=document.createElement("button");customizeButton.className="secondary preview-saved";customizeButton.type="button";customizeButton.textContent="Customize appearance";
   customizeButton.addEventListener("click",()=>openCharacterAppearance(characterDoc).catch(error=>$("project-status").textContent=error.message));
@@ -341,7 +343,7 @@ async function loadCharacters(){
    });
    card.append(reopenAssemblyButton);
   }
-  card.append(title,description,model,rig,animations,revision,previewButton,editButton,customizeButton);
+  card.append(title,description,model,rig,animations,revision,previewButton,editButton);if(editFoundryButton)card.append(editFoundryButton);card.append(customizeButton);
   const savedAssetId=assemblyAssetId(asset.relative_path);
   if(savedAssetId){
    const downloadButton=document.createElement("a");downloadButton.className="secondary preview-saved";
@@ -861,6 +863,65 @@ $("library-import").addEventListener("click",async()=>{
  }catch(error){$("library-status").textContent=error.message}
  finally{button.disabled=!selectedLibraryModel()||!activeProject}
 });
+
+
+const foundryMorphs=["head_width","jaw_width","chin_length","cheek_fullness","eye_spacing","nose_width","mouth_width","torso_width","shoulder_width","leg_length"];
+function updateFoundryMorphLabels(){
+ for(const name of foundryMorphs){
+  const value=Number($("foundry-"+name.replaceAll("_","-")).value);
+  $("foundry-"+name.replaceAll("_","-")+"-value").textContent=value.toFixed(2);
+ }
+}
+function resetFoundryMorphs(){
+ for(const name of foundryMorphs)$("foundry-"+name.replaceAll("_","-")).value="0";
+ updateFoundryMorphLabels();
+}
+function updateFoundryAvailability(){
+ $("foundry-create").disabled=!activeProject||!$("foundry-name").value.trim();
+}
+let editingFoundryCharacterId=null;
+function editFoundryCharacter(doc){
+ const data=doc.data||{},recipe=data.foundry_recipe||{};editingFoundryCharacterId=doc.id;
+ $("foundry-name").value=data.name||"";$("foundry-description").value=data.description||"";
+ for(const name of foundryMorphs){const v=Number(recipe.parameters?.[name]??0);$("foundry-"+name.replaceAll("_","-")).value=String(v)}
+ updateFoundryMorphLabels();$("foundry-create").textContent="Save Foundry changes";$("foundry-cancel").hidden=false;updateFoundryAvailability();
+ $("foundry-status").textContent="Editing "+(data.name||"character")+". Saving preserves this character identity.";
+ document.querySelector(".foundry-panel").scrollIntoView({behavior:"smooth",block:"start"});
+}
+function cancelFoundryEdit(){editingFoundryCharacterId=null;$("foundry-create").textContent="Create and preview character";$("foundry-cancel").hidden=true;resetFoundryMorphs();updateFoundryAvailability()}
+async function createFoundryCharacter(){
+ if(!activeProject)return;
+ const button=$("foundry-create"),name=$("foundry-name").value.trim();
+ if(!name)return;
+ const parameters=Object.fromEntries(foundryMorphs.map(key=>[
+  key,Number($("foundry-"+key.replaceAll("_","-")).value)
+ ]));
+ button.disabled=true;$("foundry-status").textContent="Generating the editable Foundry recipe and rigged GLB…";
+ try{
+  const editing=Boolean(editingFoundryCharacterId);const endpoint="/api/projects/"+encodeURIComponent(activeProject)+"/foundry-characters"+(editing?"/"+encodeURIComponent(editingFoundryCharacterId):"");
+  const response=await fetch(endpoint,{
+   method:editing?"PUT":"POST",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify({name,description:$("foundry-description").value.trim(),parameters})
+  });
+  const result=await response.json();
+  if(!response.ok)throw new Error(result.detail||"Foundry character generation failed.");
+  const assetResponse=await fetch(result.asset_url);
+  if(!assetResponse.ok)throw new Error("The character was saved, but its GLB preview could not be loaded.");
+  const loaded=await showCharacterPreview(await assetResponse.arrayBuffer(),name);
+  if(!loaded)throw new Error("The character was saved, but the browser preview could not be created.");
+  await loadCharacters();
+  editingFoundryCharacterId=null;$("foundry-create").textContent="Create and preview character";$("foundry-cancel").hidden=true;resetFoundryMorphs();
+  $("foundry-status").textContent=name+" saved. Editable recipe: "+result.recipe_path+". GLB asset: "+result.asset_id+". Revision "+result.revision+".";
+  $("character-list").scrollIntoView({behavior:"smooth",block:"nearest"});
+  document.querySelector(".preview-panel").scrollIntoView({behavior:"smooth",block:"center"});
+ }catch(error){$("foundry-status").textContent=error.message}
+ finally{updateFoundryAvailability()}
+}
+for(const name of foundryMorphs)$("foundry-"+name.replaceAll("_","-")).addEventListener("input",updateFoundryMorphLabels);
+$("foundry-name").addEventListener("input",updateFoundryAvailability);
+$("foundry-create").addEventListener("click",createFoundryCharacter);
+$("foundry-reset").addEventListener("click",resetFoundryMorphs);$("foundry-cancel").addEventListener("click",cancelFoundryEdit);
+updateFoundryMorphLabels();
 
 loadCharacterLibrary();
 loadProjects().catch(error=>{$("project-status").textContent=error.message;$("character-list").textContent=error.message});

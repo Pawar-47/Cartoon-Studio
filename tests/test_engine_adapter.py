@@ -12,6 +12,7 @@ import pytest
 
 from app import engine
 from app.character_builder import ensure_model_asset
+from app.character_foundry import MORPH_TARGETS, RIG_PROFILE_ID, write_master_character
 from app.engine import (
     EngineCancelledError,
     EngineExecutionError,
@@ -698,6 +699,102 @@ def test_node_morph_weights_override_mesh_defaults(tmp_path):
         entry["default_value_source"] == "gltf_node"
         for entry in response["morph_targets"]
     )
+
+
+def test_pinned_godot_imports_original_foundry_master_and_morphs(tmp_path):
+    adapter = _real_godot_adapter(tmp_path)
+    project_root = tmp_path / "foundry-master-project"
+    project_root.mkdir()
+    glb_path, recipe_path = write_master_character(
+        project_root / "stylized-adult.glb",
+        character_id="foundry-integration-hero",
+    )
+
+    inspection = adapter.inspect_glb(glb_path, allowed_root=project_root)
+
+    assert inspection["ok"] is True
+    assert inspection["mesh_count"] == 1
+    assert inspection["mesh_inventory"][0]["surface_count"] == 2
+    assert inspection["skeleton_count"] == 1
+    assert inspection["skeletons"][0]["bone_count"] == 19
+    imported_bones = {bone["name"] for bone in inspection["skeletons"][0]["bones"]}
+    assert {"Hips", "Head", "LeftUpperArm", "RightLowerLeg"} <= imported_bones
+    assert inspection["morph_target_count"] == len(MORPH_TARGETS)
+    assert {entry["name"] for entry in inspection["morph_targets"]} == set(
+        MORPH_TARGETS
+    )
+    assert all(entry["default_value"] == 0.0 for entry in inspection["morph_targets"])
+    recipe = json.loads(recipe_path.read_text(encoding="utf-8"))
+    assert recipe["character_id"] == "foundry-integration-hero"
+    assert recipe["rig_profile_id"] == RIG_PROFILE_ID
+    assert recipe["generated_asset"]["filename"] == glb_path.name
+
+
+def test_foundry_humanoid_rig_drives_episode_action_tracks(tmp_path):
+    adapter = _real_godot_adapter(tmp_path)
+    project_root = tmp_path / "foundry-rig-animation-project"
+    project_root.mkdir()
+    world_path = project_root / "assets" / "worlds" / "town.tscn"
+    adapter.export_world_scene(
+        {
+            "name": "Town",
+            "theme": "small_town",
+            "ground_color": "#789b58",
+            "sky": "day",
+            "objects": [],
+        },
+        world_path,
+        allowed_root=project_root,
+    )
+    character_path, _ = write_master_character(
+        project_root / "assets" / "characters" / "hero.glb",
+        character_id="foundry-rig-hero",
+    )
+    episode = {
+        "title": "Foundry Rig Animation Proof",
+        "characters": [{"id": "hero", "name": "Hero"}],
+        "scenes": [
+            {
+                "id": f"scene-{index}",
+                "title": f"Scene {index}",
+                "duration_seconds": 8,
+                "location_id": "town-square",
+                "character_ids": ["hero"],
+                "dialogue": [],
+                "actions": (
+                    [
+                        {
+                            "character_id": "hero",
+                            "action_id": "wave",
+                            "start_seconds": 1,
+                            "duration_seconds": 3,
+                        }
+                    ]
+                    if index == 1
+                    else []
+                ),
+                "camera": [],
+                "audio": [],
+                "props": [],
+            }
+            for index in range(1, 6)
+        ],
+    }
+    result = adapter.export_episode_scenes(
+        episode,
+        world_path,
+        [{"id": "hero", "name": "Hero", "asset_path": str(character_path)}],
+        project_root / "assets" / "episodes" / "foundry-proof" / "scenes",
+        allowed_root=project_root,
+    )
+    assert result["ok"] is True
+    assert result["scene_count"] == 5
+    first_scene = result["scenes"][0]
+    assert first_scene["action_cue_count"] == 1
+    assert first_scene["skeletal_animation_track_count"] > 0
+    assert first_scene["skeletal_animation_keyframe_count"] > first_scene[
+        "skeletal_animation_track_count"
+    ]
 
 
 def test_pinned_godot_worker_reports_real_animated_morph_cube(tmp_path):

@@ -29,6 +29,11 @@ from app.character_builder import (
     get_character_catalog,
     get_model_spec,
 )
+from app.character_foundry import (
+    default_character_recipe,
+    validate_character_recipe,
+    write_master_character,
+)
 from app.engine import (
     EngineError,
     EnginePathError,
@@ -192,6 +197,14 @@ class CharacterProfileInput(BaseModel):
     voice_profile: str = Field(default="", max_length=500)
     dialogue_style: str = Field(default="", max_length=500)
     asset_path: str = Field(min_length=1, max_length=512)
+
+
+class FoundryCharacterInput(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    description: str = Field(default="", max_length=1000)
+    parameters: dict[str, Annotated[float, Field(ge=-1, le=1)]] = Field(
+        default_factory=dict, max_length=32
+    )
 
 
 class MaterialAppearanceInput(BaseModel):
@@ -1634,9 +1647,242 @@ def character_studio() -> FileResponse:
     return FileResponse(STATIC_DIR / "characters.html")
 
 
+
+@app.put("/api/projects/{project_id}/foundry-characters/{character_id}")
+def update_foundry_character(
+    project_id: str, character_id: str, payload: FoundryCharacterInput
+) -> dict[str, Any]:
+    initialize_database()
+    with connect_db() as connection:
+        project = connection.execute(
+            "SELECT id FROM projects WHERE id = ?", (project_id,)
+        ).fetchone()
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    document = _character_document(DATA_DIR, project_id, character_id)
+    data = document.get("data", {})
+    previous = data.get("foundry_recipe")
+    if not isinstance(previous, dict):
+        raise HTTPException(
+            status_code=409, detail="This character has no editable Foundry recipe."
+        )
+    recipe = dict(previous)
+    recipe["parameters"] = dict(payload.parameters)
+    try:
+        recipe = validate_character_recipe(recipe)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    asset_id = str(uuid.uuid4())
+    relative_asset = f"assets/characters/{asset_id}.glb"
+    relative_recipe = f"characters/foundry/{character_id}.recipe.json"
+    asset_path = resolve_project_relative(DATA_DIR, project_id, relative_asset)
+    recipe_path = resolve_project_relative(DATA_DIR, project_id, relative_recipe)
+    manifest_path = resolve_project_relative(
+        DATA_DIR, project_id, f"assets/characters/{asset_id}.json"
+    )
+    temp_asset = asset_path.with_name(f".{asset_id}.tmp.glb")
+    temp_recipe = recipe_path.with_name(f".{asset_id}.tmp.json")
+    try:
+        write_master_character(temp_asset, recipe_path=temp_recipe, recipe=recipe)
+        container = _validate_glb_container(temp_asset)
+        try:
+            inspection = get_engine_adapter().inspect_glb(
+                temp_asset, allowed_root=project_directory(DATA_DIR, project_id)
+            )
+        except EngineUnavailableError as error:
+            raise HTTPException(status_code=503, detail=str(error)) from error
+        except EngineTimeoutError as error:
+            raise HTTPException(status_code=504, detail=str(error)) from error
+        except EngineError as error:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Godot could not import the Foundry character: {error}",
+            ) from error
+        asset_path.parent.mkdir(parents=True, exist_ok=True)
+        temp_asset.replace(asset_path)
+        saved_recipe = json.loads(temp_recipe.read_text(encoding="utf-8"))
+        saved_recipe["generated_asset"]["filename"] = asset_path.name
+        recipe_path.parent.mkdir(parents=True, exist_ok=True)
+        recipe_path.write_text(
+            json.dumps(saved_recipe, indent=2, ensure_ascii=False) + chr(10),
+            encoding="utf-8",
+        )
+        temp_recipe.unlink(missing_ok=True)
+        now = datetime.now(UTC).isoformat()
+        asset_data = {
+            "original_filename": f"{payload.name.strip()}.glb", "relative_path": relative_asset,
+            "container": container, "engine_inspection": inspection,
+            "rig_analysis": analyze_rig(inspection),
+            "rig_ready": int(inspection.get("skeleton_count", 0)) > 0,
+            "animation_ready": int(inspection.get("animation_count", 0)) > 0,
+            "generator": {
+                "name": "Cartoon Studio Character Foundry",
+                "version": saved_recipe["generator_version"],
+                "template_id": saved_recipe["master_template_id"], "recipe_path": relative_recipe,
+                "morph_targets": list(saved_recipe["parameters"])},
+        }
+        manifest = make_envelope("character_asset", asset_id, asset_data, now, now, 1)
+        manifest_digest = write_json_atomic(manifest_path, manifest)
+        updated_data = dict(data)
+        updated_data.update(
+            {"name": payload.name.strip(), "description": payload.description.strip(),
+            "asset": asset_data, "foundry_recipe": saved_recipe,
+            "rig_status": "ready" if asset_data["rig_ready"] else "unrigged"})
+        updated = make_envelope(
+            "character", character_id, updated_data, document["created_at"], now,
+            int(document.get("revision", 1)) + 1)
+        character_path = resolve_project_relative(
+            DATA_DIR, project_id, f"characters/{character_id}.json"
+        )
+        character_digest = write_json_atomic(character_path, updated)
+        with connect_db() as connection:
+            upsert_document_index(
+                connection, project_id, manifest,
+                f"assets/characters/{asset_id}.json", manifest_digest
+            )
+            upsert_document_index(
+                connection, project_id, updated,
+                f"characters/{character_id}.json", character_digest
+            )
+            sync_character_reference(connection, DATA_DIR, project_id, updated)
+        return {**updated, "asset_id": asset_id,
+            "asset_url": f"/api/projects/{project_id}/character-assets/{asset_id}",
+            "recipe_path": relative_recipe,
+        }
+    except BaseException:
+        temp_asset.unlink(missing_ok=True)
+        temp_recipe.unlink(missing_ok=True)
+        asset_path.unlink(missing_ok=True)
+        manifest_path.unlink(missing_ok=True)
+        raise
+
+
 @app.get("/api/character-builder/catalog")
 def character_builder_catalog() -> dict[str, Any]:
     return get_character_catalog()
+
+
+@app.post("/api/projects/{project_id}/foundry-characters", status_code=201)
+def create_foundry_character(
+    project_id: str, payload: FoundryCharacterInput
+) -> dict[str, Any]:
+    """Generate an editable Foundry recipe and register its GLB in the project library."""
+    initialize_database()
+    with connect_db() as connection:
+        project = connection.execute(
+            "SELECT id FROM projects WHERE id = ?", (project_id,)
+        ).fetchone()
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found.")
+
+    character_id = str(uuid.uuid4())
+    asset_id = str(uuid.uuid4())
+    recipe = default_character_recipe(character_id)
+    recipe["parameters"].update(payload.parameters)
+    try:
+        recipe = validate_character_recipe(recipe)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+    relative_asset = f"assets/characters/{asset_id}.glb"
+    relative_recipe = f"characters/foundry/{character_id}.recipe.json"
+    asset_path = resolve_project_relative(DATA_DIR, project_id, relative_asset)
+    recipe_path = resolve_project_relative(DATA_DIR, project_id, relative_recipe)
+    manifest_path = resolve_project_relative(
+        DATA_DIR, project_id, f"assets/characters/{asset_id}.json"
+    )
+    asset_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        write_master_character(asset_path, recipe_path=recipe_path, recipe=recipe)
+        container = _validate_glb_container(asset_path)
+        try:
+            inspection = get_engine_adapter().inspect_glb(
+                asset_path, allowed_root=project_directory(DATA_DIR, project_id)
+            )
+        except EngineUnavailableError as error:
+            raise HTTPException(status_code=503, detail=str(error)) from error
+        except EngineTimeoutError as error:
+            raise HTTPException(status_code=504, detail=str(error)) from error
+        except EngineError as error:
+            raise HTTPException(
+                status_code=422, detail=f"Godot could not import the Foundry character: {error}"
+            ) from error
+
+        now = datetime.now(UTC).isoformat()
+        asset_data = {
+            "original_filename": f"{payload.name.strip()}.glb",
+            "relative_path": relative_asset,
+            "container": container,
+            "engine_inspection": inspection,
+            "rig_analysis": analyze_rig(inspection),
+            "rig_ready": int(inspection.get("skeleton_count", 0)) > 0,
+            "animation_ready": int(inspection.get("animation_count", 0)) > 0,
+            "generator": {
+                "name": "Cartoon Studio Character Foundry",
+                "version": recipe["generator_version"],
+                "template_id": recipe["master_template_id"],
+                "recipe_path": relative_recipe,
+                "morph_targets": list(recipe["parameters"]),
+            },
+        }
+        manifest = make_envelope(
+            "character_asset", asset_id, asset_data, now, now, 1
+        )
+        digest = write_json_atomic(manifest_path, manifest)
+        with connect_db() as connection:
+            upsert_document_index(
+                connection, project_id, manifest,
+                f"assets/characters/{asset_id}.json", digest
+            )
+
+        data = {
+            "name": payload.name.strip(),
+            "description": payload.description.strip(),
+            "face_design": "Original editable Cartoon Studio Foundry master character.",
+            "body_proportions": {},
+            "height_cm": None,
+            "hair": "",
+            "clothing": ["Foundry casual outfit"] if recipe["clothing_asset_ids"] else [],
+            "accessories": [],
+            "eye_design": "Stylized cartoon eyes",
+            "mouth_design": "Stylized cartoon mouth",
+            "expressions": [],
+            "personality": "",
+            "relationships": [],
+            "voice_profile": "",
+            "dialogue_style": "",
+            "asset": asset_data,
+            "appearance_recipe": {
+                "materials": {},
+                "morph_targets": {},
+                "morph_bindings": {},
+                "face_features": FaceFeatureInput().model_dump(mode="json"),
+            },
+            "rig_status": "ready" if asset_data["rig_ready"] else "unrigged",
+            "foundry_recipe": recipe,
+        }
+        document = make_envelope("character", character_id, data, now, now, 1)
+        character_relative = f"characters/{character_id}.json"
+        character_path = resolve_project_relative(
+            DATA_DIR, project_id, character_relative
+        )
+        character_digest = write_json_atomic(character_path, document)
+        with connect_db() as connection:
+            upsert_document_index(
+                connection, project_id, document, character_relative, character_digest
+            )
+            sync_character_reference(connection, DATA_DIR, project_id, document)
+        return {
+            **document,
+            "asset_id": asset_id,
+            "asset_url": f"/api/projects/{project_id}/character-assets/{asset_id}",
+            "recipe_path": relative_recipe,
+        }
+    except BaseException:
+        asset_path.unlink(missing_ok=True)
+        recipe_path.unlink(missing_ok=True)
+        manifest_path.unlink(missing_ok=True)
+        raise
 
 
 @app.get("/api/character-builder/models/{pack}/{outfit}")
