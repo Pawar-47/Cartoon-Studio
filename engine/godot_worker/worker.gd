@@ -632,8 +632,8 @@ func _replace_skin_surface_with_generated_face(
     new_arrays[Mesh.ARRAY_VERTEX] = face_vertices
     new_arrays[Mesh.ARRAY_NORMAL] = face_normals if not face_normals.is_empty() else _compute_face_normals(face_vertices, center)
 
-    var tangents := PackedVector4Array()
-    tangents.resize(vertex_count)
+    var tangents := PackedFloat32Array()
+    tangents.resize(vertex_count * 4)
     new_arrays[Mesh.ARRAY_TANGENT] = tangents
 
     new_arrays[Mesh.ARRAY_TEX_UV] = face_uvs if not face_uvs.is_empty() else _compute_face_uvs(vertex_count)
