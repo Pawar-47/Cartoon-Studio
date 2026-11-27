@@ -1775,9 +1775,9 @@ def create_foundry_character(
 
     character_id = str(uuid.uuid4())
     asset_id = str(uuid.uuid4())
-    recipe = default_character_recipe(character_id, payload.master_template_id)
-    recipe["parameters"].update(payload.parameters)
     try:
+        recipe = default_character_recipe(character_id, payload.master_template_id)
+        recipe["parameters"].update(payload.parameters)
         recipe = validate_character_recipe(recipe)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error

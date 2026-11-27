@@ -856,6 +856,11 @@ def test_foundry_generation_rejects_unknown_morph_and_missing_project(
         json={"name": "Invalid", "parameters": {"tail_length": 0.5}},
     )
     assert invalid.status_code == 422
+    unknown_template = client.post(
+        f"/api/projects/{project_id}/foundry-characters",
+        json={"name": "Invalid template", "master_template_id": "imported.glb"},
+    )
+    assert unknown_template.status_code == 422
     missing = client.post(
         f"/api/projects/{'0' * 36}/foundry-characters",
         json={"name": "Missing"},
