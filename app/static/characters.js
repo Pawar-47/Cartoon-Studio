@@ -295,7 +295,8 @@ async function loadAssemblySources(recipe){
 async function loadCharacters(){
  const response=await fetch("/api/projects/"+encodeURIComponent(activeProject)+"/characters");
  if(!response.ok)throw new Error("Could not load saved characters.");
- const characters=await response.json(),list=$("character-list");list.replaceChildren();updateRetargetCharacterOptions(characters);await loadRetargets();
+ const characters=await response.json(),list=$("character-list");list.replaceChildren();updateRetargetCharacterOptions(characters);
+  loadRetargets().catch(error=>{$("retarget-list").textContent="Could not refresh saved retarget scenes: "+error.message});
  if(!characters.length){list.innerHTML='<div class="empty">No saved characters in this project yet.</div>';return}
  for(const characterDoc of characters){
   const data=characterDoc.data,card=document.createElement("article");card.className="character-card";
