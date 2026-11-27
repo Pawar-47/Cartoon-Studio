@@ -83,3 +83,12 @@ Do not reopen the frozen Foundry branch, duplicate existing Character Studio wor
 ## 2026-11-28 — Consolidation addendum: catalogue persistence
 
 The first asset-library implementation connected catalogue downloads to the Godot exporter, but the WorldObjectInput schema silently dropped the selected asset fields during save/update. This was a delivered integration defect, not future scope. Commit `4b1ed4b` now persists the curated `asset_id`, validates category compatibility, derives a trusted project-local path server-side and forwards it through the adapter. Windows CI #617 passed the regression tests. A real downloaded GLB still needs a Godot visual import/render acceptance test.
+
+
+## 2026-11-28 — Current source/UX alignment
+
+- Dashboard roadmap no longer lists the delivered World Builder foundation as future work; episode rendering is labeled partial, not pending.
+- Browser world preview and local Godot/FFmpeg episode rendering are separate code paths.
+- Local Urdu audio, render/MP4 assembly, durable job progress and project-scoped asset catalogues are reflected as partial implementations rather than absent modules.
+- Registry and traceability statuses use the permitted vocabulary. One VERIFIED status remains scoped to the Phase 1 installer lifecycle proof.
+- Latest code-bearing commit `49516e5` passed Windows CI #618.

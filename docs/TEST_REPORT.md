@@ -1,3 +1,10 @@
+## 2026-11-28 — Dashboard roadmap alignment
+
+- **Finding:** dashboard showed World Builder as a future milestone and episode rendering as “Pending”, although the World Builder foundation and local Godot/FFmpeg rendering path already exist.
+- **Correction:** commit `49516e57577c74f25c33e3d481e0633fa5c2c724` marks Character Studio and World Builder foundations delivered, Story/Urdu audio and episode rendering as active partial work, and changes the render status to “Pipeline partial”.
+- **Regression:** `test_dashboard_is_served` now asserts these status labels and evidence text.
+- **Windows CI #618:** [SUCCESS](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/46067945723) on `49516e5`; dependency lock/install, pinned Godot/fixture setup, Ruff, JavaScript syntax, Python compilation and full pytest step passed.
+
 ## 2026-11-28 — World asset selection persistence correction
 
 - **Finding:** the browser installed a selected curated GLB and kept `asset_id`/`asset_path` in its object state, but `WorldObjectInput` omitted both fields. Pydantic therefore discarded them on create/update, so the selection did not persist to the world document.

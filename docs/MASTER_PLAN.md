@@ -344,3 +344,10 @@ The World Builder now has a curated 28-model Kenney CC0 catalogue connected to s
 A source-level consolidation review found that the API schema dropped browser-supplied `asset_id`/`asset_path` fields. Commit `4b1ed4b` fixed this by accepting the catalogue ID, validating its category against the object kind, installing/verifying it in the project cache, and deriving the path server-side. CI #617 passed the save/reopen/update and adapter path regressions.
 
 This does not yet prove that a real downloaded model renders correctly in the final Godot scene. Real-asset import/render visual acceptance remains open.
+
+
+## 2026-11-28 — Baseline evidence corrections
+
+The registry now uses the approved status vocabulary only. Current status counts: 7 TESTED, 17 IMPLEMENTED, 51 PLANNED, 90 PARTIALLY IMPLEMENTED, 3 RESEARCH REQUIRED, 2 IN PROGRESS and 1 VERIFIED. The registry and traceability matrix retain 171 unique, matching requirement IDs.
+
+The dashboard now reflects the delivered Character Studio and World Builder foundations and accurately labels the episode rendering path as partial. Commit `49516e5` passed Windows CI #618. This does not mean the complete 5–7 minute episode workflow has passed acceptance.

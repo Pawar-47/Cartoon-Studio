@@ -4,7 +4,7 @@
 **Repository:** `Pawar-47/Cartoon-Studio`  
 **Branch:** `main`  
 **Initial code-audit HEAD:** `e0e288006c13347d2bbc99ff388948c16a9e6011`
-**Current code HEAD at refresh:** `4b1ed4be6beaa3048588e169ff0ca6024a364328` (world-asset persistence correction; CI #617 passed)  
+**Latest code-bearing checkpoint at refresh:** `49516e57577c74f25c33e3d481e0633fa5c2c724` (dashboard roadmap correction; Windows CI #618 passed). Earlier world-asset persistence correction `4b1ed4b` passed CI #617.  
 **Latest observed CI:** #615 — SUCCESS on the audited HEAD  
 **Binding source:** `docs/MASTER_EXECUTION_PROMPT.md` (25 parts, 1,133 lines)  
 **Supporting source:** `docs/PROJECT_SPECIFICATION.md` (24 numbered sections)
@@ -163,3 +163,18 @@ The World Builder browser downloaded a curated model, then stored both `asset_id
 **Evidence:** Windows CI #617 passed on the correction commit. The new API tests cover create → save → reopen → update persistence, forged client path rejection by derivation, unknown IDs and category mismatches. The adapter test confirms the validated project-local path is forwarded to the worker.
 
 **Remaining acceptance:** CI uses a test fixture for the API and a fake adapter invocation for path forwarding. It does not yet prove a real downloaded Kenney GLB imports and renders visibly in Godot. That remains a separate visual acceptance item, not a reason to disregard the persistence correction.
+
+
+### CONS-011 — Requirement status vocabulary and implementation evidence were stale
+
+**Severity:** Medium  
+The 171-row registry contained 13 rows with the non-standard status `PARTIAL` instead of the permitted `PARTIALLY IMPLEMENTED`. Several rows still said no implementation existed even though source modules and tests now provide partial foundations (notably backend orchestration, rendering, audio, local/offline paths, UI workspaces and durable job telemetry).
+
+**Correction:** all 13 invalid status labels were normalized in commit `61cde02`. The 2026-11-28 evidence refresh updated the affected registry/traceability rows with current source/test evidence while preserving partial acceptance boundaries. Current structural check: 171 unique registry IDs, 171 unique traceability IDs, matching ID sets; registry status counts at the last check were 7 TESTED, 17 IMPLEMENTED, 51 PLANNED, 90 PARTIALLY IMPLEMENTED, 3 RESEARCH REQUIRED, 2 IN PROGRESS and 1 VERIFIED. The single VERIFIED row remains the scoped Phase 1 installer lifecycle gate.
+
+### CONS-012 — Dashboard roadmap contradicted delivered work
+
+**Severity:** Medium  
+The dashboard still presented World Builder as a future step and episode rendering as entirely pending, despite the persistent World Builder, curated world catalogue, Godot export/preview and partial Godot/FFmpeg rendering path already being present.
+
+**Correction:** commit `49516e5` marks the Character Studio and World Builder foundations as delivered, marks story/audio and episode rendering as active partial work, and replaces the misleading “Pending” rendering label with “Pipeline partial”. The dashboard regression test verifies the new wording. Windows CI #618 passed on that exact code commit.
