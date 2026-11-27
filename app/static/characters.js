@@ -890,9 +890,9 @@ async function createFoundryCharacter(){
   if(!assetResponse.ok)throw new Error("The character was saved, but its GLB preview could not be loaded.");
   const loaded=await showCharacterPreview(await assetResponse.arrayBuffer(),name);
   if(!loaded)throw new Error("The character was saved, but the browser preview could not be created.");
-  await loadCharacters();
   editingFoundryCharacterId=null;$("foundry-create").textContent="Create and preview character";$("foundry-cancel").hidden=true;resetFoundryMorphs();
   $("foundry-status").textContent=name+" saved. Editable recipe: "+result.recipe_path+". GLB asset: "+result.asset_id+". Revision "+result.revision+".";
+  loadCharacters().catch(error=>{$("project-status").textContent="Character saved, but the library could not refresh: "+error.message});
   $("character-list").scrollIntoView({behavior:"smooth",block:"nearest"});
   document.querySelector(".preview-panel").scrollIntoView({behavior:"smooth",block:"center"});
  }catch(error){$("foundry-status").textContent=error.message}
