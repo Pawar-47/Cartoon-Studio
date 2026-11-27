@@ -608,6 +608,21 @@ class GodotEngineAdapter:
                 or any(c not in "0123456789abcdefABCDEF" for c in color[1:])
             ):
                 raise EnginePathError("World object color must be a six-digit hexadecimal value.")
+            asset_path_value = item.get("asset_path")
+            if asset_path_value:
+                relative_asset = Path(str(asset_path_value))
+                if relative_asset.is_absolute() or ".." in relative_asset.parts:
+                    raise EnginePathError("World asset path must be project-relative.")
+                asset_path = (root / relative_asset).resolve(strict=True)
+                if (
+                    asset_path == root
+                    or root not in asset_path.parents
+                    or asset_path.suffix.lower() != ".glb"
+                    or not asset_path.is_file()
+                    or asset_path.stat().st_size > MAX_GLB_BYTES
+                ):
+                    raise EnginePathError("World asset must be an existing project-local GLB.")
+                item["asset_path"] = str(asset_path)
         glb_output = output.with_suffix(".glb")
         if glb_output == root or root not in glb_output.parents or glb_output.exists():
             raise EnginePathError("World preview output must be a new project-local .glb file.")

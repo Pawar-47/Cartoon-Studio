@@ -24,7 +24,7 @@ def test_catalog_filters_by_query_and_category():
 
 def test_git_blob_hash_uses_git_object_format():
     data = b"Cartoon Studio world asset"
-    expected = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\\0" + data).hexdigest()
+    expected = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
     assert world_assets._git_blob_sha1(data) == expected
 
 
@@ -37,12 +37,17 @@ def test_install_download_verifies_size_hash_and_glb_header(tmp_path, monkeypatc
     asset_id = "road-straight"
     data = b"glTF" + b"verified-test-payload"
     spec = world_assets.ASSETS[asset_id]
+    original = dict(spec)
     spec["size"] = len(data)
     spec["git_blob_sha1"] = world_assets._git_blob_sha1(data)
     monkeypatch.setattr(world_assets, "_download_asset", lambda _asset_id, _size: data)
-    result = world_assets.install_world_asset(tmp_path, asset_id)
-    target = tmp_path / result["relative_path"]
-    assert target.read_bytes() == data
-    assert result["cached"] is False
-    cached = world_assets.install_world_asset(tmp_path, asset_id)
-    assert cached["cached"] is True
+    try:
+        result = world_assets.install_world_asset(tmp_path, asset_id)
+        target = tmp_path / result["relative_path"]
+        assert target.read_bytes() == data
+        assert result["cached"] is False
+        cached = world_assets.install_world_asset(tmp_path, asset_id)
+        assert cached["cached"] is True
+    finally:
+        spec.clear()
+        spec.update(original)
