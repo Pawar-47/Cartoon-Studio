@@ -175,13 +175,52 @@ try {
     throw new Error("Male hairstyle settings were not persisted.");
   }
 
+  const foundryRequests = [];
+  page.on("request", (request) => {
+    if (request.url().includes("/foundry-characters")) {
+      foundryRequests.push({ method: request.method(), url: request.url() });
+      record("[browser request] " + request.method() + " " + request.url());
+    }
+  });
   await page.getByRole("button", { name: "Edit Foundry recipe" }).click();
-  await page.locator("#foundry-head-width").waitFor();
-  if (await page.locator("#foundry-head-width").inputValue() !== "0.35") {
-    throw new Error("Saved Foundry morph did not restore when editing.");
+  await page.waitForFunction(
+    () => document.querySelector("#foundry-create")?.textContent?.trim() === "Save Foundry changes",
+    null,
+    { timeout: 10_000 },
+  ).catch(async () => {
+    const state = await page.evaluate(() => ({
+      buttonText: document.querySelector("#foundry-create")?.textContent?.trim(),
+      buttonDisabled: document.querySelector("#foundry-create")?.disabled,
+      project: document.querySelector("#project-select")?.value,
+      name: document.querySelector("#foundry-name")?.value,
+      status: document.querySelector("#foundry-status")?.textContent,
+      morph: document.querySelector("#foundry-head-width")?.value,
+    }));
+    await page.screenshot({ path: path.join(output, "02-foundry-edit-mode-failure.png"), fullPage: true });
+    throw new Error("Edit Foundry recipe did not activate edit mode within 10 seconds: " + JSON.stringify(state));
+  });
+  const editModeState = await page.evaluate(() => ({
+    buttonText: document.querySelector("#foundry-create")?.textContent?.trim(),
+    buttonDisabled: document.querySelector("#foundry-create")?.disabled,
+    project: document.querySelector("#project-select")?.value,
+    name: document.querySelector("#foundry-name")?.value,
+    status: document.querySelector("#foundry-status")?.textContent,
+    morph: document.querySelector("#foundry-head-width")?.value,
+  }));
+  if (editModeState.buttonDisabled || editModeState.name !== "CI Foundry Ali"
+      || !editModeState.project || !editModeState.status?.startsWith("Editing CI Foundry Ali")
+      || editModeState.morph !== "0.35") {
+    throw new Error("Foundry edit mode state is inconsistent: " + JSON.stringify(editModeState));
   }
+  record("Foundry edit mode verified: " + JSON.stringify(editModeState));
   await setInputValue(page, "#foundry-head-width", "0.6");
   await page.locator("#foundry-create").click();
+  await page.waitForFunction(
+    () => document.querySelector("#foundry-status")?.textContent?.includes("saved.")
+      || document.querySelector("#foundry-status")?.textContent?.includes("could not"),
+    null,
+    { timeout: 120_000 },
+  );
   await page.waitForFunction(
     () => {
       const status = document.querySelector("#foundry-status")?.textContent || "";
