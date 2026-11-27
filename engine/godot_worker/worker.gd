@@ -666,10 +666,6 @@ func _replace_skin_surface_with_generated_face(
     new_arrays[Mesh.ARRAY_VERTEX] = face_vertices
     new_arrays[Mesh.ARRAY_NORMAL] = face_normals if not face_normals.is_empty() else _compute_face_normals(face_vertices, center)
 
-    var tangents := PackedVector3Array()
-    tangents.resize(vertex_count)
-    new_arrays[Mesh.ARRAY_TANGENT] = tangents
-
     new_arrays[Mesh.ARRAY_TEX_UV] = face_uvs if not face_uvs.is_empty() else _compute_face_uvs(vertex_count)
 
     var bones := PackedInt32Array()
@@ -841,7 +837,7 @@ func _add_character_face_features(scene: Node, recipe: Dictionary) -> Dictionary
     var nose_y: float = eye_y - head_bounds.size.y * 0.08
     var mouth_y: float = eye_y - head_bounds.size.y * 0.27
     var brow_y: float = brow_surface["bounds"].get_center().y if bool(brow_surface.get("found", false)) else eye_y + eye_height * 1.15
-    var skin_surface_indices: Array[int] = skin_surface.get("surface_indices", [])
+    var skin_surface_indices: Array = skin_surface.get("surface_indices", [])
     var nose_surface_z := _generated_face_front_depth(head_bounds, center, center.x, nose_y, face_width, cheek_fullness, jaw_width, front_direction)
     var mouth_surface_z := _generated_face_front_depth(head_bounds, center, center.x, mouth_y, face_width, cheek_fullness, jaw_width, front_direction)
     var brow_surface_z := _generated_face_front_depth(head_bounds, center, center.x, brow_y, face_width, cheek_fullness, jaw_width, front_direction)
