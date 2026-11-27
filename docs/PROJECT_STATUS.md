@@ -2,9 +2,9 @@
 
 ## Live checkpoint — mainline master-brief alignment review
 
-- Starting main HEAD: `a88379f3ac3a985756d68c25afd22ac7b0a9b4d5`; Windows CI #611 passed on this exact commit.
+- World Builder alignment commit: `17d35ea4b6b87509ee2318bf26eb1078cd39351d`; Windows CI #612 passed on this exact commit.
 - The first-pass alignment audit is recorded in `docs/MAINLINE_ALIGNMENT_AUDIT.md`.
-- The World Builder browser palette was incomplete relative to its backend: 16 object kinds were accepted by the API/exporter but only 7 were addable in the UI. This batch exposes all supported kinds and adds X/Y/rotation controls with a regression test.
+- The World Builder browser palette was incomplete relative to its backend: 17 object kinds were accepted by the API/exporter but only 7 were addable in the UI. This batch exposes all supported kinds and adds X/Y/rotation controls with a regression test.
 - The Godot World Builder exporter currently generates procedural primitive blockout geometry. It is a real editable Godot scene and GLB preview, but not yet a production-quality reusable environment asset library.
 - Vehicle movement/rig/interaction APIs persist state/events; actual vehicle animation and character interaction playback remain incomplete.
 - The Story Generator remains a manual prompt/paste workflow. The Urdu audio path exists, but mouth movement is an RMS envelope heuristic rather than phoneme/viseme alignment.
@@ -19,7 +19,7 @@
 | 0 — Specification, research, architecture | COMPLETE | Master brief preserved; 171 atomic requirements and matching traceability; research, architecture and bounded engine/queue proofs recorded |
 | 1 — GitHub/CI/CD and Windows delivery | COMPLETE | Reproducible locked dependencies, CI, self-contained installer build and install/upgrade/uninstall/reinstall lifecycle proof |
 | 2 — Character Studio | PARTIAL | Modular characters, import, profile persistence, proportions, hair/face geometry, morphs and retargeting implemented; interactive visual signoff and broad rig acceptance remain |
-| 3 — World Builder | ACTIVE / PARTIAL | Versioned world docs, templates, scene export, GLB preview and 16 object kinds; asset library, visual quality and vehicle runtime behavior remain |
+| 3 — World Builder | ACTIVE / PARTIAL | Versioned world docs, templates, scene export, GLB preview and 17 object kinds; asset library, visual quality and vehicle runtime behavior remain |
 | 4 — Story and Scene Engine | PARTIAL | Structured prompt/schema, validation, world/cast binding and editable scene generation; integrated generation, approval, repair and complete mapping remain |
 | 5 — Animation Engine | PARTIAL | Procedural action/camera/expression tracks; reusable motion library, blending, timeline editor and visual acceptance remain |
 | 6 — Urdu Voice and Lip-Sync | PARTIAL | Offline Urdu speech/audio mix/subtitles and heuristic mouth envelope; native-speaker evaluation and phoneme/viseme alignment remain |

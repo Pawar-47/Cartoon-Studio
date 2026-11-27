@@ -4,8 +4,8 @@
 
 - Repository: `Pawar-47/Cartoon-Studio`
 - Active branch: `main`
-- Starting checkpoint for this alignment batch: `a88379f3ac3a985756d68c25afd22ac7b0a9b4d5`
-- CI at starting checkpoint: Windows CI #611 — SUCCESS (`46061139390`)
+- World Builder alignment commit: `17d35ea4b6b87509ee2318bf26eb1078cd39351d`
+- CI at starting checkpoint: Windows CI #612 — SUCCESS (`46062289103`)
 - The Foundry branch remains frozen; do not merge or modify it.
 - Binding requirements: the complete 25-part `docs/MASTER_EXECUTION_PROMPT.md` and the 171-row registry/traceability set.
 

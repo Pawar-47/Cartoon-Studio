@@ -20,7 +20,7 @@ However, the product is **not yet aligned with the complete end-to-end acceptanc
 
 ### 1. World Builder UI did not expose the backend's full object catalogue
 
-At the audited starting commit, `WorldObjectInput` and the Godot exporter accepted 16 world-object categories, while `worlds.html` exposed only 7 add buttons. Civic buildings, garages, indoor rooms, playgrounds, furniture, water bodies and dedicated streetlights could be stored/exported through API paths but could not be added through the normal browser editor. The selected-object panel also omitted direct position and rotation controls.
+At the audited starting commit, `WorldObjectInput` and the Godot exporter accepted 17 world-object categories, while `worlds.html` exposed only 7 add buttons. Civic buildings, garages, indoor rooms, playgrounds, furniture, water bodies and dedicated streetlights could be stored/exported through API paths but could not be added through the normal browser editor. The selected-object panel also omitted direct position and rotation controls.
 
 **First-pass correction in this batch:** expose every backend-supported category in the browser object palette, add numeric X/Y position and rotation controls, and cover the UI/backend catalogue parity with a regression test. This closes the UI omission; it does not turn procedural blockout geometry into a finished asset library.
 
@@ -63,7 +63,7 @@ Dashboard, Story, Character and World workspaces exist. The complete brief's Ass
 
 ## First-pass implementation delivered with this audit
 
-- World Builder now exposes all 16 backend-supported object kinds.
+- World Builder now exposes all 17 backend-supported object kinds.
 - Selected objects now support numeric X/Y positioning and rotation in addition to size, label and colour.
 - Canvas rendering distinguishes water, furniture, playground/park and streetlight object classes.
 - Regression test ensures every backend-supported object kind remains reachable from the browser palette and position/rotation controls remain wired.

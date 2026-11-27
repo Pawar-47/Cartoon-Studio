@@ -27,12 +27,12 @@ This is a complete production application, not a mockup, theme, prompt generator
 
 The complete original 25-part `MASTER_EXECUTION_PROMPT.md` is binding; the 171-row requirement registry and traceability matrix remain the atomic coverage records. The old baseline below the initial Phase 0 audit is historical and superseded by the current mainline state.
 
-At main commit `a88379f3ac3a985756d68c25afd22ac7b0a9b4d5` (Windows CI #611 SUCCESS), the repository contains:
+At mainline alignment commit `17d35ea4b6b87509ee2318bf26eb1078cd39351d` (Windows CI #612 SUCCESS), the repository contains:
 - FastAPI/static browser application, SQLite-backed portable project documents, migrations and recovery.
 - Pinned Godot 4.7.2 Compatibility worker behind a supervised adapter.
 - Self-contained Windows installer build and a previously verified install/upgrade/uninstall/reinstall lifecycle.
 - Character Studio with imported GLB inspection, profiles, modular Quaternius character assembly, proportions, hair/face geometry, appearance/morph editing and retargeting.
-- World Builder with versioned persistent layouts, templates, 16 supported object kinds, Godot scene export and Three.js GLB preview.
+- World Builder with versioned persistent layouts, templates, 17 supported object kinds, Godot scene export and Three.js GLB preview.
 - Story prompt/schema/validation and world/cast-linked editable episode-scene generation.
 - Urdu speech/audio/subtitle generation, heuristic audio-envelope mouth motion and a Godot AVI + FFmpeg MP4 assembly path.
 - Durable SQLite job queue with bounded attempts, leases, expiry reclaim, cancellation/progress and endpoints for production, audio, world export and render.
