@@ -166,6 +166,8 @@ Allowed job states are queued, preparing, rendering, assembling, completed, fail
 - Enable SQLite foreign keys on every connection, WAL where supported, a bounded busy timeout and explicit transactions. Initial worker concurrency is one render job.
 - Write JSON/media to a same-volume temporary path, validate and hash it, then atomically rename; update the SQLite index in a transaction. A startup reconciliation pass detects files written before a crash and stale index rows.
 - Back up the database and affected project documents before schema migrations. Never overwrite the previous document revision during migration.
+- A project package is the project directory zipped verbatim. Import takes the archive as the request body (no form parser, so no multipart dependency is added to the locked environment), rejects members that are absolute, traversing, drive-lettered or duplicated, bounds both the upload and its uncompressed total, and repoints world/episode/character documents from the exporting project id to the new one. A rejected member discards the whole import and its project row.
+- A queued job records a worker lease owner and expiry; the next claim reclaims an expired lease. An in-process caller claims its job for the budget of its own operation, not the queue's short default, so long work is never reclaimed while it runs.
 
 ## 13. Versioning and compatibility
 - Document schema versions use semantic major.minor.patch. Patch versions are backward-compatible metadata/validation clarifications; minor versions add optional fields; major versions require a migration.

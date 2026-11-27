@@ -1,4 +1,15 @@
-# Project Status — 2026-11-27
+# Project Status — 2026-11-28
+
+## Live checkpoint — 2026-11-28 (main work-in-progress audit)
+
+- Main CI [#?](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/46058353281) on `201c6dd` failed in the `Test` step at collection: `RuntimeError: Form data requires "python-multipart" to be installed`, in every test module that imports `app.main`. The project-portability import endpoint was written with `UploadFile = File(...)`, a form dependency that is not in `pyproject.toml` or `requirements.lock`.
+- **What was fixed in this audit batch:**
+  - `POST /api/projects/import` now reads the ZIP from the request body (`Content-Type: application/zip`), so no form parser or new dependency is needed. Members are path-checked against absolute, traversal and drive-letter names, duplicates are rejected, the upload and its uncompressed total are bounded, and a rejected member discards the whole import. World, episode and character documents are repointed from the exporting project id to the new one, so imported asset and preview URLs resolve.
+  - The queue's retry limit now counts whole attempts (`attempts`, migration 4) instead of overloading `progress`, and a job records a worker lease with an expiry that the next claim reclaims, so a job whose worker died cannot stay `running` forever. Each route claims for the budget of its own operation (180s scene generation and world export, an hour for audio, four hours for a render) so long work is not reclaimed mid-flight.
+  - `_migration_3` created the queue tables twice over (once in storage, once in the queue module with a divergent definition). The queue module no longer defines any schema, and the missing `job_events` index is added in migration 3.
+  - Job bookkeeping no longer masks the request's own error, and a job is marked completed only after its documents are persisted.
+  - `migrate_world_document` now applies every registered step and then fills the schema's object defaults, and every world read (list and detail) and write (create, update, vehicle endpoints, scene export) passes through it, so a created world and a migrated world have the same shape.
+- **Verified:** static review only; CI is the proof and has not been re-run at the time of writing.
 
 ## Live checkpoint — 2026-11-27 (main CI repair: generated face surface marker)
 

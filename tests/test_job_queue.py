@@ -61,29 +61,41 @@ def test_complete_non_running_job(queue: JobQueue) -> None:
 
 def test_fail_with_retry(queue: JobQueue) -> None:
     job_id = queue.enqueue("proj-1", "episode_production", total_units=3)
-    queue.claim_specific(job_id, worker_id="worker-1")
 
-    # First failure: re-queued (progress 0 -> 1)
+    # First attempt fails: re-queued with the attempt counter at 1.
+    queue.claim_specific(job_id, worker_id="worker-1")
     queue.fail(job_id, worker_id="worker-1", error="transient", retry=True)
     snapshot = queue.snapshot(job_id)
     assert snapshot["job"]["state"] == "queued"
-    assert snapshot["job"]["progress"] == 1
+    assert snapshot["job"]["attempts"] == 1
     assert snapshot["job"]["error"] == "transient"
 
-    # Claim again and fail again (progress 1 -> 2)
+    # Second attempt fails: re-queued with the attempt counter at 2.
     queue.claim_specific(job_id, worker_id="worker-1")
     queue.fail(job_id, worker_id="worker-1", error="transient", retry=True)
     snapshot = queue.snapshot(job_id)
     assert snapshot["job"]["state"] == "queued"
-    assert snapshot["job"]["progress"] == 2
+    assert snapshot["job"]["attempts"] == 2
 
-    # Claim again and fail again (progress 2 -> MAX_ATTEMPTS reached, failed)
+    # Third attempt exhausts MAX_ATTEMPTS and the job stays failed.
     queue.claim_specific(job_id, worker_id="worker-1")
     queue.fail(job_id, worker_id="worker-1", error="permanent", retry=True)
     snapshot = queue.snapshot(job_id)
     assert snapshot["job"]["state"] == "failed"
-    assert snapshot["job"]["progress"] == 2
+    assert snapshot["job"]["attempts"] == 3
     assert snapshot["job"]["error"] == "permanent"
+    # A failed job is not claimable again.
+    assert queue.claim_specific(job_id, worker_id="worker-1") is None
+
+
+def test_attempts_do_not_consume_progress(queue: JobQueue) -> None:
+    job_id = queue.enqueue("proj-1", "episode_production", total_units=5)
+    queue.claim_specific(job_id, worker_id="worker-1")
+    queue.fail(job_id, worker_id="worker-1", error="transient")
+    snapshot = queue.snapshot(job_id)
+    assert snapshot["job"]["attempts"] == 1
+    assert snapshot["job"]["progress"] == 0
+    assert snapshot["job"]["total"] == 5
 
 
 def test_fail_without_retry(queue: JobQueue) -> None:
@@ -146,3 +158,38 @@ def test_multiple_jobs_claim_order(queue: JobQueue) -> None:
     # No more pending jobs
     fourth = queue.claim_next(worker_id="worker-1")
     assert fourth is None
+
+
+def test_expired_lease_is_reclaimed(queue: JobQueue) -> None:
+    job_id = queue.enqueue("proj-1", "episode_render", total_units=1, now=1_000.0)
+    first = queue.claim_specific(job_id, worker_id="worker-1", now=1_000.0)
+    assert first is not None and first["attempts"] == 1
+
+    # Before the lease expires the job is not claimable by anyone else.
+    assert queue.claim_specific(job_id, worker_id="worker-2", now=1_060.0) is None
+
+    # After it expires the next claim takes the job over as a second attempt.
+    second = queue.claim_specific(job_id, worker_id="worker-2", now=1_200.0)
+    assert second is not None
+    assert second["worker"] == "worker-2"
+    assert second["attempts"] == 2
+    event_types = [e["event_type"] for e in queue.snapshot(job_id)["events"]]
+    assert "job_lease_expired" in event_types
+
+
+def test_lost_worker_cannot_complete(queue: JobQueue) -> None:
+    job_id = queue.enqueue("proj-1", "episode_render", total_units=1, now=1_000.0)
+    queue.claim_specific(job_id, worker_id="worker-1", now=1_000.0)
+    with pytest.raises(JobQueueError):
+        queue.complete(job_id, worker_id="worker-2")
+    queue.complete(job_id, worker_id="worker-1")
+    assert queue.snapshot(job_id)["job"]["state"] == "completed"
+
+
+def test_heartbeat_extends_lease(queue: JobQueue) -> None:
+    job_id = queue.enqueue("proj-1", "episode_render", total_units=1, now=1_000.0)
+    queue.claim_specific(job_id, worker_id="worker-1", now=1_000.0)
+    assert queue.heartbeat(job_id, worker_id="worker-1", now=1_100.0) is True
+    # The extended lease keeps the job owned past the original expiry.
+    assert queue.claim_specific(job_id, worker_id="worker-2", now=1_150.0) is None
+    assert queue.heartbeat(job_id, worker_id="worker-2", now=1_150.0) is False

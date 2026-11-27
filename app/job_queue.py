@@ -1,12 +1,23 @@
-"""Production SQLite job queue for long-running episode operations.
+"""Durable SQLite job queue for long-running Cartoon Studio operations.
 
-Replaces the one-shot synchronous HTTP endpoints for episode production,
-audio generation and video rendering with durable, resumable jobs backed
-by SQLite lease/checkpoint semantics.
+Job state lives in the project index database: the ``jobs`` and ``job_events``
+tables are created by schema migrations 3 and 4 in :mod:`app.storage`, so the
+queue never defines a second, divergent copy of that schema.
 
-Each job owns one or more unit tasks. Workers claim pending tasks with a
-lease, execute them, and report completion or failure. Expired leases are
-reclaimed automatically. Cancellations are honoured at task boundaries.
+What this module guarantees today:
+
+- durable job records with a monotonic event history;
+- one claim at a time (``BEGIN IMMEDIATE``), recorded with a lease owner and an
+  expiry so a job whose worker died can be reclaimed by the next claim;
+- bounded retries counted in whole attempts (``MAX_ATTEMPTS``);
+- cancellation requests that the caller honours at its next task boundary;
+- progress and output persisted for polling through the HTTP API.
+
+What it does not do: it does not run work by itself. The FastAPI routes enqueue
+a job, claim it, execute the Godot/FFmpeg call in-process and record the
+outcome, so a cancellation cannot interrupt a call that is already running and a
+crash mid-call is only recovered after the lease expires and the job is claimed
+again.
 """
 
 from __future__ import annotations
@@ -25,6 +36,7 @@ from app.storage import initialize_database
 
 MAX_ATTEMPTS = 3
 LEASE_SECONDS = 120
+MAX_LIST_LIMIT = 200
 
 
 @contextmanager
@@ -51,12 +63,37 @@ def now_epoch() -> float:
     return time.time()
 
 
+def _timestamp(value: float | None) -> float:
+    return now_epoch() if value is None else value
+
+
+def _iso(value: float | None) -> str:
+    return now_iso() if value is None else datetime.fromtimestamp(value, UTC).isoformat()
+
+
 class JobQueueError(RuntimeError):
     """Raised when a job queue operation cannot proceed."""
 
 
+def _require_running(db: sqlite3.Connection, job_id: str, worker_id: str) -> sqlite3.Row:
+    """Return the job row, or raise if it is missing, finished or leased elsewhere."""
+    row = db.execute(
+        """
+        SELECT state, attempts, progress, total, lease_owner
+        FROM jobs WHERE job_id = ?
+        """,
+        (job_id,),
+    ).fetchone()
+    if row is None or row["state"] != "running":
+        raise JobQueueError(f"Job {job_id} is not in running state.")
+    owner = row["lease_owner"]
+    if owner is not None and owner != worker_id:
+        raise JobQueueError(f"Job {job_id} is leased to another worker.")
+    return row
+
+
 class JobQueue:
-    """SQLite-backed durable job queue with lease/checkpoint semantics."""
+    """SQLite-backed durable job queue with lease and checkpoint semantics."""
 
     def __init__(self, data_dir: Path, db_path: Path) -> None:
         self.data_dir = data_dir
@@ -64,50 +101,6 @@ class JobQueue:
         data_dir.mkdir(parents=True, exist_ok=True)
         db_path.parent.mkdir(parents=True, exist_ok=True)
         initialize_database(data_dir, db_path)
-        self._ensure_tables()
-
-    def _ensure_tables(self) -> None:
-        with _connect(self.db_path) as db:
-            db.execute(
-                """
-                CREATE TABLE IF NOT EXISTS jobs (
-                    job_id TEXT PRIMARY KEY,
-                    project_id TEXT NOT NULL,
-                    operation TEXT NOT NULL,
-                    state TEXT NOT NULL,
-                    cancel_requested INTEGER NOT NULL DEFAULT 0,
-                    progress INTEGER NOT NULL DEFAULT 0,
-                    total INTEGER NOT NULL DEFAULT 0,
-                    created_at TEXT NOT NULL,
-                    updated_at TEXT NOT NULL,
-                    error TEXT,
-                    output_json TEXT
-                );
-                """
-            )
-            db.execute(
-                """
-                CREATE TABLE IF NOT EXISTS job_events (
-                    event_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    job_id TEXT NOT NULL,
-                    event_type TEXT NOT NULL,
-                    created_at TEXT NOT NULL,
-                    detail_json TEXT NOT NULL DEFAULT '{}'
-                );
-                """
-            )
-            db.execute(
-                """
-                CREATE INDEX IF NOT EXISTS idx_jobs_project_state
-                ON jobs(project_id, state, updated_at)
-                """
-            )
-            db.execute(
-                """
-                CREATE INDEX IF NOT EXISTS idx_job_events_job
-                ON job_events(job_id, event_id)
-                """
-            )
 
     def _event(
         self,
@@ -124,6 +117,31 @@ class JobQueue:
             (job_id, event_type, now_iso(), json.dumps(detail or {})),
         )
 
+    def _reclaim_expired(self, db: sqlite3.Connection, timestamp: float) -> list[str]:
+        """Return expired running jobs to the queue so another worker can take them."""
+        rows = db.execute(
+            """
+            SELECT job_id FROM jobs
+            WHERE state = 'running'
+              AND lease_expires_at IS NOT NULL
+              AND lease_expires_at < ?
+            """,
+            (timestamp,),
+        ).fetchall()
+        reclaimed = [str(row["job_id"]) for row in rows]
+        for job_id in reclaimed:
+            db.execute(
+                """
+                UPDATE jobs
+                SET state = 'queued', lease_owner = NULL, lease_expires_at = NULL,
+                    updated_at = ?
+                WHERE job_id = ?
+                """,
+                (_iso(timestamp), job_id),
+            )
+            self._event(db, job_id, "job_lease_expired", {"reclaimed_at": _iso(timestamp)})
+        return reclaimed
+
     def enqueue(
         self,
         project_id: str,
@@ -133,14 +151,14 @@ class JobQueue:
     ) -> str:
         """Create a new queued job and return its job_id."""
         job_id = str(uuid.uuid4())
-        created = now_iso() if now is None else datetime.fromtimestamp(now, UTC).isoformat()
+        created = _iso(now)
         with _connect(self.db_path) as db:
             db.execute("BEGIN IMMEDIATE")
             db.execute(
                 """
                 INSERT INTO jobs(job_id, project_id, operation, state, cancel_requested,
-                                 progress, total, created_at, updated_at)
-                VALUES (?, ?, ?, 'queued', 0, 0, ?, ?, ?)
+                                 attempts, progress, total, created_at, updated_at)
+                VALUES (?, ?, ?, 'queued', 0, 0, 0, ?, ?, ?)
                 """,
                 (job_id, project_id, operation, total_units, created, created),
             )
@@ -153,35 +171,52 @@ class JobQueue:
         return job_id
 
     def claim_next(
-        self, worker_id: str, now: float | None = None
+        self,
+        worker_id: str,
+        now: float | None = None,
+        lease_seconds: float | None = None,
     ) -> dict[str, Any] | None:
-        """Claim the next pending job across all projects, or return None.
-
-        Expired leases are reclaimed before claiming. Only one worker can
-        claim a job at a time.
-        """
-        return self._claim(job_id=None, worker_id=worker_id, now=now)
+        """Claim the oldest queued job across all projects, or return None."""
+        return self._claim(
+            job_id=None, worker_id=worker_id, now=now, lease_seconds=lease_seconds
+        )
 
     def claim_specific(
-        self, job_id: str, worker_id: str, now: float | None = None
+        self,
+        job_id: str,
+        worker_id: str,
+        now: float | None = None,
+        lease_seconds: float | None = None,
     ) -> dict[str, Any] | None:
-        """Claim a specific job by ID, or return None if not pending."""
-        return self._claim(job_id=job_id, worker_id=worker_id, now=now)
+        """Claim a specific queued job by ID, or return None if it is not claimable.
+
+        ``lease_seconds`` overrides the default lease for work known to run
+        longer than LEASE_SECONDS, so a long operation is not reclaimed from its
+        own worker while it is still running.
+        """
+        return self._claim(
+            job_id=job_id, worker_id=worker_id, now=now, lease_seconds=lease_seconds
+        )
 
     def _claim(
         self,
         job_id: str | None,
         worker_id: str,
         now: float | None = None,
+        lease_seconds: float | None = None,
     ) -> dict[str, Any] | None:
-        """Internal claim logic. If job_id is None, claim the next pending job."""
-        timestamp = now_epoch() if now is None else now
+        """Claim a job inside one write transaction, reclaiming expired leases first."""
+        timestamp = _timestamp(now)
+        claim_time = _iso(now)
+        lease = LEASE_SECONDS if lease_seconds is None else max(1.0, lease_seconds)
+        lease_expires_at = timestamp + lease
         with _connect(self.db_path) as db:
             db.execute("BEGIN IMMEDIATE")
+            self._reclaim_expired(db, timestamp)
             if job_id is not None:
                 task = db.execute(
                     """
-                    SELECT job_id, project_id, operation, progress, total, state
+                    SELECT job_id, project_id, operation, progress, total, state, attempts
                     FROM jobs
                     WHERE job_id = ? AND state = 'queued' AND cancel_requested = 0
                     """,
@@ -190,7 +225,7 @@ class JobQueue:
             else:
                 task = db.execute(
                     """
-                    SELECT job_id, project_id, operation, progress, total, state
+                    SELECT job_id, project_id, operation, progress, total, state, attempts
                     FROM jobs
                     WHERE state = 'queued' AND cancel_requested = 0
                     ORDER BY created_at ASC, rowid ASC
@@ -200,48 +235,62 @@ class JobQueue:
             if task is None:
                 return None
 
-            claimed_job_id = task["job_id"]
-            if now is None:
-                claim_time = now_iso()
-            else:
-                claim_time = datetime.fromtimestamp(timestamp, UTC).isoformat()
+            claimed_job_id = str(task["job_id"])
+            attempts = int(task["attempts"]) + 1
             db.execute(
                 """
-                UPDATE jobs SET state = 'running', updated_at = ? WHERE job_id = ?
+                UPDATE jobs
+                SET state = 'running', attempts = ?, updated_at = ?,
+                    lease_owner = ?, lease_expires_at = ?
+                WHERE job_id = ?
                 """,
-                (claim_time, claimed_job_id),
+                (attempts, claim_time, worker_id, lease_expires_at, claimed_job_id),
             )
             self._event(
                 db,
                 claimed_job_id,
                 "job_claimed",
-                {"worker": worker_id, "operation": task["operation"]},
+                {
+                    "worker": worker_id,
+                    "operation": task["operation"],
+                    "attempt": attempts,
+                    "lease_expires_at": datetime.fromtimestamp(
+                        lease_expires_at, UTC
+                    ).isoformat(),
+                },
             )
             return {
                 "job_id": claimed_job_id,
                 "project_id": task["project_id"],
                 "operation": task["operation"],
+                "attempts": attempts,
                 "progress": task["progress"],
                 "total": task["total"],
                 "worker": worker_id,
             }
 
     def heartbeat(self, job_id: str, worker_id: str, now: float | None = None) -> bool:
-        """Extend the running job's lease. Returns False if the job is not running or owned."""
-        timestamp = now_epoch() if now is None else now
-        updated = now_iso() if now is None else datetime.fromtimestamp(timestamp, UTC).isoformat()
+        """Extend a running job's lease.
+
+        Returns False when the job is missing, not running, or leased to a
+        different worker; a caller that cannot heartbeat no longer owns the job.
+        """
+        timestamp = _timestamp(now)
         with _connect(self.db_path) as db:
             row = db.execute(
-                "SELECT state FROM jobs WHERE job_id = ?", (job_id,)
+                "SELECT state, lease_owner FROM jobs WHERE job_id = ?", (job_id,)
             ).fetchone()
             if row is None or row["state"] != "running":
                 return False
+            owner = row["lease_owner"]
+            if owner is not None and owner != worker_id:
+                return False
             db.execute(
-                "UPDATE jobs SET updated_at = ? WHERE job_id = ?",
-                (updated, job_id),
+                "UPDATE jobs SET updated_at = ?, lease_expires_at = ? WHERE job_id = ?",
+                (_iso(now), timestamp + LEASE_SECONDS, job_id),
             )
             self._event(db, job_id, "job_heartbeat", {"worker": worker_id})
-            return True
+        return True
 
     def complete(
         self,
@@ -250,23 +299,18 @@ class JobQueue:
         output: dict[str, Any] | None = None,
         now: float | None = None,
     ) -> None:
-        """Mark a job as completed with optional output payload."""
-        timestamp = now_epoch() if now is None else now
-        updated = now_iso() if now is None else datetime.fromtimestamp(timestamp, UTC).isoformat()
+        """Mark a running job as completed with an optional output payload."""
         output_json = json.dumps(output) if output is not None else None
         with _connect(self.db_path) as db:
             db.execute("BEGIN IMMEDIATE")
-            row = db.execute(
-                "SELECT state FROM jobs WHERE job_id = ?", (job_id,)
-            ).fetchone()
-            if row is None or row["state"] != "running":
-                raise JobQueueError(f"Job {job_id} is not in running state.")
+            _require_running(db, job_id, worker_id)
             db.execute(
                 """
                 UPDATE jobs SET state = 'completed', progress = total,
+                    lease_owner = NULL, lease_expires_at = NULL,
                     updated_at = ?, output_json = ? WHERE job_id = ?
                 """,
-                (updated, output_json, job_id),
+                (_iso(now), output_json, job_id),
             )
             self._event(
                 db,
@@ -283,22 +327,18 @@ class JobQueue:
         retry: bool = True,
         now: float | None = None,
     ) -> None:
-        """Mark a job as failed. If retry is True and attempts remain, re-queue."""
-        timestamp = now_epoch() if now is None else now
-        updated = now_iso() if now is None else datetime.fromtimestamp(timestamp, UTC).isoformat()
+        """Mark a job as failed, re-queueing it while attempts remain."""
+        updated = _iso(now)
         with _connect(self.db_path) as db:
             db.execute("BEGIN IMMEDIATE")
-            row = db.execute(
-                "SELECT state, progress, total FROM jobs WHERE job_id = ?", (job_id,)
-            ).fetchone()
-            if row is None or row["state"] != "running":
-                raise JobQueueError(f"Job {job_id} is not in running state.")
-            progress = row["progress"]
-            if retry and progress + 1 < MAX_ATTEMPTS:
+            row = _require_running(db, job_id, worker_id)
+            attempts = int(row["attempts"])
+            if retry and attempts < MAX_ATTEMPTS:
                 db.execute(
                     """
-                    UPDATE jobs SET state = 'queued', progress = progress + 1,
-                        updated_at = ?, error = ? WHERE job_id = ?
+                    UPDATE jobs SET state = 'queued', lease_owner = NULL,
+                        lease_expires_at = NULL, updated_at = ?, error = ?
+                    WHERE job_id = ?
                     """,
                     (updated, error, job_id),
                 )
@@ -306,12 +346,14 @@ class JobQueue:
                     db,
                     job_id,
                     "job_failed_retry",
-                    {"worker": worker_id, "attempt": progress + 1, "error": error},
+                    {"worker": worker_id, "attempt": attempts, "error": error},
                 )
             else:
                 db.execute(
                     """
-                    UPDATE jobs SET state = 'failed', updated_at = ?, error = ? WHERE job_id = ?
+                    UPDATE jobs SET state = 'failed', lease_owner = NULL,
+                        lease_expires_at = NULL, updated_at = ?, error = ?
+                    WHERE job_id = ?
                     """,
                     (updated, error, job_id),
                 )
@@ -319,32 +361,41 @@ class JobQueue:
                     db,
                     job_id,
                     "job_failed",
-                    {"worker": worker_id, "error": error},
+                    {"worker": worker_id, "attempts": attempts, "error": error},
                 )
 
     def request_cancel(self, job_id: str, now: float | None = None) -> None:
-        """Request cancellation of a job. Running jobs are cancelled after the current task."""
-        timestamp = now_epoch() if now is None else now
-        updated = now_iso() if now is None else datetime.fromtimestamp(timestamp, UTC).isoformat()
+        """Request cancellation of a job.
+
+        A queued job is cancelled immediately. A running job keeps its state and
+        records the request, which the owning caller honours at its next task
+        boundary because the call already in flight cannot be interrupted.
+        """
+        updated = _iso(now)
         with _connect(self.db_path) as db:
             db.execute("BEGIN IMMEDIATE")
-            db.execute(
-                "UPDATE jobs SET cancel_requested = 1, updated_at = ? WHERE job_id = ?",
-                (updated, job_id),
-            )
             row = db.execute(
                 "SELECT state FROM jobs WHERE job_id = ?", (job_id,)
             ).fetchone()
             if row is None:
                 raise JobQueueError(f"Job {job_id} does not exist.")
-            if row["state"] != "running":
-                db.execute(
-                    "UPDATE jobs SET state = 'cancelled', updated_at = ? WHERE job_id = ?",
-                    (updated, job_id),
-                )
-                self._event(db, job_id, "job_cancelled")
-            else:
+            if row["state"] in ("completed", "failed", "cancelled"):
+                return
+            db.execute(
+                "UPDATE jobs SET cancel_requested = 1, updated_at = ? WHERE job_id = ?",
+                (updated, job_id),
+            )
+            if row["state"] == "running":
                 self._event(db, job_id, "cancel_requested")
+                return
+            db.execute(
+                """
+                UPDATE jobs SET state = 'cancelled', lease_owner = NULL,
+                    lease_expires_at = NULL, updated_at = ? WHERE job_id = ?
+                """,
+                (updated, job_id),
+            )
+            self._event(db, job_id, "job_cancelled")
 
     def snapshot(self, job_id: str) -> dict[str, Any]:
         """Return the full job state including events."""
@@ -374,16 +425,18 @@ class JobQueue:
     def list_for_project(
         self, project_id: str, limit: int = 50, offset: int = 0
     ) -> list[dict[str, Any]]:
-        """List jobs for a project, most recent first."""
+        """List jobs for a project, most recent first, with a bounded page size."""
+        page_size = max(1, min(int(limit), MAX_LIST_LIMIT))
+        skip = max(0, int(offset))
         with _connect(self.db_path) as db:
             rows = db.execute(
                 """
-                SELECT job_id, project_id, operation, state, progress, total,
+                SELECT job_id, project_id, operation, state, attempts, progress, total,
                     created_at, updated_at, error
                 FROM jobs WHERE project_id = ?
-                ORDER BY updated_at DESC
+                ORDER BY updated_at DESC, rowid DESC
                 LIMIT ? OFFSET ?
                 """,
-                (project_id, limit, offset),
+                (project_id, page_size, skip),
             ).fetchall()
         return [dict(row) for row in rows]

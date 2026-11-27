@@ -11,10 +11,10 @@ import zipfile
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Annotated, Any, Literal
 
-from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -32,13 +32,14 @@ from app.character_builder import (
     get_model_spec,
 )
 from app.engine import (
+    MAX_TIMEOUT_SECONDS,
     EngineError,
     EnginePathError,
     EngineTimeoutError,
     EngineUnavailableError,
     GodotEngineAdapter,
 )
-from app.job_queue import JobQueue, JobQueueError
+from app.job_queue import MAX_LIST_LIMIT, JobQueue, JobQueueError
 from app.render import (
     RenderDependencyUnavailable,
     RenderExecutionError,
@@ -47,6 +48,7 @@ from app.render import (
 )
 from app.rig_analysis import analyze_rig
 from app.storage import (
+    DOCUMENT_SCHEMA_VERSION,
     LATEST_WORLD_SCHEMA_VERSION,
     default_data_dir,
     make_envelope,
@@ -75,6 +77,26 @@ _JOB_QUEUE: JobQueue | None = None
 _JOB_QUEUE_KEY: tuple[str, str] | None = None
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 _INITIALIZED_DB_KEY: tuple[str, str] | None = None
+# The FastAPI process both enqueues a long operation and executes it, so every
+# in-process claim uses this one worker name.
+JOB_WORKER_ID = "api-server"
+# A portable project package is the project directory zipped as-is, so the import
+# limits are generous but bounded: a hostile package must not exhaust memory or disk.
+MAX_PROJECT_IMPORT_BYTES = 256 * 1024 * 1024
+# A deflated archive can declare a tiny body and still expand enormously, so the
+# uncompressed total is bounded separately from the upload size.
+MAX_PROJECT_IMPORT_UNCOMPRESSED_BYTES = 512 * 1024 * 1024
+MAX_PROJECT_IMPORT_ENTRIES = 20_000
+# The API process both enqueues each long operation and executes it in-process, so
+# the job is claimed for the whole budget of that operation instead of the queue's
+# short default lease; otherwise a second claim could reclaim work still running.
+JOB_LEASE_SECONDS = {
+    "episode_production": MAX_TIMEOUT_SECONDS,
+    "world_export": MAX_TIMEOUT_SECONDS,
+    "episode_audio": 3600.0,
+    "episode_render": 4 * 3600.0,
+}
+DEFAULT_JOB_LEASE_SECONDS = 3600.0
 
 
 def connect_db():
@@ -93,6 +115,36 @@ def get_job_queue() -> JobQueue:
 
 def get_engine_adapter() -> GodotEngineAdapter:
     return GodotEngineAdapter(data_dir=DATA_DIR)
+
+
+def _record_job_failure(queue: JobQueue, job_id: str, error: str) -> None:
+    """Record a job failure without masking the error the request already raised."""
+    try:
+        queue.fail(job_id, worker_id=JOB_WORKER_ID, error=error, retry=False)
+    except JobQueueError as queue_error:
+        print(f"[job] could not record failure for {job_id}: {queue_error}", flush=True)
+
+
+def _record_job_success(queue: JobQueue, job_id: str, output: dict[str, Any]) -> None:
+    """Record a completed job; bookkeeping must never fail work that already finished."""
+    try:
+        queue.complete(job_id, worker_id=JOB_WORKER_ID, output=output)
+    except JobQueueError as queue_error:
+        print(f"[job] could not record completion for {job_id}: {queue_error}", flush=True)
+
+
+def _claim_job(queue: JobQueue, project_id: str, operation: str) -> str:
+    """Enqueue and claim a job for one in-process operation, returning its id."""
+    job_id = queue.enqueue(project_id, operation, total_units=1)
+    lease = JOB_LEASE_SECONDS.get(operation, DEFAULT_JOB_LEASE_SECONDS)
+    if queue.claim_specific(
+        job_id, worker_id=JOB_WORKER_ID, lease_seconds=lease
+    ) is None:
+        _record_job_failure(queue, job_id, f"The {operation} job could not be claimed.")
+        raise HTTPException(
+            status_code=503, detail=f"The {operation} job could not be claimed."
+        )
+    return job_id
 
 
 def initialize_database() -> None:
@@ -901,12 +953,9 @@ def build_episode_production(project_id: str) -> dict[str, Any]:
         dialogue_line = scene["dialogue"][line_index - 1]
         dialogue_line["audio_envelope"] = track["mouth_envelope"]
         dialogue_line["audio_duration_seconds"] = track["duration_seconds"]
+    queue = get_job_queue()
+    job_id = _claim_job(queue, project_id, "episode_production")
     try:
-        queue = get_job_queue()
-        job_id = queue.enqueue(project_id, "episode_production", total_units=1)
-        claimed = queue.claim_specific(job_id, worker_id="api-server")
-        if claimed is None:
-            raise JobQueueError(f"Could not claim job {job_id}")
         result = get_engine_adapter().export_episode_scenes(
             episode_for_render,
             world_scene,
@@ -916,42 +965,29 @@ def build_episode_production(project_id: str) -> dict[str, Any]:
         )
     except EngineUnavailableError as error:
         shutil.rmtree(output_directory.parent, ignore_errors=True)
-        queue.fail(job_id, worker_id="api-server", error=str(error), retry=False)
+        _record_job_failure(queue, job_id, str(error))
         raise HTTPException(status_code=503, detail=str(error)) from error
     except EngineTimeoutError as error:
         shutil.rmtree(output_directory.parent, ignore_errors=True)
-        queue.fail(job_id, worker_id="api-server", error=str(error), retry=False)
+        _record_job_failure(queue, job_id, str(error))
         raise HTTPException(status_code=504, detail=str(error)) from error
     except EnginePathError as error:
         shutil.rmtree(output_directory.parent, ignore_errors=True)
-        queue.fail(job_id, worker_id="api-server", error=str(error), retry=False)
+        _record_job_failure(queue, job_id, str(error))
         raise HTTPException(status_code=422, detail=str(error)) from error
     except EngineError as error:
         shutil.rmtree(output_directory.parent, ignore_errors=True)
-        queue.fail(job_id, worker_id="api-server", error=str(error), retry=False)
+        _record_job_failure(queue, job_id, str(error))
         raise HTTPException(
             status_code=502,
             detail=f"Episode scene generation failed: {error}",
         ) from error
     if not result.get("ok") or len(result.get("scenes", [])) != len(plan["scenes"]):
         shutil.rmtree(output_directory.parent, ignore_errors=True)
-        queue.fail(
-            job_id,
-            worker_id="api-server",
-            error="Godot did not generate every episode scene.",
-            retry=False,
-        )
+        _record_job_failure(queue, job_id, "Godot did not generate every episode scene.")
         raise HTTPException(
             status_code=502, detail="Godot did not generate every episode scene."
         )
-    queue.complete(
-        job_id,
-        worker_id="api-server",
-        output={
-            "scene_count": len(result.get("scenes", [])),
-            "status": "ok",
-        },
-    )
     project_root = project_directory(DATA_DIR, project_id).resolve()
     scenes = []
     for item in result["scenes"]:
@@ -1000,6 +1036,15 @@ def build_episode_production(project_id: str) -> dict[str, Any]:
         upsert_document_index(
             connection, project_id, manifest, relative_manifest, digest
         )
+    _record_job_success(
+        queue,
+        job_id,
+        {
+            "build_id": build_id,
+            "scene_count": len(scenes),
+            "status": "ok",
+        },
+    )
     return {"build_id": build_id, **data}
 
 
@@ -1078,12 +1123,9 @@ def render_episode(project_id: str) -> dict[str, Any]:
     relative_output = f"assets/episodes/{episode_id}/renders/{render_id}"
     output_directory = resolve_project_relative(DATA_DIR, project_id, relative_output)
     output_path = output_directory / "episode.mp4"
+    queue = get_job_queue()
+    job_id = _claim_job(queue, project_id, "episode_render")
     try:
-        queue = get_job_queue()
-        job_id = queue.enqueue(project_id, "episode_render", total_units=1)
-        claimed = queue.claim_specific(job_id, worker_id="api-server")
-        if claimed is None:
-            raise JobQueueError(f"Could not claim job {job_id}")
         result = render_episode_video(
             scene_paths,
             scene_durations,
@@ -1095,27 +1137,16 @@ def render_episode(project_id: str) -> dict[str, Any]:
         )
     except RenderDependencyUnavailable as error:
         shutil.rmtree(output_directory, ignore_errors=True)
-        queue.fail(job_id, worker_id="api-server", error=str(error), retry=False)
+        _record_job_failure(queue, job_id, str(error))
         raise HTTPException(status_code=503, detail=str(error)) from error
     except RenderPathError as error:
         shutil.rmtree(output_directory, ignore_errors=True)
-        queue.fail(job_id, worker_id="api-server", error=str(error), retry=False)
+        _record_job_failure(queue, job_id, str(error))
         raise HTTPException(status_code=422, detail=str(error)) from error
     except RenderExecutionError as error:
         shutil.rmtree(output_directory, ignore_errors=True)
-        queue.fail(job_id, worker_id="api-server", error=str(error), retry=False)
+        _record_job_failure(queue, job_id, str(error))
         raise HTTPException(status_code=502, detail=str(error)) from error
-    queue.complete(
-        job_id,
-        worker_id="api-server",
-        output={
-            "duration_seconds": result.get("duration_seconds", 0),
-            "fps": result.get("fps", 0),
-            "width": result.get("width", 0),
-            "height": result.get("height", 0),
-            "status": "ok",
-        },
-    )
     video_relative = str(
         Path(result["video_path"]).resolve().relative_to(project_root.resolve())
     ).replace("\\", "/")
@@ -1142,6 +1173,18 @@ def render_episode(project_id: str) -> dict[str, Any]:
         upsert_document_index(
             connection, project_id, manifest, relative_manifest, digest
         )
+    _record_job_success(
+        queue,
+        job_id,
+        {
+            "render_id": render_id,
+            "duration_seconds": result["duration_seconds"],
+            "fps": result["fps"],
+            "width": result["width"],
+            "height": result["height"],
+            "status": "ok",
+        },
+    )
     return {
         "build_id": render_id,
         **data,
@@ -1151,11 +1194,18 @@ def render_episode(project_id: str) -> dict[str, Any]:
 
 @app.get("/api/projects/{project_id}/jobs")
 def list_project_jobs(project_id: str, limit: int = 50, offset: int = 0):
-    """List jobs for a project, most recent first."""
+    """List jobs for a project, most recent first, with a bounded page size."""
     initialize_database()
-    queue = get_job_queue()
-    jobs = queue.list_for_project(project_id, limit=limit, offset=offset)
-    return {"project_id": project_id, "jobs": jobs, "limit": limit, "offset": offset}
+    with connect_db() as connection:
+        project = connection.execute(
+            "SELECT id FROM projects WHERE id = ?", (project_id,)
+        ).fetchone()
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    page_size = max(1, min(limit, MAX_LIST_LIMIT))
+    skip = max(0, offset)
+    jobs = get_job_queue().list_for_project(project_id, limit=page_size, offset=skip)
+    return {"project_id": project_id, "jobs": jobs, "limit": page_size, "offset": skip}
 
 
 @app.get("/api/projects/{project_id}/jobs/{job_id}")
@@ -1176,6 +1226,7 @@ def get_project_job(project_id: str, job_id: str):
         "state": job["state"],
         "progress": job["progress"],
         "total": job["total"],
+        "attempts": job["attempts"],
         "cancel_requested": bool(job["cancel_requested"]),
         "error": job["error"],
         "created_at": job["created_at"],
@@ -1204,10 +1255,14 @@ def cancel_project_job(project_id: str, job_id: str):
             "cancel_requested": bool(job["cancel_requested"]),
         }
     queue.request_cancel(job_id)
+    # Report the state the queue actually holds: a queued job is cancelled at once,
+    # a running job records the request and stays running until its caller reaches
+    # the next task boundary.
+    current = queue.snapshot(job_id)["job"]
     return {
         "job_id": job_id,
-        "state": "cancelling",
-        "cancel_requested": True,
+        "state": current["state"],
+        "cancel_requested": bool(current["cancel_requested"]),
     }
 
 
@@ -1249,12 +1304,9 @@ def build_episode_audio(project_id: str) -> dict[str, Any]:
     build_id = str(uuid.uuid4())
     relative_output = f"assets/episodes/{episode_id}/audio/builds/{build_id}"
     output_directory = resolve_project_relative(DATA_DIR, project_id, relative_output)
+    queue = get_job_queue()
+    job_id = _claim_job(queue, project_id, "episode_audio")
     try:
-        queue = get_job_queue()
-        job_id = queue.enqueue(project_id, "episode_audio", total_units=1)
-        claimed = queue.claim_specific(job_id, worker_id="api-server")
-        if claimed is None:
-            raise JobQueueError(f"Could not claim job {job_id}")
         result = generate_episode_audio(
             plan,
             output_directory,
@@ -1262,21 +1314,12 @@ def build_episode_audio(project_id: str) -> dict[str, Any]:
         )
     except SpeechEngineUnavailable as error:
         shutil.rmtree(output_directory, ignore_errors=True)
-        queue.fail(job_id, worker_id="api-server", error=str(error), retry=False)
+        _record_job_failure(queue, job_id, str(error))
         raise HTTPException(status_code=503, detail=str(error)) from error
     except SpeechGenerationError as error:
         shutil.rmtree(output_directory, ignore_errors=True)
-        queue.fail(job_id, worker_id="api-server", error=str(error), retry=False)
+        _record_job_failure(queue, job_id, str(error))
         raise HTTPException(status_code=422, detail=str(error)) from error
-    queue.complete(
-        job_id,
-        worker_id="api-server",
-        output={
-            "duration_seconds": result.get("duration_seconds", 0),
-            "dialogue_line_count": result.get("dialogue_line_count", 0),
-            "status": "ok",
-        },
-    )
     project_root = project_directory(DATA_DIR, project_id).resolve()
     audio_relative = str(
         Path(result["audio_path"]).resolve().relative_to(project_root)
@@ -1313,6 +1356,16 @@ def build_episode_audio(project_id: str) -> dict[str, Any]:
         upsert_document_index(
             connection, project_id, manifest, relative_manifest, digest
         )
+    _record_job_success(
+        queue,
+        job_id,
+        {
+            "build_id": build_id,
+            "duration_seconds": result["duration_seconds"],
+            "dialogue_line_count": result["dialogue_line_count"],
+            "status": "ok",
+        },
+    )
     return {
         "build_id": build_id,
         **data,
@@ -1513,7 +1566,9 @@ def _project_worlds(project_id: str) -> list[dict[str, Any]]:
     for row in rows:
         path = resolve_project_relative(DATA_DIR, project_id, row["relative_path"])
         if path.is_file():
-            document = read_json(path)
+            # Every read path migrates, so one page of the world list never shows
+            # a shape the detail route would have upgraded.
+            document = migrate_world_document(read_json(path))
             worlds.append({
                 "id": document["id"],
                 "revision": document["revision"],
@@ -1640,10 +1695,13 @@ def create_project_world(project_id: str, payload: WorldPlanInput) -> dict[str, 
         ).fetchone()
         if project is None:
             raise HTTPException(status_code=404, detail="Project not found.")
-        document = make_envelope(
-            "world", world_id, data, project["created_at"], now,
-            schema_version=LATEST_WORLD_SCHEMA_VERSION,
+        document = migrate_world_document(
+            make_envelope(
+                "world", world_id, data, project["created_at"], now,
+                schema_version=LATEST_WORLD_SCHEMA_VERSION,
+            )
         )
+        data = document["data"]
         relative_path = f"worlds/{world_id}.json"
         digest = write_json_atomic(
             resolve_project_relative(DATA_DIR, project_id, relative_path), document
@@ -1710,6 +1768,10 @@ def update_project_world(
         document["data"] = data
         document["revision"] = int(document.get("revision", 1)) + 1
         document["updated_at"] = now
+        # A payload that omits optional object fields must not silently drop the
+        # defaults this document's schema version requires.
+        document = migrate_world_document(document)
+        data = document["data"]
         digest = write_json_atomic(path, document)
         upsert_document_index(
             connection, project_id, document, indexed["relative_path"], digest
@@ -1824,6 +1886,7 @@ def _save_vehicle_world(
     document["data"] = world_document.get("data", document.get("data", {}))
     document["revision"] = int(document.get("revision", 1)) + 1
     document["updated_at"] = now
+    document = migrate_world_document(document)
     digest = write_json_atomic(path, document)
     upsert_document_index(connection, project_id, document, indexed["relative_path"], digest)
     return document
@@ -1942,34 +2005,31 @@ def export_project_world(project_id: str, world_id: str) -> dict[str, Any]:
     scene_path = resolve_project_relative(DATA_DIR, project_id, relative_scene)
     preview_path = resolve_project_relative(DATA_DIR, project_id, relative_preview)
     project_root = project_directory(DATA_DIR, project_id)
+    queue = get_job_queue()
+    job_id = _claim_job(queue, project_id, "world_export")
     try:
-        queue = get_job_queue()
-        job_id = queue.enqueue(project_id, "world_export", total_units=1)
-        claimed = queue.claim_specific(job_id, worker_id="api-server")
-        if claimed is None:
-            raise JobQueueError(f"Could not claim job {job_id}")
         result = get_engine_adapter().export_world_scene(
             document["data"], scene_path, allowed_root=project_root
         )
     except EngineUnavailableError as error:
         scene_path.unlink(missing_ok=True)
         preview_path.unlink(missing_ok=True)
-        queue.fail(job_id, worker_id="api-server", error=str(error), retry=False)
+        _record_job_failure(queue, job_id, str(error))
         raise HTTPException(status_code=503, detail=str(error)) from error
     except EngineTimeoutError as error:
         scene_path.unlink(missing_ok=True)
         preview_path.unlink(missing_ok=True)
-        queue.fail(job_id, worker_id="api-server", error=str(error), retry=False)
+        _record_job_failure(queue, job_id, str(error))
         raise HTTPException(status_code=504, detail=str(error)) from error
     except EnginePathError as error:
         scene_path.unlink(missing_ok=True)
         preview_path.unlink(missing_ok=True)
-        queue.fail(job_id, worker_id="api-server", error=str(error), retry=False)
+        _record_job_failure(queue, job_id, str(error))
         raise HTTPException(status_code=422, detail=str(error)) from error
     except EngineError as error:
         scene_path.unlink(missing_ok=True)
         preview_path.unlink(missing_ok=True)
-        queue.fail(job_id, worker_id="api-server", error=str(error), retry=False)
+        _record_job_failure(queue, job_id, str(error))
         raise HTTPException(
             status_code=502, detail=f"World scene export failed: {error}"
         ) from error
@@ -1980,29 +2040,13 @@ def export_project_world(project_id: str, world_id: str) -> dict[str, Any]:
     ):
         scene_path.unlink(missing_ok=True)
         preview_path.unlink(missing_ok=True)
-        queue.fail(
-            job_id,
-            worker_id="api-server",
-            error="Godot did not produce both the scene and its browser preview.",
-            retry=False,
+        _record_job_failure(
+            queue, job_id, "Godot did not produce both the scene and its browser preview."
         )
         raise HTTPException(
             status_code=502,
             detail="Godot did not produce both the scene and its browser preview.",
         )
-    queue.complete(
-        job_id,
-        worker_id="api-server",
-        output={
-            "object_count": int(result.get("object_count", 0)),
-            "theme_prop_count": int(result.get("theme_prop_count", 0)),
-            "scene_reopened": bool(result.get("scene_reopened", False)),
-            "lighting_preset": str(
-                result.get("lighting_preset", document["data"].get("sky", "day"))
-            ),
-            "status": "ok",
-        },
-    )
     now = datetime.now(UTC).isoformat()
     document["data"]["scene_relative_path"] = relative_scene
     document["data"]["preview_relative_path"] = relative_preview
@@ -2019,6 +2063,15 @@ def export_project_world(project_id: str, world_id: str) -> dict[str, Any]:
     with connect_db() as connection:
         upsert_document_index(connection, project_id, document, indexed["relative_path"], digest)
     _sync_world_reference(project_id, document)
+    _record_job_success(
+        queue,
+        job_id,
+        {
+            "world_id": world_id,
+            **document["data"]["scene_export"],
+            "status": "ok",
+        },
+    )
     return {
         "world_id": world_id,
         "scene_relative_path": relative_scene,
@@ -3265,13 +3318,59 @@ def update_project(project_id: str, payload: ProjectUpdate) -> ProjectRecord:
     return _project_record(updated)
 
 
+def _project_package_entries(project_root: Path) -> list[Path]:
+    """Return every file to place in a portable project package, project.json first."""
+    files = [path for path in sorted(project_root.rglob("*")) if path.is_file()]
+    files.sort(key=lambda path: path.relative_to(project_root).as_posix() != "project.json")
+    return files
+
+
+def _safe_package_member(name: str) -> PurePosixPath | None:
+    """Resolve one archive member name, rejecting absolute and traversing paths."""
+    candidate = PurePosixPath(name)
+    if not name or name.startswith("/") or candidate.is_absolute():
+        return None
+    parts = [part for part in candidate.parts if part not in ("", ".")]
+    if not parts or any(part == ".." for part in parts):
+        return None
+    if any(":" in part for part in parts):
+        # A Windows drive letter or an alternate data stream; never a real entry.
+        return None
+    return PurePosixPath(*parts)
+
+
+def _remap_project_package_documents(project_root: Path, old_id: str, new_id: str) -> None:
+    """Repoint every document that records the exporting project id at the new project.
+
+    A package is a snapshot of one project directory, so its world, episode and
+    character documents embed the exporting project's id in asset and preview
+    paths. Left alone, every such URL of the imported project resolves to a
+    directory that does not exist on this machine.
+    """
+    for path in sorted(project_root.rglob("*.json")):
+        relative = path.relative_to(project_root).as_posix()
+        if relative == "project.json":
+            continue
+        try:
+            document = read_json(path)
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(document, dict) or not document.get("document_type"):
+            continue
+        serialized = json.dumps(document, ensure_ascii=False)
+        if old_id not in serialized:
+            continue
+        write_json_atomic(path, json.loads(serialized.replace(old_id, new_id)))
+
+
 @app.get("/api/projects/{project_id}/export")
 def export_project(project_id: str):
     """Export a project as a portable ZIP package.
 
-    The package contains project.json, character profiles, world documents
-    and exported assets. It can be re-imported into any Cartoon Studio
-    instance to reopen and revise the project (PROD-R005).
+    The package is the project directory zipped verbatim: project.json at the
+    root plus the world, episode and character documents and the assets they
+    reference, so another Cartoon Studio instance can reopen and revise the
+    episode (PROD-R005).
     """
     initialize_database()
     with connect_db() as connection:
@@ -3286,10 +3385,8 @@ def export_project(project_id: str):
 
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
-        for file_path in sorted(project_root.rglob("*")):
-            if file_path.is_file():
-                arcname = file_path.relative_to(project_root).as_posix()
-                archive.write(file_path, arcname)
+        for file_path in _project_package_entries(project_root):
+            archive.write(file_path, file_path.relative_to(project_root).as_posix())
     buffer.seek(0)
     return StreamingResponse(
         buffer,
@@ -3301,90 +3398,164 @@ def export_project(project_id: str):
 
 
 @app.post("/api/projects/import", response_model=ProjectRecord, status_code=201)
-def import_project(file: UploadFile = File(...)):
-    """Import a portable project ZIP package.
+async def import_project(request: Request):
+    """Import a portable project ZIP package as a new project.
 
-    The package must contain project.json at its root. A new project is
-    created with a fresh ID, and all package contents are restored under
-    the new project directory (PROD-R005).
+    The request body is the archive itself with ``Content-Type: application/zip``,
+    so the import needs no form parser or multipart dependency. ``project.json``
+    must sit at the package root; every member is path-checked and the archive is
+    size-limited before anything is written, and a rejected member abandons the
+    whole import.
     """
     initialize_database()
-    if not file.filename or not file.filename.endswith(".zip"):
+    declared_length = request.headers.get("content-length", "")
+    if declared_length.isdigit() and int(declared_length) > MAX_PROJECT_IMPORT_BYTES:
         raise HTTPException(
-            status_code=422, detail="Only .zip project packages are accepted."
+            status_code=413, detail="Project package exceeds the 256 MiB import limit."
         )
-    upload_data = file.file.read()
-    with zipfile.ZipFile(io.BytesIO(upload_data)) as archive:
-        names = archive.namelist()
-        if "project.json" not in names:
+    upload_data = await request.body()
+    if not upload_data:
+        raise HTTPException(status_code=422, detail="Project package body is empty.")
+    if len(upload_data) > MAX_PROJECT_IMPORT_BYTES:
+        raise HTTPException(
+            status_code=413, detail="Project package exceeds the 256 MiB import limit."
+        )
+    try:
+        archive = zipfile.ZipFile(io.BytesIO(upload_data))
+    except zipfile.BadZipFile as error:
+        raise HTTPException(
+            status_code=422, detail="Project package is not a valid ZIP archive."
+        ) from error
+    with archive:
+        members: list[tuple[PurePosixPath, zipfile.ZipInfo]] = []
+        seen: set[str] = set()
+        for info in archive.infolist():
+            if info.is_dir():
+                continue
+            safe_name = _safe_package_member(info.filename)
+            if safe_name is None:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Project package contains an unsafe path: {info.filename!r}.",
+                )
+            name = safe_name.as_posix()
+            if name in seen:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Project package contains a duplicate entry: {name!r}.",
+                )
+            seen.add(name)
+            members.append((safe_name, info))
+        if len(members) > MAX_PROJECT_IMPORT_ENTRIES:
+            raise HTTPException(
+                status_code=413, detail="Project package contains too many files."
+            )
+        if sum(info.file_size for _, info in members) > MAX_PROJECT_IMPORT_UNCOMPRESSED_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail="Project package expands beyond the 512 MiB import limit.",
+            )
+        if "project.json" not in seen:
             raise HTTPException(
                 status_code=422,
                 detail="Project package is missing project.json at its root.",
             )
-        project_document = json.loads(archive.read("project.json"))
-        if not isinstance(project_document, dict):
+        try:
+            project_document = json.loads(archive.read("project.json"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as error:
             raise HTTPException(
-                status_code=422, detail="project.json is not a JSON object."
-            )
-        if project_document.get("document_type") != "project":
+                status_code=422, detail="project.json is not valid JSON."
+            ) from error
+        if (
+            not isinstance(project_document, dict)
+            or project_document.get("document_type") != "project"
+            or project_document.get("schema_version") != DOCUMENT_SCHEMA_VERSION
+            or not isinstance(project_document.get("data"), dict)
+            or not isinstance(project_document.get("id"), str)
+            or not project_document["id"]
+        ):
             raise HTTPException(
                 status_code=422,
-                detail="project.json is not a project document.",
+                detail="project.json is not a supported project document.",
             )
-        old_project_id = project_document.get("id")
-        if not old_project_id:
-            raise HTTPException(
-                status_code=422,
-                detail="project.json is missing a project id.",
-            )
+        old_project_id = project_document["id"]
         new_project_id = str(uuid.uuid4())
         new_root = project_directory(DATA_DIR, new_project_id)
-        new_root.mkdir(parents=True, exist_ok=True)
-        for name in names:
-            if name.endswith("/"):
-                continue
-            target = new_root / name
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes(archive.read(name))
-        project_path = new_root / "project.json"
-        document = read_json(project_path)
-        document["id"] = new_project_id
-        document["data"]["id"] = new_project_id
-        now = datetime.now(UTC).isoformat()
-        document["updated_at"] = now
-        document["data"]["updated_at"] = now
-        document["revision"] = int(document.get("revision", 1)) + 1
-        digest = write_json_atomic(project_path, document)
-        project_name = str(document["data"].get("name", "Imported Project"))
-        project_description = str(document["data"].get("description", ""))
-        with connect_db() as connection:
-            connection.execute(
-                """
-                INSERT INTO projects (
-                    id, name, description, created_at, updated_at, metadata_json
-                ) VALUES (?, ?, ?, ?, ?, '{}')
-                """,
-                (
+        try:
+            new_root.mkdir(parents=True, exist_ok=True)
+            resolved_root = new_root.resolve()
+            for safe_name, info in members:
+                target = new_root.joinpath(*safe_name.parts)
+                if resolved_root not in target.resolve().parents:
+                    raise HTTPException(
+                        status_code=422,
+                        detail=f"Project package contains an unsafe path: {info.filename!r}.",
+                    )
+                target.parent.mkdir(parents=True, exist_ok=True)
+                with archive.open(info) as source, target.open("wb") as destination:
+                    written = 0
+                    while True:
+                        chunk = source.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        written += len(chunk)
+                        if written > MAX_PROJECT_IMPORT_UNCOMPRESSED_BYTES:
+                            raise HTTPException(
+                                status_code=413,
+                                detail=(
+                                    "Project package expands beyond the 512 MiB "
+                                    "import limit."
+                                ),
+                            )
+                        destination.write(chunk)
+            _remap_project_package_documents(new_root, old_project_id, new_project_id)
+            project_path = new_root / "project.json"
+            document = read_json(project_path)
+            now = datetime.now(UTC).isoformat()
+            document["id"] = new_project_id
+            document["updated_at"] = now
+            document["revision"] = int(document.get("revision", 1)) + 1
+            created_at = str(document.get("created_at") or now)
+            project_name = str(document["data"].get("name") or "Imported Project")
+            project_description = str(document["data"].get("description") or "")
+            digest = write_json_atomic(project_path, document)
+            with connect_db() as connection:
+                connection.execute(
+                    """
+                    INSERT INTO projects (
+                        id, name, description, created_at, updated_at, metadata_json
+                    ) VALUES (?, ?, ?, ?, ?, '{}')
+                    """,
+                    (new_project_id, project_name, project_description, created_at, now),
+                )
+                upsert_document_index(
+                    connection,
                     new_project_id,
-                    project_name,
-                    project_description,
-                    document.get("created_at", now),
-                    now,
-                ),
-            )
-            upsert_document_index(
-                connection,
-                new_project_id,
-                document,
-                "project.json",
-                digest,
-            )
-        reconcile_project_files(DATA_DIR, DB_PATH)
+                    document,
+                    "project.json",
+                    digest,
+                )
+            reconcile_project_files(DATA_DIR, DB_PATH)
+        except BaseException:
+            shutil.rmtree(new_root, ignore_errors=True)
+            # A failure after the index write must not leave a project row that
+            # points at a directory this import just removed.
+            try:
+                with connect_db() as connection:
+                    connection.execute(
+                        "DELETE FROM projects WHERE id = ?", (new_project_id,)
+                    )
+            except Exception as cleanup_error:  # cleanup must not mask the real error
+                print(
+                    f"[import] could not remove project {new_project_id}: {cleanup_error}",
+                    flush=True,
+                )
+            raise
     return ProjectRecord(
         id=new_project_id,
         name=project_name,
         description=project_description,
-        created_at=document.get("created_at", now),
+        created_at=created_at,
         updated_at=now,
         metadata={},
     )

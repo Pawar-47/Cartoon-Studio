@@ -1,4 +1,17 @@
-# Test Report — 2026-11-27
+# Test Report — 2026-11-28
+
+## Main work-in-progress audit — 2026-11-28
+
+- **Failure:** Windows CI on `main` at `201c6dd` stopped during collection with `RuntimeError: Form data requires "python-multipart" to be installed` in six test modules. The new project-import endpoint used `UploadFile = File(...)`; `python-multipart` is neither in `pyproject.toml` nor in `requirements.lock`, and the lock check would have rejected adding it without regenerating the lock.
+- **Change 1 — import without a form dependency.** `POST /api/projects/import` takes the ZIP as the request body. It rejects absolute, traversal and drive-letter members, duplicate members, uploads over 256 MiB and packages whose uncompressed total exceeds 512 MiB, and it removes the partly written project directory when any member is rejected.
+- **Change 2 — imported identity.** World, episode and character documents are rewritten from the exporting project id to the imported one; without that every imported asset and preview URL pointed at a directory that does not exist.
+- **Change 3 — queue correctness.** Retries now count whole attempts (`jobs.attempts`, schema migration 4) instead of incrementing `progress`, which previously corrupted the progress a client polls. A claim records `lease_owner` and `lease_expires_at`; the next claim reclaims a job whose lease expired, and `complete`/`fail`/`heartbeat` reject a worker that no longer owns the job. The routes claim their job for the whole budget of the operation (180s for scene generation and world export, an hour for audio, four hours for a render) rather than the queue's 120s default, so a long operation is never reclaimed from the process actually running it.
+- **Change 4 — one schema, one owner.** `JobQueue` no longer creates its own copy of the `jobs`/`job_events` tables; migrations 3 and 4 in `app.storage` are the only definitions. The missing `job_events(job_id, event_id)` index was added.
+- **Change 5 — bookkeeping cannot mask errors.** The routes record job failures through a helper that logs instead of raising a second exception, and a job is completed only after its documents are persisted.
+- **Change 6 — world document shape.** `migrate_world_document` runs every registered step and then fills the required object defaults; the world list, detail, create, update, vehicle and scene-export paths all go through it.
+- **Tests:** import tests rewritten for the body-based contract (round-trip, non-ZIP, missing project.json, path traversal), two job API tests, a world-defaults create/update test, and queue tests for attempt counting, lease ownership, lease reclaim and heartbeat. The legacy-migration test now expects schema version 4.
+- **Result:** awaiting the next GitHub Actions run on `main`. No local pytest run was possible in this batch (no Godot runtime, no Windows host), so nothing is claimed as passing.
+- **Not claimed:** no visual browser acceptance, target-PC benchmark, installer rebuild or full episode render was performed in this batch.
 
 ## 2026-11-27 — Main CI repair: generated face surface marker
 

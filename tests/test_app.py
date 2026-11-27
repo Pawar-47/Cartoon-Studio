@@ -919,7 +919,8 @@ def test_project_import_round_trip(tmp_path, monkeypatch):
 
     imported = client.post(
         "/api/projects/import",
-        files={"file": ("project.zip", exported.content, "application/zip")},
+        content=exported.content,
+        headers={"Content-Type": "application/zip"},
     )
     assert imported.status_code == 201
     new_project_id = imported.json()["id"]
@@ -927,11 +928,18 @@ def test_project_import_round_trip(tmp_path, monkeypatch):
     assert imported.json()["name"] == "Original"
     assert imported.json()["description"] == "Original desc"
 
-    # Verify the imported project has the world
+    # Verify the imported project has the world, and that the world document was
+    # repointed at the imported project rather than the exporting one.
     imported_worlds = client.get(f"/api/projects/{new_project_id}/worlds")
     assert imported_worlds.status_code == 200
     world_ids = [w["id"] for w in imported_worlds.json()]
     assert world_id in world_ids
+    imported_world = client.get(f"/api/projects/{new_project_id}/worlds/{world_id}")
+    assert imported_world.status_code == 200
+    imported_world_path = (
+        import_tmp / "projects" / new_project_id / "worlds" / f"{world_id}.json"
+    )
+    assert project_id not in imported_world_path.read_text(encoding="utf-8")
 
 
 def test_project_import_rejects_non_zip(tmp_path, monkeypatch):
@@ -942,7 +950,8 @@ def test_project_import_rejects_non_zip(tmp_path, monkeypatch):
 
     response = client.post(
         "/api/projects/import",
-        files={"file": ("notazip.txt", b"not a zip file", "text/plain")},
+        content=b"not a zip file",
+        headers={"Content-Type": "application/zip"},
     )
     assert response.status_code == 422
 
@@ -962,10 +971,41 @@ def test_project_import_rejects_missing_project_json(tmp_path, monkeypatch):
 
     response = client.post(
         "/api/projects/import",
-        files={"file": ("bad.zip", buffer.read(), "application/zip")},
+        content=buffer.read(),
+        headers={"Content-Type": "application/zip"},
     )
     assert response.status_code == 422
     assert "project.json" in response.json()["detail"]
+
+
+def test_project_import_rejects_path_traversal(tmp_path, monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "badimport3.sqlite3")
+    created = client.post("/api/projects", json={"name": "Traversal Project"})
+    project_id = created.json()["id"]
+    project_root = tmp_path / "projects" / project_id
+    project_document = json.loads(
+        (project_root / "project.json").read_text(encoding="utf-8")
+    )
+
+    import zipfile
+
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("project.json", json.dumps(project_document))
+        archive.writestr("../escaped.txt", "should never be written")
+    buffer.seek(0)
+
+    response = client.post(
+        "/api/projects/import",
+        content=buffer.read(),
+        headers={"Content-Type": "application/zip"},
+    )
+    assert response.status_code == 422
+    assert "unsafe path" in response.json()["detail"]
+    assert not (tmp_path / "projects" / "escaped.txt").exists()
 
 
 def test_story_plan_is_saved_as_portable_episode_document(tmp_path, monkeypatch):
@@ -1064,7 +1104,7 @@ def test_legacy_database_migrates_and_preserves_project_and_story(tmp_path, monk
         migrated_story = connection.execute(
             "SELECT plan_json FROM story_plans WHERE project_id = ?", (project_id,)
         ).fetchone()[0]
-    assert versions == 3
+    assert versions == 4
     assert preserved == "Legacy Project"
     assert json.loads(migrated_story)["title"] == "Market Mix-up"
     project_file = tmp_path / "projects" / project_id / "project.json"
@@ -1111,6 +1151,105 @@ def test_database_index_rebuilds_from_portable_project_and_episode_files(tmp_pat
         assert connection.execute("SELECT COUNT(*) FROM projects").fetchone()[0] == 1
         assert connection.execute("SELECT COUNT(*) FROM project_documents").fetchone()[0] == 2
         assert connection.execute("SELECT COUNT(*) FROM story_plans").fetchone()[0] == 1
+
+
+def test_world_job_endpoints_report_and_cancel_queued_work(tmp_path, monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "jobs.sqlite3")
+    monkeypatch.setattr(main, "_INITIALIZED_DB_KEY", None)
+    monkeypatch.setattr(main, "_JOB_QUEUE", None)
+    monkeypatch.setattr(main, "_JOB_QUEUE_KEY", None)
+    project = client.post("/api/projects", json={"name": "Job Project"})
+    project_id = project.json()["id"]
+    other_project = client.post("/api/projects", json={"name": "Other Jobs"})
+
+    queue = main.get_job_queue()
+    job_id = queue.enqueue(project_id, "episode_production", total_units=1)
+
+    listed = client.get(f"/api/projects/{project_id}/jobs")
+    assert listed.status_code == 200
+    assert [job["job_id"] for job in listed.json()["jobs"]] == [job_id]
+
+    opened = client.get(f"/api/projects/{project_id}/jobs/{job_id}")
+    assert opened.status_code == 200
+    assert opened.json()["state"] == "queued"
+    assert opened.json()["events"][0]["event_type"] == "job_queued"
+
+    # A job is not visible through another project.
+    assert client.get(
+        f"/api/projects/{other_project.json()['id']}/jobs/{job_id}"
+    ).status_code == 404
+
+    cancelled = client.post(f"/api/projects/{project_id}/jobs/{job_id}/cancel")
+    assert cancelled.status_code == 200
+    assert cancelled.json()["state"] == "cancelled"
+    assert cancelled.json()["cancel_requested"] is True
+
+    # Cancelling an already-cancelled job is a no-op that still reports the truth.
+    again = client.post(f"/api/projects/{project_id}/jobs/{job_id}/cancel")
+    assert again.status_code == 200
+    assert again.json()["state"] == "cancelled"
+
+    assert client.get(
+        f"/api/projects/{project_id}/jobs/00000000-0000-0000-0000-000000000000"
+    ).status_code == 404
+
+
+def test_job_list_rejects_unknown_project(tmp_path, monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "jobs-missing.sqlite3")
+    monkeypatch.setattr(main, "_INITIALIZED_DB_KEY", None)
+    missing = "0" * 36
+    assert client.get(f"/api/projects/{missing}/jobs").status_code == 404
+
+
+def test_world_object_defaults_survive_create_and_update(tmp_path, monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "world-defaults.sqlite3")
+    monkeypatch.setattr(main, "_INITIALIZED_DB_KEY", None)
+    project = client.post("/api/projects", json={"name": "World Defaults"})
+    project_id = project.json()["id"]
+    world = client.post(
+        f"/api/projects/{project_id}/worlds",
+        json={
+            "name": "Defaults Town",
+            "objects": [
+                {"id": "obj-1", "kind": "tree", "label": "Tree", "x": 4, "y": 6},
+            ],
+        },
+    )
+    assert world.status_code == 201
+    # A freshly created world carries the same object defaults as a migrated one.
+    assert world.json()["objects"][0]["location_kind"] == "generic"
+
+    world_id = world.json()["id"]
+    updated = client.put(
+        f"/api/projects/{project_id}/worlds/{world_id}",
+        json={
+            "name": "Defaults Town Updated",
+            "objects": [
+                {"id": "obj-1", "kind": "tree", "label": "Tree", "x": 5, "y": 7},
+            ],
+        },
+    )
+    assert updated.status_code == 200
+    reopened = client.get(f"/api/projects/{project_id}/worlds/{world_id}")
+    assert reopened.status_code == 200
+    assert reopened.json()["objects"][0]["location_kind"] == "generic"
+    document = json.loads(
+        (tmp_path / "projects" / project_id / "worlds" / f"{world_id}.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert document["schema_version"] == "1.0.1"
+    assert document["data"]["objects"][0]["location_kind"] == "generic"
+
 
 def test_episode_can_be_bound_to_an_exported_world_in_its_project(tmp_path, monkeypatch):
     from app import main

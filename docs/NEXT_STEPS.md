@@ -13,17 +13,17 @@ Phase 3 — World Builder is now ACTIVE per user direction. Persistent/editable 
 
 ## Completed batches
 
-### Job reliability queue — DONE
-Production SQLite job queue (`app/job_queue.py`) with bounded retries (MAX_ATTEMPTS=3), durable event records, lease-based claiming, cancellation, progress polling, atomic output manifests; schema migration v3 added job tables; production/audio/render/world-export endpoints wired to queue; `/jobs`, `/jobs/{id}`, `/jobs/{id}/cancel` API endpoints added; 11 unit tests. CI green.
+### Job reliability queue — IN PROGRESS
+Production SQLite job queue (`app/job_queue.py`) with bounded retries counted in whole attempts (MAX_ATTEMPTS=3), durable event records, lease-based claiming with expiry-based reclaim, cancellation requests honoured at task boundaries, progress polling and persisted output; schema migrations 3 and 4 create and extend the job tables; production/audio/render/world-export endpoints wired to the queue and claiming for the budget of their own operation; `/jobs`, `/jobs/{id}`, `/jobs/{id}/cancel` API endpoints. 14 unit tests plus 2 API tests.
 
 ### Canonical world schema migration — DONE
-`LATEST_WORLD_SCHEMA_VERSION = "1.0.1"` in `app/storage.py`; `WORLD_MIGRATIONS` with example 1.0.0→1.0.1 migration; `migrate_world_document()` auto-upgrades world documents on `get_project_world` read; world documents created with latest schema version; 3 unit tests.
+`LATEST_WORLD_SCHEMA_VERSION = "1.0.1"` in `app/storage.py`; `WORLD_MIGRATIONS` with a 1.0.0→1.0.1 migration; `migrate_world_document()` upgrades a document and then fills the required object defaults, and every world read (list, detail) and every write (create, update, vehicle movement/interaction/rig, scene export) passes through it; 3 unit tests plus a create/update defaults test.
 
 ### World export wired to job queue — DONE
-`/api/projects/{project_id}/worlds/{world_id}/export` enqueues a `world_export` job, claims it, runs `export_world_scene`, completes/fails through the queue; `/jobs`, `/jobs/{id}`, `/jobs/{id}/cancel` API endpoints cover world export jobs. World export endpoint test passes with job queue wired.
+`/api/projects/{project_id}/worlds/{world_id}/export` enqueues a `world_export` job, claims it, runs `export_world_scene` and records completion only after the document is persisted; `/jobs`, `/jobs/{id}`, `/jobs/{id}/cancel` API endpoints cover world export jobs.
 
-### Project export/import (PROD-R005) — DONE
-GET /api/projects/{project_id}/export returns a portable ZIP package containing project.json, character profiles, world documents and exported assets. POST /api/projects/import restores a ZIP package as a new project with a fresh ID. 4 unit tests cover export/import round-trip, non-ZIP rejection and missing project.json rejection.
+### Project export/import (PROD-R005) — PARTIAL
+GET /api/projects/{project_id}/export returns a portable ZIP package containing project.json, character profiles, world documents and exported assets. POST /api/projects/import restores the archive as a new project: it takes the raw ZIP body (no multipart dependency), path-checks and size-limits every member, and repoints world/episode/character documents at the new project id. 4 unit tests cover the round-trip and the non-ZIP, missing-project.json and path-traversal rejections. Revising a scene inside the imported project is not yet covered by a test.
 
 ## Phase 3 World Builder batches
 

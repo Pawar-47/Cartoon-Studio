@@ -12,8 +12,10 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-LATEST_SCHEMA_VERSION = 3
+LATEST_SCHEMA_VERSION = 4
 LATEST_WORLD_SCHEMA_VERSION = "1.0.1"
+# Portable envelope version shared by every document type (project, world, episode, character).
+DOCUMENT_SCHEMA_VERSION = "1.0.0"
 
 
 def default_data_dir() -> Path:
@@ -133,12 +135,38 @@ def _migration_3_job_queue_tables(connection: sqlite3.Connection) -> None:
         ON jobs(project_id, state, updated_at)
         """
     )
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_job_events_job
+        ON job_events(job_id, event_id)
+        """
+    )
+
+
+def _migration_4_job_lease_and_attempts(connection: sqlite3.Connection) -> None:
+    """Add the job attempt counter and worker lease columns.
+
+    Migration 3 shipped the queue tables without them, so the retry limit reused
+    the progress column and no lease was recorded.
+    """
+    connection.execute(
+        "ALTER TABLE jobs ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0"
+    )
+    connection.execute("ALTER TABLE jobs ADD COLUMN lease_owner TEXT")
+    connection.execute("ALTER TABLE jobs ADD COLUMN lease_expires_at REAL")
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_jobs_state_lease
+        ON jobs(state, lease_expires_at)
+        """
+    )
 
 
 MIGRATIONS = (
     (1, "legacy_project_tables", _migration_1_legacy_project_tables),
     (2, "portable_document_index", _migration_2_portable_document_index),
     (3, "job_queue_tables", _migration_3_job_queue_tables),
+    (4, "job_lease_and_attempts", _migration_4_job_lease_and_attempts),
 )
 
 
@@ -165,27 +193,47 @@ WORLD_MIGRATIONS = (
     ("1.0.0", "1.0.1", _migration_world_1_0_0_to_1_0_1),
 )
 
+WORLD_MIGRATION_STEPS = {
+    source: (target, migration) for source, target, migration in WORLD_MIGRATIONS
+}
+
+
+def _normalize_world_objects(document: dict[str, Any]) -> dict[str, Any]:
+    """Fill in the world-object defaults every supported world schema requires."""
+    data = document.get("data")
+    if not isinstance(data, dict):
+        return document
+    objects = data.get("objects")
+    if not isinstance(objects, list):
+        return document
+    for obj in objects:
+        if isinstance(obj, dict) and "location_kind" not in obj:
+            obj["location_kind"] = "generic"
+    return document
+
 
 def migrate_world_document(document: dict[str, Any]) -> dict[str, Any]:
-    """Migrate a world document to the latest schema version.
+    """Migrate a world document to the latest schema and normalise its objects.
 
-    Applies migrations in order until the document reaches
-    LATEST_WORLD_SCHEMA_VERSION. Idempotent: documents already at the
-    latest version are returned unchanged.
+    Applies the registered migrations in order until the document reaches
+    LATEST_WORLD_SCHEMA_VERSION and then fills in required defaults, so a world
+    written by an older release and one written now have the same shape.
+    Idempotent: a document already at the latest version only gets the defaults,
+    which is why freshly created worlds are passed through here as well.
     """
+    if not isinstance(document, dict):
+        raise ValueError("World document must be a JSON object.")
     current = str(document.get("schema_version", "1.0.0"))
-    if current == LATEST_WORLD_SCHEMA_VERSION:
-        return document
-    for from_version, to_version, migration in WORLD_MIGRATIONS:
-        if current == from_version:
-            document = migration(document)
-            current = to_version
-            if current == LATEST_WORLD_SCHEMA_VERSION:
-                return document
-    raise ValueError(
-        f"Cannot migrate world document from schema {current} "
-        f"to {LATEST_WORLD_SCHEMA_VERSION}: no migration path found."
-    )
+    while current != LATEST_WORLD_SCHEMA_VERSION:
+        step = WORLD_MIGRATION_STEPS.get(current)
+        if step is None:
+            raise ValueError(
+                f"Cannot migrate world document from schema {current} "
+                f"to {LATEST_WORLD_SCHEMA_VERSION}: no migration path found."
+            )
+        current, migration = step
+        document = migration(document)
+    return _normalize_world_objects(document)
 
 
 
@@ -283,7 +331,7 @@ def make_envelope(
     created_at: str,
     updated_at: str,
     revision: int = 1,
-    schema_version: str = "1.0.0",
+    schema_version: str = DOCUMENT_SCHEMA_VERSION,
 ) -> dict[str, Any]:
     return {
         "schema_version": schema_version,
@@ -478,7 +526,10 @@ def _restore_project_rows_from_documents(connection: sqlite3.Connection, data_di
         expected_root = project_directory(data_dir, str(project_id))
         if expected_root.resolve() != project_path.parent.resolve():
             raise ValueError(f"Project folder and document ID do not match: {project_path}")
-        if document.get("schema_version") != "1.0.0" or document.get("document_type") != "project":
+        if (
+            document.get("schema_version") != DOCUMENT_SCHEMA_VERSION
+            or document.get("document_type") != "project"
+        ):
             raise ValueError(f"Unsupported project document: {project_path}")
         data = document.get("data")
         if not isinstance(data, dict):
@@ -525,7 +576,7 @@ def reconcile_project_files(data_dir: Path, db_path: Path) -> None:
             if project_path.exists():
                 project_document = read_json(project_path)
                 if (
-                    project_document.get("schema_version") != "1.0.0"
+                    project_document.get("schema_version") != DOCUMENT_SCHEMA_VERSION
                     or project_document.get("document_type") != "project"
                     or project_document.get("id") != project["id"]
                     or not isinstance(project_document.get("data"), dict)
