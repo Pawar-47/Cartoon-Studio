@@ -531,11 +531,16 @@ def test_world_export_adapter_accepts_every_persistable_object_kind(tmp_path, mo
         return {"ok": True}
 
     monkeypatch.setattr(adapter, "_run", fake_run)
+    asset_path = project_root / "assets" / "world-library" / "road-straight.glb"
+    asset_path.parent.mkdir(parents=True, exist_ok=True)
+    asset_path.write_bytes(b"glTF-test-fixture")
+    world["objects"][0]["asset_path"] = "assets/world-library/road-straight.glb"
     output = project_root / "assets" / "worlds" / "contract.tscn"
     result = adapter.export_world_scene(world, output, allowed_root=project_root)
     assert result["ok"] is True
     assert captured["operation"] == "export_world_scene"
     assert [item["kind"] for item in captured["payload"]["world"]["objects"]] == list(kinds)
+    assert captured["payload"]["world"]["objects"][0]["asset_path"] == str(asset_path.resolve())
     assert output.parent.is_dir()
 
 

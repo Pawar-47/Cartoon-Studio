@@ -147,6 +147,94 @@ def test_world_layout_create_edit_and_portable_reopen(tmp_path, monkeypatch):
 
 
 
+def test_world_asset_selection_survives_save_reopen_and_update(tmp_path, monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "world-assets.sqlite3")
+    main._INITIALIZED_DB_KEY = None
+
+    def fake_install(project_root, asset_id):
+        assert asset_id == "road-straight"
+        relative_path = "assets/world-library/road-straight.glb"
+        target = project_root / relative_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(b"glTF-test-fixture")
+        return {
+            "id": asset_id,
+            "name": "Road Straight",
+            "relative_path": relative_path,
+            "cached": False,
+            "license": "CC0-1.0",
+        }
+
+    monkeypatch.setattr(main, "install_world_asset", fake_install)
+    project = client.post("/api/projects", json={"name": "Asset World"})
+    assert project.status_code == 201
+    project_id = project.json()["id"]
+    payload = {
+        "name": "Asset Town",
+        "objects": [{
+            "id": "road-1",
+            "kind": "road",
+            "label": "Main Road",
+            "x": 50,
+            "y": 50,
+            "width": 60,
+            "height": 10,
+            "asset_id": "road-straight",
+            "asset_path": "../../outside.glb",
+        }],
+    }
+
+    created = client.post(f"/api/projects/{project_id}/worlds", json=payload)
+    assert created.status_code == 201
+    world_id = created.json()["id"]
+    expected_path = "assets/world-library/road-straight.glb"
+    assert created.json()["objects"][0]["asset_id"] == "road-straight"
+    assert created.json()["objects"][0]["asset_path"] == expected_path
+
+    reopened = client.get(f"/api/projects/{project_id}/worlds/{world_id}")
+    assert reopened.status_code == 200
+    assert reopened.json()["objects"][0]["asset_path"] == expected_path
+
+    updated = client.put(
+        f"/api/projects/{project_id}/worlds/{world_id}", json=payload
+    )
+    assert updated.status_code == 200
+    assert updated.json()["objects"][0]["asset_id"] == "road-straight"
+    assert updated.json()["objects"][0]["asset_path"] == expected_path
+
+    saved = json.loads(
+        (tmp_path / "projects" / project_id / "worlds" / f"{world_id}.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert saved["data"]["objects"][0]["asset_path"] == expected_path
+
+
+def test_world_asset_selection_rejects_unknown_and_mismatched_assets(tmp_path, monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "world-assets-invalid.sqlite3")
+    main._INITIALIZED_DB_KEY = None
+    project = client.post("/api/projects", json={"name": "Invalid Asset World"})
+    project_id = project.json()["id"]
+    payload = {
+        "name": "Invalid Asset Town",
+        "objects": [{
+            "id": "road-1", "kind": "road", "label": "Road",
+            "x": 50, "y": 50, "asset_id": "car-sedan",
+        }],
+    }
+    mismatched = client.post(f"/api/projects/{project_id}/worlds", json=payload)
+    assert mismatched.status_code == 422
+    payload["objects"][0]["asset_id"] = "not-in-catalogue"
+    unknown = client.post(f"/api/projects/{project_id}/worlds", json=payload)
+    assert unknown.status_code == 422
+
+
 def test_world_layout_recovers_from_portable_documents_without_old_database(
     tmp_path, monkeypatch
 ):
