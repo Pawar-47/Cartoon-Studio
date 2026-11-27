@@ -280,9 +280,52 @@ try {
   record("VISUAL ACCEPTANCE FAILED: " + error.stack);
   throw error;
 } finally {
-  if (browser) await browser.close();
+  // Bound cleanup so a successful acceptance run cannot hang the CI job.
+  const withTimeout = async (label, operation, timeoutMs = 10_000) => {
+    let timer;
+    try {
+      await Promise.race([
+        operation(),
+        new Promise((_, reject) => {
+          timer = setTimeout(() => reject(new Error(label + " timed out after " + timeoutMs + "ms")), timeoutMs);
+          timer.unref?.();
+        }),
+      ]);
+      record(label + " completed.");
+    } catch (error) {
+      record("[cleanup warning] " + label + ": " + error.message);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  };
+
+  if (browser) {
+    await withTimeout("Chromium shutdown", () => browser.close());
+  }
   if (server && server.exitCode === null) {
-    server.kill();
+    if (process.platform === "win32" && server.pid) {
+      // uv launches Python as a child; terminate the complete process tree or
+      // descendants can keep inherited stdout/stderr handles open indefinitely.
+      const killer = spawn("taskkill", ["/PID", String(server.pid), "/T", "/F"], {
+        windowsHide: true,
+        stdio: "ignore",
+      });
+      await withTimeout("FastAPI process-tree shutdown", () => new Promise((resolve, reject) => {
+        killer.once("error", reject);
+        killer.once("close", (code) => code === 0 ? resolve() : reject(new Error("taskkill exited with code " + code)));
+      }));
+    } else {
+      server.kill("SIGTERM");
+      await withTimeout("FastAPI shutdown", () => new Promise((resolve) => {
+        if (server.exitCode !== null || server.signalCode !== null) return resolve();
+        server.once("close", resolve);
+      }), 5_000);
+      if (server.exitCode === null && server.signalCode === null) {
+        server.kill("SIGKILL");
+      }
+    }
+    server.stdout?.destroy();
+    server.stderr?.destroy();
   }
   await writeFile(path.join(output, "browser-acceptance.log"), log.join("\n") + "\n", "utf8");
   if (failed) {
