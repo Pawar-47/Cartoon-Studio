@@ -39,3 +39,9 @@ Base: `c5631247b0b3d3144b2c6b3df9b9be318f6e9c1a`
 - CI visual acceptance remains gated on this full Godot-backed suite.
 
 - Run #566 passed the generated-face export/re-import, Head-bone attachment, rig/animation preservation, and 23+ component checks; the only remaining assertion was a naming convention (`CartoonStudio_Face_Jaw_`), now aligned by naming the jaw mesh `CartoonStudio_Face_Jaw_0`.
+
+## 2026-11-27 — Foundry inspection budget
+
+- Run #604 passed Ruff, browser JavaScript syntax, Python compilation and the full pytest suite, then failed in browser acceptance: the female Foundry create returned `HTTP 504` because `inspect_glb` hit the engine adapter's 60-second default deadline while importing the freshly generated master (`stage=godot-inspection-timeout elapsed=133.22s`). The male edit of a same-size GLB needed only ~13s in the same run, so the cost of that import varies with the generated template and runner load.
+- Foundry create and update now request the engine's maximum inspection budget (180s) through one documented constant, `FOUNDRY_INSPECTION_TIMEOUT_SECONDS`. The browser acceptance script waits 420s for a Foundry save instead of 240s, so generation plus inspection both fit inside one wait.
+- No verification was weakened: the Godot import/inspection still runs and still gates the response. The next CI run decides whether 180s is sufficient; if it is not, the following step is reducing import cost rather than extending the budget again.

@@ -27,12 +27,16 @@ def make_glb() -> bytes:
 
 
 class FakeEngine:
+    last_inspection_timeout = None
+
     def __init__(self):
         self.proportion_source_paths = []
         self.proportion_values = []
 
-    def inspect_glb(self, source_path, allowed_root):
+    def inspect_glb(self, source_path, allowed_root, timeout_seconds=None):
         assert source_path.is_relative_to(allowed_root)
+        assert timeout_seconds is None or timeout_seconds > 0
+        FakeEngine.last_inspection_timeout = timeout_seconds
         return {
             "engine_version": "4.7.2.stable",
             "mesh_count": 1,
@@ -793,6 +797,9 @@ def test_foundry_generation_creates_project_character_and_replayable_recipe(
         },
     )
     assert response.status_code == 201, response.text
+    # A generated master character needs the engine's maximum import budget, not the
+    # 60-second adapter default that timed out in browser acceptance.
+    assert FakeEngine.last_inspection_timeout == main.FOUNDRY_INSPECTION_TIMEOUT_SECONDS
     result = response.json()
     character_id = result["id"]
     asset_id = result["asset_id"]
@@ -833,6 +840,7 @@ def test_foundry_recipe_update_preserves_identity_and_original_asset(tmp_path, m
     response = client.put(f"/api/projects/{project_id}/foundry-characters/{original['id']}",
         json={"name": "Ali Updated", "parameters": {"head_width": 0.75}})
     assert response.status_code == 200, response.text
+    assert FakeEngine.last_inspection_timeout == main.FOUNDRY_INSPECTION_TIMEOUT_SECONDS
     updated = response.json()
     assert updated["id"] == original["id"]
     assert updated["revision"] == original["revision"] + 1

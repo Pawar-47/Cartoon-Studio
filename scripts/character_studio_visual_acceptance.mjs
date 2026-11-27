@@ -11,6 +11,11 @@ await mkdir(output, { recursive: true });
 await mkdir(dataDir, { recursive: true });
 
 const log = [];
+// A Foundry save generates a full skinned master character and then imports it with
+// Godot before responding. Generation alone takes about a minute on a shared runner,
+// and the Godot inspection that follows is allowed up to the engine's 180-second
+// budget, so the browser waits long enough for both stages to finish.
+const FOUNDRY_SAVE_TIMEOUT_MS = 420_000;
 const record = (message) => {
   const line = new Date().toISOString() + " " + message;
   log.push(line);
@@ -152,7 +157,7 @@ try {
     await page.waitForFunction(
       () => document.querySelector("#foundry-status")?.textContent?.includes("saved."),
       null,
-      { timeout: 240_000 },
+      { timeout: FOUNDRY_SAVE_TIMEOUT_MS },
     );
     await page.locator("#model-preview").waitFor({ state: "visible", timeout: 30_000 });
     await page.waitForFunction(() => {
@@ -228,7 +233,7 @@ try {
       () => document.querySelector("#foundry-status")?.textContent?.includes("saved.")
         || document.querySelector("#foundry-status")?.textContent?.includes("could not"),
       null,
-      { timeout: 240_000 },
+      { timeout: FOUNDRY_SAVE_TIMEOUT_MS },
     );
     await page.waitForFunction(
       () => {
@@ -271,7 +276,7 @@ try {
   await page.waitForFunction(
     () => document.querySelector("#foundry-status")?.textContent?.includes("saved."),
     null,
-    { timeout: 240_000 },
+    { timeout: FOUNDRY_SAVE_TIMEOUT_MS },
   );
   await page.waitForTimeout(1200);
   await page.locator("#model-preview").screenshot({ path: path.join(output, "03-female-foundry-preview.png"), timeout: 60_000 });

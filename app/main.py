@@ -37,6 +37,7 @@ from app.character_foundry import (
     write_master_character,
 )
 from app.engine import (
+    MAX_TIMEOUT_SECONDS,
     EngineError,
     EnginePathError,
     EngineTimeoutError,
@@ -74,6 +75,12 @@ _ENV_DATA_DIR = os.environ.get("CARTOON_STUDIO_DATA", "").strip()
 DATA_DIR = Path(_ENV_DATA_DIR).expanduser() if _ENV_DATA_DIR else default_data_dir()
 DB_PATH = DATA_DIR / "cartoon_studio.sqlite3"
 STATIC_DIR = Path(__file__).resolve().parent / "static"
+# A Foundry master character is a generated skinned mesh carrying facial morph targets,
+# so Godot spends far longer importing it than a hand-authored asset: the same step
+# measured ~13s on an idle runner but over a minute while the runner was busy. The
+# 60-second engine default is too tight for that generation step, so the Foundry routes
+# request the engine's maximum budget instead.
+FOUNDRY_INSPECTION_TIMEOUT_SECONDS = MAX_TIMEOUT_SECONDS
 _INITIALIZED_DB_KEY: tuple[str, str] | None = None
 
 
@@ -1717,7 +1724,9 @@ def update_foundry_character(
         )
         try:
             inspection = get_engine_adapter().inspect_glb(
-                temp_asset, allowed_root=project_directory(DATA_DIR, project_id)
+                temp_asset,
+                allowed_root=project_directory(DATA_DIR, project_id),
+                timeout_seconds=FOUNDRY_INSPECTION_TIMEOUT_SECONDS,
             )
             print(
                 "[foundry-update] stage=godot-inspection-complete "
@@ -1859,7 +1868,9 @@ def create_foundry_character(
         )
         try:
             inspection = get_engine_adapter().inspect_glb(
-                asset_path, allowed_root=project_directory(DATA_DIR, project_id)
+                asset_path,
+                allowed_root=project_directory(DATA_DIR, project_id),
+                timeout_seconds=FOUNDRY_INSPECTION_TIMEOUT_SECONDS,
             )
         except EngineUnavailableError as error:
             print(f"[foundry-create] stage=godot-inspection-unavailable error={error}", flush=True)

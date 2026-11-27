@@ -1,5 +1,13 @@
 # Test Report — 2026-11-26
 
+## Foundry browser acceptance — inspection budget repair, 2026-11-27
+
+- Windows CI run [#604](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/46052902171) on `feature/cartoon-character-foundry`: Ruff, browser JavaScript syntax, Python compilation and the full pytest suite passed. The step `Launch Character Studio and perform browser visual acceptance` failed.
+- Failure: the female Foundry create (`POST /api/projects/{id}/foundry-characters`) returned `504 Gateway Timeout`. Server trace: `[foundry-create] stage=godot-inspection-timeout elapsed=133.22s error=Godot inspect_glb exceeded its 60-second time budget.` The browser then timed out at `scripts/character_studio_visual_acceptance.mjs:271` waiting for the save status.
+- Cause: the Foundry routes called `inspect_glb` with the engine adapter's 60-second default. Importing a freshly generated skinned master character with ten facial morph targets can take over a minute on a shared runner; the male edit of a comparable GLB needed about 13s in the same run.
+- Change: Foundry create and update request the engine's maximum inspection budget (180s) through `FOUNDRY_INSPECTION_TIMEOUT_SECONDS`, and the browser acceptance waits 420s for a Foundry save instead of 240s. The inspection itself is unchanged and still gates the response.
+- Result: awaiting the next GitHub Actions run on this branch. No local browser acceptance or pytest run was possible in this batch, so nothing is claimed as passing.
+
 ## Current main regression and working-branch verification — 2026-11-26
 
 - Current main commit `062400e58cbbf491ec92869dc140b60a9b354d7f` failed Windows CI [#471](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45791209337): Godot rejected the duplicate `"action_cue_count"` dictionary key in `engine/godot_worker/worker.gd`, preventing the worker script from loading.
