@@ -5,7 +5,7 @@ import path from "node:path";
 
 const root = process.cwd();
 const output = path.join(root, "build", "visual-acceptance");
-const dataDir = path.join(output, "data");
+const dataDir = path.join(root, "build", "visual-acceptance-data");
 const baseUrl = "http://127.0.0.1:8765";
 await mkdir(output, { recursive: true });
 await mkdir(dataDir, { recursive: true });

@@ -1,7 +1,7 @@
 name: Cartoon Studio CI
 on:
   push:
-    branches: [main]
+    branches: [main, feature/cartoon-character-foundry]
   pull_request:
     branches: [main]
   workflow_dispatch:

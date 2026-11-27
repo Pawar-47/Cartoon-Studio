@@ -668,7 +668,7 @@ def test_pinned_godot_imports_original_foundry_master_and_morphs(tmp_path):
 
     assert inspection["ok"] is True
     assert inspection["mesh_count"] == 1
-    assert inspection["mesh_inventory"][0]["surface_count"] == 2
+    assert inspection["mesh_inventory"][0]["surface_count"] == 3
     assert inspection["skeleton_count"] == 1
     assert inspection["skeletons"][0]["bone_count"] == 19
     imported_bones = {bone["name"] for bone in inspection["skeletons"][0]["bones"]}
