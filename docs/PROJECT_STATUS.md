@@ -82,10 +82,9 @@ Godot may normalize raw skin-joint ordering during import. The application uses 
 
 Phase 3 is now active per user direction. Work continues on:
 1. Multi-location world/location reuse and canonical world schema migration
-2. World-scene export quality and browser preview visual review
+2. World-scene export quality and browser preview visual review (world export endpoint wired to job queue via `world_export` operation; queue endpoints cover export jobs)
 3. World-linked story plan production mapping (ties to Phase 4)
-4. Job reliability queue: production SQLite job queue (`app/job_queue.py`) with bounded retries, durable events, cancellation, progress polling; production/audio/render endpoints wired to it. Schema migration v3 added job tables.
-5. P2.2 remaining visual acceptance items proceed in parallel: interactive browser acceptance of hairstyles, portraits, assembly, morphs and retarget preview; broad rig acceptance on representative models
+4. P2.2 remaining visual acceptance items proceed in parallel: interactive browser acceptance of hairstyles, portraits, assembly, morphs and retarget preview; broad rig acceptance on representative models
 
 User visual acceptance for Phases 2–7 is scheduled for Phase 8 per project owner direction.
 

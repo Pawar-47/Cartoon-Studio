@@ -1941,22 +1941,33 @@ def export_project_world(project_id: str, world_id: str) -> dict[str, Any]:
     preview_path = resolve_project_relative(DATA_DIR, project_id, relative_preview)
     project_root = project_directory(DATA_DIR, project_id)
     try:
+        queue = get_job_queue()
+        job_id = queue.enqueue(project_id, "world_export", total_units=1)
+        claimed = queue.claim_specific(job_id, worker_id="api-server")
+        if claimed is None:
+            raise JobQueueError(f"Could not claim job {job_id}")
         result = get_engine_adapter().export_world_scene(
             document["data"], scene_path, allowed_root=project_root
         )
     except EngineUnavailableError as error:
+        scene_path.unlink(missing_ok=True)
+        preview_path.unlink(missing_ok=True)
+        queue.fail(job_id, worker_id="api-server", error=str(error), retry=False)
         raise HTTPException(status_code=503, detail=str(error)) from error
     except EngineTimeoutError as error:
         scene_path.unlink(missing_ok=True)
         preview_path.unlink(missing_ok=True)
+        queue.fail(job_id, worker_id="api-server", error=str(error), retry=False)
         raise HTTPException(status_code=504, detail=str(error)) from error
     except EnginePathError as error:
         scene_path.unlink(missing_ok=True)
         preview_path.unlink(missing_ok=True)
+        queue.fail(job_id, worker_id="api-server", error=str(error), retry=False)
         raise HTTPException(status_code=422, detail=str(error)) from error
     except EngineError as error:
         scene_path.unlink(missing_ok=True)
         preview_path.unlink(missing_ok=True)
+        queue.fail(job_id, worker_id="api-server", error=str(error), retry=False)
         raise HTTPException(
             status_code=502, detail=f"World scene export failed: {error}"
         ) from error
@@ -1967,10 +1978,29 @@ def export_project_world(project_id: str, world_id: str) -> dict[str, Any]:
     ):
         scene_path.unlink(missing_ok=True)
         preview_path.unlink(missing_ok=True)
+        queue.fail(
+            job_id,
+            worker_id="api-server",
+            error="Godot did not produce both the scene and its browser preview.",
+            retry=False,
+        )
         raise HTTPException(
             status_code=502,
             detail="Godot did not produce both the scene and its browser preview.",
         )
+    queue.complete(
+        job_id,
+        worker_id="api-server",
+        output={
+            "object_count": int(result.get("object_count", 0)),
+            "theme_prop_count": int(result.get("theme_prop_count", 0)),
+            "scene_reopened": bool(result.get("scene_reopened", False)),
+            "lighting_preset": str(
+                result.get("lighting_preset", document["data"].get("sky", "day"))
+            ),
+            "status": "ok",
+        },
+    )
     now = datetime.now(UTC).isoformat()
     document["data"]["scene_relative_path"] = relative_scene
     document["data"]["preview_relative_path"] = relative_preview

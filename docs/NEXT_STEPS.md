@@ -14,10 +14,13 @@ Phase 3 — World Builder is now ACTIVE per user direction. Persistent/editable 
 ## Completed batches
 
 ### Job reliability queue — DONE
-Production SQLite job queue (`app/job_queue.py`) with bounded retries (MAX_ATTEMPTS=3), durable event records, lease-based claiming, cancellation, progress polling, atomic output manifests; schema migration v3 added job tables; production/audio/render endpoints wired to queue; `/jobs`, `/jobs/{id}`, `/jobs/{id}/cancel` API endpoints added; 11 unit tests. CI green.
+Production SQLite job queue (`app/job_queue.py`) with bounded retries (MAX_ATTEMPTS=3), durable event records, lease-based claiming, cancellation, progress polling, atomic output manifests; schema migration v3 added job tables; production/audio/render/world-export endpoints wired to queue; `/jobs`, `/jobs/{id}`, `/jobs/{id}/cancel` API endpoints added; 11 unit tests. CI green.
 
 ### Canonical world schema migration — DONE
 `LATEST_WORLD_SCHEMA_VERSION = "1.0.1"` in `app/storage.py`; `WORLD_MIGRATIONS` with example 1.0.0→1.0.1 migration; `migrate_world_document()` auto-upgrades world documents on `get_project_world` read; world documents created with latest schema version; 3 unit tests.
+
+### World export wired to job queue — DONE
+`/api/projects/{project_id}/worlds/{world_id}/export` enqueues a `world_export` job, claims it, runs `export_world_scene`, completes/fails through the queue; `/jobs`, `/jobs/{id}`, `/jobs/{id}/cancel` API endpoints cover world export jobs. World export endpoint test passes with job queue wired.
 
 ## Phase 3 World Builder batches
 
