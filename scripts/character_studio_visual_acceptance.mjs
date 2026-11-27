@@ -196,7 +196,7 @@ try {
       status: document.querySelector("#foundry-status")?.textContent,
       morph: document.querySelector("#foundry-head-width")?.value,
     }));
-    await page.screenshot({ path: path.join(output, "02-foundry-edit-mode-failure.png"), fullPage: true });
+    await page.locator("#model-preview").screenshot({ path: path.join(output, "02-foundry-edit-mode-failure.png"), timeout: 60_000 });
     throw new Error("Edit Foundry recipe did not activate edit mode within 10 seconds: " + JSON.stringify(state));
   });
   const editModeState = await page.evaluate(() => ({
@@ -235,7 +235,7 @@ try {
   const previewStatus = await page.locator("#preview-status").textContent();
   record("Foundry edit result: " + editStatus);
   record("Foundry preview result: " + previewStatus);
-  await page.screenshot({ path: path.join(output, "02-male-foundry-edit-result.png"), fullPage: true });
+  await page.locator("#model-preview").screenshot({ path: path.join(output, "02-male-foundry-edit-result.png"), timeout: 60_000 });
   if (!editStatus?.includes("saved.") || previewStatus?.startsWith("Preview unavailable:")) {
     throw new Error("Foundry edit/preview did not finish successfully: " + editStatus
       + " | preview: " + previewStatus);
@@ -248,7 +248,7 @@ try {
   if (!male || male.revision !== 2 || male.data.foundry_recipe.parameters.head_width !== 0.6) {
     throw new Error("Foundry edit did not preserve character identity and revision.");
   }
-  await page.screenshot({ path: path.join(output, "02-male-foundry-edited.png"), fullPage: true });
+  await page.locator("#model-preview").screenshot({ path: path.join(output, "02-male-foundry-edited.png"), timeout: 60_000 });
   record("Saved recipe reopened, edited and persisted under the same character ID.");
 
   await page.locator("#foundry-name").fill("CI Foundry Sana");
@@ -264,7 +264,7 @@ try {
     { timeout: 240_000 },
   );
   await page.waitForTimeout(1200);
-  await page.screenshot({ path: path.join(output, "03-female-foundry-preview.png"), fullPage: true });
+  await page.locator("#model-preview").screenshot({ path: path.join(output, "03-female-foundry-preview.png"), timeout: 60_000 });
   charactersResponse = await request.get(
     baseUrl + "/api/projects/" + project.id + "/characters",
   );
@@ -297,7 +297,7 @@ try {
     null,
     { timeout: 30_000 },
   );
-  await page.screenshot({ path: path.join(output, "04-preview-export-ready.png"), fullPage: true });
+  await page.locator("#model-preview").screenshot({ path: path.join(output, "04-preview-export-ready.png"), timeout: 60_000 });
   const [turnaroundDownload] = await Promise.all([
     page.waitForEvent("download"),
     page.locator("#export-turnaround-png").click(),
