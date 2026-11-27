@@ -23,17 +23,24 @@ This is a complete production application, not a mockup, theme, prompt generator
 13. Respect provider quotas, project terms, software/model/dataset/asset licenses and user privacy.
 14. User is not responsible for running developer commands, coordinating batches or fixing implementation errors. The lead agent owns repository execution and reporting.
 
-## Current baseline
+## Current baseline — refreshed 2026-11-28
 
-See `docs/BASELINE_AUDIT.md`. The original user-approved 25-part master execution brief is the binding execution contract. The uploaded copy audited on 2026-11-25 is 1,133 lines (SHA-256 `541098eebd96b98e0153770f0bc37a1031a7242fd9cb97bc5a6b52c35c9ddfde`). The repository's `PROJECT_SPECIFICATION.md` is a durable condensed specification, not a verbatim copy of that brief. The exact original 25-part brief is now preserved verbatim at `docs/MASTER_EXECUTION_PROMPT.md` (1,133 lines, 4,642 words; SHA-256 `541098eebd96b98e0153770f0bc37a1031a7242fd9cb97bc5a6b52c35c9ddfde`). The GitHub-fetched file was verified to match the uploaded source text exactly. At the audited HEAD:
-- FastAPI/static dashboard, SQLite project metadata and a manual external-AI Story Generator exist.
-- Story-plan schema, validation and save/load exist.
-- Windows GitHub Actions validation and bootstrap ZIP packaging pass.
-- No production 3D engine is integrated.
-- Ara 3D Gen is only a candidate with a proof workflow; it is not selected.
-- Character/world production, Urdu TTS, lip-sync, complete rendering and final installer remain unimplemented.
-- Existing requirements and traceability documents need a full coverage pass.
-- A partial Story Generator/schema was built ahead of the specified phase order; preserve it, freeze further expansion until Phase 4, and remove its temporary Ara-derived catalog coupling before production use.
+The complete original 25-part `MASTER_EXECUTION_PROMPT.md` is binding; the 171-row requirement registry and traceability matrix remain the atomic coverage records. The old baseline below the initial Phase 0 audit is historical and superseded by the current mainline state.
+
+At main commit `a88379f3ac3a985756d68c25afd22ac7b0a9b4d5` (Windows CI #611 SUCCESS), the repository contains:
+- FastAPI/static browser application, SQLite-backed portable project documents, migrations and recovery.
+- Pinned Godot 4.7.2 Compatibility worker behind a supervised adapter.
+- Self-contained Windows installer build and a previously verified install/upgrade/uninstall/reinstall lifecycle.
+- Character Studio with imported GLB inspection, profiles, modular Quaternius character assembly, proportions, hair/face geometry, appearance/morph editing and retargeting.
+- World Builder with versioned persistent layouts, templates, 16 supported object kinds, Godot scene export and Three.js GLB preview.
+- Story prompt/schema/validation and world/cast-linked editable episode-scene generation.
+- Urdu speech/audio/subtitle generation, heuristic audio-envelope mouth motion and a Godot AVI + FFmpeg MP4 assembly path.
+- Durable SQLite job queue with bounded attempts, leases, expiry reclaim, cancellation/progress and endpoints for production, audio, world export and render.
+- Windows CI, dependency locks, SBOM and installer workflow.
+
+Important gaps remain: World Builder geometry is procedural blockout rather than a reusable detailed environment asset library; vehicle state is not yet animated as a full runtime; story generation remains manual AI handoff; the animation editor/library and blending are incomplete; Urdu phoneme/viseme alignment and native-speaker quality acceptance are outstanding; scene-level render caching/restart-resume and full 5–7 minute episode visual/audio acceptance are not complete; target-PC benchmarks and Phase 8 acceptance remain deferred. The project root still has no selected distribution LICENSE; do not assume one.
+
+See `docs/MAINLINE_ALIGNMENT_AUDIT.md` for the detailed gap analysis and first-pass fixes. Never interpret green CI as final product acceptance.
 
 ## Phase sequence and gates
 

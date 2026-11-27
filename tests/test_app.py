@@ -1586,3 +1586,22 @@ def test_episode_audio_endpoint_saves_and_serves_the_dialogue_mix(
     assert subtitles.status_code == 200
     assert "السلام علیکم!" in subtitles.text
     assert "text/plain" in subtitles.headers["content-type"]
+
+
+def test_world_builder_exposes_every_supported_world_object_kind():
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    html = (root / "app" / "static" / "worlds.html").read_text(encoding="utf-8")
+    javascript = (root / "app" / "static" / "worlds.js").read_text(encoding="utf-8")
+    supported_kinds = {
+        "road", "building", "shop", "school", "hospital", "office",
+        "police_station", "tree", "vehicle", "lamp", "park", "garage",
+        "indoor_room", "playground", "furniture", "water_body", "streetlight",
+    }
+    for kind in supported_kinds:
+        assert f'data-kind="{kind}"' in html
+        assert f'{kind}:' in javascript
+    for control in ("object-x", "object-y", "object-rotation"):
+        assert f'id="{control}"' in html
+        assert f'"{control}"' in javascript

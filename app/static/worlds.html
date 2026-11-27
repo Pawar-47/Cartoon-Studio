@@ -35,11 +35,23 @@
   <label>Ground colour<input id="ground-color" type="color" value="#789b58"></label>
   <div class="tool-divider"></div>
   <span class="eyebrow">ADD WORLD OBJECTS</span>
-  <div class="object-tools">
-   <button type="button" data-kind="road">＋ Road</button><button type="button" data-kind="building">＋ Building</button>
-   <button type="button" data-kind="shop">＋ Shop</button><button type="button" data-kind="tree">＋ Tree</button>
-   <button type="button" data-kind="vehicle">＋ Vehicle</button><button type="button" data-kind="lamp">＋ Street lamp</button>
-   <button type="button" data-kind="park">＋ Park</button>
+  <div class="object-tools" aria-label="World object library">
+   <div class="object-tool-group"><strong>Streets</strong><button type="button" data-kind="road">＋ Road</button></div>
+   <div class="object-tool-group"><strong>Buildings &amp; civic</strong>
+    <button type="button" data-kind="building">＋ House / building</button><button type="button" data-kind="shop">＋ Shop</button>
+    <button type="button" data-kind="school">＋ School</button><button type="button" data-kind="hospital">＋ Hospital</button>
+    <button type="button" data-kind="office">＋ Office</button><button type="button" data-kind="police_station">＋ Police station</button>
+    <button type="button" data-kind="garage">＋ Garage</button>
+   </div>
+   <div class="object-tool-group"><strong>Outdoor spaces &amp; nature</strong>
+    <button type="button" data-kind="tree">＋ Tree</button><button type="button" data-kind="park">＋ Park</button>
+    <button type="button" data-kind="playground">＋ Playground</button><button type="button" data-kind="water_body">＋ Water body</button>
+    <button type="button" data-kind="lamp">＋ Lamp</button><button type="button" data-kind="streetlight">＋ Streetlight</button>
+   </div>
+   <div class="object-tool-group"><strong>Vehicles &amp; interiors</strong>
+    <button type="button" data-kind="vehicle">＋ Vehicle</button><button type="button" data-kind="indoor_room">＋ Indoor room</button>
+    <button type="button" data-kind="furniture">＋ Furniture</button>
+   </div>
   </div>
   <div class="tool-divider"></div>
   <span class="eyebrow">SELECTED OBJECT</span>
@@ -47,7 +59,9 @@
   <div id="selection-editor" hidden>
    <label>Object label<input id="object-label" maxlength="80"></label>
    <label>Object colour<input id="object-color" type="color" value="#c89b67"></label>
-   <div class="object-size"><label>Width<input id="object-width" type="number" min="2" max="60" step="1"></label><label>Height<input id="object-height" type="number" min="2" max="60" step="1"></label></div>
+   <div class="object-size"><label>Width<input id="object-width" type="number" min="2" max="100" step="1"></label><label>Depth<input id="object-height" type="number" min="2" max="60" step="1"></label></div>
+   <div class="object-size"><label>Position X<input id="object-x" type="number" min="0" max="100" step="1"></label><label>Position Y<input id="object-y" type="number" min="0" max="100" step="1"></label></div>
+   <label>Rotation (degrees)<input id="object-rotation" type="number" min="0" max="360" step="5"></label>
    <button id="delete-object" class="danger" type="button">Remove selected object</button>
   </div>
   <button id="save-world" class="save-world" type="button" disabled>Save world layout</button>
