@@ -2,8 +2,8 @@
 
 ## Live checkpoint — master-brief consolidation
 
-- **Current main HEAD:** `4b1ed4be6beaa3048588e169ff0ca6024a364328` (World Builder asset-selection persistence correction).
-- **Latest code-bearing commit:** `e0e288006c13347d2bbc99ff388948c16a9e6011`; Windows CI #615 passed on that exact code commit (run `46064317433`).
+- **Latest code-bearing checkpoint:** `49516e57577c74f25c33e3d481e0633fa5c2c724`; Windows CI #618 passed on that exact commit (run `46067945723`).
+- **Latest documentation refresh:** documentation-only `[skip ci]`; it does not change application code.
 - The original 25-part Master Brief is committed at `docs/MASTER_EXECUTION_PROMPT.md`; it remains the binding source.
 - Registry and traceability contain 171 unique, matching requirement IDs. The registry currently has one VERIFIED requirement (`PHASE-R002`) for the defined Phase 1 installer lifecycle gate; that does not mean the product is complete.
 - The current consolidation pass is reconciling each completed implementation against source, tests and actual CI evidence. Registry statuses now use only the approved vocabulary; source evidence has been refreshed for local rendering, audio, offline paths, job telemetry and delivered UI foundations. A confirmed World Builder asset-selection persistence defect was fixed in `4b1ed4b`; CI #617 passed the save/reopen/update and adapter regressions. Registry/traceability rows still contain historical mappings and must not be treated as freshly audited merely because their IDs match.
