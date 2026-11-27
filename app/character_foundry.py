@@ -12,7 +12,7 @@ RECIPE_SCHEMA_VERSION = 1
 MASTER_TEMPLATE_ID = "cartoon-studio.stylized-adult.v1"
 FEMALE_MASTER_TEMPLATE_ID = "cartoon-studio.stylized-adult-female.v1"
 MASTER_TEMPLATE_IDS = {MASTER_TEMPLATE_ID, FEMALE_MASTER_TEMPLATE_ID}
-GENERATOR_VERSION = "0.6.0"
+GENERATOR_VERSION = "0.7.0"
 
 
 RIG_PROFILE_ID = "cartoon-studio.humanoid.v1"
@@ -50,6 +50,9 @@ def _component_bone_name(group: str, center: tuple[float, float, float]) -> str:
         "head": "Head",
         "ear": "Head",
         "eye": "Head",
+        "iris": "Head",
+        "pupil": "Head",
+        "eyebrow": "Head",
         "nose": "Head",
         "mouth": "Head",
         "upper_arm": f"{side}UpperArm",
@@ -94,6 +97,9 @@ def _component_skin_weights(
         "head": ("Head",),
         "ear": ("Head",),
         "eye": ("Head",),
+        "iris": ("Head",),
+        "pupil": ("Head",),
+        "eyebrow": ("Head",),
         "nose": ("Head",),
         "mouth": ("Head",),
         "upper_arm": (f"{side}Shoulder", f"{side}UpperArm", f"{side}LowerArm"),
@@ -150,6 +156,12 @@ _COMPONENTS = (
     ("ear", (0.415, 2.64, 0.0), (0.095, 0.145, 0.075)),
     ("eye", (-0.155, 2.76, -0.325), (0.083, 0.088, 0.052)),
     ("eye", (0.155, 2.76, -0.325), (0.083, 0.088, 0.052)),
+    ("iris", (-0.155, 2.76, -0.365), (0.043, 0.052, 0.024)),
+    ("iris", (0.155, 2.76, -0.365), (0.043, 0.052, 0.024)),
+    ("pupil", (-0.155, 2.76, -0.385), (0.021, 0.030, 0.012)),
+    ("pupil", (0.155, 2.76, -0.385), (0.021, 0.030, 0.012)),
+    ("eyebrow", (-0.155, 2.895, -0.333), (0.105, 0.025, 0.026)),
+    ("eyebrow", (0.155, 2.895, -0.333), (0.105, 0.025, 0.026)),
     ("nose", (0.0, 2.61, -0.365), (0.09, 0.145, 0.085)),
     ("mouth", (0.0, 2.405, -0.337), (0.145, 0.043, 0.035)),
     ("upper_arm", (-0.54, 1.66, 0.0), (0.17, 0.39, 0.17)),
@@ -392,7 +404,7 @@ def _morph_delta(
         and -0.05 < ny < 0.52 and nz < -0.35 and abs(nx) > 0.28
     ):
         dz = -0.075
-    elif target == "eye_spacing" and group == "eye":
+    elif target == "eye_spacing" and group in {"eye", "iris", "pupil", "eyebrow"}:
         dx = math.copysign(0.075, center[0])
     elif target == "nose_width" and group == "nose":
         dx = x * 0.32
@@ -423,7 +435,10 @@ def _build_geometry(
     # Build the torso, head, neck and limbs as one smooth implicit surface.
     # Facial details remain separate meshes so their silhouettes stay crisp.
     core = tuple(item for item in components if item[0] not in {"eye", "nose", "mouth"})
-    details = tuple(item for item in components if item[0] in {"eye", "nose", "mouth"})
+    details = tuple(
+        item for item in components
+        if item[0] in {"eye", "iris", "pupil", "eyebrow", "nose", "mouth"}
+    )
     step = 0.085
     padding = 0.12
     lower = [min(c[1][a] - c[2][a] for c in core) - padding for a in range(3)]
@@ -547,12 +562,23 @@ def _build_geometry(
                             sum((positions[i][a]-center[a])*u[a] for a in range(3))))
                         indices.extend((ordered[0],ordered[1],ordered[2],ordered[0],ordered[2],ordered[3]))
 
-    # Retain distinct facial forms as conventional ellipsoids.
+    # Keep facial forms as separate ellipsoids with distinct vertex colors.
+    skin_color = (0.82, 0.53, 0.37, 1.0)
+    face_colors = {
+        "eye": (0.97, 0.95, 0.89, 1.0),
+        "iris": (0.20, 0.10, 0.045, 1.0),
+        "pupil": (0.012, 0.009, 0.007, 1.0),
+        "eyebrow": (0.12, 0.055, 0.025, 1.0),
+        "nose": (0.88, 0.59, 0.43, 1.0),
+        "mouth": (0.30, 0.075, 0.065, 1.0),
+    }
+    vertex_colors = [skin_color] * len(positions)
     for group, center, radii in details:
         component, faces, _, component_normals = _ellipsoid(center,radii)
         offset = len(positions)
         positions.extend(component)
         normals.extend(component_normals)
+        vertex_colors.extend([face_colors[group]] * len(component))
         indices.extend(offset+i for i in faces)
 
     # Remove zero-area pole triangles from ellipsoid details and orient every
@@ -619,13 +645,14 @@ def _build_geometry(
                 for bone, weight in strongest
             ]
         vertex_weights.append(tuple(strongest))
-    return positions,indices,deltas,vertex_weights,normals
+    return positions,indices,deltas,vertex_weights,normals,vertex_colors
 
 
 def _build_hair_geometry(style: str) -> tuple[
     list[tuple[float, float, float]], list[int],
     dict[str, list[tuple[float, float, float]]],
-    list[tuple[tuple[str, float], ...]], list[tuple[float, float, float]]
+    list[tuple[tuple[str, float], ...]], list[tuple[float, float, float]],
+    list[tuple[float, float, float, float]]
 ]:
     """Build a separate, head-skinned hairstyle mesh from editable recipe data."""
     shapes = [(0.0, 2.94, 0.015, 0.445, 0.245, 0.385)]
@@ -673,7 +700,7 @@ def _build_hair_geometry(style: str) -> tuple[
             delta = (point[0] * 0.16, 0.0, 0.0) if name == "head_width" else (0.0, 0.0, 0.0)
             morphs[name].append(delta)
         weights.append((("Head", 1.0),))
-    return positions, indices, morphs, weights, normals
+    return positions, indices, morphs, weights, normals, []
 
 
 def build_master_character_glb(recipe: dict[str, Any] | None = None) -> bytes:
@@ -736,11 +763,12 @@ def build_master_character_glb(recipe: dict[str, Any] | None = None) -> bytes:
         geometry: tuple[
             list[tuple[float, float, float]], list[int],
             dict[str, list[tuple[float, float, float]]], list[str],
-            list[tuple[float, float, float]]
+            list[tuple[float, float, float]],
+            list[tuple[float, float, float, float]]
         ],
         material_index: int,
     ) -> dict[str, Any]:
-        positions, indices, morphs, vertex_weights, normals = geometry
+        positions, indices, morphs, vertex_weights, normals, vertex_colors = geometry
         flat_positions = [coordinate for point in positions for coordinate in point]
         mins = [min(point[axis] for point in positions) for axis in range(3)]
         maxs = [max(point[axis] for point in positions) for axis in range(3)]
@@ -781,13 +809,20 @@ def build_master_character_glb(recipe: dict[str, Any] | None = None) -> bytes:
             struct.pack(f"<{len(weight_values)}f", *weight_values),
             5126, len(positions), "VEC4", 34962
         )
+        attributes = {
+            "POSITION": position_accessor,
+            "NORMAL": normal_accessor,
+            "JOINTS_0": joints_accessor,
+            "WEIGHTS_0": weights_accessor,
+        }
+        if material_index == 0 and vertex_colors:
+            flat_colors = [channel for color in vertex_colors for channel in color]
+            attributes["COLOR_0"] = add_accessor(
+                struct.pack(f"<{len(flat_colors)}f", *flat_colors),
+                5126, len(positions), "VEC4", 34962
+            )
         return {
-            "attributes": {
-                "POSITION": position_accessor,
-                "NORMAL": normal_accessor,
-                "JOINTS_0": joints_accessor,
-                "WEIGHTS_0": weights_accessor,
-            },
+            "attributes": attributes,
             "indices": index_accessor,
             "material": material_index,
             "mode": 4,
@@ -839,7 +874,7 @@ def build_master_character_glb(recipe: dict[str, Any] | None = None) -> bytes:
     materials = [{
         "name": "WarmCartoonSkin",
         "pbrMetallicRoughness": {
-            "baseColorFactor": [0.82, 0.53, 0.37, 1.0],
+            "baseColorFactor": [1.0, 1.0, 1.0, 1.0],
             "metallicFactor": 0.0,
             "roughnessFactor": 0.82,
         },

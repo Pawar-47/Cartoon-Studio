@@ -360,3 +360,24 @@ def test_foundry_recipe_rejects_unknown_hair_style_and_invalid_color() -> None:
     recipe["hair_color"] = "brown"
     with pytest.raises(ValueError, match="hair_color"):
         validate_character_recipe(recipe)
+
+
+def test_foundry_face_has_distinct_eye_iris_pupil_and_brow_colors() -> None:
+    data = build_master_character_glb()
+    document = _read_glb(data)
+    primitive = document["meshes"][0]["primitives"][0]
+    assert "COLOR_0" in primitive["attributes"]
+    accessor = document["accessors"][primitive["attributes"]["COLOR_0"]]
+    view = document["bufferViews"][accessor["bufferView"]]
+    json_length = struct.unpack_from("<I", data, 12)[0]
+    binary_start = 20 + json_length + 8
+    start = binary_start + view.get("byteOffset", 0) + accessor.get("byteOffset", 0)
+    values = struct.unpack_from(f"<{accessor['count'] * 4}f", data, start)
+    colors = {
+        tuple(round(channel, 3) for channel in values[offset:offset + 4])
+        for offset in range(0, len(values), 4)
+    }
+    assert (0.97, 0.95, 0.89, 1.0) in colors
+    assert (0.2, 0.1, 0.045, 1.0) in colors
+    assert (0.012, 0.009, 0.007, 1.0) in colors
+    assert (0.12, 0.055, 0.025, 1.0) in colors

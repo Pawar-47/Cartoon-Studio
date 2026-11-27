@@ -174,3 +174,10 @@ The app-side library foundation exposes a catalog and lazy-download model route.
 - With the pinned Godot 4.7.2 runtime, `tests/test_engine.py` passed **14 tests**. The Male Adventurer regression verifies head-bound fitting, face-feature front orientation, short-hair/ponytail placement, retained animation clips and playback, and byte-identical source preservation.
 - The integrated local suite passed **122 tests with 4 environment-related skips** (three Node.js cases and one symlink-capability case). GitHub Actions run #431 initially flagged Ruff import ordering; the fix is in `7d396e5` and run #432 passed.
 - No fresh browser visual acceptance was completed. Hair/portrait/turnaround appearance review, saved-profile visual review, original face geometry and broader rig compatibility remain open; P2.2 is still PARTIAL.
+
+
+## Original Foundry facial-detail pass — 2026-11-28
+
+- CI #606 completed end-to-end male/female Foundry browser acceptance, Godot inspection and PNG/turnaround exports. Inspection of the uploaded images showed the generated face lacked readable eye whites, irises, pupils and eyebrows; facial forms inherited the skin material.
+- Generator version 0.7.0 adds separately colored sclera, irises, pupils and brows as Head-skinned facial geometry using glTF vertex colors. Nose and mouth details receive distinct restrained colors. Face details continue through the existing morph-target pipeline.
+- This is a focused visual-quality increment, not a claim that original face authoring or overall cartoon-style acceptance is complete. CI must verify the GLB through Godot and browser preview.

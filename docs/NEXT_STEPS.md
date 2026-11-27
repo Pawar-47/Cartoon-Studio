@@ -83,3 +83,10 @@ Phase 2 remains ACTIVE. Do not start Phase 3 until P2.2 exit criteria are met. P
 PR #11 merged the deterministic API-level round-trip test for modular character recipes. It exercises assembly with four parts plus a bone-attached accessory, persists the resulting asset manifest, verifies every source manifest can be reopened, saves and reopens a character profile referencing the assembled asset, and submits a second assembly using only the recovered recipe. The fake engine isolates persistence/replay contracts; the separate pinned-Godot integration test remains responsible for real skeleton compatibility and animation playback.
 
 This closes the API-level persistence regression item only. Interactive browser acceptance and remaining face/hair geometry authoring remain open.
+
+
+## 2026-11-28 — Foundry visual-quality batch
+
+- Latest feature-branch CI #606 passed male/female generation, edit/save/reopen, Godot inspection and portrait/turnaround exports.
+- CI screenshots were inspected. The character face remains underdeveloped; the next batch adds readable eye whites, irises, pupils and eyebrows while keeping facial geometry skinned to Head.
+- Continue only on `feature/cartoon-character-foundry`; preserve `main` and do not merge PR #23.
