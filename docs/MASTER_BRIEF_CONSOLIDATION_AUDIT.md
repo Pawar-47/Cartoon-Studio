@@ -178,3 +178,11 @@ The 171-row registry contained 13 rows with the non-standard status `PARTIAL` in
 The dashboard still presented World Builder as a future step and episode rendering as entirely pending, despite the persistent World Builder, curated world catalogue, Godot export/preview and partial Godot/FFmpeg rendering path already being present.
 
 **Correction:** commit `49516e5` marks the Character Studio and World Builder foundations as delivered, marks story/audio and episode rendering as active partial work, and replaces the misleading “Pending” rendering label with “Pipeline partial”. The dashboard regression test verifies the new wording. Windows CI #618 passed on that exact code commit.
+
+
+### CONS-013 — Traceability source paths were stale or non-existent
+
+**Severity:** Medium  
+A structural scan of the 171 traceability rows found stale path references such as `scripts/bootstrap` and `tests/test_story.py`, plus broad globs that obscured the actual browser workspace files. Some descriptions also claimed that engine adapters and canonical persistence contracts did not exist.
+
+**Correction:** the current traceability refresh replaces these with exact live paths (Godot runtime fetch/build scripts, installer smoke tests, actual static workspace files, current storage/engine/job modules and existing tests). ARCH-R003/R004 and GIT-R002 evidence was updated to reflect the integrated Godot worker and versioned storage/adapter code. Structural source-path scanning is now being used as a reconciliation aid; a matching path is not by itself proof of requirement acceptance.
