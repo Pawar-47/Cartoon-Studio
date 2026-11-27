@@ -814,6 +814,10 @@ def test_dashboard_is_served():
     response = client.get("/")
     assert response.status_code == 200
     assert "Cartoon Studio" in response.text
+    assert "World Builder foundation" in response.text
+    assert "curated CC0 assets and Godot scene export" in response.text
+    assert "Pipeline partial" in response.text
+    assert "full 5–7 minute acceptance remains" in response.text
 
 
 def test_project_create_and_list(tmp_path, monkeypatch):
