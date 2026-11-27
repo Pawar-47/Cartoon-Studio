@@ -632,7 +632,7 @@ func _replace_skin_surface_with_generated_face(
     new_arrays[Mesh.ARRAY_VERTEX] = face_vertices
     new_arrays[Mesh.ARRAY_NORMAL] = face_normals if not face_normals.is_empty() else _compute_face_normals(face_vertices, center)
 
-    var tangents := PackedVector3Array()
+    var tangents := PackedVector4Array()
     tangents.resize(vertex_count)
     new_arrays[Mesh.ARRAY_TANGENT] = tangents
 
@@ -830,7 +830,6 @@ func _add_character_face_features(scene: Node, recipe: Dictionary) -> Dictionary
     var mesh_count := 0
     var skin_replaced := false
     var replaced_surface_index := -1
-    var skin_surface_indices := skin_surface.get("surface_indices", [])
     if skin_surface_indices.size() > 0:
         var skin_index := int(skin_surface_indices[0])
         var replacement := _replace_skin_surface_with_generated_face(
