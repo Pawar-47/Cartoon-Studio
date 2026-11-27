@@ -252,6 +252,114 @@ def test_world_layout_accepts_civic_and_indoor_object_kinds(tmp_path, monkeypatc
     assert len(client.get(f"/api/projects/{project_id}/worlds").json()) == 1
 
 
+def test_world_layout_accepts_environmental_object_kinds(tmp_path, monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "world-environment.sqlite3")
+    main._INITIALIZED_DB_KEY = None
+    project = client.post("/api/projects", json={"name": "Environment Project"})
+    project_id = project.json()["id"]
+    payload = {
+        "name": "Park Area",
+        "theme": "park",
+        "ground_color": "#789b58",
+        "sky": "day",
+        "objects": [
+            {"id": "bench-1", "kind": "furniture", "label": "Park Bench",
+             "x": 30, "y": 30, "width": 4, "height": 2, "rotation": 0,
+             "color": "#5a4a3a"},
+            {"id": "pond-1", "kind": "water_body", "label": "Duck Pond",
+             "x": 60, "y": 50, "width": 12, "height": 10, "rotation": 0,
+             "color": "#5b9bd5"},
+            {"id": "light-1", "kind": "streetlight", "label": "Main Street Light",
+             "x": 20, "y": 20, "width": 2, "height": 5, "rotation": 0,
+             "color": "#444b50"},
+        ],
+    }
+    created = client.post(f"/api/projects/{project_id}/worlds", json=payload)
+    assert created.status_code == 201
+    world_id = created.json()["id"]
+    world_path = tmp_path / "projects" / project_id / "worlds" / f"{world_id}.json"
+    document = json.loads(world_path.read_text(encoding="utf-8"))
+    assert document["document_type"] == "world"
+    kinds = {obj["kind"] for obj in document["data"]["objects"]}
+    assert kinds == {"furniture", "water_body", "streetlight"}
+    reopened = client.get(f"/api/projects/{project_id}/worlds/{world_id}")
+    assert reopened.status_code == 200
+    assert reopened.json()["revision"] == 1
+
+
+def test_world_template_instantiate_from_saved_world(tmp_path, monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "world-template.sqlite3")
+    main._INITIALIZED_DB_KEY = None
+    project = client.post("/api/projects", json={"name": "Template Project"})
+    project_id = project.json()["id"]
+
+    # Create a template world
+    template_payload = {
+        "name": "Town Square Template",
+        "theme": "market",
+        "ground_color": "#789b58",
+        "sky": "day",
+        "objects": [
+            {"id": "road-1", "kind": "road", "label": "Main Road",
+             "x": 50, "y": 50, "width": 80, "height": 12, "rotation": 0,
+             "color": "#4b4d50"},
+            {"id": "shop-1", "kind": "shop", "label": "Bakery",
+             "x": 30, "y": 40, "width": 18, "height": 16, "rotation": 0,
+             "color": "#d9a46b"},
+        ],
+    }
+    template_created = client.post(
+        f"/api/projects/{project_id}/worlds", json=template_payload
+    )
+    assert template_created.status_code == 201
+    template_id = template_created.json()["id"]
+
+    # Instantiate a new world from the template
+    instance_payload = {
+        "name": "Town Square Copy",
+        "template_id": template_id,
+        "sky": "sunset",
+    }
+    instance_created = client.post(
+        f"/api/projects/{project_id}/worlds", json=instance_payload
+    )
+    assert instance_created.status_code == 201
+    instance_id = instance_created.json()["id"]
+    assert instance_id != template_id
+    instance_data = instance_created.json()
+    assert instance_data["theme"] == "market"
+    assert instance_data["sky"] == "sunset"
+    assert len(instance_data["objects"]) == 2
+    instance_kinds = {obj["kind"] for obj in instance_data["objects"]}
+    assert instance_kinds == {"road", "shop"}
+
+    # Both worlds exist independently
+    all_worlds = client.get(f"/api/projects/{project_id}/worlds")
+    assert len(all_worlds.json()) == 2
+
+
+def test_world_template_instantiate_rejects_missing_template(tmp_path, monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "world-template-missing.sqlite3")
+    main._INITIALIZED_DB_KEY = None
+    project = client.post("/api/projects", json={"name": "Missing Template Project"})
+    project_id = project.json()["id"]
+    payload = {
+        "name": "Bad Copy",
+        "template_id": "nonexistent-template-id",
+    }
+    response = client.post(f"/api/projects/{project_id}/worlds", json=payload)
+    assert response.status_code == 404
+
+
 def test_story_builder_is_served():
     response = client.get("/story")
     assert response.status_code == 200

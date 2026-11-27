@@ -2870,7 +2870,7 @@ func _export_world_scene(payload: Dictionary) -> Dictionary:
             continue
         var item: Dictionary = object_value
         var kind := str(item.get("kind", ""))
-        if not ["road", "building", "shop", "school", "hospital", "office", "police_station", "tree", "vehicle", "lamp", "park", "garage", "indoor_room", "playground"].has(kind):
+        if not ["road", "building", "shop", "school", "hospital", "office", "police_station", "tree", "vehicle", "lamp", "park", "garage", "indoor_room", "playground", "furniture", "water_body", "streetlight"].has(kind):
             continue
         var x := (float(item.get("x", 50.0)) - 50.0) * 0.9
         var z := (float(item.get("y", 50.0)) - 50.0) * 0.9
@@ -2918,6 +2918,26 @@ func _export_world_scene(payload: Dictionary) -> Dictionary:
             _world_add_box(anchor, "PlaygroundSurface", Vector3(width, 0.16, depth), Vector3(0.0, 0.08, 0.0), "#7aa85b")
             _world_add_box(anchor, "Slide", Vector3(width * 0.3, body_height * 0.5, depth * 0.25), Vector3(-width * 0.2, body_height * 0.25, depth * 0.2), "#e85a4f")
             _world_add_sphere(anchor, "ClimbingDome", maxf(1.2, minf(width, depth) * 0.25), Vector3(width * 0.2, maxf(1.2, depth * 0.2), -depth * 0.15), "#a8a8a8")
+        elif kind == "furniture":
+            var seat_height := clampf(height * 0.45, 0.4, 0.9)
+            _world_add_box(anchor, "FurnitureBase", Vector3(width, seat_height, depth), Vector3(0.0, seat_height * 0.5, 0.0), tint)
+            _world_add_box(anchor, "FurnitureTop", Vector3(width * 1.05, 0.1, depth * 1.05), Vector3(0.0, seat_height + 0.05, 0.0), "#8a7a6a")
+        elif kind == "water_body":
+            _world_add_box(anchor, "WaterSurface", Vector3(width, 0.06, depth), Vector3.ZERO, "#5b9bd5")
+            _world_add_box(anchor, "WaterBank", Vector3(width * 1.1, 0.12, depth * 1.1), Vector3.ZERO, "#8a9ba8")
+        elif kind == "streetlight":
+            var pole_height := clampf(height * 0.9, 3.0, 6.0)
+            var pole := MeshInstance3D.new()
+            pole.name = "StreetlightPole"
+            var pole_mesh := CylinderMesh.new()
+            pole_mesh.top_radius = 0.08
+            pole_mesh.bottom_radius = 0.12
+            pole_mesh.height = pole_height
+            pole.mesh = pole_mesh
+            pole.material_override = _world_material("#444b50")
+            pole.position.y = pole_height * 0.5
+            anchor.add_child(pole)
+            _world_add_sphere(anchor, "StreetlightLamp", 0.4, Vector3(0.0, pole_height + 0.15, 0.0), "#ffe6a1")
         elif kind == "tree":
             var trunk := MeshInstance3D.new()
             trunk.name = "Trunk"

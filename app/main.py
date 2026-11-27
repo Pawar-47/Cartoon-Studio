@@ -121,7 +121,8 @@ class WorldObjectInput(BaseModel):
     id: str = Field(min_length=1, max_length=64)
     kind: Literal[
         "road", "building", "shop", "school", "hospital", "office", "police_station",
-        "tree", "vehicle", "lamp", "park", "garage", "indoor_room", "playground"
+        "tree", "vehicle", "lamp", "park", "garage", "indoor_room", "playground",
+        "furniture", "water_body", "streetlight"
     ] = Field(...)
     label: str = Field(min_length=1, max_length=80)
     x: float = Field(ge=0, le=100)
@@ -138,6 +139,7 @@ class WorldPlanInput(BaseModel):
     ground_color: str = Field(default="#789b58", pattern=r"^#[0-9a-fA-F]{6}$")
     sky: Literal["day", "sunset", "night"] = "day"
     objects: list[WorldObjectInput] = Field(default_factory=list, max_length=100)
+    template_id: str | None = Field(default=None, max_length=64)
 
 
 class CharacterHairInput(BaseModel):
@@ -1432,10 +1434,37 @@ def create_project_world(project_id: str, payload: WorldPlanInput) -> dict[str, 
     initialize_database()
     now = datetime.now(UTC).isoformat()
     world_id = str(uuid.uuid4())
-    data = payload.model_dump(mode="json")
+    data = payload.model_dump(mode="json", exclude_unset=True)
     data["name"] = data["name"].strip()
     if not data["name"]:
         raise HTTPException(status_code=422, detail="World name cannot be blank.")
+    template_id = data.pop("template_id", None)
+    if template_id is not None:
+        with connect_db() as connection:
+            project = connection.execute(
+                "SELECT id FROM projects WHERE id = ?", (project_id,)
+            ).fetchone()
+            if project is None:
+                raise HTTPException(status_code=404, detail="Project not found.")
+            indexed = connection.execute(
+                """
+                SELECT * FROM project_documents
+                WHERE project_id = ? AND document_id = ? AND document_type = 'world'
+                """,
+                (project_id, template_id),
+            ).fetchone()
+            if indexed is None:
+                raise HTTPException(status_code=404, detail="Template world not found.")
+        template_path = resolve_project_relative(DATA_DIR, project_id, indexed["relative_path"])
+        if not template_path.is_file():
+            raise HTTPException(status_code=404, detail="Template document not found.")
+        template_document = read_json(template_path)
+        template_data = template_document.get("data", {})
+        data.setdefault("theme", template_data.get("theme", "small_town"))
+        data.setdefault("ground_color", template_data.get("ground_color", "#789b58"))
+        data.setdefault("sky", template_data.get("sky", "day"))
+        if not data.get("objects"):
+            data["objects"] = [dict(obj) for obj in template_data.get("objects", [])]
     with connect_db() as connection:
         project = connection.execute(
             "SELECT id, created_at FROM projects WHERE id = ?", (project_id,)
