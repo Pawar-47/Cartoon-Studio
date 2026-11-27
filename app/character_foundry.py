@@ -367,6 +367,38 @@ def _build_geometry(
     def grid_id(x: int, y: int, z: int) -> int:
         return (z * ny + y) * nx + x
 
+    # Estimate the implicit-field gradient from the already sampled grid.
+    # Interpolating these gradients avoids six additional field evaluations
+    # for every generated surface vertex.
+    gradient_cache: dict[int, tuple[float, float, float]] = {}
+
+    def grid_gradient(index: int) -> tuple[float, float, float]:
+        cached = gradient_cache.get(index)
+        if cached is not None:
+            return cached
+        z, remainder = divmod(index, nx * ny)
+        y, x = divmod(remainder, nx)
+        coordinates = (x, y, z)
+        dimensions = (nx, ny, nz)
+        gradient = []
+        for axis in range(3):
+            low = max(coordinates[axis] - 1, 0)
+            high = min(coordinates[axis] + 1, dimensions[axis] - 1)
+            low_point = list(coordinates)
+            high_point = list(coordinates)
+            low_point[axis] = low
+            high_point[axis] = high
+            low_id = grid_id(*low_point)
+            high_id = grid_id(*high_point)
+            distance = axes[axis][high] - axes[axis][low]
+            gradient.append(
+                (samples[high_id] - samples[low_id]) / distance
+                if distance > 0.0 else 0.0
+            )
+        result = tuple(gradient)
+        gradient_cache[index] = result
+        return result
+
     positions: list[tuple[float,float,float]] = []
     indices: list[int] = []
     normals: list[tuple[float,float,float]] = []
@@ -390,11 +422,11 @@ def _build_geometry(
         point = tuple(pa[i] + t*(pb[i]-pa[i]) for i in range(3))
         index = len(positions)
         positions.append(point)
-        epsilon = 0.002
+        gradient_a = grid_gradient(a)
+        gradient_b = grid_gradient(b)
         gradient = tuple(
-            (field(tuple(point[j] + (epsilon if j==i else 0.0) for j in range(3))) -
-             field(tuple(point[j] - (epsilon if j==i else 0.0) for j in range(3)))) / (2*epsilon)
-            for i in range(3)
+            gradient_a[axis] + t * (gradient_b[axis] - gradient_a[axis])
+            for axis in range(3)
         )
         length = math.sqrt(sum(v*v for v in gradient)) or 1.0
         normals.append(tuple(v/length for v in gradient))

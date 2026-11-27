@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import struct
 
 import pytest
@@ -99,6 +100,10 @@ def test_generated_triangles_follow_outward_vertex_normals() -> None:
 
     positions = accessor_values(primitive["attributes"]["POSITION"], "f", 3)
     normals = accessor_values(primitive["attributes"]["NORMAL"], "f", 3)
+    assert all(
+        abs(math.sqrt(sum(value * value for value in normal)) - 1.0) < 1e-3
+        for normal in normals
+    )
     indices = [value[0] for value in accessor_values(primitive["indices"], "I", 1)]
     assert len(indices) % 3 == 0
     for offset in range(0, len(indices), 3):
