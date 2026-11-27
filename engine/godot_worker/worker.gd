@@ -627,16 +627,22 @@ func _replace_skin_surface_with_generated_face(
 
     var vertex_count: int = face_vertices.size()
 
-    var new_arrays := Array()
+    var new_arrays: Array = []
     new_arrays.resize(Mesh.ARRAY_MAX)
-    new_arrays[Mesh.ARRAY_VERTEX] = face_vertices
-    new_arrays[Mesh.ARRAY_NORMAL] = face_normals if not face_normals.is_empty() else _compute_face_normals(face_vertices, center)
+    new_arrays[Mesh.ARRAY_VERTEX] = PackedVector3Array(face_vertices)
+    if face_normals.size() == vertex_count:
+        new_arrays[Mesh.ARRAY_NORMAL] = PackedVector3Array(face_normals)
+    else:
+        new_arrays[Mesh.ARRAY_NORMAL] = _compute_face_normals(face_vertices, center)
 
-    var tangents := PackedFloat32Array()
-    tangents.resize(vertex_count * 4)
-    new_arrays[Mesh.ARRAY_TANGENT] = tangents
+    # Tangents intentionally omitted (null): all-zero tangents are invalid and the
+    # generated skin material has no normal map.
+    new_arrays[Mesh.ARRAY_TANGENT] = null
 
-    new_arrays[Mesh.ARRAY_TEX_UV] = face_uvs if not face_uvs.is_empty() else _compute_face_uvs(vertex_count)
+    if face_uvs.size() == vertex_count:
+        new_arrays[Mesh.ARRAY_TEX_UV] = PackedVector2Array(face_uvs)
+    else:
+        new_arrays[Mesh.ARRAY_TEX_UV] = _compute_face_uvs(vertex_count)
 
     var bones := PackedInt32Array()
     var weights := PackedFloat32Array()
@@ -672,16 +678,17 @@ func _replace_skin_surface_with_generated_face(
             if mat != null:
                 new_mesh.surface_set_material(new_idx, mat)
 
-        var added_idx := new_mesh.add_surface_from_arrays(
-            Mesh.PRIMITIVE_TRIANGLES,
-            new_arrays,
-            [],
-            {},
-            0
-        )
-        if added_idx < 0:
-            return {"ok": false, "error_code": "face_surface_add_failed", "error": "add_surface_from_arrays() returned -1 for generated face surface."}
-        new_surface_index = added_idx
+    # Add the generated face exactly once, after the original surfaces.
+    var added_idx := new_mesh.add_surface_from_arrays(
+        Mesh.PRIMITIVE_TRIANGLES,
+        new_arrays,
+        [],
+        {},
+        0
+    )
+    if added_idx < 0:
+        return {"ok": false, "error_code": "face_surface_add_failed", "error": "add_surface_from_arrays() returned -1 for generated face surface."}
+    new_surface_index = added_idx
     new_mesh.surface_set_name(new_surface_index, "CartoonStudio_GeneratedFace")
     if skin_material != null:
         new_mesh.surface_set_material(new_surface_index, skin_material)
