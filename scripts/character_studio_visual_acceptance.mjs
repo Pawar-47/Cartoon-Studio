@@ -1,6 +1,6 @@
 import { chromium } from "playwright";
 import { spawn } from "node:child_process";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const root = process.cwd();
@@ -19,6 +19,14 @@ const record = (message) => {
 let server;
 let browser;
 let failed = false;
+
+async function setInputValue(page, selector, value) {
+  await page.locator(selector).evaluate((element, nextValue) => {
+    element.value = String(nextValue);
+    element.dispatchEvent(new Event("input", { bubbles: true }));
+    element.dispatchEvent(new Event("change", { bubbles: true }));
+  }, String(value));
+}
 
 async function waitForServer() {
   const deadline = Date.now() + 120_000;
@@ -130,9 +138,9 @@ try {
   await page.locator("#foundry-description").fill("Original male hero generated in browser CI.");
   await page.locator("#foundry-template").selectOption("cartoon-studio.stylized-adult.v1");
   await page.locator("#foundry-hair-style").selectOption("spiky");
-  await page.locator("#foundry-hair-color").fill("#254c9b");
-  await page.locator("#foundry-head-width").fill("0.35");
-  await page.locator("#foundry-mouth-width").fill("0.25");
+  await setInputValue(page, "#foundry-hair-color", "#254c9b");
+  await setInputValue(page, "#foundry-head-width", "0.35");
+  await setInputValue(page, "#foundry-mouth-width", "0.25");
   await page.locator("#foundry-create").click();
   await page.waitForFunction(
     () => document.querySelector("#foundry-status")?.textContent?.includes("saved."),
@@ -172,7 +180,7 @@ try {
   if (await page.locator("#foundry-head-width").inputValue() !== "0.35") {
     throw new Error("Saved Foundry morph did not restore when editing.");
   }
-  await page.locator("#foundry-head-width").fill("0.6");
+  await setInputValue(page, "#foundry-head-width", "0.6");
   await page.locator("#foundry-create").click();
   await page.waitForFunction(
     () => document.querySelector("#foundry-status")?.textContent?.includes("saved."),
@@ -194,8 +202,8 @@ try {
   await page.locator("#foundry-description").fill("Original female hero generated in browser CI.");
   await page.locator("#foundry-template").selectOption("cartoon-studio.stylized-adult-female.v1");
   await page.locator("#foundry-hair-style").selectOption("bob");
-  await page.locator("#foundry-hair-color").fill("#9b3c70");
-  await page.locator("#foundry-head-width").fill("-0.2");
+  await setInputValue(page, "#foundry-hair-color", "#9b3c70");
+  await setInputValue(page, "#foundry-head-width", "-0.2");
   await page.locator("#foundry-create").click();
   await page.waitForFunction(
     () => document.querySelector("#foundry-status")?.textContent?.includes("saved."),
@@ -222,14 +230,30 @@ try {
   }
   record("Male and female GLBs both passed the live Godot import/inspection API.");
 
-  await page.locator("#export-preview-png").click();
+  const [portraitDownload] = await Promise.all([
+    page.waitForEvent("download"),
+    page.locator("#export-preview-png").click(),
+  ]);
+  const portraitPath = path.join(output, "character-portrait.png");
+  await portraitDownload.saveAs(portraitPath);
+  if ((await stat(portraitPath)).size < 1024) {
+    throw new Error("Portrait PNG export is unexpectedly small.");
+  }
   await page.waitForFunction(
     () => document.querySelector("#preview-status")?.textContent?.includes("PNG exported"),
     null,
     { timeout: 30_000 },
   );
   await page.screenshot({ path: path.join(output, "04-preview-export-ready.png"), fullPage: true });
-  await page.locator("#export-turnaround-png").click();
+  const [turnaroundDownload] = await Promise.all([
+    page.waitForEvent("download"),
+    page.locator("#export-turnaround-png").click(),
+  ]);
+  const turnaroundPath = path.join(output, "character-turnaround.png");
+  await turnaroundDownload.saveAs(turnaroundPath);
+  if ((await stat(turnaroundPath)).size < 1024) {
+    throw new Error("Turnaround PNG export is unexpectedly small.");
+  }
   await page.waitForFunction(
     () => document.querySelector("#preview-status")?.textContent?.includes("turnaround sheet exported"),
     null,

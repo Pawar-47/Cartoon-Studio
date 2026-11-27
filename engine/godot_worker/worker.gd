@@ -1215,26 +1215,28 @@ func _export_character_appearance(payload: Dictionary) -> Dictionary:
     if face_enabled:
         var face_mesh_count := 0
         var face_attachment_verified := false
-        var generated_face_surface_found := false
+        var generated_face_replacement_mesh_found := false
         for mesh_record in verification.get("mesh_inventory", []):
             if not str(mesh_record.get("node_name", "")).begins_with("CartoonStudio_Face_"):
                 continue
             face_mesh_count += 1
             if str(mesh_record.get("attachment_bone", "")) == str(face_result.get("attachment_bone", "")):
                 face_attachment_verified = true
-            var surface_names: Array = mesh_record.get("surface_names", [])
-            var material_names: Array = mesh_record.get("material_names", [])
-            for surface_index in range(surface_names.size()):
-                if str(surface_names[surface_index]) == "CartoonStudio_GeneratedFace":
-                    generated_face_surface_found = true
-                if surface_index < material_names.size() and str(material_names[surface_index]) == "CartoonStudio_GeneratedFace":
-                    generated_face_surface_found = true
+            if str(mesh_record.get("node_name", "")) == str(face_result.get("head_mesh_name", "")):
+                var bounds: Dictionary = mesh_record.get("bounds", {})
+                var bounds_size: Array = bounds.get("size", [])
+                if int(mesh_record.get("surface_count", 0)) > 0 and bounds_size.size() >= 3:
+                    generated_face_replacement_mesh_found = (
+                        float(bounds_size[0]) > 0.01
+                        and float(bounds_size[1]) > 0.01
+                        and float(bounds_size[2]) > 0.01
+                    )
         if face_mesh_count < int(face_result.get("mesh_count", 0)) or not face_attachment_verified:
             DirAccess.remove_absolute(output_path)
             return {"error_code": "appearance_face_verification_failed", "error": "Generated facial meshes or their Head-bone attachment did not survive GLB export and re-import."}
-        if bool(face_result.get("skin_replaced", false)) and not generated_face_surface_found:
+        if bool(face_result.get("skin_replaced", false)) and not generated_face_replacement_mesh_found:
             DirAccess.remove_absolute(output_path)
-            return {"error_code": "appearance_face_replacement_verification_failed", "error": "Generated face surface was not found on the head mesh after export and re-import."}
+            return {"error_code": "appearance_face_replacement_verification_failed", "error": "The head mesh with the generated skin replacement did not survive GLB export and re-import."}
         verification["face_features_verified"] = true
         verification["face_attachment_bone"] = str(face_result.get("attachment_bone", ""))
         verification["face_front_direction"] = float(face_result.get("front_direction", 1.0))
