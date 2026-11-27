@@ -983,6 +983,16 @@ func _add_character_face_features(scene: Node, recipe: Dictionary) -> Dictionary
         Vector3(width * 0.18 * jaw_width, height * 0.055 * chin_length, eye_depth * 0.3),
         skin_material)
     mesh_count += 1
+    var chin_y := jaw_y - height * 0.035 * chin_length
+    var chin_z := _generated_face_front_depth(
+        head_bounds, center, center.x, chin_y,
+        face_width, cheek_fullness, jaw_width, front_direction
+    )
+    _add_face_sphere(attachment, scene, "CartoonStudio_Face_Chin",
+        Vector3(center.x, chin_y, chin_z + front_direction * eye_depth * 0.14),
+        Vector3(width * 0.105 * jaw_width, height * 0.038 * chin_length, eye_depth * 0.28),
+        skin_material)
+    mesh_count += 1
 
     var mouth_half := width * 0.19 * mouth_width
     if moustache_enabled:
