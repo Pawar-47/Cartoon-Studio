@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import math
 import struct
+from collections import Counter
 
 import pytest
 
@@ -13,11 +14,46 @@ from app.character_foundry import (
     MORPH_TARGETS,
     RIG_PROFILE_ID,
     build_master_character_glb,
+    _CUBE_TETRAHEDRA,
     default_character_recipe,
     validate_character_recipe,
     write_master_character,
 )
 from scripts import generate_foundry_master
+
+
+def test_cube_tetrahedra_form_a_conforming_closed_partition() -> None:
+    cube = (
+        (0, 0, 0), (1, 0, 0), (0, 1, 0), (1, 1, 0),
+        (0, 0, 1), (1, 0, 1), (0, 1, 1), (1, 1, 1),
+    )
+    faces = Counter()
+    total_volume = 0.0
+    for tetrahedron in _CUBE_TETRAHEDRA:
+        a, b, c, d = (cube[index] for index in tetrahedron)
+        ab = tuple(b[i] - a[i] for i in range(3))
+        ac = tuple(c[i] - a[i] for i in range(3))
+        ad = tuple(d[i] - a[i] for i in range(3))
+        cross = (
+            ac[1] * ad[2] - ac[2] * ad[1],
+            ac[2] * ad[0] - ac[0] * ad[2],
+            ac[0] * ad[1] - ac[1] * ad[0],
+        )
+        total_volume += abs(sum(ab[i] * cross[i] for i in range(3))) / 6.0
+        for omitted in range(4):
+            face = tuple(sorted(tetrahedron[:omitted] + tetrahedron[omitted + 1:]))
+            faces[face] += 1
+
+    boundary = [face for face, count in faces.items() if count == 1]
+    assert len(_CUBE_TETRAHEDRA) == 6
+    assert total_volume == pytest.approx(1.0)
+    assert all(count in (1, 2) for count in faces.values())
+    assert sum(count == 2 for count in faces.values()) == 6
+    assert len(boundary) == 12
+    assert all(
+        any(len({cube[index][axis] for index in face}) == 1 for axis in range(3))
+        for face in boundary
+    )
 
 
 def _read_glb(data: bytes) -> dict:

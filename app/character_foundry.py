@@ -480,7 +480,10 @@ def _build_geometry(
     indices: list[int] = []
     normals: list[tuple[float,float,float]] = []
     edge_vertices: dict[tuple[int,int],int] = {}
-    tetrahedra = ((0,5,1,6),(0,1,2,6),(0,2,3,6),(0,3,7,6),(0,7,4,6),(0,4,5,6))
+    # A conforming six-tetrahedron cube split around the 0–7 body diagonal.
+    # The previous list used a face diagonal and created internal boundary
+    # triangles, which appeared as repeating holes in the exported character.
+    tetrahedra = ((0,1,3,7),(0,3,2,7),(0,2,6,7),(0,6,4,7),(0,4,5,7),(0,5,1,7))
     cube_offsets = ((0,0,0),(1,0,0),(0,1,0),(1,1,0),(0,0,1),(1,0,1),(0,1,1),(1,1,1))
     tetra_edges = ((0,1),(0,2),(0,3),(1,2),(1,3),(2,3))
 
