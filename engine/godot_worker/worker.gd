@@ -662,6 +662,7 @@ func _replace_skin_surface_with_generated_face(
             new_mesh.add_surface_from_arrays(
                 Mesh.PRIMITIVE_TRIANGLES,
                 surf_arrays,
+                [],
                 {},
                 0,
                 0
@@ -675,10 +676,11 @@ func _replace_skin_surface_with_generated_face(
         new_mesh.add_surface_from_arrays(
             Mesh.PRIMITIVE_TRIANGLES,
             new_arrays,
+            [],
             {},
             0,
-        0
-    )
+            0
+        )
     new_surface_index = new_mesh.get_surface_count() - 1
     new_mesh.surface_set_name(new_surface_index, "CartoonStudio_GeneratedFace")
     if skin_material != null:
