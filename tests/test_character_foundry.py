@@ -69,13 +69,15 @@ def test_female_master_template_generates_distinct_body_and_clothing_geometry() 
     for female_primitive, male_primitive in zip(
         female_primitives, male_primitives, strict=True
     ):
-        female_count = female_document["accessors"][
+        female_positions = female_document["accessors"][
             female_primitive["attributes"]["POSITION"]
-        ]["count"]
-        male_count = male_document["accessors"][
+        ]
+        male_positions = male_document["accessors"][
             male_primitive["attributes"]["POSITION"]
-        ]["count"]
-        assert female_count != male_count
+        ]
+        assert (female_positions["min"], female_positions["max"]) != (
+            male_positions["min"], male_positions["max"]
+        )
 
 
 def test_recipe_rejects_unknown_template_and_parameter() -> None:
@@ -97,7 +99,7 @@ def test_generated_master_glb_contains_real_morph_geometry() -> None:
     assert mesh["extras"]["targetNames"] == list(MORPH_TARGETS)
     assert primitive["attributes"]["POSITION"] < len(document["accessors"])
     assert document["asset"]["extras"]["masterTemplate"] == MASTER_TEMPLATE_ID
-    assert document["nodes"][0]["name"] == "CartoonStudio_StylizedAdult"
+    assert document["nodes"][0]["name"] == "CartoonStudio_StylizedAdultMale"
     assert document["nodes"][0]["skin"] == 0
     assert len(document["skins"][0]["joints"]) == 19
     assert document["skins"][0]["skeleton"] == 1

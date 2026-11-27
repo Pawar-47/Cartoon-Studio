@@ -240,7 +240,10 @@ def default_character_recipe(
 ) -> dict[str, Any]:
     if not isinstance(character_id, str) or not character_id.strip():
         raise ValueError("character_id must be a non-empty string.")
-    if master_template_id not in MASTER_TEMPLATE_IDS:
+    if (
+        not isinstance(master_template_id, str)
+        or master_template_id not in MASTER_TEMPLATE_IDS
+    ):
         raise ValueError("Unknown master character template.")
     return {
         "schema_version": RECIPE_SCHEMA_VERSION,
