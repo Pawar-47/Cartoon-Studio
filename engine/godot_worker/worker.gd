@@ -638,12 +638,12 @@ func _replace_skin_surface_with_generated_face(
 
     new_arrays[Mesh.ARRAY_TEX_UV] = face_uvs if not face_uvs.is_empty() else _compute_face_uvs(vertex_count)
 
-    var bones := PackedFloat32Array()
+    var bones := PackedInt32Array()
     var weights := PackedFloat32Array()
     bones.resize(vertex_count * 4)
     weights.resize(vertex_count * 4)
     for i in range(vertex_count):
-        bones[i * 4] = float(head_bone_index)
+        bones[i * 4] = head_bone_index
         weights[i * 4] = 1.0
     new_arrays[Mesh.ARRAY_BONES] = bones
     new_arrays[Mesh.ARRAY_WEIGHTS] = weights
