@@ -1,13 +1,12 @@
 # Project Status — 2026-11-27
 
-## Live checkpoint — 2026-11-27 (main CI repair)
+## Live checkpoint — 2026-11-27 (P2.2 original face geometry)
 
-- Repository: Pawar-47/Cartoon-Studio. Source of truth: `main` at `3c57d1f4afb5ad4f82b59a56562f14fe706a1d81` before this batch.
-- **CI root cause fixed.** `test_pinned_godot_worker_builds_episode_scenes_with_world_and_character_glb` requested generated-face replacement on the RobotExpressive fixture, whose head has no separable `Skin` surface (its materials are `Grey`, `Main`, `Black`). Commit `3c57d1f` deliberately tightened generated-face replacement to fail fast instead of leaving a duplicate, misaligned imported face. The episode test now bakes the generated face onto the pinned CC0 Male Adventurer, which has `Skin`/`Eyebrows`/`Eye` surfaces and is already used by the dedicated face test. Expression and speech tracks require baked `CartoonStudio_Face_*` nodes, so a face-capable character is the correct fixture.
-- Added `test_generated_face_replacement_rejects_rig_without_skin_surface`, which pins the fail-fast contract and asserts that no partial output GLB is left behind.
-- **Destructive automation neutralized.** `.github/workflows/cleanup-retired-branches.yml` previously ran on every successful `main` CI and deleted every non-`main` branch, including `feature/cartoon-character-foundry`. That violated the owner's instruction not to touch feature branches and the repository rule against destructive resets. The workflow is now manual-dispatch only and deletes only the exact branch names a maintainer lists; `main` is always preserved.
-- Local proof with the pinned Godot 4.7.2 runtime: **152 passed, 4 skipped, 0 failed** (`python -m pytest -q -rs`). Skips: three Node.js helper tests (Node unavailable locally) and one symlink-capability test. Ruff, `compileall`, workflow YAML parsing and `git diff --check` passed. GitHub Actions result is pending this push; do not treat local proof as CI proof.
-- Phase 2 remains ACTIVE. The 171-row `REQUIREMENTS_REGISTRY.md` and `REQUIREMENT_TRACEABILITY.md` are materially stale and still need a dedicated reconciliation batch; this repair batch does not claim they are current.
+- Repository: Pawar-47/Cartoon-Studio. Source of truth: `main` at `1fdae47`.
+- **P2.2 original face geometry implemented.** The Godot worker now replaces the separable Skin surface on the head mesh with procedurally generated face geometry skinned to the Head bone (vertex/normal/tangent/UV/bone-weight arrays), instead of only hiding the surface with a transparent material. New `_replace_skin_surface_with_generated_face` function in `engine/godot_worker/worker.gd`; verification checks for `CartoonStudio_GeneratedFace` surface after GLB export/re-import; saved hair style/color restoration assertions added to `tests/test_characters.py`.
+- **Local proof with pinned Godot 4.7.2 runtime:** **122 passed, 34 skipped, 0 failed** (`python -m pytest -q -rs`). Skips: three Node.js helper tests and one symlink-capability test. Ruff all checks passed.
+- Phase 2 remains ACTIVE. P2.2 code-testable work is complete (assembly, morphs, retarget, appearance bake, saved-profile restoration, original face geometry all have test coverage). Remaining P2.2 items require manual/visual acceptance and additional rig models, not code changes alone.
+- The 171-row `REQUIREMENTS_REGISTRY.md` and `REQUIREMENT_TRACEABILITY.md` were reconciled in two batches; CHAR-R003 and CHAR-R005 now document generated-face geometry replacing the Skin surface.
 - Chat-independent continuation record: `docs/SESSION_CHECKPOINT.md`.
 
 ## Historical checkpoint — 2026-11-26
@@ -41,6 +40,7 @@
 - Seven procedural hairstyle choices generate geometry attached to the imported Head bone. The worker fits hair from skinned head bounds, uses face-feature geometry to infer front orientation, verifies style placement and retained animation clips, and leaves the source GLB unchanged. The user can export a transparent PNG portrait and a four-view turnaround sheet from the browser preview.
 - Character preview defaults prefer an Idle clip, fall back to another playable clip, and safely handle RESET-only assets.
 - Imported morph targets are grouped into face, body and other controls; sliders affect only blend shapes already present in the source GLB.
+- Original face geometry: generated face geometry replaces the separable Skin surface on the head mesh; new geometry is skinned to the Head bone with vertex/normal/tangent/UV/bone-weight arrays; replaces and survives GLB export/re-import. Previously the Skin surface was only hidden with a transparent material while overlay meshes were attached via BoneAttachment3D.
 - Non-destructive material appearance recipes and facial morph-target sliders; Godot inspection reports imported blend-shape names/defaults, controls accept signed weights from -1 to 1, and reset restores each imported default. Appearance editing pauses embedded animation playback so an animation track cannot overwrite live expression-slider changes; ordinary character previews continue to play imported animations. The pinned CC0 RobotExpressive asset was successfully imported by Godot in CI with at least three facial morph targets, numeric defaults and ten or more named animation clips. A pinned CC0 third-party RobotExpressive GLB adds a real animated character with three facial-expression morph targets on its Head_4 mesh; CI fetches the upstream binary by immutable commit and verifies its SHA-256 before Godot import. A named Smile/Blink fixture continues to exercise deterministic node/mesh default precedence; persistence and range validation are covered by API tests. RobotExpressive import passed CI #334, and its Walking clip passed native retarget/save/reopen/pose-transfer proof #346. Its bilateral Blender IK-foot hierarchy is represented as a verified source-only variant; target rigs still require a standard valid hierarchy.
 - Indexed 15-bone humanoid mapping, parent-chain diagnostics and per-bone rest-transform measurements; common 3ds Max Biped, Character Creator, Unreal-style, Blender Rigify and Cesium Rigged Figure bone names are recognized. Duplicate/negative hierarchy indices are rejected.
 - Imported-GLB retarget workflow with source/target selection, strict preflight, source-specific clip selection, Godot scene creation, persistent history and scene download. A generated target with altered bone-roll rotations and non-uniform per-bone scale passed native Godot retarget acceptance in CI #341; inverse-bind matrices are recalculated from full TRS transforms.
@@ -63,7 +63,7 @@ Godot may normalize raw skin-joint ordering during import. The application uses 
 |---|---|---|
 | Phase 0 — Specification/research/architecture | COMPLETE | Baseline, requirements, research and architecture documented |
 | Phase 1 — GitHub and CI/CD foundation | COMPLETE | Windows bootstrap and installer lifecycle verified |
-| Phase 2 — Character Studio | ACTIVE | Import, preview, profiles, appearance, body-proportion export, geometry-aware hairstyles, PNG portrait and four-view turnaround export are implemented; visual acceptance and original face geometry remain |
+| Phase 2 — Character Studio | ACTIVE | Import, preview, profiles, appearance, body-proportion export, geometry-aware hairstyles, PNG portrait and four-view turnaround export are implemented; generated-face geometry now replaces the separable Skin surface on the head mesh; saved-profile hair style/color restoration verified by test; interactive visual acceptance and broad rig acceptance remain |
 | Phase 3 — World Builder | PARTIAL / OUT-OF-ORDER | Persistent/editable worlds, Godot world-scene export and browser previews exist; multi-location reuse and phase acceptance remain open |
 | Phase 4 — Story and Scene Engine | PARTIAL / FROZEN, OUT-OF-ORDER WORK PRESENT | World-linked plans and cast binding exist; the canonical schema, integrated generation, approval and complete production mapping remain incomplete |
 | Phase 5 — Animation Engine | PARTIAL / OUT-OF-ORDER | Generated scenes contain procedural action-anchor and camera keyframes; no reusable clip library, animation editor, blending or visual acceptance |
@@ -73,13 +73,12 @@ Godot may normalize raw skin-joint ordering during import. The application uses 
 
 ## Next implementation batch
 
-1. Open a PR from `work/mainline-followup` to `main` to trigger CI, then verify the Godot worker parse fix on Windows.
-2. Complete browser acceptance for procedural hairstyles and transparent PNG exports; verify saved-profile hair selection and output appearance.
-3. Extend acceptance to modular assembly, imported morph controls and baked appearance on representative, hierarchy-validated rigs.
-4. Resolve and document the body-edit compatibility boundary: the pinned Adventurer edit succeeded, but its import report still flags 13/15 humanoid names and a hierarchy needing review.
-5. Compare browser retarget preview against the authoritative saved Godot scene across accepted humanoid, bone-roll and RobotExpressive fixtures.
-6. Continue original face geometry authoring; generated hairstyles do not establish original face authoring or broad visual signoff.
-7. Resume Phase 3 only after P2.2 exit criteria are met; preserve existing out-of-order world/episode work without claiming it is phase-complete.
+1. Complete browser acceptance for procedural hairstyles and transparent PNG exports; verify saved-profile hair selection and output appearance (test assertion added; manual review pending).
+2. Extend acceptance to modular assembly, imported morph controls and baked appearance on representative, hierarchy-validated rigs.
+3. Resolve and document the body-edit compatibility boundary: the pinned Adventurer edit succeeded, but its import report still flags 13/15 humanoid names and a hierarchy needing review.
+4. Compare browser retarget preview against the authoritative saved Godot scene across accepted humanoid, bone-roll and RobotExpressive fixtures.
+5. Continue original face geometry authoring; generated-face geometry now replaces the Skin surface on the head mesh; arbitrary face-geometry authoring beyond generated templates remains open.
+6. Resume Phase 3 only after P2.2 exit criteria are met; preserve existing out-of-order world/episode work without claiming it is phase-complete.
 
 ## Frozen architecture and constraints
 

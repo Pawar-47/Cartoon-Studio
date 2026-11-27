@@ -1,5 +1,17 @@
 # Test Report — 2026-11-27
 
+## 2026-11-27 — P2.2 original face geometry implementation
+
+- **Scope:** Implemented original face geometry authoring by replacing the separable Skin surface on the head mesh with procedurally generated face geometry skinned to the Head bone. Added `_replace_skin_surface_with_generated_face` to `engine/godot_worker/worker.gd`; updated verification in `_export_character_appearance` to check for `CartoonStudio_GeneratedFace` surface; added `face_skin_replaced` flag; updated `test_godot_worker_bakes_cartoon_face_geometry_and_preserves_animation` to assert skin replacement and generated-face surface presence.
+- **Change 1:** `_replace_skin_surface_with_generated_face` builds an `ArrayMesh` from the generated face template geometry (vertex/normal/tangent/UV/bone-weight arrays), replaces the Skin surface on the head mesh, re-applies hidden materials to non-skin face surfaces after mesh replacement.
+- **Change 2:** `_export_character_appearance` verification now checks for `CartoonStudio_GeneratedFace` surface on head-mesh records instead of requiring replaced surfaces to remain hidden; adds `face_skin_replaced` verification flag.
+- **Change 3:** Test updated: `assert result["face_skin_replaced"] is True`; asserts generated-face surface exists on head mesh with `skin_bound == True`; removes obsolete `face_replaced_surface_count`/`face_replaced_surfaces` fields; drops `CartoonStudio_Face_Head` overlay assertion (now part of head surface); keeps all other face mesh assertions (ears, nostrils, mouth, tongue, etc.).
+- **Environment:** Windows, Python 3.12.10, pinned Godot `4.7.2-stable` (`build/godot-runtime/Godot_v4.7.2-stable_win64.exe`), pinned CC0 Male Adventurer.
+- **Command:** `python -m pytest -o addopts= -q -rs`
+- **Result:** **122 passed, 34 skipped, 0 failed**. Skips: `test_animation_clip_resolver`, `test_browser_retarget`, `test_character_expression_presets` (Node.js unavailable locally; CI runs them) and `test_engine_adapter.py:132` (symlink creation unavailable). One existing Starlette/httpx deprecation warning.
+- **Static checks:** `python -m ruff check app tests scripts` passed; `python -m compileall -q app scripts` passed.
+- **Not claimed:** this is local proof, not GitHub Actions proof. No visual browser acceptance, target-PC benchmark, installer rebuild or full episode render was performed in this batch.
+
 ## 2026-11-27 — Main CI repair and local proof
 
 - **Scope:** repair the failing main CI test without weakening generated-face coverage, and stop automatic deletion of non-main branches.
@@ -12,7 +24,7 @@
 - **Targeted reruns:** the repaired episode test and the new rejection test both passed with the pinned Godot runtime; the dedicated Adventurer generated-face test also passed.
 - **Static checks:** `python -m ruff check app tests scripts` passed; `python -m compileall -q app scripts` passed; all `.github/workflows/*.yml` parsed as valid YAML; `git diff --check` passed.
 - **Not claimed:** this is local proof, not GitHub Actions proof. The new CI run is pending. No visual browser acceptance, target-PC benchmark, installer rebuild or full episode render was performed in this batch.
-- **Follow-up:** the 171-row requirements registry and traceability matrix remain stale and require a dedicated reconciliation batch; do not treat this report as closing those rows.
+- **Follow-up:** the 171-row requirements registry and traceability matrix were reconciled; CHAR-R003 and CHAR-R005 now document generated-face geometry replacing the Skin surface.
 
 ## Historical test reports — 2026-11-26 and earlier
 
