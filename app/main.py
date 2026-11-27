@@ -68,6 +68,7 @@ from app.storage import (
 )
 from app.story import EpisodePlan, StoryPromptRequest, build_story_prompt
 from app.version import APP_VERSION
+from app.world_assets import WorldAssetError, install_world_asset, list_world_assets
 
 ROOT = Path(__file__).resolve().parent.parent
 _ENV_DATA_DIR = os.environ.get("CARTOON_STUDIO_DATA", "").strip()
@@ -1977,6 +1978,37 @@ def vehicle_rig(
         "updated_at": document["updated_at"],
         **document.get("data", {}),
     }
+
+
+
+
+@app.get("/api/world-assets")
+def world_asset_catalog(q: str = "", category: str = "") -> list[dict[str, Any]]:
+    allowed_categories = {"road", "street", "building", "nature", "vehicle", "furniture"}
+    if category and category not in allowed_categories:
+        raise HTTPException(status_code=422, detail="Unsupported world asset category.")
+    if len(q) > 80:
+        raise HTTPException(status_code=422, detail="World asset search is too long.")
+    return list_world_assets(q, category)
+
+
+@app.post("/api/projects/{project_id}/world-assets/{asset_id}")
+def install_project_world_asset(project_id: str, asset_id: str) -> dict[str, Any]:
+    initialize_database()
+    with connect_db() as connection:
+        project = connection.execute(
+            "SELECT id FROM projects WHERE id = ?", (project_id,)
+        ).fetchone()
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    project_root = project_directory(DATA_DIR, project_id)
+    try:
+        installed = install_world_asset(project_root, asset_id)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail="World asset not found.") from error
+    except WorldAssetError as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error
+    return installed
 
 
 @app.post("/api/projects/{project_id}/worlds/{world_id}/export")
