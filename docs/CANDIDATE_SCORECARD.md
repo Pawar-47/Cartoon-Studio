@@ -1,120 +1,16 @@
-# Candidate Scorecard — P0.3 source-level comparison
+# Candidate Scorecard — Revised Architecture
 
-**Date:** 2026-11-25  
-**Purpose:** compare serious candidates before architecture freeze. This is a source-based scorecard, not a benchmark or final selection. The hardware dimension scores documented API/resource fit, not measured performance on the user's PC.
+## Selected roles
+| Technology | Role | Decision |
+|---|---|---|
+| Blender Python API | Authoring/generation of all 3D assets | Selected as central platform |
+| Godot 4.7.2 | Production engine | Retained |
+| FastAPI + browser | Control plane | Retained |
+| GLB/glTF | Interchange | Selected |
+| FFmpeg | MP4 assembly | Retained |
 
-## Scoring method
+## Evaluation rules
+Score candidates by actual source-level capability, quality, maintenance, license, offline operation, hardware fit and integration cost. A score is not proof or authorization to adopt. Pin exact versions and test the specific integration.
 
-Scores are 1–5 (5 is strongest). Weighted score:
-
-- Documented hardware/API and resource fit: 25% (source evidence only; no physical-PC benchmark)
-- Feature coverage: 20%
-- License and redistribution fit: 15%
-- Offline / no-mandatory-cost fit: 15%
-- Maturity and upstream test evidence: 15%
-- Integration effort (5 = easiest): 10%
-
-Scores reflect public source/docs inspected on 2026-11-25. Unknown target performance is not assumed to be good; confidence is shown separately. A high score does not authorize reuse. Exact versions, licenses and asset files must be pinned before integration.
-
-## Engine and editor
-
-| Candidate | Hardware | Features | License | Offline/cost | Maturity | Integration | Weighted | Confidence / trade-off |
-|---|---:|---:|---:|---:|---:|---:|---:|---|
-| Godot 4.7.2 Compatibility | 4 | 4 | 5 | 5 | 5 | 3 | **4.35** | Medium. OpenGL 3.3 floor fits HD 5500's reported 4.3; target has only 2 CPU cores vs 4 recommended; no target test; custom UI/backend integration required. |
-| Blender 4.5.17 LTS | 2 | 5 | 3 | 5 | 5 | 2 | **3.65** | Medium. Full 3D authoring/rendering; target is below published CPU minimum and has legacy Intel driver risk; GPL3 obligations. |
-| Browser WebGL / Ara / Ekza | 3 | 3 | 3 | 4 | 2 | 3 | **3.00** | Low. Fast UI/preview path but editor maturity, CI and MP4 export proof are incomplete/cancelled; browser memory needs testing. |
-
-**Selected runtime:** Godot 4.7.2 Compatibility after the successful P0.6 hosted-runner proof (GLB import, animation, save/reopen and MovieWriter AVI). Physical-PC measurements are deferred to Phase 8 and do not gate architecture or implementation.
-
-## World and environment
-
-| Candidate | Hardware | Features | License | Offline/cost | Maturity | Integration | Weighted | Confidence / trade-off |
-|---|---:|---:|---:|---:|---:|---:|---:|---|
-| Godot-native stack (Terrain3D + Road Generator + Building Generator + Roommate) | 4 | 4 | 4 | 5 | 3 | 3 | **3.90** | Low–medium. Compatibility renderer supported by Terrain3D; road generator incomplete, building generator lacks CI, Roommate MPL-2.0/docs-only CI; stack not tested together. |
-| Blender addons (Bene Procgen Maps + Blender Level Architect) | 2 | 5 | 2 | 5 | 4 | 2 | **3.35** | Medium. Rich procedural cities/interiors and upstream CI; GPL3 and Blender target-hardware risk. |
-| OpenCity prototype | 4 | 3 | 5 | 5 | 1 | 4 | **3.65** | Low. Traffic/pedestrian behavior and headless test modes; only two commits, no CI, visible geometry mostly placeholders. |
-
-## Character and facial expression
-
-| Candidate | Hardware | Features | License | Offline/cost | Maturity | Integration | Weighted | Confidence / trade-off |
-|---|---:|---:|---:|---:|---:|---:|---:|---|
-| VRM 1.0 + Godot VRM/MToon + verified CC0 Quaternius parts + custom editor | 4 | 4 | 5 | 5 | 3 | 3 | **4.05** | Medium. Standard emotions/visemes/custom expressions, MIT plugin and CC0 assets; no finished recipe-based creator; add-on has known gaps and no CI. |
-| MPFB2 / CharacterCreator | 2 | 4 | 2 | 5 | 4 | 2 | **3.15** | Medium. Procedural human base/rig workflow; Blender dependency and GPL3 code; not final toon style. |
-| Ducz.CharacterCreator implementation | 4 | 4 | 1 | 5 | 1 | 3 | **3.15** | Low. Strong modular-character concept but repository code has no license; do not copy. Reimplement independently with CC0 assets. |
-
-## Animation
-
-| Candidate | Hardware | Features | License | Offline/cost | Maturity | Integration | Weighted | Confidence / trade-off |
-|---|---:|---:|---:|---:|---:|---:|---:|---|
-| Godot AnimationTree/AnimationPlayer + CC0 UAL/UAL2 | 4 | 4 | 5 | 5 | 4 | 4 | **4.30** | Medium. 250+ retarget-ready clips; simple state machine first; facial animation still custom. |
-| Godot AI Animation Toolkit 2.0.0 | 3 | 4 | 5 | 5 | 3 | 2 | **3.70** | Low–medium. 103 authoring operations but requires separate Godot AI/MCP plugin; not runtime-required. |
-| Godot Motion Matching | 3 | 4 | 5 | 5 | 1 | 2 | **3.40** | Low. MIT and promising features, but new/no CI/no assets; unnecessary complexity before baseline animation works. |
-
-## Urdu speech, alignment and lip-sync
-
-No candidate is approved as the production voice or fully automatic Urdu lip-sync.
-
-| Candidate | Current role | Strength | Blocking limitation |
-|---|---|---|---|
-| WhisperX + Urdu Wav2Vec2 model | Word/character alignment | WhisperX BSD2 explicitly maps `ur`; model Apache2 | 300M parameters; full dependency stack heavy; model WER 39.89% on Common Voice 8; no Pakistani sample test; not phone-level |
-| eSpeak NG | Urdu G2P / emergency voice | Compact, offline `ur` rules; phoneme/pitch/length output | GPL3; formant voice is robotic; not main natural voice |
-| Allosaurus + custom viseme map | Possible phone recognition | Universal phone model; approximate phone timestamps | Urdu inventory/timing not verified; GPL3/PyTorch |
-| Parrot Lipsync | Blender-side phoneme-to-mouth reference | Editable phoneme/viseme table; Blender 4.5 support | GPL3 Blender add-on; not Godot; Urdu quality untested |
-| Qwen Audio TTS Flash | Optional cloud Urdu voice | Official docs list Urdu voice | Cloud-only; Pakistan access, price, privacy, accent and quality unverified |
-| Smol Urdu TTS / tiny-urdu | Local model research | Small/Urdu-specific model claims | Code-license gap or Roman-Urdu-only; BF16/PyTorch/quality not proven |
-
-**Working hypothesis:** approved Urdu transcript → human recording or approved TTS → WhisperX word/character alignment → eSpeak G2P → VRM/custom viseme mapping → manual timeline correction. P0.4 must validate on native Pakistani Urdu samples.
-
-## Audio and MP4
-
-| Candidate | Hardware | Features | License | Offline/cost | Maturity | Integration | Weighted | Confidence / trade-off |
-|---|---:|---:|---:|---:|---:|---:|---:|---|
-| Godot MovieWriter + FFmpeg/OpenH264 | 4 | 4 | 4 | 5 | 4 | 3 | **4.05** | Medium. Non-real-time fixed-FPS render; exported AVI/PNG+WAV; AVI 4 GB cap; FFmpeg needed for MP4. |
-| Blender VSE + FFmpeg | 2 | 5 | 3 | 5 | 5 | 3 | **3.75** | Medium. Rich editing/render path but target CPU/driver risk and Blender dependency. |
-
-Kenney CC0 packs cover SFX and short jingles; OpenGameArt CC0 loops need per-track license and YouTube Content ID checks. They do not replace original soundtrack or Urdu voice work.
-
-## Queue and recovery
-
-| Candidate | Hardware | Features | License | Offline/cost | Maturity | Integration | Weighted | Confidence / trade-off |
-|---|---:|---:|---:|---:|---:|---:|---:|---|
-| Huey / SqliteHuey | 5 | 4 | 5 | 5 | 4 | 4 | **4.55** | Medium. MIT, retries/results/scheduling; in-flight task recovery requires explicit idempotent stages. |
-| sqlite-workqueue | 5 | 3 | 5 | 5 | 2 | 3 | **3.95** | Medium. MIT, leases/retries/idempotency; lacks cancellation/results/migrations. |
-
-A minimal Cartoon Studio-owned SQLite queue may still be simpler; choose in P0.5 after the current app's job requirements are mapped.
-
-## Windows packaging
-
-| Candidate | Hardware | Features | License | Offline/cost | Maturity | Integration | Weighted | Confidence / trade-off |
-|---|---:|---:|---:|---:|---:|---:|---:|---|
-| PyInstaller + NSIS | 4 | 4 | 4 | 5 | 5 | 4 | **4.30** | Medium. Fits existing Python app; dependency and FFmpeg notices must be preserved; installer not built yet. |
-| pywebview | 4 | 3 | 5 | 5 | 4 | 4 | **4.10** | Medium. Light WebView shell; WebView2/runtime integration and Godot sidecar still need proof. |
-| Tauri 2 | 4 | 3 | 5 | 5 | 5 | 2 | **4.05** | Medium. Mature shell, but Rust/WebView2 and backend sidecar integration add complexity. |
-
-## AI provider shortlist
-
-- **API candidates:** GroqCloud, Cloudflare Workers AI, Gemini Developer API, OpenRouter. Their free quotas, privacy and model access differ; exact Pakistan availability and user-account quotas are P0.4.
-- **Manual agent workflows:** FreeMilk (daily allowance but exact quota not public; privacy and direct-script restrictions), Copilot Free, ChatGPT Free, Claude Free and Perplexity Standard. These are not free general-purpose backend APIs.
-- **No provider is selected or connected. No paid API is approved.**
-
-## P0.3 outcome and next gates
-
-P0.3 source-level research and provisional scorecard are complete. The scorecard does not select an engine or authorize code/assets. P0.4 source-based hardware/API compatibility, Pakistan region/account quota, Urdu model/voice feasibility, privacy and cost research is complete with unknowns recorded. P0.5 architecture proceeds without a physical-PC test. P0.6 runs only architecture-critical bounded proofs after P0.5. Actual target-PC benchmarks are Phase 8 work. Preserve the current FastAPI/browser/SQLite and Story Generator work; do not restart or expand production features before P0.7.
-
-## P0.4 Urdu model-card refinements — 2026-11-25
-- WhisperX Urdu forced-alignment candidate: Apache-2.0 model card, 300M parameters / 1.41 GB FP32; Common Voice 8 Urdu WER 39.89% and CER 16.70% with 5-gram decoder. Retain only for forced-alignment experiments, not as production ASR. Boundary quality must be measured separately.
-- Urdu Whisper large-v3-turbo ASR candidate: Apache-2.0 model card, 0.8B parameters / 3.24 GB FP32; Common Voice 17 Urdu WER 26.234% and CER 8.795% self-reported. CTranslate2 int8 conversion is 824 MB. Too large to assume viable on the 8 GB target without testing.
-- Smol Urdu TTS V1: 135M BF16 weights and Apache-2.0 model-card metadata, but linked inference repository has no LICENSE, requires Liger Kernel and separate WavTokenizer files, and BF16 CPU operation on Broadwell is unverified. Not approved for bundling.
-
-
-## Hardware score interpretation
-The hardware score is an evidence-based compatibility/resource estimate, not measured FPS, render time, memory or driver stability. The target-PC probe is optional before Phase 8. P0.6 proves architecture-critical behavior; Phase 8 measures real performance.
-
-
-## Hardware gate correction — 2026-11-25
-
-The physical target PC is not a gate for candidate ranking, P0.5 architecture, P0.6 functional proofs, P0.7 freeze or feature implementation. Scores continue to describe source/API/resource fit and uncertainty, not measured performance. Godot remains the leading candidate because its documented Compatibility renderer/API and integration boundary are promising; the P0.6 proof is a controlled functional test, not a benchmark on the user's PC. Actual target-PC frame time, RAM, render duration and quality-preset tuning are Phase 8 optimization evidence. A slow result does not invalidate the product or stop development.
-
-## P0.6 result — 2026-11-25
-
-Godot 4.7.2 Compatibility is selected as the native 3D runtime after run #3 passed GLB import, animation, save/reopen and MovieWriter AVI; FFmpeg assembled an MP4 and FFprobe confirmed 640x360, 24 FPS, 3 seconds, MPEG-4 Part 2/AAC. The SQLite-owned queue prototype also passed five queue-specific tests. These are hosted-runner functional proofs only. The final FFmpeg build/codec and optional browser viewport remain open by design; physical-PC performance is Phase 8. See P0_6_PROOF_REPORT.md.
+## Exclusions and cautions
+MPFB is not the product foundation and MPFB GPL code must not be copied. Blender is GPL-3.0; external use does not remove redistribution obligations. Add-ons and generated/source assets have separate licenses. The user's low-end Intel laptop is not assumed capable of all authoring tasks; Blender worker placement is configurable and not required at app launch.

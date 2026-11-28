@@ -1,124 +1,23 @@
-# Repository Baseline Audit
+# Repository Baseline Audit — Feature Line
 
-**Audit date:** 2026-11-25  
-**Repository:** https://github.com/Pawar-47/Cartoon-Studio  
-**Branch:** main  
-**Audited HEAD:** 40bec8c423e953a0753c62f53c8a173274ac72e1
+## Snapshot
+At documentation realignment start, `feature/cartoon-character-foundry` was `ce9530543f31b5653bed96694286e660d19b206c`; old `main` was `f6d9001b79f1cfb3108561f31c6ab6a88ebc7a23`. Default branch was still `main`. Preserve both histories; do not merge feature into old main.
 
-## 1. Repository and Git state
+## Existing systems to preserve
+- FastAPI backend and browser workspaces.
+- SQLite/project-scoped persistence and versioned story/character data.
+- Character Studio and Foundry API/UI, character recipe persistence and procedural GLB prototype.
+- Blender toolchain and Blender authoring modules.
+- Blender verification path generating character, world and prop assets.
+- Godot 4.7.2 worker/adapter and GLB import/inspection/round-trip.
+- World Builder and curated Quaternius/Kenney asset catalogues.
+- Render/job queue, episode scene foundations and FFmpeg assembly path.
 
-- The GitHub repository is public; default branch is `main`.
-- Branch search returned only `main`.
-- The latest commit is `40bec8c423e953a0753c62f53c8a173274ac72e1` (2026-11-24 21:06:56 UTC), updating `AGENTS.md` with the complete document-reading gate and upstream patch review requirements.
-- The recent history includes the Story Plan schema/catalog validation, prompt catalog inclusion, CI and checkpoint documentation. No code change after the latest app CI is required to explain the green run: run #52 tested the current HEAD.
-- The project remains in the original repository. No reset, replacement or migration was performed.
+## Current verification checkpoint
+Latest feature CI run #630 failed. No pass is claimed. Inspect raw job logs before assigning root cause. Documentation changes must not touch application code or attempt to repair this CI failure.
 
-## 2. Current application source
+## Strategy discrepancies found in older documentation
+Older files described Blender as optional, character-only or excluded from the world/prop toolchain; treated Godot as the primary asset authoring path; and prescribed merging the feature branch into old main. Those statements are superseded by the current master brief.
 
-Confirmed from current `main`:
-
-- `app/main.py`: FastAPI app, SQLite project metadata, health/status endpoints, project create/list, story prompt, story-plan validation and save/load.
-- `app/story.py`: strict Pydantic episode schema; 5–7 scenes; 300–420 seconds; up to five characters; timed dialogue, action, camera and audio cues; exact location, expression and action ID validation; prompt builder includes the current catalogs and Urdu instructions.
-- `app/static/`: dashboard and Story Generator UI.
-- `tests/test_app.py`: 12 tests covering health, routes, projects, prompt/schema, save/load, duration, seven scenes and invalid catalog references.
-- `.github/workflows/ci.yml`: Windows Python lint, compile, pytest, bootstrap ZIP and artifact upload.
-- `.github/workflows/ara-foundation-proof.yml`: pinned upstream Ara Windows proof; it clones Ara at a fixed SHA and applies the tracked patch script. It does not integrate Ara into the product.
-
-## 3. Current Cartoon Studio CI — run #52
-
-Run: https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45487769827  
-Run ID: `45487769827`  
-Head SHA: `40bec8c423e953a0753c62f53c8a173274ac72e1`  
-Job: `test-and-package-windows`  
-Conclusion: **success**.
-
-Verified job steps: dependency installation, Ruff lint, Python compile, pytest (12 passed, one Starlette/httpx deprecation warning), Windows bootstrap ZIP packaging and artifact upload.
-
-Artifact:
-- Name: `Cartoon-Studio-Windows-Bootstrap`
-- ID: `14963389016`
-- Size: 74,228 bytes
-- SHA-256: `423371c438c3b07a5b2aa3c38f6b26768078ffb1611e96b72d3c08a2e189d0ea`
-- Expires: 2026-12-08 21:07:29 UTC
-
-This artifact is a bootstrap ZIP containing source and a launcher. It is not a self-contained installer, production engine or completed application.
-
-## 4. Ara proof — run #6 actual outcome
-
-Run: https://github.com/Pawar-47/Cartoon-Studio/actions/runs/45486950450  
-Run ID: `45486950450`  
-Tested Cartoon Studio commit: `3beb546b63e9a0a07e1459ea4f4e3ea26d6d41d6`  
-Pinned upstream: `olatunde85/3d-gen@4151c1124b172fdd918d23e0ef4aad727f4984c1`  
-Job: `Build and test pinned Ara 3D Studio upstream`  
-Conclusion: **cancelled**, not success.
-
-Completed before cancellation:
-- Upstream clone and dependency installation.
-- CC0 asset preparation (including the upstream setup-assets process).
-- Cartoon Studio patch application and `git diff --check`.
-- TypeScript type-check.
-- Film model checks: seven-scene limit, film JSON, timing, editing and related assertions.
-- Browser checks for adding scenes, per-scene sets/names/transitions, continuous playback, reload/save, and scene-strip duplication/reordering/deletion up to seven.
-
-The job was cancelled during the browser-level two-scene MP4 export test. Studio-wide checks, Vite build and proof artifact upload were skipped. The run has no artifacts. The logs do not establish why the export did not finish before cancellation; that remains an investigation item, not a proven upstream defect.
-
-Ara is still a candidate only. Neither the type-check nor partial browser checks approve it as the production engine.
-
-## 5. Evidence boundaries and limitations
-
-- The GitHub connector exposed branch search, commit history, selected run jobs/logs and artifacts. It did not expose a complete paginated Actions run listing in this audit. Therefore this document reports the explicitly inspected run #52 and Ara run #6, and does not claim that every historical or currently active run was enumerated.
-- The combined commit status endpoint for the current HEAD returned no status records; run #52 itself is directly verified through its job and artifact records.
-- No target-PC installation, Intel HD 5500 performance measurement, real final MP4 from Cartoon Studio, Urdu TTS, Urdu lip-sync or end-to-end production render has been verified.
-
-## 6. Actual capability baseline
-
-| Area | Current evidence-backed state |
-|---|---|
-| Dashboard | FastAPI-served static dashboard |
-| Projects | SQLite create/list metadata |
-| Story Generator | Prompt construction and manual external-AI handoff |
-| Episode schema | Pydantic schema with duration, scene, cast and cue validation |
-| Catalog validation | Location/action/expression IDs checked against candidate production catalogs |
-| Story persistence | Validated JSON save/load per project |
-| Direct AI generation | Not integrated |
-| Character Studio | Not implemented |
-| Persistent world builder | Not implemented |
-| Animation/timeline editor | Not integrated into Cartoon Studio |
-| Urdu TTS / lip-sync | Not implemented or verified |
-| Production renderer | Not integrated |
-| Final MP4 pipeline | Not implemented in Cartoon Studio |
-| Windows delivery | Bootstrap ZIP only |
-| Target PC | No actual install or performance benchmark |
-
-Catalog validation currently uses Ara-derived identifiers. This is useful input validation, but it couples the schema to an unapproved candidate and does not prove an engine adapter or real animation playback.
-
-## 7. Phase and process assessment
-
-The master plan's Phase 0 exit gate is not met:
-1. Registry and traceability do not yet decompose every distinct specification requirement into a fully evidenced row.
-2. Comparative research remains incomplete across toon character creation, persistent world assets, animation/retargeting, render compatibility, audio, Urdu lip-sync, packaging and AI provider terms.
-3. Target-hardware and Urdu TTS feasibility remain unproven.
-4. Architecture is provisional; no production engine has been selected.
-
-Therefore Phase 0 remains active. Do not begin engine-dependent production feature work or integrate Ara until the master-plan gate is met. Continue the highest-priority Phase 0 work in complete documentation/research batches, and keep the existing app foundation intact.
-
-## 8. Preservation rules
-
-- Preserve all current application source, tests, docs, Ara proof workflow and patch script.
-- Do not reset the repository or replace the application shell.
-- Do not promote Ara from candidate to selected engine based on partial checks.
-- Do not call the bootstrap ZIP a final installer.
-- Do not mark requirements VERIFIED from code presence or unrelated CI success.
-
-
-## 2026-11-25 — Master-brief compliance reconciliation addendum
-
-- User re-uploaded the original `MASTER_EXECUTION_PROMPT.md`; full 1,133 lines and all 25 parts were read line by line. SHA-256: `541098eebd96b98e0153770f0bc37a1031a7242fd9cb97bc5a6b52c35c9ddfde`.
-- Live `main` HEAD at audit: `c389391643a7b1f7b5683e181421291fdba7abb2`. The only listed branch is `main`.
-- Compared source baseline `40bec8c423e953a0753c62f53c8a173274ac72e1` to live HEAD: 15 commits, and every changed path was documentation. No application source or tests changed in those 15 commits.
-- Those 15 documentation commits triggered 15 separate successful Cartoon Studio CI runs (#53–#67). This was unnecessary CI churn and directly violated the master brief's one-coherent-commit-per-batch rule.
-- Latest run #67 (`45489366441`) passed on exact live HEAD `c389391643a7b1f7b5683e181421291fdba7abb2`; bootstrap artifact ID `14964957829`, 78,882 bytes, SHA-256 `f307617262c75506d622ad602e204b85935bc88a7b73797d14d2c2344dd97fd7`.
-- The exact uploaded master brief is not yet a verbatim version-controlled file in `docs/`; `PROJECT_SPECIFICATION.md` is a condensed companion. This is a continuity gap to close.
-- The current master plan had inserted a separate numbered production-engine phase and shifted Character Studio, World Builder, Story/Scene and Animation phases. This contradicted the original numbered phase sequence. The phase plan is being realigned: engine candidate proofs remain within Phase 0; selected-engine integration occurs as needed inside Phase 2 Character Studio.
-- The current Story Generator/schema is preserved but was implemented ahead of the original sequence. Freeze its feature expansion until Phase 4. Its current location/action/expression IDs are Ara-derived and provisional, not canonical engine-neutral project IDs.
-- Requirement registry has only coarse rows and lacks mandatory per-requirement dependencies, implementation plan, test method, evidence and limitations. Traceability is partial. P0.2 remains the next active batch.
+## Audit conclusion
+The repository contains substantial usable work. The required action is architectural realignment and extension, not a restart. This document is a dated checkpoint, not a claim that all existing modules are production-complete.

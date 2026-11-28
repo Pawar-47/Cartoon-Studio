@@ -1,99 +1,17 @@
-# Urdu Voice, G2P and Lip-Sync Feasibility — P0.4
+# Urdu Voice and Lip-Sync Feasibility
 
-**Status:** research and test design only. No Pakistani Urdu sample has been processed; no TTS, G2P or alignment candidate is approved for production.
+Urdu voice generation remains a separate production subsystem. It must not block Blender asset authoring or core local workflows.
 
-## 1. What the source code establishes
+## Requirements
+- Natural conversational Pakistani Urdu, preferably Urdu script.
+- Stable character-specific voice profiles and pronunciation.
+- Human-editable transcript and timing.
+- Word/phoneme alignment suitable for visemes.
+- Manual recorded-voice fallback.
+- Offline/local fallback where legally and technically practical.
 
-### eSpeak NG Urdu G2P
-- Upstream contains an Urdu-specific rules file: https://github.com/espeak-ng/espeak-ng/blob/master/dictsource/ur_rules
-- CLI supports Urdu voice selection and phoneme output: -v ur -x (eSpeak mnemonic phones), -v ur --ipa (IPA), and --phonout=FILE: https://github.com/espeak-ng/espeak-ng/blob/master/src/espeak-ng.c and https://github.com/espeak-ng/espeak-ng/blob/master/src/speak-ng.1.ronn
-- This provides a useful offline grapheme-to-phoneme baseline, but Urdu orthography omits short vowels in ordinary writing and pronunciation depends on context, dialect and lexical knowledge. Its generated phone string must be reviewed by a native Pakistani Urdu speaker.
-- eSpeak NG is GPL-3.0. Do not bundle or link it into the product until distribution obligations and notices are reviewed.
-- It is not an approved natural Urdu TTS voice.
+## Research constraints
+Evaluate model and dataset licenses separately. Measure CPU/RAM/runtime on target hardware only when a candidate is ready. Cloud TTS is optional and must not become a paid mandatory dependency. Do not upload user dialogue or voice data without explicit authorization.
 
-### WhisperX Urdu alignment
-- WhisperX README documents word-level timestamps via forced alignment, CPU operation using --device cpu --compute_type int8, and the need for a language-specific alignment model: https://github.com/m-bain/whisperX
-- Current upstream alignment.py explicitly maps ur to kingabzpro/wav2vec2-large-xls-r-300m-Urdu: https://github.com/m-bain/whisperX/blob/main/whisperx/alignment.py
-- WhisperX is BSD-2-Clause; the Hugging Face Urdu model is a separate artifact. Inspect its model card, license and training-data provenance before redistribution.
-- CPU int8 support does not establish that the 300M aligner will fit comfortably or run fast on an i3-5005U with 8 GB RAM. Measure peak RAM and alignment time with batch size 1.
-- Forced alignment is not speech recognition quality assurance. If transcript words are wrong, timestamps can still be wrong; align only to a human-corrected transcript.
-
-Suggested first command (after installing a pinned WhisperX version and its dependencies):
-```powershell
-whisperx .\sample_urdu.wav --language ur --align_model kingabzpro/wav2vec2-large-xls-r-300m-Urdu --device cpu --compute_type int8 --batch_size 1 --output_format json
-```
-
-### Qwen Audio TTS Urdu voice
-- Official voice list names qwen-audio-3.1-tts-flash-sahar_ur (Sahar / سحر), male Urdu voice, with timestamps and SSML: https://www.alibabacloud.com/help/en/model-studio/qwen-audio-tts-voice-list
-- Official HTTP API documents Singapore and China North 2 (Beijing) endpoints: https://docs.qwencloud.com/api-reference/speech-synthesis/qwen-audio-tts/http-api
-- Standard Singapore pricing listed on the model page is $0.23 per million input tokens and $1.87 per million output tokens: https://docs.qwencloud.com/models/qwen-audio-3-1-tts-flash
-- It is cloud-only, paid, and not Pakistan-hosted. Pakistan account/payment access, data processing terms, Pakistani accent quality and exact timestamp semantics remain unverified. Do not send user content or enable this provider without explicit approval.
-
-## 2. Test corpus requirements
-
-Use a 30–60 second recording by a consenting native Pakistani Urdu speaker, recorded in a quiet room. Store locally. Prepare a verbatim transcript checked by a second listener. Include:
-- aspirated/unaspirated and retroflex/dental contrasts;
-- nasalization and long/short vowels;
-- Urdu proper names and uncommon words;
-- natural conversational speed, pauses and sentence boundaries;
-- modest Urdu-English code-switching;
-- one sentence with numbers/date/time spoken naturally.
-
-Do not use synthetic Hindi as a substitute for Pakistani Urdu. Keep the same recording and corrected transcript for all alignment comparisons.
-
-## 3. Acceptance measurements
-
-| Test | Measurement | Required evidence |
-|---|---|---|
-| G2P | Human-reviewed phone correctness; missing/extra phones; names and code-switching | Raw eSpeak output + reviewer corrections |
-| ASR/transcript | Word error rate against the corrected transcript | Raw transcript + edit-distance calculation |
-| Alignment | Median and 95th-percentile absolute word-boundary error against manually marked boundaries | WhisperX JSON + human boundary reference |
-| Runtime | Wall-clock seconds per audio second; peak RAM; CPU utilization | Timed command log and system monitor |
-| Robustness | OOV names, pauses, overlapping speech, code-switching | Per-case failure notes |
-| Lip-sync mapping | Viseme confusion, closure timing for /p,b,m/, jaw/open-vowel timing | Frame-by-frame review against the audio |
-
-Provisional quality gate (must be reviewed with native speaker): at least 90% of words receive usable timestamps; median boundary error <=150 ms and p95 <=300 ms on clean single-speaker speech; all critical names and code-switched words manually reviewed. These are project acceptance targets, not claims about current model performance.
-
-## 4. Recommended modular flow (not yet frozen)
-
-1. Approved Urdu script and human-corrected transcript.
-2. Human recording or separately approved TTS.
-3. ASR/transcript comparison and word-level forced alignment.
-4. G2P/phoneme sequence for fallback timing and viseme mapping.
-5. Urdu-specific viseme table (multiple phonemes may share a viseme).
-6. Manual timeline/viseme correction.
-7. Store transcript, audio, timings and viseme events as editable project data.
-
-Keep audio and timing independent from the 3D engine. Never make cloud TTS mandatory; manual recording must always work offline.
-
-## 5. Open blockers
-
-- Actual Pakistani Urdu recording and transcript are not yet supplied.
-- eSpeak Urdu pronunciation accuracy has not been reviewed by a native speaker.
-- WhisperX Urdu aligner memory, speed and timing accuracy on target hardware are unknown.
-- Hugging Face aligner model license/data provenance needs separate review.
-- Qwen voice access, price, privacy and accent quality need approval and testing.
-- No automatic Urdu lip-sync system is proven. Manual viseme editing remains required.
-
-## 6. Additional model-card and implementation audit
-
-### Urdu wav2vec2 model used by WhisperX
-The exact Hugging Face model card is https://huggingface.co/kingabzpro/wav2vec2-large-xls-r-300m-Urdu:
-- License metadata: Apache-2.0.
-- 300M parameters; repository model file size shown as 1.41 GB; FP32 weights.
-- Trained on Mozilla Common Voice 8.0 Urdu.
-- Self-reported full test-set results: 39.89% WER / 16.70% CER with its 5-gram language model; greedy CTC 56.07% WER / 23.70% CER.
-- This is a poor standalone ASR result for production transcript creation. It remains in the shortlist only because WhisperX uses it as the language-specific forced-alignment acoustic model. Forced-alignment boundary quality must be tested separately using a human-corrected transcript; do not reuse the WER as an alignment metric.
-
-### Newer Urdu Whisper ASR candidate
-The separate model https://huggingface.co/kingabzpro/whisper-large-v3-turbo-urdu is Apache-2.0 and reports 26.234% WER / 8.795% CER on Common Voice 17.0 Urdu (model-card self-reported). It has 0.8B parameters and the model repository shows a 3.24 GB FP32 checkpoint. This is ASR, not WhisperX's current forced-alignment model. It is too large to assume comfortable use on an 8 GB i3 laptop. An 824 MB CTranslate2 int8 conversion is listed at https://huggingface.co/kingabzpro/whisper-large-v3-urdu-ct2, but it still requires a real CPU/RAM test and its exact variant/accuracy must be checked before use.
-
-### Smol Urdu TTS code audit
-The model card https://huggingface.co/ProximaAI/smol-urdu-tts-v1 describes an experimental 135M-parameter Urdu TTS model, Apache-2.0 metadata, BF16 weights and 24 kHz output. Its linked code repository https://github.com/Proxima-AI-Co/smolurdu has no LICENSE file in its current tree.
-- The source requires PyTorch, torchaudio, Transformers, Liger Kernel and separate WavTokenizer model/config files.
-- Inference loads the language model in bfloat16 and uses a separate WavTokenizer decoder checkpoint.
-- The repository's setup.py does not declare all runtime dependencies (Liger Kernel/WavTokenizer path); the model and code licensing are not aligned clearly enough for redistribution.
-- BF16 execution on the target Broadwell i3-5005U is unverified and may be inefficient or unsupported by the available CPU kernels.
-- Decision: do not approve Smol Urdu TTS for bundling or the target-PC default. It may be tested in an isolated experiment only after license/dependency review and only if it runs within the hardware budget.
-
-These model-card scores are published evaluation results, not measurements on Pakistani conversational speech. None establishes native-speaker quality for the Cartoon Studio use case.
+## Current status
+Research notes exist for eSpeak NG Urdu G2P, WhisperX Urdu alignment and cloud TTS candidates. No production Pakistani Urdu TTS/lip-sync path is verified. Prior candidate notes are historical research and require fresh version, quality, license, privacy and pricing checks before adoption.

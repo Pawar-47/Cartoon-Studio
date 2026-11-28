@@ -1,61 +1,50 @@
-# Instructions for every AI coding agent working in this repository
+# Cartoon Studio — Agent Operating Contract
 
-You are the technical owner of the complete Cartoon Studio project, not a one-shot code generator.
+This file is binding for every human or AI contributor. The GitHub repository is the source of truth. Current primary development line: `feature/cartoon-character-foundry` until the owner completes the requested independent-primary-branch promotion. The existing `main` branch is a separate preserved baseline; never merge into it, force-push it, rename/delete it, or change the default branch without explicit owner approval.
 
-## Mandatory reading gate
+## Mandatory reading order
+1. This file.
+2. `docs/MASTER_EXECUTION_PROMPT.md`
+3. `docs/PROJECT_SPECIFICATION.md`
+4. `docs/MASTER_PLAN.md`
+5. `docs/ARCHITECTURE.md`
+6. `docs/CHARACTER_FOUNDRY_ARCHITECTURE.md`
+7. `docs/REQUIREMENTS_REGISTRY.md` and `docs/REQUIREMENT_TRACEABILITY.md`
+8. `docs/PROJECT_STATUS.md`, `docs/NEXT_STEPS.md`, `docs/SESSION_CHECKPOINT.md`
+9. Relevant research, licensing, hardware, build, test and decision records.
+10. The actual source/tests/workflows for every component being changed.
 
-Before making any change, read this file completely, then read the complete authoritative specification first, followed by every current project-control document:
+Read complete documents, not summaries. Re-fetch current GitHub HEAD and Actions state after interruptions. Never assume old chat context overrides repository state.
 
-1. docs/PROJECT_SPECIFICATION.md
-2. docs/MASTER_PLAN.md
-3. docs/REQUIREMENTS_REGISTRY.md
-4. docs/REQUIREMENT_TRACEABILITY.md
-5. docs/ARCHITECTURE.md
-6. docs/PROJECT_STATUS.md
-7. docs/GITHUB_RESEARCH.md
-8. docs/OPEN_SOURCE_REUSE_MATRIX.md
-9. docs/REPOSITORY_EVALUATION.md
-10. docs/ARA_FOUNDATION_PATCHES.md
-11. docs/RESEARCH_LOG.md
-12. docs/HARDWARE_PROFILE.md
-13. docs/ASSET_LICENSES.md
-14. docs/AI_PROVIDERS.md
-15. docs/BUILD_AND_INSTALL.md
-16. docs/TEST_REPORT.md
-17. docs/NEXT_STEPS.md
-18. docs/SESSION_CHECKPOINT.md
-19. docs/P2_2_CHARACTER_STUDIO_REPORT.md
-20. docs/DECISION_LOG.md
-21. docs/ARCHITECTURE_CONTRACTS.md
-22. docs/EXECUTION_BATCH_PLAN.md
-23. docs/TEST_REPORT.md
-24. Read the source and tests of every module you intend to change. For upstream Ara changes, also read scripts/patch_ara_foundation.py and the exact pinned upstream files it patches.
-
-Do not begin coding after reading only a summary or a few sections. Recheck the relevant registry entries and their dependencies before each implementation batch. Reconcile every requirement with code and tests before marking it complete.
-
-## Engineering role
-
-Act as principal architect, senior full-stack developer, open-source research engineer, 3D technical director, animation pipeline engineer, AI integration engineer, DevOps engineer, performance engineer, QA engineer, licensing/security reviewer and technical project manager.
+## Product strategy — non-negotiable
+- **Blender is the central asset-authoring and generation platform** for original characters AND all world/environment/item assets: buildings, roads, streets, terrain, vegetation, interiors, vehicles, furniture, props, objects, accessories and set dressing.
+- Build one shared, reusable Blender automation/tooling platform, with domain-specific tools and recipes on top. Do not create disconnected character-only and world-only generators.
+- Blender is used through its Python API, reusable modules/operators and interactive/headless automation. Preserve editable `.blend` source projects and export production-ready GLB/glTF plus textures, manifests, metadata, thumbnails and provenance.
+- **Godot 4.7.2 remains the production engine** for project/scene assembly, animation, cameras, timeline, preview, lighting and rendering. It consumes exported assets; it does not replace Blender as the authoring platform.
+- The browser-first FastAPI application remains the control plane for projects, prompts, asset jobs, recipes, review/approval, scene/timeline control and render jobs.
+- FFmpeg handles final video/audio assembly into MP4.
+- Blender is an offline authoring dependency, not a required installed-app runtime dependency. Generated GLB assets must work in Godot without Blender installed.
+- Character quality is the first quality-critical deliverable. The same Blender foundation must be designed for worlds and props from day one.
+- User visual acceptance is performed by the user seeing the actual generated asset. Automated clipping/screenshot scripts are diagnostics only, never product features or a substitute for user review.
 
 ## Implementation rules
+- Preserve existing code, APIs, project data and assets. Extend rather than restart.
+- Inspect current source before changing it; search/research upstream alternatives before major new subsystems.
+- No paid API, mandatory API key, cloud inference, online activation, credits or quota may block core asset creation or local production. External AI is optional.
+- Do not use MPFB as the product foundation or copy GPL code into the project. Evaluate licenses per code, model, texture, animation and generated asset.
+- Keep existing procedural GLB generation as a prototype/fallback where useful; it must not set the visual quality ceiling or compete with the Blender authoring path.
+- Prefer reusable tools and real editing/generation functions over mockups, audits, validation-only scripts or cosmetic polish.
+- Do not implement screenshot clipping acceptance as a feature.
+- Never claim a capability or test is complete without direct evidence.
+- Update status, registry, traceability, tests and next steps in the same substantial batch.
 
-- Search public GitHub for suitable existing solutions before building a major component from scratch.
-- Inspect source, docs, releases, activity, dependencies, compatibility and all relevant licenses.
-- Reuse/adapt only after documenting the decision and provenance.
-- Never silently reduce project scope or replace real functionality with a mockup.
-- Work in complete feature batches, not tiny disconnected edits.
-- Run the tests relevant to the batch; inspect actual rendered output for graphics/animation work.
-- GitHub Actions builds/tests/packages the app. Do not treat hosted runners as a free GPU render farm.
-- Keep final episode rendering local-first and hardware-aware.
-- Never claim a test passed unless a real run proves it.
-- Never mark a requirement VERIFIED from code presence alone.
-- Preserve working progress. No destructive resets without explicit authorization.
-- Update requirements registry, traceability, project status, test report and next steps in the same substantial batch.
+## Branch and CI discipline
+- Work only on the current feature development line until owner-approved promotion is completed.
+- Preserve old `main`; do not merge feature work back into it.
+- Do not create extra task branches.
+- One CI run at a time. Never push while a run is active/queued. Batch coherent changes; documentation-only changes do not require full build/package workflows.
+- Do not trigger CI for single-line changes. Use CI at meaningful checkpoints, not as a constant build gate.
+- Never force-push or delete branches without explicit approval.
 
-## Resume protocol
-
-After interruption, inspect the latest main branch, recent commits, Actions runs, project status, next steps and requirement registry. Then read the original requirement documents and relevant code before continuing. Do not ask the user to repeat requirements already recorded here.
-
-## User constraints
-
-Target computer: Intel Core i3-5005U, Intel HD Graphics 5500, 8 GB RAM, SSD, Windows. Urdu is a required language; prefer natural Pakistani Urdu and Urdu script. Do not substitute Hindi. No mandatory paid APIs or cloud inference. Free AI quotas must be respected.
+## User-facing delivery
+Report concrete files/features changed, commit, tests actually run, CI outcome, remaining work and any blockers. Keep updates concise. Always communicate in English. Do not ask the user to repeat requirements already in this repository.

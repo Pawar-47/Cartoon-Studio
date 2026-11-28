@@ -1,43 +1,34 @@
 # Cartoon Studio
 
-An original, local-first Urdu 3D cartoon production studio. This repository is the source of truth for development, Windows builds and releases.
+An original, browser-first production studio for creating reusable 3D cartoon characters, worlds and Urdu cartoon episodes. The repository is the source of truth for product requirements, implementation and releases.
 
-## Current working foundation
+## Current strategy
 
-- Local FastAPI application served in the browser.
-- SQLite-backed project index with numbered migrations, backup-before-migrate and a portable versioned project.json per project.
-- Project open/update and story-plan save/reload using portable episode JSON documents; SQLite remains the local index and compatibility store.
-- Story Generator prompt builder for use with FreeMilk by Milq and other AI applications.
-- Copyable structured story prompt and JSON Schema.
-- Validation of 5–7 minute episode plans, 5–7 scenes, character references and timed production cues.
-- Save and reload validated episode plans inside a local project.
-- Character Studio: import and inspect GLB 2.0 models, preview saved models in an interactive local 3D viewer, edit saved character profiles, customize and persist material colour/roughness/metalness recipes and existing facial morph targets, check mesh/skeleton/animation readiness, and save versioned reusable character profiles to a project.
-- GitHub Actions Windows CI installs exact uv-locked dependencies, runs lint/compile/tests and packages a hash-locked bootstrap ZIP.
+Cartoon Studio uses a coordinated three-part production architecture:
 
-Godot 4.7.2 Compatibility is integrated as a pinned, bundled native worker behind a supervised Python adapter. P2.1 passed Windows CI #204. The first P2.2 Character Studio vertical slice also passed Windows CI #208 (45 pytest tests): project-scoped GLB 2.0 import/inspection, rig-readiness reporting, versioned character profiles, project references and recovery. The Character Studio phase is still active; rig authoring, texture painting, new blend-shape authoring, export and animation authoring remain future work.
+1. **Blender — asset creation foundation.** A shared Blender Python automation/tooling platform creates and edits characters, rigs, clothing, hair, facial geometry, environments, towns, buildings, roads, vegetation, interiors, vehicles, furniture and props. Editable `.blend` sources are retained; approved assets are exported as GLB/glTF with textures and metadata.
+2. **Godot 4.7.2 — production engine.** Godot assembles assets into reusable scenes, handles animation, cameras, timeline, previews and production rendering.
+3. **Browser + FastAPI — studio control plane.** The web UI manages projects, story plans, asset-generation jobs, recipes, libraries, review/approval and production jobs. FFmpeg assembles final audio/video into MP4.
 
-## Run on Windows
+Blender is not a required runtime dependency of the installed application. Generated GLB assets must remain usable in Godot without Blender installed.
 
-1. Install Python 3.11 or newer.
-2. Download/extract the latest Windows bootstrap artifact from the GitHub Actions page.
-3. Keep requirements.lock beside start.bat.
-4. Run start.bat; dependencies are installed with pip hash verification.
-5. The local app opens at http://127.0.0.1:8765.
-6. Open Character Studio to import a GLB 2.0 character model, inspect its geometry/rig/animation readiness and save a reusable profile.
-7. Open Story Generator to prepare a prompt, paste an AI-generated JSON plan, validate it and save it to a project.
+## Existing implementation
 
-The Windows bootstrap ZIP is Python-dependent. A self-contained Windows installer is also built and uploaded as a GitHub Actions artifact. Project data defaults to the user's application-data directory; on Windows this is `%LOCALAPPDATA%\\CartoonStudio`. Set `CARTOON_STUDIO_DATA` to override it.
+The repository already contains a FastAPI/browser application, project persistence, Story Generator foundations, Character Studio, World Builder foundations, a Godot worker/adapter, GLB inspection and export workflows, character recipes and generation code, a Blender toolchain/asset verification path, and FFmpeg/rendering foundations. These systems must be inspected and extended, not recreated. Consult `docs/PROJECT_STATUS.md` for the verified current checkpoint; do not infer completion from this overview.
 
-## Development principles
+## Product target
 
-- Read and trace the complete project specification before implementation.
-- Search public GitHub and evaluate existing projects before building components.
-- Preserve software, model and asset licenses and provenance.
-- Use GitHub Actions for repeatable validation and Windows packaging.
-- Render actual episodes locally; hosted Actions runners are not treated as a free GPU render farm.
-- Keep Intel Core i3-5005U, Intel HD Graphics 5500, 8 GB RAM and SSD as design constraints; physical-PC benchmarking is Phase 8, not a development gate.
-- Never claim untested features are complete.
+- Original 3D cartoon universe, not copies of protected characters or franchises.
+- Urdu-first episodes, typically 5–7 minutes, with editable stories, scenes, dialogue, animation, voices, lip-sync, sound, music and final MP4.
+- Reusable character identities and persistent locations across episodes.
+- Characters, environments and props created through the shared Blender toolchain.
+- Local-first production with no mandatory paid APIs, API keys, quotas or cloud services.
+- Hardware-aware preview and render modes; physical-PC testing is not an early development gate.
 
-## Documentation
+## Development
 
-Every coding agent must follow AGENTS.md and read docs/PROJECT_SPECIFICATION.md in full before changing code. The execution plan, requirement registry, traceability, research, tests and status are maintained under docs/.
+Read `AGENTS.md` and the complete authoritative documents in `docs/` before implementation. Work on the feature development line, preserve the old `main`, batch changes and run one CI workflow at a time. User visual acceptance is based on seeing actual generated assets, not screenshot automation.
+
+## Run
+
+The existing Windows launcher/bootstrap instructions are maintained in [docs/BUILD_AND_INSTALL.md](docs/BUILD_AND_INSTALL.md). Blender is used for authoring/generation workflows, not required to launch the installed studio.
