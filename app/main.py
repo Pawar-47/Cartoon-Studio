@@ -18,6 +18,13 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from app.blender_toolchain import (
+    BlenderExecutionError,
+    BlenderTimeoutError,
+    BlenderToolchain,
+    BlenderUnavailableError,
+)
+
 from app.audio import (
     SpeechEngineUnavailable,
     SpeechGenerationError,
@@ -29,12 +36,6 @@ from app.character_builder import (
     ensure_model_asset,
     get_character_catalog,
     get_model_spec,
-)
-from app.blender_toolchain import (
-    BlenderExecutionError,
-    BlenderTimeoutError,
-    BlenderToolchain,
-    BlenderUnavailableError,
 )
 from app.character_foundry import (
     MASTER_TEMPLATE_ID,
