@@ -104,7 +104,7 @@ jobs:
         env:
           EGL_PLATFORM: surfaceless
         run: |
-          curl --fail --location --retry 3 --output blender.tar.xz https://download.blender.org/release/Blender4.5/blender-4.5.17-linux-x64.tar.xz
+          curl --fail --location --retry 5 --retry-all-errors --retry-delay 10 --user-agent "CartoonStudioCI/1.0" --output blender.tar.xz https://mirror.blender.org/release/Blender4.5/blender-4.5.17-linux-x64.tar.xz
           mkdir blender-runtime
           tar -xf blender.tar.xz --directory blender-runtime --strip-components=1
           rm blender.tar.xz

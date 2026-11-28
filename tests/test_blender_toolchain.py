@@ -71,7 +71,12 @@ def test_factory_contains_domain_generators_and_editable_glb_export() -> None:
     assert "def vehicle():" in source
     assert "def vegetation():" in source
     assert "pakistani_storybook_v1" in source
-    for family in ("pakistani_charpai_and_chai_set_v1", "lahore_haveli_shopfront_v1", "pakistani_auto_rickshaw_v1", "pakistani_mango_tree_v1"):
+    for family in (
+        "pakistani_charpai_and_chai_set_v1",
+        "lahore_haveli_shopfront_v1",
+        "pakistani_auto_rickshaw_v1",
+        "pakistani_mango_tree_v1",
+    ):
         assert family in source
     assert "export_skins=True" in source
     assert "export_morph=True" in source
