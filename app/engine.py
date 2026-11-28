@@ -55,7 +55,7 @@ class GodotEngineAdapter:
         executable: Path | None = None,
         worker_project: Path | None = None,
     ) -> None:
-        self.data_dir = Path(data_dir) if data_dir is not None else default_data_dir()
+        self.data_dir = (Path(data_dir) if data_dir is not None else default_data_dir()).expanduser().resolve()
         self.timeout_seconds = timeout_seconds
         self.bundle_root = self._bundle_root()
         self.executable = Path(executable) if executable else self._find_executable()
