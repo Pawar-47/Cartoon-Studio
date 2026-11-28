@@ -36,21 +36,35 @@ async function setInputValue(page, selector, value) {
 async function capturePreview(page, filename) {
   const preview = page.locator("#model-preview");
   await preview.waitFor({ state: "visible" });
+  // page.screenshot({ clip }) uses viewport coordinates. A visible element
+  // can still have page coordinates outside that viewport after the page has
+  // scrolled, so bring the canvas into view before measuring it.
+  await preview.scrollIntoViewIfNeeded();
   const bounds = await preview.boundingBox();
-  if (!bounds || bounds.width <= 0 || bounds.height <= 0) {
+  const viewport = page.viewportSize();
+  if (!bounds || !viewport || bounds.width <= 0 || bounds.height <= 0) {
     throw new Error("Character preview has no visible screenshot bounds.");
   }
   // Avoid locator.screenshot(): its actionability stability wait can time out
-  // while the WebGL canvas is continuously repainting. Clip a page screenshot
-  // to the measured canvas bounds instead; this captures the live preview
-  // without waiting for the animated element to become artificially stable.
+  // while the WebGL canvas is continuously repainting. Intersect its measured
+  // bounds with the viewport so the page screenshot clip is always valid.
+  const left = Math.max(0, Math.floor(bounds.x));
+  const top = Math.max(0, Math.floor(bounds.y));
+  const right = Math.min(viewport.width, Math.ceil(bounds.x + bounds.width));
+  const bottom = Math.min(viewport.height, Math.ceil(bounds.y + bounds.height));
+  if (right <= left || bottom <= top) {
+    throw new Error(
+      "Character preview is outside the screenshot viewport: "
+        + JSON.stringify({ bounds, viewport }),
+    );
+  }
   await page.screenshot({
     path: path.join(output, filename),
     clip: {
-      x: Math.max(0, Math.floor(bounds.x)),
-      y: Math.max(0, Math.floor(bounds.y)),
-      width: Math.ceil(bounds.width),
-      height: Math.ceil(bounds.height),
+      x: left,
+      y: top,
+      width: right - left,
+      height: bottom - top,
     },
     animations: "disabled",
     timeout: 60_000,
