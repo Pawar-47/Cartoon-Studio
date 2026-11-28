@@ -453,8 +453,7 @@ def add_foundry_shape_keys(mesh, recipe):
         if base.z < 2.54 and base.y < -.05:
             point.z = base.z - .055
     add_key("JawOpen", ("head", "mouth"), jaw_open, expressions.get("JawOpen", 0.0))
-    # Blink only deforms the eyeball, iris, pupil and catchlight region;
-    # brows and eyelid curves remain intact instead of collapsing with the eye.
+    # Blink closes the eye surface and both eyelid curves while keeping brows independent.
     add_key(
         "Blink", ("eye_surface", "eyelids"),
         lambda p, b: setattr(p, "z", 2.62 + (b.z - 2.62) * .08),

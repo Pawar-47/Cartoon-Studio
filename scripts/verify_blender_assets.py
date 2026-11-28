@@ -213,7 +213,9 @@ def main() -> int:
                 "female character: Godot did not import facial controls "
                 + ", ".join(sorted(required_face_targets - female_targets))
             )
-        if female_inspection.get("morph_target_count", 0) < len(MORPH_TARGETS) + len(required_face_targets):
+        expected_morph_count = len(MORPH_TARGETS) + len(required_face_targets)
+        imported_morph_count = female_inspection.get("morph_target_count", 0)
+        if imported_morph_count < expected_morph_count:
             raise RuntimeError("female character: complete facial morph set failed import")
         female_target = args.output / "character-female"
         female_target.mkdir(parents=True, exist_ok=True)
