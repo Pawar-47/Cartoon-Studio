@@ -1,25 +1,29 @@
-# Next Steps — Current Strategy
+# Next Steps — Cartoon Studio
 
-## Mandatory order
-1. Finish and verify this complete documentation realignment.
-2. Complete the repository's independent primary-branch transition safely, preserving old `main`; do not merge PR #23 into old main or force-push.
-3. Inspect raw CI #630 logs and identify the actual Blender-to-Godot failure. Do not guess from prior suspected path issues.
-4. Resume implementation with real Blender authoring functions. Character quality is first; shared core must support worlds and props from day one.
+## Active branch and safety
 
-## First implementation batch after documentation
-- Inspect current Blender modules and generation scripts.
-- Consolidate reusable worker/runtime, scene lifecycle, asset identity, recipe, material, geometry, rig, export and provenance functions.
-- Improve the character generator's actual geometry and face quality through Blender-native modeling operations.
-- Generate an editable .blend source and GLB, then verify Godot import.
-- Provide a real output for the user to inspect; do not gate progress on automated screenshot clipping.
-- Build on the same primitives for a world asset and a prop rather than a parallel toolchain.
+Continue only on `feature/cartoon-character-foundry` until Phase 2 is complete. Keep `main` intact. Do not merge PR #23 or change the default branch without explicit authorization and a deliberate reconciliation of the two lines of work.
 
-## CI policy
-One run at a time. The documentation-only batch does not justify a full build or repeated CI. Wait for all active jobs before pushing. Run functional CI at a meaningful checkpoint after the next implementation batch. Do not launch packaging/installer workflows for documentation changes.
+## Current checkpoint
 
-## Do not do
-- Do not return to a Blender-free or Godot-only asset-creation strategy.
-- Do not restart the repo or duplicate existing systems.
-- Do not spend implementation cycles only writing audits, validators or screenshot tooling.
-- Do not treat visual clipping scripts as a product feature.
-- Do not claim CI #630 passed; it failed.
+- CI #663 passed at `ff32d086e41d15c40210aa7e065ded65360081e5`.
+- Blender 4.5.17 generated male and female Foundry characters with editable `.blend` sources and GLB exports.
+- Godot 4.7.2 imported both characters, each with the full 26-target body/facial morph set.
+- Character Studio browser workflow and expression-control tests passed.
+- The current models are still development-quality blockouts; CI success is not visual acceptance.
+
+## Next implementation batch
+
+1. Finish actual Pakistani textile texture support: packed woven and Ajrak-inspired image textures, UV mapping, embedded GLB images and Godot import verification.
+2. Improve character production geometry: head/face proportions, eye sockets and lids, mouth/lips, hair clumps, connected clothing silhouette, hands/fingers and footwear.
+3. Improve rig deformation beyond rigid component weights; preserve the canonical humanoid mapping while adding functional controls and animation compatibility.
+4. Produce a dedicated male and female character preview variant for user inspection. User visual approval remains separate from CI.
+5. Extend the same shared Blender geometry/material/UV/assembly tools to all Master Brief environment, interior, building, road, vehicle, furniture, vegetation and prop requirements.
+
+## Completion discipline
+
+- Use the complete Master Brief and requirement registry, not only the current six builder names.
+- Do not call primitive blockouts production assets.
+- Keep editable Blender sources, GLB outputs, manifests, stable IDs and provenance.
+- Run one CI at a time; use CI to prove coherent milestones.
+- Report only work actually implemented and tested.

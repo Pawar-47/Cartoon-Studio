@@ -1,5 +1,19 @@
 # Requirement Traceability — Atomic P0.2 Baseline
 
+## Latest implementation evidence — 2026-11-28
+
+The historical atomic registry remains the authoritative requirement inventory; this addendum records new implementation evidence without changing the status of unrelated requirements.
+
+| Capability | Source files | Verification | Current status |
+|---|---|---|---|
+| Blender male/female character generation | scripts/blender/asset_factory.py; app/blender_toolchain.py | CI #663 Blender 4.5.17 generation and Godot 4.7.2 import | FUNCTIONALLY VERIFIED; visual quality still requires user review |
+| Character body/facial morphs | scripts/blender/asset_factory.py; scripts/verify_blender_assets.py | 26 targets imported for both male and female characters in CI #661/#663 | FUNCTIONALLY VERIFIED |
+| Browser facial control classification and expression presets | app/static/character-morph-groups.js; app/static/character-expression-presets.js | Node expression tests and Character Studio browser workflow in CI #663 | FUNCTIONALLY VERIFIED |
+| Pakistani textile image textures | scripts/blender/asset_factory.py; scripts/verify_blender_assets.py | Current batch requires embedded GLB images and at least two image-textured clothing materials; CI result pending | IN PROGRESS |
+| Overall Character Studio visual quality | User visual review | Inspect generated previews and approve/reject | PENDING USER |
+| Complete Master Brief asset coverage | Shared Blender authoring platform | Requirement-level implementation and evidence for every requested family/capability | IN PROGRESS; six initial domains are not full coverage |
+
+
 Every atomic registry ID is mapped below. The source column is the authoritative master-prompt part and/or specification section. Planned component names are architectural targets. Existing source paths are listed only where present and inspected. Evidence is deliberately not inferred from code presence.
 
 **Live checkpoint:** 171 registry IDs and 171 traceability IDs remain in one-to-one correspondence. P0.5 adds ARCHITECTURE_TRACEABILITY.md as the architecture ownership crosswalk. Latest verified implementation CI: run #356 SUCCESS on `81972eae6e5cafb4756695d385425d1d1f1a63a8`.

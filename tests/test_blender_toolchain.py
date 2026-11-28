@@ -90,8 +90,22 @@ def test_factory_contains_domain_generators_and_editable_glb_export() -> None:
     assert '"eye_surface"' in source
     assert '"eyelids"' in source
     assert "Face | lower eyelid" in source
+    assert "ShaderNodeTexImage" in source
+    assert "image.pack()" in source
+    assert "bpy.ops.uv.smart_project" in source
+    assert "ajrak_geometric_v1" in source
     assert "def add_foundry_shape_keys" in source
     assert "LeftShoulder" in source
     assert "export_morph=True" in source
     assert '"editable_source":True' in source.replace(" ", "")
     assert "--recipe-json" in source
+
+def test_blender_verification_requires_embedded_character_textures() -> None:
+    script = (
+        Path(__file__).resolve().parents[1] / "scripts" / "verify_blender_assets.py"
+    )
+    source = script.read_text(encoding="utf-8")
+    assert "def verify_character_textures" in source
+    assert 'gltf.get("images", [])' in source
+    assert 'gltf.get("textures", [])' in source
+    assert "textured_materials" in source

@@ -33,6 +33,17 @@ def read_glb(path: Path) -> dict:
         raise RuntimeError(f"{path.name}: missing JSON chunk")
     return json.loads(data[20:20 + chunk_length].decode("utf-8"))
 
+def verify_character_textures(gltf: dict, label: str) -> None:
+    textured_materials = [
+        material
+        for material in gltf.get("materials", [])
+        if material.get("pbrMetallicRoughness", {}).get("baseColorTexture")
+    ]
+    if len(gltf.get("images", [])) < 2 or len(gltf.get("textures", [])) < 2:
+        raise RuntimeError(f"{label}: Pakistani fabric images were not embedded in GLB")
+    if len(textured_materials) < 2:
+        raise RuntimeError(f"{label}: kurta and shalwar materials are not image-textured")
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(
@@ -88,6 +99,7 @@ def main() -> int:
                     + str(godot_inspection)
                 )
             if kind == "character":
+                verify_character_textures(gltf, "male character")
                 if not gltf.get("skins"):
                     raise RuntimeError("character: exported GLB has no skin")
                 target_names = {
@@ -179,6 +191,8 @@ def main() -> int:
             asset_kind="character", name="Pakistani Female Character",
             recipe=female_recipe, timeout_seconds=900,
         )
+        female_gltf = read_glb(female_result.glb_path)
+        verify_character_textures(female_gltf, "female character")
         female_inspection = godot.inspect_glb(
             female_result.glb_path, allowed_root=project, timeout_seconds=180
         )

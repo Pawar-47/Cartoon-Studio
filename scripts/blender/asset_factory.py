@@ -23,13 +23,63 @@ def mat(name,color,rough=.72,metal=0):
 
 
 
-def textile_mat(name, base_color, accent_color, scale=12):
-    """Keep export-safe fabric colours and retain pattern metadata for later baking."""
+def textile_mat(
+    name, base_color, accent_color, scale=12,
+    pattern_id="pakistani_storybook_woven",
+):
+    """Create a packed, exportable Pakistani woven or Ajrak-inspired fabric texture."""
     material = mat(name, base_color, rough=.86)
+    size = 192
+    repeat_count = max(1, int(scale))
+    period = max(8, size // repeat_count)
+    thread_width = max(1, period // 9)
+    pixels = []
+    for y in range(size):
+        for x in range(size):
+            cell_x = x % period
+            cell_y = y % period
+            warp = cell_x < thread_width
+            weft = cell_y < thread_width
+            if pattern_id == "ajrak_geometric_v1":
+                center = period / 2
+                dx = abs(cell_x - center)
+                dy = abs(cell_y - center)
+                diamond = abs(dx + dy - period * .52) < thread_width * 1.25
+                rosette = (
+                    (dx < thread_width and dy < period * .34)
+                    or (dy < thread_width and dx < period * .34)
+                )
+                motif = diamond or rosette or (warp and weft)
+            else:
+                diagonal = (cell_x + cell_y) % period < thread_width
+                motif = warp or weft or diagonal
+            shade = .94 + .06 * ((x + y) % 2)
+            color = accent_color if motif else base_color
+            pixels.extend((
+                max(0.0, min(1.0, color[0] * shade)),
+                max(0.0, min(1.0, color[1] * shade)),
+                max(0.0, min(1.0, color[2] * shade)),
+                1.0,
+            ))
+    image = bpy.data.images.new(
+        name + " | woven texture", width=size, height=size, alpha=False
+    )
+    image.pixels.foreach_set(pixels)
+    image.pack()
+    texture = material.node_tree.nodes.new("ShaderNodeTexImage")
+    texture.name = name + " | packed fabric image"
+    texture.label = "Packed Pakistani woven fabric"
+    texture.image = image
+    texture.interpolation = "Linear"
+    shader = material.node_tree.nodes.get("Principled BSDF")
+    material.node_tree.links.new(
+        texture.outputs["Color"], shader.inputs["Base Color"]
+    )
     material["cartoon_studio_textile"] = True
     material["textile_accent_rgba"] = [*accent_color, 1.0]
-    material["textile_pattern_scale"] = int(scale)
-    material["textile_pattern_id"] = "pakistani_storybook_woven"
+    material["textile_pattern_scale"] = repeat_count
+    material["textile_pattern_id"] = pattern_id
+    material["textile_texture_name"] = image.name
     return material
 
 def hex_rgb(value, fallback):
@@ -296,6 +346,15 @@ def rig(parts):
         for modifier in list(obj.modifiers):
             bpy.ops.object.modifier_apply(modifier=modifier.name)
         bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+        has_textile = any(
+            material and material.get("cartoon_studio_textile")
+            for material in obj.data.materials
+        )
+        if has_textile:
+            bpy.ops.object.mode_set(mode="EDIT")
+            bpy.ops.mesh.select_all(action="SELECT")
+            bpy.ops.uv.smart_project(island_margin=.025)
+            bpy.ops.object.mode_set(mode="OBJECT")
         bone_name = _character_bone(obj.name, source_bone)
         if bone_name not in specs:
             raise RuntimeError("Character component references unknown rig bone: " + bone_name)
@@ -531,6 +590,7 @@ def character(recipe=None):
     dupatta = textile_mat(
         "Dupatta | ajrak-inspired woven fabric",
         (.58, .075, .18), (.78, .22, .32), 8,
+        pattern_id="ajrak_geometric_v1",
     )
     eye_white = mat("Eyes | ivory", (.98, .93, .81), .28)
     iris = mat("Eyes | amber", (.35, .13, .025), .24)
@@ -786,6 +846,16 @@ def character(recipe=None):
         "hair_color": str(recipe.get("hair_color", "#2b1b13")).lower(),
         "outfit": "kurta_shalwar_with_peshawari_chappal",
         "female_dupatta": is_female,
+        "textile_materials": [
+            "Clothing | Pakistani woven kurta",
+            "Clothing | Pakistani woven shalwar",
+        ] + (["Dupatta | ajrak-inspired woven fabric"] if is_female else []),
+        "textile_texture_count": 3 if is_female else 2,
+        "textile_patterns": {
+            "kurta": "pakistani_storybook_woven",
+            "shalwar": "pakistani_storybook_woven",
+            "dupatta": "ajrak_geometric_v1" if is_female else None,
+        },
     }
 
 
@@ -1072,7 +1142,7 @@ def main():
     scene.render.engine="BLENDER_EEVEE_NEXT"
     bpy.ops.wm.save_as_mainfile(filepath=str(blend))
     manifest={"schema_version":1,"asset_id":a.asset_id,"asset_kind":a.asset_kind,"name":a.name,
-      "generator":"cartoon-studio-blender-factory","generator_version":"0.3.0","culture_profile":a.culture_profile,
+      "generator":"cartoon-studio-blender-factory","generator_version":"0.4.0","culture_profile":a.culture_profile,
       "blender_version":bpy.app.version_string,"source_file":blend.name,"glb_file":glb.name,
       "preview_file":preview.name,"editable_source":True,
       "recipe_file":a.recipe_json.name if a.recipe_json else None,
