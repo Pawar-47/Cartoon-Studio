@@ -351,10 +351,16 @@ def validate_character_recipe(recipe: Any) -> dict[str, Any]:
     allowed_facial_hair_styles = {
         "none", "moustache", "stubble", "short_beard", "full_beard", "goatee"
     }
-    if not isinstance(facial_hair_style, str) or facial_hair_style not in allowed_facial_hair_styles:
+    if (
+        not isinstance(facial_hair_style, str)
+        or facial_hair_style not in allowed_facial_hair_styles
+    ):
         raise ValueError("Unsupported facial-hair style.")
     facial_hair_color = recipe.get("facial_hair_color", "#2b1b13")
-    if not isinstance(facial_hair_color, str) or re.fullmatch(r"#[0-9a-fA-F]{6}", facial_hair_color) is None:
+    if (
+        not isinstance(facial_hair_color, str)
+        or re.fullmatch(r"#[0-9a-fA-F]{6}", facial_hair_color) is None
+    ):
         raise ValueError("facial_hair_color must be a six-digit hexadecimal color.")
     normalized["facial_hair_style"] = facial_hair_style
     normalized["facial_hair_color"] = facial_hair_color.lower()
