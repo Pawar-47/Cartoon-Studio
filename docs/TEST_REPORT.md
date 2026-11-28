@@ -15,7 +15,7 @@
 - **Change 2 — the synchronous control is unreachable from the UI.** `#render-episode` is now a hidden, disabled element kept only because `story.js` binds and toggles it, so no user can start the synchronous render from the Story page. The HTTP route remains for API compatibility and keeps its own tests.
 - **Change 3 — a subtitle-mode selector.** The Story page gains a Subtitles selector (`urdu`, `roman_urdu`, `english`, `none`). It reflects the pasted plan's `subtitle_mode`; a change rewrites the plan JSON and raises the same `input` event a paste would, so `story.js` drops its cached validated plan and the user re-validates. The status line says the subtitle file only matches after dialogue audio is regenerated.
 - **Tests:** `test_renderer_and_logs_workspaces_are_served` now also asserts the Story page serves `#subtitle-mode`, `#queue-render` and `/static/story-render-queue.js`.
-- **Result:** awaiting the next Windows CI run, which now covers the new file's JavaScript syntax check and the page assertions. No browser acceptance was possible in this batch.
+- **Result:** green. Windows CI passed in 1m 34s (job `141006605775`) on `e5b2e9b`: the JavaScript syntax check, `compileall` and pytest all passed, including the page assertions. No browser acceptance was performed.
 
 ## 2026-11-28 — Stale encoder assumptions in two render tests
 

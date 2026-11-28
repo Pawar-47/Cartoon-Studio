@@ -16,7 +16,7 @@
 - **The synchronous render control is unreachable from the UI:** `#render-episode` is hidden and disabled, kept only for the legacy handler in `story.js`. The synchronous HTTP route remains for API compatibility.
 - **Subtitle mode is selectable.** The page's Subtitles selector reflects the pasted plan's `subtitle_mode`; changing it rewrites the plan JSON, invalidates the cached validated plan and states that dialogue audio must be regenerated for the subtitle file to match.
 - **Tests:** the page test asserts `#subtitle-mode`, `#queue-render` and the new script are served.
-- **Verified:** static review only; the next Windows CI run covers JavaScript syntax and pytest. No browser acceptance.
+- **Verified:** Windows CI passed on `e5b2e9b` (job `141006605775`, 1m 34s), including the JavaScript syntax check and the page assertions. No browser acceptance.
 - **Still open:** `piper-tts` remains outside the locked environment, so the TTS path still needs the lock regenerated and the reported install check from `/api/diagnostics`.
 
 ## Live checkpoint — 2026-11-28 (Episode Renderer and Logs workspaces)
