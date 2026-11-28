@@ -60,7 +60,7 @@ function ensureRenderer() {
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x111923);
   camera = new THREE.PerspectiveCamera(35, 1, 0.01, 1000);
-  camera.position.set(2.8, 2.1, -3.2);
+  camera.position.set(2.8, 2.1, 3.2);
 
   scene.add(new THREE.HemisphereLight(0xd9e8ff, 0x40352c, 2.0));
   const key = new THREE.DirectionalLight(0xfff1df, 3.0);

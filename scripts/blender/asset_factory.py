@@ -21,6 +21,31 @@ def mat(name,color,rough=.72,metal=0):
     bs.inputs["Metallic"].default_value=metal
     return m
 
+
+
+def textile_mat(name, base_color, accent_color, scale=12):
+    material = mat(name, base_color, rough=.86)
+    nodes = material.node_tree.nodes
+    links = material.node_tree.links
+    shader = nodes.get("Principled BSDF")
+    coordinates = nodes.new("ShaderNodeTexCoord")
+    checker = nodes.new("ShaderNodeTexChecker")
+    checker.inputs["Color1"].default_value = (*base_color, 1)
+    checker.inputs["Color2"].default_value = (*accent_color, 1)
+    checker.inputs["Scale"].default_value = scale
+    links.new(coordinates.outputs["Generated"], checker.inputs["Vector"])
+    weave = nodes.new("ShaderNodeTexNoise")
+    weave.inputs["Scale"].default_value = 115
+    weave.inputs["Detail"].default_value = 2
+    bump = nodes.new("ShaderNodeBump")
+    bump.inputs["Strength"].default_value = .12
+    bump.inputs["Distance"].default_value = .012
+    links.new(coordinates.outputs["Generated"], weave.inputs["Vector"])
+    links.new(weave.outputs["Fac"], bump.inputs["Height"])
+    links.new(checker.outputs["Color"], shader.inputs["Base Color"])
+    links.new(bump.outputs["Normal"], shader.inputs["Normal"])
+    return material
+
 def hex_rgb(value, fallback):
     if isinstance(value, str) and len(value) == 7 and value.startswith("#"):
         try:
@@ -91,6 +116,122 @@ def curve(name,coords,radius,material):
     for p,v in zip(s.bezier_points,coords): p.co=v; p.handle_left_type="AUTO"; p.handle_right_type="AUTO"
     o=bpy.data.objects.new(name,c); bpy.context.collection.objects.link(o); o.data.materials.append(material)
     return o
+
+
+
+def sweep_tube(name, coords, radii, material, segments=16):
+    """Create a smooth tapered tube for hair locks, branches, roots and cables."""
+    points = [Vector(point) for point in coords]
+    if len(points) < 2 or len(points) != len(radii):
+        raise ValueError("sweep_tube requires matching point and radius arrays")
+    vertices = []
+    for index, center in enumerate(points):
+        tangent = (
+            points[min(index + 1, len(points) - 1)]
+            - points[max(index - 1, 0)]
+        ).normalized()
+        reference = Vector((0, 1, 0))
+        if abs(tangent.dot(reference)) > .92:
+            reference = Vector((1, 0, 0))
+        side = tangent.cross(reference).normalized()
+        up = tangent.cross(side).normalized()
+        for segment in range(segments):
+            angle = 2 * math.pi * segment / segments
+            offset = (
+                side * math.cos(angle) + up * math.sin(angle)
+            ) * float(radii[index])
+            vertices.append(tuple(center + offset))
+    faces = []
+    for ring in range(len(points) - 1):
+        for segment in range(segments):
+            current = ring * segments + segment
+            following = ring * segments + (segment + 1) % segments
+            faces.append((current, following, following + segments, current + segments))
+    start_cap = len(vertices)
+    vertices.append(tuple(points[0]))
+    end_cap = len(vertices)
+    vertices.append(tuple(points[-1]))
+    last_ring = (len(points) - 1) * segments
+    for segment in range(segments):
+        following = (segment + 1) % segments
+        faces.append((start_cap, following, segment))
+        faces.append((end_cap, last_ring + segment, last_ring + following))
+    mesh = bpy.data.meshes.new(name + " | tapered sweep")
+    mesh.from_pydata(vertices, [], faces)
+    mesh.update()
+    obj = bpy.data.objects.new(name, mesh)
+    bpy.context.collection.objects.link(obj)
+    return smooth(obj, material)
+
+
+def cloth_panel(
+    name, path, width, material, border_material=None,
+    rows=36, columns=11, thickness=.012,
+):
+    """Build a draped, double-sided fabric panel with optional piped edges."""
+    points = [Vector(point) for point in path]
+    if len(points) < 2:
+        raise ValueError("cloth_panel requires at least two path points")
+
+    def sample(t):
+        position = t * (len(points) - 1)
+        segment = min(int(position), len(points) - 2)
+        return points[segment].lerp(points[segment + 1], position - segment)
+
+    vertices = []
+    for row in range(rows):
+        t = row / (rows - 1)
+        center = sample(t)
+        tangent = sample(min(1.0, t + .015)) - sample(max(0.0, t - .015))
+        lateral = Vector((-tangent.z, 0.0, tangent.x))
+        if lateral.length < .001:
+            lateral = Vector((1.0, 0.0, 0.0))
+        lateral.normalize()
+        row_width = width * (.88 + .12 * math.sin(math.pi * t))
+        for column in range(columns):
+            across = column / (columns - 1) - .5
+            offset = across * row_width
+            ripple = .022 * math.sin(t * math.pi * 4 + across * 13) * math.sin(math.pi * t)
+            vertex = center + lateral * offset + Vector((0.0, ripple, 0.0))
+            vertices.append(tuple(vertex))
+
+    faces = []
+    edge_faces = []
+    for row in range(rows - 1):
+        for column in range(columns - 1):
+            faces.append((
+                row * columns + column,
+                (row + 1) * columns + column,
+                (row + 1) * columns + column + 1,
+                row * columns + column + 1,
+            ))
+            edge_faces.append(column == 0 or column == columns - 2)
+
+    mesh = bpy.data.meshes.new(name + " | woven cloth mesh")
+    mesh.from_pydata(vertices, [], faces)
+    mesh.update()
+    obj = bpy.data.objects.new(name, mesh)
+    bpy.context.collection.objects.link(obj)
+    obj.data.materials.append(material)
+    if border_material:
+        obj.data.materials.append(border_material)
+    for polygon, is_edge in zip(obj.data.polygons, edge_faces):
+        polygon.use_smooth = True
+        if is_edge and border_material:
+            polygon.material_index = 1
+
+    subdiv = obj.modifiers.new("Soft fabric folds", "SUBSURF")
+    subdiv.levels = 2
+    subdiv.render_levels = 2
+    solidify = obj.modifiers.new("Fabric thickness", "SOLIDIFY")
+    solidify.thickness = thickness
+    bpy.ops.object.select_all(action="DESELECT")
+    obj.select_set(True)
+    bpy.context.view_layer.objects.active = obj
+    for modifier in list(obj.modifiers):
+        bpy.ops.object.modifier_apply(modifier=modifier.name)
+    obj.select_set(False)
+    return obj
 
 def _character_region(object_name):
     name = object_name.lower()
@@ -323,15 +464,22 @@ def character(recipe=None):
     ear_inner = mat("Skin | ear detail", (.43, .16, .12))
     hair = mat("Hair | recipe color", hair_color)
     hair_light = mat("Hair | recipe highlight", hair_highlight)
-    kurta = mat("Clothing | Pakistani kurta", (.55, .12, .25) if is_female else (.018, .27, .31))
+    kurta_base = (.55, .12, .25) if is_female else (.018, .27, .31)
+    kurta_accent = (.68, .20, .34) if is_female else (.035, .34, .37)
+    kurta = textile_mat("Clothing | Pakistani woven kurta", kurta_base, kurta_accent, 13)
     kurta_dark = mat("Clothing | deep teal seams", (.012, .12, .16))
-    gold = mat("Clothing | brass piping", (.91, .55, .16))
+    gold = mat("Clothing | brass piping", (.91, .55, .16), .48, .28)
     shirt = mat("Clothing | warm ivory", (.91, .78, .55))
-    shalwar = mat("Clothing | Pakistani shalwar", (.91, .78, .55) if is_female else (.075, .12, .28))
+    shalwar_base = (.91, .78, .55) if is_female else (.075, .12, .28)
+    shalwar_accent = (.97, .86, .68) if is_female else (.12, .19, .38)
+    shalwar = textile_mat("Clothing | Pakistani woven shalwar", shalwar_base, shalwar_accent, 17)
     shalwar_seam = mat("Clothing | seam blue", (.16, .23, .42))
     leather = mat("Shoes | dark leather", (.16, .055, .025))
     sole = mat("Peshawari Chappal | sole", (.045, .035, .03))
-    dupatta = mat("Dupatta | festive woven fabric", (.62, .12, .24))
+    dupatta = textile_mat(
+        "Dupatta | ajrak-inspired woven fabric",
+        (.58, .075, .18), (.78, .22, .32), 8,
+    )
     eye_white = mat("Eyes | ivory", (.98, .93, .81), .28)
     iris = mat("Eyes | amber", (.35, .13, .025), .24)
     pupil = mat("Eyes | dark pupil", (.009, .006, .004), .18)
@@ -345,7 +493,8 @@ def character(recipe=None):
     # Continuous cross-section meshes define the torso, jaw, limbs and clothing silhouette.
     torso_obj = add(loft(
         "Body | tailored kurta shell", (0, 0, 1.47),
-        [(-.59, .27, .20, 0), (-.54, .32, .23, 0),
+        [(-.79, .24, .18, 0), (-.72, .28, .21, 0),
+         (-.59, .31, .22, 0), (-.54, .32, .23, 0),
          (-.39, .35, .25, 0), (-.18, .39, .28, 0),
          (.08, .44, .29, 0), (.30, .46, .28, 0),
          (.46, .39, .24, 0), (.55, .25, .18, 0)],
@@ -444,10 +593,14 @@ def character(recipe=None):
         add(ball("Hair | ponytail tie", (0, .25, 2.79), (.09, .09, .08), hair_light, 24), "head")
     elif hair_style == "spiky":
         for index, x in enumerate((-.24, -.12, 0, .12, .24)):
-            add(curve("Hair | spike %02d" % index,
-                      [(x, -.02, 2.98), (x * 1.1, -.01, 3.13 + (index % 2) * .06),
-                       (x * 1.15, .015, 3.18 + (index % 2) * .06)],
-                      .045, hair), "head")
+            drift = (index - 2) * .018
+            add(sweep_tube(
+                "Hair | tapered tuft %02d" % index,
+                [(x, -.015, 2.96), (x * 1.02, -.035, 3.04),
+                 (x + drift, -.045, 3.12 + (index % 2) * .035),
+                 (x + drift * 1.3, -.02, 3.16 + (index % 2) * .035)],
+                [.078, .068, .038, .002], hair, 14,
+            ), "head")
     elif hair_style == "curly":
         for index in range(9):
             angle = 2 * math.pi * index / 9
@@ -461,8 +614,8 @@ def character(recipe=None):
                  hair, 32), "head")
 
     # Pakistani kurta details: band collar, button placket, side slits and restrained piping.
-    add(block("Kurta | front placket", (0, -.292, 1.52),
-              (.13, .04, .58), shirt, .025), "chest")
+    add(block("Kurta | front placket", (0, -.292, 1.42),
+              (.13, .04, .84), shirt, .025), "chest")
     add(curve("Kurta | band collar",
               [(-.17, -.29, 1.94), (-.10, -.34, 2.00),
                (0, -.35, 1.97), (.10, -.34, 2.00),
@@ -470,27 +623,30 @@ def character(recipe=None):
     for sign, side in ((-1, "L"), (1, "R")):
         add(curve("Kurta | front seam." + side,
                   [(sign * .18, -.30, 1.78), (sign * .17, -.31, 1.48),
-                   (sign * .14, -.28, 1.12)], .012, gold), "spine")
+                   (sign * .14, -.28, .78)], .012, gold), "spine")
         add(block("Kurta | chest pocket." + side,
                   (sign * .245, -.286, 1.65), (.16, .035, .18), kurta, .018), "chest")
         add(curve("Kurta | side slit." + side,
-                  [(sign * .31, -.16, 1.06), (sign * .32, -.18, .88),
-                   (sign * .28, -.17, .78)], .012, shirt), "spine")
+                  [(sign * .31, -.16, 1.06), (sign * .32, -.18, .83),
+                   (sign * .28, -.17, .70)], .012, shirt), "spine")
         add(block("Kurta | cuff piping." + side,
                   (sign * .515, -.015, 1.27), (.24, .20, .045), gold, .018), "forearm." + side)
-    for z in (1.72, 1.58, 1.44, 1.30):
+    for z in (1.72, 1.58, 1.44, 1.30, 1.16):
         add(ball("Kurta | brass button", (0, -.326, z),
                  (.022, .012, .022), gold, 20), "chest")
+    add(curve("Kurta | hem embroidery",
+              [(-.28, -.21, .74), (-.18, -.28, .69), (0, -.30, .68),
+               (.18, -.28, .69), (.28, -.21, .74)], .014, gold), "spine")
     add(curve("Shalwar | drawstring",
               [(-.12, -.22, .99), (0, -.27, .94), (.12, -.22, .99)], .018, gold), "pelvis")
 
     if is_female:
-        add(curve("Dupatta | shoulder drape",
-                  [(-.47, .05, 1.94), (-.42, -.18, 1.78), (-.24, -.34, 1.42),
-                   (0, -.37, 1.05), (.16, -.34, .92)], .075, dupatta), "chest")
-        add(curve("Dupatta | embroidered border",
-                  [(-.42, -.23, 1.75), (-.22, -.38, 1.38),
-                   (.02, -.41, 1.02), (.18, -.38, .94)], .012, gold), "chest")
+        add(cloth_panel(
+            "Dupatta | draped ajrak panel",
+            [(-.43, -.12, 1.94), (-.37, -.29, 1.72), (-.19, -.37, 1.42),
+             (.08, -.38, 1.12), (.29, -.28, .88)],
+            .28, dupatta, gold, rows=36, columns=11, thickness=.012,
+        ), "chest")
 
     for sign, side in ((-1, "L"), (1, "R")):
         add(loft(

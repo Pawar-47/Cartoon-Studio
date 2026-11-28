@@ -1785,7 +1785,8 @@ def _foundry_generator_metadata(
         "blender_preview_url": preview_url,
         "hair_style": details.get("hair_style", recipe.get("hair_style")),
         "hair_color": details.get("hair_color", recipe.get("hair_color")),
-        "outfit": details.get("outfit", "pakistani_kurta_shalwar_with_peshawari_chappal"),
+        "outfit_id": details.get("outfit", "kurta_shalwar_with_peshawari_chappal"),
+        "outfit": "Pakistani kurta-shalwar with Peshawari chappal",
     }
     return saved_recipe, generator
 
