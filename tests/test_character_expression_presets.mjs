@@ -59,3 +59,27 @@ test("generated face presets provide frown, surprise and angry expressions", () 
 test("generated face preset rejects unknown names", () => {
   assert.throws(() => buildGeneratedFaceExpression("laugh"), RangeError);
 });
+
+test("Blender gaze and expression controls appear in the facial group", () => {
+  for (const name of ["GazeLeft", "GazeRight", "GazeUp", "GazeDown", "EyesWide", "Squint", "BrowRaise", "BrowInnerDown", "BrowDown", "Frown"]) {
+    assert.equal(classifyMorphTarget({ name, meshName: "CartoonStudioCharacterMesh" }), "face");
+  }
+});
+
+test("Blender facial controls activate the matching expression presets", () => {
+  const controls = [
+    { key: "frown", name: "Frown", value: 0 },
+    { key: "inner", name: "BrowInnerDown", value: 0 },
+    { key: "raise", name: "BrowRaise", value: 0 },
+    { key: "wide", name: "EyesWide", value: 0 },
+    { key: "down", name: "BrowDown", value: 0 },
+  ];
+  const frown = buildExpressionPreset("frown", controls);
+  assert.equal(frown.weights.frown, 0.85);
+  assert.equal(frown.weights.inner, 0.85);
+  const surprise = buildExpressionPreset("surprise", controls);
+  assert.equal(surprise.weights.raise, 0.85);
+  assert.equal(surprise.weights.wide, 0.85);
+  const angry = buildExpressionPreset("angry", controls);
+  assert.equal(angry.weights.down, 0.85);
+});

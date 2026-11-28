@@ -81,9 +81,15 @@ def test_factory_contains_domain_generators_and_editable_glb_export() -> None:
     assert "export_skins=True" in source
     assert "cartoon-studio.humanoid.v1" in source
     assert "head_width" in source
-    for gaze_control in ("GazeLeft", "GazeRight", "GazeUp", "GazeDown"):
-        assert gaze_control in source
+    for face_control in (
+        "GazeLeft", "GazeRight", "GazeUp", "GazeDown",
+        "Frown", "BrowRaise", "BrowInnerDown", "BrowDown",
+        "EyesWide", "Squint",
+    ):
+        assert face_control in source
     assert '"eye_surface"' in source
+    assert '"eyelids"' in source
+    assert "Face | lower eyelid" in source
     assert "def add_foundry_shape_keys" in source
     assert "LeftShoulder" in source
     assert "export_morph=True" in source

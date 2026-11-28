@@ -97,7 +97,9 @@ def main() -> int:
                 }
                 required_targets = set(MORPH_TARGETS) | {
                     "GazeLeft", "GazeRight", "GazeUp", "GazeDown",
-                    "Smile", "JawOpen", "Blink", "Open", "Phoneme_A", "Phoneme_O"
+                    "Frown", "BrowRaise", "BrowInnerDown", "BrowDown",
+                    "EyesWide", "Squint", "Smile", "JawOpen", "Blink", "Open",
+                    "Phoneme_A", "Phoneme_O"
                 }
                 if not required_targets.issubset(target_names):
                     raise RuntimeError(
@@ -200,14 +202,19 @@ def main() -> int:
             str(target.get("name", ""))
             for target in female_inspection.get("morph_targets", [])
         }
-        required_gaze_targets = {"GazeLeft", "GazeRight", "GazeUp", "GazeDown"}
-        if not required_gaze_targets.issubset(female_targets):
+        required_face_targets = {
+            "GazeLeft", "GazeRight", "GazeUp", "GazeDown",
+            "Frown", "BrowRaise", "BrowInnerDown", "BrowDown",
+            "EyesWide", "Squint", "Smile", "JawOpen", "Blink", "Open",
+            "Phoneme_A", "Phoneme_O",
+        }
+        if not required_face_targets.issubset(female_targets):
             raise RuntimeError(
-                "female character: Godot did not import gaze controls "
-                + ", ".join(sorted(required_gaze_targets - female_targets))
+                "female character: Godot did not import facial controls "
+                + ", ".join(sorted(required_face_targets - female_targets))
             )
-        if female_inspection.get("morph_target_count", 0) < len(MORPH_TARGETS) + 10:
-            raise RuntimeError("female character: recipe and gaze morph targets failed import")
+        if female_inspection.get("morph_target_count", 0) < len(MORPH_TARGETS) + len(required_face_targets):
+            raise RuntimeError("female character: complete facial morph set failed import")
         female_target = args.output / "character-female"
         female_target.mkdir(parents=True, exist_ok=True)
         for source in (

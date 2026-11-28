@@ -1,5 +1,5 @@
 const BODY_TOKENS = /body|torso|chest|waist|hip|shoulder|arm|leg|muscle|belly|stomach|height|breast|bust|thigh|calf|buttock/;
-const FACE_TOKENS = /eye|brow|lid|blink|mouth|lip|jaw|cheek|nose|face|smile|frown|angry|sad|happy|surpris|tongue|teeth/;
+const FACE_TOKENS = /eye|gaze|iris|pupil|sclera|brow|lid|blink|mouth|lip|jaw|cheek|nose|face|smile|frown|angry|sad|happy|surpris|tongue|teeth/;
 
 function normalize(value) {
   return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, "");

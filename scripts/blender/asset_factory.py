@@ -426,6 +426,29 @@ def add_foundry_shape_keys(mesh, recipe):
         if abs(base.x) > .015:
             point.z = base.z + .035 * min(1.0, abs(base.x) / .12)
     add_key("Smile", ("mouth",), smile, expressions.get("Smile", 0.0))
+    def frown(point, base):
+        if abs(base.x) > .015:
+            point.z = base.z - .035 * min(1.0, abs(base.x) / .12)
+    add_key("Frown", ("mouth",), frown, expressions.get("Frown", 0.0))
+
+    def brow_raise(point, base):
+        point.z = base.z + .055
+    add_key("BrowRaise", ("brows",), brow_raise, expressions.get("BrowRaise", 0.0))
+
+    def brow_inner_down(point, base):
+        if abs(base.x) < .20:
+            point.z = base.z - .05
+            point.x = base.x * .88
+    add_key(
+        "BrowInnerDown", ("brows",), brow_inner_down,
+        expressions.get("BrowInnerDown", 0.0),
+    )
+    add_key(
+        "BrowDown", ("brows",),
+        lambda p, b: setattr(p, "z", b.z - .045),
+        expressions.get("BrowDown", 0.0),
+    )
+
     def jaw_open(point, base):
         if base.z < 2.54 and base.y < -.05:
             point.z = base.z - .055
@@ -433,9 +456,19 @@ def add_foundry_shape_keys(mesh, recipe):
     # Blink only deforms the eyeball, iris, pupil and catchlight region;
     # brows and eyelid curves remain intact instead of collapsing with the eye.
     add_key(
-        "Blink", ("eye_surface",),
+        "Blink", ("eye_surface", "eyelids"),
         lambda p, b: setattr(p, "z", 2.62 + (b.z - 2.62) * .08),
         expressions.get("Blink", 0.0),
+    )
+    add_key(
+        "EyesWide", ("eye_surface",),
+        lambda p, b: setattr(p, "z", 2.62 + (b.z - 2.62) * 1.22),
+        expressions.get("EyesWide", 0.0),
+    )
+    add_key(
+        "Squint", ("eye_surface",),
+        lambda p, b: setattr(p, "z", 2.62 + (b.z - 2.62) * .56),
+        expressions.get("Squint", 0.0),
     )
     add_key(
         "Open", ("mouth",),
@@ -455,13 +488,17 @@ def add_foundry_shape_keys(mesh, recipe):
         ["head_width", "jaw_width", "chin_length", "cheek_fullness", "eye_spacing",
          "nose_width", "mouth_width", "torso_width", "shoulder_width", "leg_length",
          "GazeLeft", "GazeRight", "GazeUp", "GazeDown",
-         "Smile", "JawOpen", "Blink", "Open", "Phoneme_A", "Phoneme_O"]
+         "Frown", "BrowRaise", "BrowInnerDown", "BrowDown",
+         "EyesWide", "Squint", "Smile", "JawOpen", "Blink", "Open",
+         "Phoneme_A", "Phoneme_O"]
     )
     return [
         "head_width", "jaw_width", "chin_length", "cheek_fullness", "eye_spacing",
         "nose_width", "mouth_width", "torso_width", "shoulder_width", "leg_length",
         "GazeLeft", "GazeRight", "GazeUp", "GazeDown",
-        "Smile", "JawOpen", "Blink", "Open", "Phoneme_A", "Phoneme_O",
+        "Frown", "BrowRaise", "BrowInnerDown", "BrowDown",
+        "EyesWide", "Squint", "Smile", "JawOpen", "Blink", "Open",
+        "Phoneme_A", "Phoneme_O",
     ]
 
 
@@ -554,6 +591,9 @@ def character(recipe=None):
         add(curve("Face | upper eyelid." + side,
                   [(x - .085, -.29, 2.62), (x, -.35, 2.72),
                    (x + .085, -.29, 2.62)], .018, ear_inner), "head")
+        add(curve("Face | lower eyelid." + side,
+                  [(x - .082, -.29, 2.59), (x, -.345, 2.55),
+                   (x + .082, -.29, 2.59)], .014, highlight), "head")
         add(curve("Face | brow." + side,
                   [(x - .085, -.285, 2.765), (x, -.335, 2.79),
                    (x + .085, -.285, 2.765)], .026, hair), "head")
@@ -727,7 +767,9 @@ def character(recipe=None):
     morph_targets = add_foundry_shape_keys(character_mesh, recipe)
     arm["facial_controls"] = [
         "GazeLeft", "GazeRight", "GazeUp", "GazeDown",
-        "Smile", "JawOpen", "Blink", "Open", "Phoneme_A", "Phoneme_O",
+        "Frown", "BrowRaise", "BrowInnerDown", "BrowDown",
+        "EyesWide", "Squint", "Smile", "JawOpen", "Blink", "Open",
+        "Phoneme_A", "Phoneme_O",
     ]
     arm["template_id"] = master_template_id
     return {
