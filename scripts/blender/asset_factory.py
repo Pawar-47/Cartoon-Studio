@@ -140,6 +140,36 @@ def loft(name, location, profile, material, segments=48):
     return smooth(obj, material)
 
 
+
+def cloth_loft(name, location, profile, material, pleat_count=10, amplitude=.025, segments=72):
+    """Create tailored fabric volumes with softly sculpted continuous pleat channels."""
+    vertices = []
+    for ring_index, (z, radius_x, radius_y, depth_offset) in enumerate(profile):
+        progress = ring_index / max(1, len(profile) - 1)
+        envelope = math.sin(math.pi * progress) ** .65
+        for index in range(segments):
+            angle = 2 * math.pi * index / segments
+            fold = 1.0 + amplitude * envelope * math.cos(pleat_count * angle + progress * math.pi * 1.35)
+            vertices.append((radius_x * fold * math.cos(angle), depth_offset + radius_y * fold * math.sin(angle), z))
+    faces = []
+    for ring in range(len(profile) - 1):
+        for index in range(segments):
+            current = ring * segments + index
+            following = ring * segments + (index + 1) % segments
+            faces.append((current, following, following + segments, current + segments))
+    bottom = len(vertices); vertices.append((0, profile[0][3], profile[0][0]))
+    top = len(vertices); vertices.append((0, profile[-1][3], profile[-1][0]))
+    last = (len(profile) - 1) * segments
+    for index in range(segments):
+        following = (index + 1) % segments
+        faces.append((bottom, following, index))
+        faces.append((top, last + index, last + following))
+    mesh = bpy.data.meshes.new(name + " | tailored pleated cloth")
+    mesh.from_pydata(vertices, [], faces); mesh.update()
+    obj = bpy.data.objects.new(name, mesh); bpy.context.collection.objects.link(obj)
+    obj.location = location
+    return smooth(obj, material)
+
 def block(name,loc,dims,material,bevel=.06):
     bpy.ops.mesh.primitive_cube_add(size=1,location=loc)
     o=bpy.context.object; o.name=name; o.dimensions=dims
@@ -784,17 +814,23 @@ def character(recipe=None):
         return obj
 
     # Continuous cross-section meshes define the torso, jaw, limbs and clothing silhouette.
-    torso_obj = add(loft(
-        "Body | tailored kurta shell", (0, 0, 1.47),
+    kurta_profile = (
+        [(-.93, .30, .22, 0), (-.84, .32, .23, 0),
+         (-.70, .34, .24, 0), (-.52, .34, .24, 0),
+         (-.36, .36, .25, 0), (-.16, .39, .27, 0),
+         (.08, .44, .29, 0), (.30, .46, .28, 0),
+         (.46, .39, .24, 0), (.55, .25, .18, 0)]
+        if is_female else
         [(-.79, .24, .18, 0), (-.72, .28, .21, 0),
          (-.59, .31, .22, 0), (-.54, .32, .23, 0),
          (-.39, .35, .25, 0), (-.18, .39, .28, 0),
          (.08, .44, .29, 0), (.30, .46, .28, 0),
-         (.46, .39, .24, 0), (.55, .25, .18, 0)],
-        kurta, 56,
+         (.46, .39, .24, 0), (.55, .25, .18, 0)]
+    )
+    torso_obj = add(cloth_loft(
+        "Body | tailored kurta shell", (0, 0, 1.47), kurta_profile,
+        kurta, pleat_count=8, amplitude=.018, segments=72,
     ), "spine")
-    if is_female:
-        torso_obj.scale.x = .94
     add(loft(
         "Body | neck", (0, 0, 2.02),
         [(-.17, .12, .12, 0), (-.10, .14, .13, 0),
@@ -1031,9 +1067,9 @@ def character(recipe=None):
     if is_female:
         add(cloth_panel(
             "Dupatta | draped ajrak panel",
-            [(-.43, -.12, 1.94), (-.37, -.29, 1.72), (-.19, -.37, 1.42),
-             (.08, -.38, 1.12), (.29, -.28, .88)],
-            .28, dupatta, gold, rows=36, columns=11, thickness=.012,
+            [(-.43, -.10, 1.98), (-.39, -.30, 1.78), (-.24, -.405, 1.53),
+             (.02, -.415, 1.28), (.25, -.37, 1.02), (.36, -.24, .82)],
+            .48, dupatta, gold, rows=48, columns=17, thickness=.014,
         ), "chest")
 
     for sign, side in ((-1, "L"), (1, "R")):
@@ -1103,22 +1139,22 @@ def character(recipe=None):
         ), "forearm." + side)
 
     for sign, side in ((-1, "L"), (1, "R")):
-        add(loft(
+        add(cloth_loft(
             "Shalwar | thigh." + side, (sign * .19, 0, .64),
-            [(-.42, .12, .13, 0), (-.32, .17, .17, 0),
-             (-.08, .20, .19, 0), (.20, .22, .20, 0),
-             (.38, .18, .17, 0), (.43, .12, .13, 0)],
-            shalwar, 40,
+            [(-.42, .145, .15, 0), (-.34, .205, .19, 0),
+             (-.12, .255, .235, 0), (.12, .285, .255, 0),
+             (.32, .275, .24, 0), (.43, .205, .19, 0)],
+            shalwar, pleat_count=12, amplitude=.055, segments=72,
         ), "thigh." + side)
         add(curve("Shalwar | seam." + side,
                   [(sign * .19, -.17, .93), (sign * .19, -.17, .66),
                    (sign * .19, -.13, .40)], .008, shalwar_seam), "thigh." + side)
-        add(loft(
+        add(cloth_loft(
             "Shalwar | shin." + side, (sign * .19, 0, .245),
-            [(-.22, .09, .11, 0), (-.16, .11, .12, 0),
-             (.04, .12, .13, 0), (.20, .13, .14, 0),
-             (.25, .12, .13, 0)],
-            shalwar, 36,
+            [(-.22, .105, .12, 0), (-.16, .125, .14, 0),
+             (-.08, .15, .155, 0), (.04, .165, .17, 0),
+             (.18, .17, .17, 0), (.25, .15, .15, 0)],
+            shalwar, pleat_count=12, amplitude=.045, segments=64,
         ), "shin." + side)
         add(ball("Foot | instep." + side, (sign * .19, -.13, .13),
                  (.14, .25, .085), skin, 28), "foot." + side)
