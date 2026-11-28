@@ -620,7 +620,7 @@ $("export-turnaround-png").addEventListener("click",async()=>{
   const url=URL.createObjectURL(blob),link=window.document.createElement("a");
   const sourceName=activeCharacter?.name||importedAsset?.original_filename||"character";
   const fileStem=String(sourceName).replace(/\.[^.]+$/,"").replace(/[^a-z0-9_-]+/gi,"-").toLowerCase()||"character";
-  link.href=url;link.download=fileStem+"-turnaround.png";link.click();
+  link.href=url;link.download=fileStem+"-turnaround.png";window.document.body.append(link);link.click();link.remove();
   window.setTimeout(()=>URL.revokeObjectURL(url),1000);
   $("preview-status").textContent="2 × 2 turnaround sheet exported ("+(size*2)+" × "+(size*2)+").";
  }catch(error){$("preview-status").textContent="Turnaround export failed: "+error.message}
@@ -634,7 +634,7 @@ $("export-preview-png").addEventListener("click",async()=>{
   const url=URL.createObjectURL(blob),link=window.document.createElement("a");
   const sourceName=activeCharacter?.name||importedAsset?.original_filename||"character";
   const fileStem=String(sourceName).replace(/\.[^.]+$/,"").replace(/[^a-z0-9_-]+/gi,"-").toLowerCase()||"character";
-  link.href=url;link.download=fileStem+"-"+size+"px.png";link.click();
+  link.href=url;link.download=fileStem+"-"+size+"px.png";window.document.body.append(link);link.click();link.remove();
   window.setTimeout(()=>URL.revokeObjectURL(url),1000);
   $("preview-status").textContent="PNG exported at "+size+" × "+size+( $("preview-transparent").checked ? " with a transparent background." : ".");
  }catch(error){$("preview-status").textContent="PNG export failed: "+error.message}
