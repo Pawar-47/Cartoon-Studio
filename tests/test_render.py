@@ -239,7 +239,7 @@ def test_render_rejects_ffmpeg_without_required_mp4_encoders_before_godot(
         )
 
     monkeypatch.setattr("app.render.subprocess.run", fake_run)
-    with pytest.raises(RenderDependencyUnavailable, match="libx264"):
+    with pytest.raises(RenderDependencyUnavailable, match="no redistribution-safe video encoder"):
         render_episode_video(
             [scene_path],
             [1],
@@ -285,13 +285,22 @@ def test_render_removes_mp4_when_final_verification_fails(
     godot.write_bytes(b"godot-test")
     ffmpeg.write_bytes(b"ffmpeg-test")
     output = project_root / "renders" / "episode.mp4"
+    calls = []
 
     def fake_run(command, **kwargs):
+        calls.append(command)
         if command[0] == str(ffmpeg) and "-encoders" in command:
+            # A build that offers VP9 beside the GPL libx264: the
+            # redistribution-safe encoder must still be the one chosen.
             return subprocess.CompletedProcess(
                 command,
                 0,
-                stdout=" V..... libx264\n A..... aac\n S..... mov_text\n",
+                stdout=(
+                    " V..... libvpx-vp9   libvpx VP9\n"
+                    " V..... libx264     libx264 H.264\n"
+                    " A..... aac         AAC\n"
+                    " S..... mov_text    mov_text\n"
+                ),
                 stderr="",
             )
         if command[0] == str(godot):
@@ -329,3 +338,7 @@ def test_render_removes_mp4_when_final_verification_fails(
             ffmpeg_executable=ffmpeg,
         )
     assert not output.exists()
+    mux_calls = [call for call in calls if "-c:v" in call]
+    assert len(mux_calls) == 1
+    assert mux_calls[0][mux_calls[0].index("-c:v") + 1] == "libvpx-vp9"
+    assert "libx264" not in mux_calls[0]

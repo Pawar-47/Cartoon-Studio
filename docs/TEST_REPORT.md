@@ -1,3 +1,11 @@
+## 2026-11-28 — Stale encoder assumptions in two render tests
+
+- **Finding:** the redistribution-safe encoder batch added `video_encoder` selection, but two tests in `tests/test_render.py` still encoded the old contract. `test_render_rejects_ffmpeg_without_required_mp4_encoders_before_godot` expected the message to contain `libx264` although the guard had been split into "no safe encoder" and "GPL-only"; `test_render_removes_mp4_when_final_verification_fails` fed an encoder list whose only video encoder was the GPL `libx264`, so the render now stopped at encoder selection instead of reaching the verification it was written to test. The `test` job failed with exactly these three cases (two parametrised) on `7dd8658` ([job 140895039099](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/46117677402/job/140895039099)) and on `4fbeb9c` ([job 140895690392](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/46117892918/job/140895690392)).
+- **Correction:** the first test asserts the "no redistribution-safe video encoder" guard; the second's fake build now lists VP9 beside `libx264`, and the test additionally asserts the mux command chose `libvpx-vp9` and never the GPL encoder — so it still covers the failure it was written for and now also pins the encoder policy at the mux step.
+- **No application code changed;** `app/render.py` behaved as designed.
+- **Result:** awaiting the next Windows CI run; no local pytest run was possible.
+
+
 ## 2026-11-28 — Dashboard roadmap alignment
 
 - **Finding:** dashboard showed World Builder as a future milestone and episode rendering as “Pending”, although the World Builder foundation and local Godot/FFmpeg rendering path already exist.
