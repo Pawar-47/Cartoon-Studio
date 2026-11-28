@@ -1800,16 +1800,22 @@ def _foundry_rig_ready(rig_analysis: dict[str, Any]) -> bool:
 
 
 def _foundry_blender_artifact_path(project_id: str, asset_id: str, field: str) -> Path:
-    manifest_path = resolve_project_relative(DATA_DIR, project_id, f"assets/characters/{asset_id}.json")
+    manifest_path = resolve_project_relative(
+        DATA_DIR, project_id, f"assets/characters/{asset_id}.json"
+    )
     if not manifest_path.is_file():
         raise HTTPException(status_code=404, detail="Character asset not found.")
     try:
         envelope = json.loads(manifest_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
-        raise HTTPException(status_code=500, detail="Character asset manifest is unreadable.") from error
+        raise HTTPException(
+            status_code=500, detail="Character asset manifest is unreadable."
+        ) from error
     relative_path = envelope.get("data", {}).get("generator", {}).get(field)
     if not isinstance(relative_path, str) or not relative_path:
-        raise HTTPException(status_code=404, detail="This character has no Blender source artifact.")
+        raise HTTPException(
+            status_code=404, detail="This character has no Blender source artifact."
+        )
     path = resolve_project_relative(DATA_DIR, project_id, relative_path)
     if not path.is_file():
         raise HTTPException(status_code=404, detail="Blender artifact file is missing.")

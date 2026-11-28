@@ -124,10 +124,13 @@ def main() -> int:
                     )
                 rig_analysis = analyze_rig(godot_inspection)
                 if (
-                    rig_analysis.get("matched_bone_count") != rig_analysis.get("required_bone_count")
+                    rig_analysis.get("matched_bone_count")
+                    != rig_analysis.get("required_bone_count")
                     or rig_analysis.get("hierarchy_validation", {}).get("status") != "valid"
                 ):
-                    raise RuntimeError("character: canonical humanoid rig mapping/hierarchy is invalid")
+                    raise RuntimeError(
+                        "character: canonical humanoid rig mapping/hierarchy is invalid"
+                    )
                 imported_targets = {
                     str(target.get("name", ""))
                     for target in godot_inspection.get("morph_targets", [])
@@ -185,10 +188,13 @@ def main() -> int:
             raise RuntimeError("female character: canonical 19-bone rig failed import")
         female_rig_analysis = analyze_rig(female_inspection)
         if (
-            female_rig_analysis.get("matched_bone_count") != female_rig_analysis.get("required_bone_count")
+            female_rig_analysis.get("matched_bone_count")
+            != female_rig_analysis.get("required_bone_count")
             or female_rig_analysis.get("hierarchy_validation", {}).get("status") != "valid"
         ):
-            raise RuntimeError("female character: canonical humanoid rig mapping/hierarchy is invalid")
+            raise RuntimeError(
+                "female character: canonical humanoid rig mapping/hierarchy is invalid"
+            )
         if female_inspection.get("morph_target_count", 0) < len(MORPH_TARGETS) + 6:
             raise RuntimeError("female character: recipe morph targets failed import")
         female_target = args.output / "character-female"
@@ -212,7 +218,7 @@ def main() -> int:
         })
         report = {"blender": status, "godot": godot_status, "assets": summary}
         (args.output / "blender-runtime-report.json").write_text(
-            json.dumps(report, indent=2) + "\\n", encoding="utf-8")
+            json.dumps(report, indent=2) + "\n", encoding="utf-8")
         print(json.dumps(report, indent=2))
     return 0
 
