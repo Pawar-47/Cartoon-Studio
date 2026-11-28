@@ -90,6 +90,10 @@ def test_factory_contains_domain_generators_and_editable_glb_export() -> None:
     assert '"eye_surface"' in source
     assert '"eyelids"' in source
     assert "Face | lower eyelid" in source
+    assert "Hand | nail." in source
+    assert "Hand | knuckle." in source
+    assert "Hand | thumb joint." in source
+    assert "finger_lengths" in source
     assert "ShaderNodeTexImage" in source
     assert "image.pack()" in source
     assert "bpy.ops.uv.smart_project" in source

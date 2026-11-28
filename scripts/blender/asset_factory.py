@@ -780,17 +780,54 @@ def character(recipe=None):
              (.27, .105, .11, 0)],
             skin, 36,
         ), "forearm." + side)
-        add(ball("Hand | palm." + side, (sign * .54, -.015, .79),
-                 (.115, .095, .13), highlight, 28), "forearm." + side)
-        for finger in range(4):
-            fx = sign * (.54 + (finger - 1.5) * .045)
-            fz = .675 - (.018 if finger in (0, 3) else 0)
-            add(ball("Hand | finger.%s.%d" % (side, finger + 1),
-                     (fx, -.025, fz), (.026, .031, .085),
-                     skin, 20), "forearm." + side)
-        add(ball("Hand | thumb." + side,
-                 (sign * .405, -.045, .785), (.045, .04, .075),
-                 skin, 20), "forearm." + side)
+        # Sculpted palm with a tapered wrist transition; the palm and digits
+        # are separate skinned components so hand poses can be authored later.
+        add(loft(
+            "Hand | palm." + side, (sign * .54, -.012, .785),
+            [(-.105, .075, .055, 0), (-.075, .105, .075, -.005),
+             (-.015, .125, .082, 0), (.055, .115, .075, .004),
+             (.105, .075, .055, 0)],
+            highlight, 36,
+        ), "forearm." + side)
+        finger_offsets = (-.075, -.025, .025, .075)
+        finger_lengths = (.115, .145, .137, .105)
+        for finger, offset in enumerate(finger_offsets, start=1):
+            fx = sign * (.54 + offset)
+            length = finger_lengths[finger - 1]
+            start_z = .735 - abs(offset) * .10
+            middle_z = start_z - length * .52
+            tip_z = start_z - length
+            spread = offset * .16
+            add(sweep_tube(
+                "Hand | finger.%s.%d" % (side, finger),
+                [(fx, -.025, start_z),
+                 (fx + sign * spread, -.052, middle_z),
+                 (fx + sign * spread * 1.35, -.045, tip_z)],
+                [.027, .022, .012], skin, 16,
+            ), "forearm." + side)
+            add(ball(
+                "Hand | nail.%s.%d" % (side, finger),
+                (fx + sign * spread * 1.35, -.058, tip_z + .012),
+                (.014, .008, .022), highlight, 16,
+            ), "forearm." + side)
+            add(ball(
+                "Hand | knuckle.%s.%d" % (side, finger),
+                (fx, -.075, middle_z + .012),
+                (.022, .012, .019), highlight, 16,
+            ), "forearm." + side)
+        # The thumb sweeps diagonally out from the palm with a visible base joint.
+        add(sweep_tube(
+            "Hand | thumb." + side,
+            [(sign * .445, -.035, .825),
+             (sign * .405, -.070, .785),
+             (sign * .385, -.075, .735)],
+            [.043, .035, .021], skin, 20,
+        ), "forearm." + side)
+        add(ball(
+            "Hand | thumb joint." + side,
+            (sign * .445, -.075, .825), (.043, .018, .038),
+            highlight, 20,
+        ), "forearm." + side)
 
     for sign, side in ((-1, "L"), (1, "R")):
         add(loft(
