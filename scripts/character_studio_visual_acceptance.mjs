@@ -303,10 +303,21 @@ try {
     ? "Female GLB passed the live Godot import/inspection API."
     : "Male and female GLBs both passed the live Godot import/inspection API.");
 
-  const [portraitDownload] = await Promise.all([
-    page.waitForEvent("download"),
-    page.locator("#export-preview-png").click(),
-  ]);
+  const portraitDownloadPromise = page.waitForEvent("download", { timeout: 30_000 });
+  await page.locator("#export-preview-png").click({ force: true });
+  await page.waitForFunction(
+    () => {
+      const status = document.querySelector("#preview-status")?.textContent || "";
+      return status.includes("PNG exported") || status.includes("PNG export failed");
+    },
+    null,
+    { timeout: 30_000 },
+  );
+  const portraitStatus = await page.locator("#preview-status").textContent();
+  if (!portraitStatus.includes("PNG exported")) {
+    throw new Error("Portrait PNG export failed in the browser: " + portraitStatus);
+  }
+  const portraitDownload = await portraitDownloadPromise;
   const portraitPath = path.join(output, "character-portrait.png");
   await portraitDownload.saveAs(portraitPath);
   if ((await stat(portraitPath)).size < 1024) {
@@ -317,10 +328,21 @@ try {
     null,
     { timeout: 30_000 },
   );
-  const [turnaroundDownload] = await Promise.all([
-    page.waitForEvent("download"),
-    page.locator("#export-turnaround-png").click(),
-  ]);
+  const turnaroundDownloadPromise = page.waitForEvent("download", { timeout: 30_000 });
+  await page.locator("#export-turnaround-png").click({ force: true });
+  await page.waitForFunction(
+    () => {
+      const status = document.querySelector("#preview-status")?.textContent || "";
+      return status.includes("turnaround sheet exported") || status.includes("Turnaround export failed");
+    },
+    null,
+    { timeout: 30_000 },
+  );
+  const turnaroundStatus = await page.locator("#preview-status").textContent();
+  if (!turnaroundStatus.includes("turnaround sheet exported")) {
+    throw new Error("Turnaround PNG export failed in the browser: " + turnaroundStatus);
+  }
+  const turnaroundDownload = await turnaroundDownloadPromise;
   const turnaroundPath = path.join(output, "character-turnaround.png");
   await turnaroundDownload.saveAs(turnaroundPath);
   if ((await stat(turnaroundPath)).size < 1024) {
