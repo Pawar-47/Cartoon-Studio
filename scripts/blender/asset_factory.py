@@ -24,26 +24,12 @@ def mat(name,color,rough=.72,metal=0):
 
 
 def textile_mat(name, base_color, accent_color, scale=12):
+    """Keep export-safe fabric colours and retain pattern metadata for later baking."""
     material = mat(name, base_color, rough=.86)
-    nodes = material.node_tree.nodes
-    links = material.node_tree.links
-    shader = nodes.get("Principled BSDF")
-    coordinates = nodes.new("ShaderNodeTexCoord")
-    checker = nodes.new("ShaderNodeTexChecker")
-    checker.inputs["Color1"].default_value = (*base_color, 1)
-    checker.inputs["Color2"].default_value = (*accent_color, 1)
-    checker.inputs["Scale"].default_value = scale
-    links.new(coordinates.outputs["Generated"], checker.inputs["Vector"])
-    weave = nodes.new("ShaderNodeTexNoise")
-    weave.inputs["Scale"].default_value = 115
-    weave.inputs["Detail"].default_value = 2
-    bump = nodes.new("ShaderNodeBump")
-    bump.inputs["Strength"].default_value = .12
-    bump.inputs["Distance"].default_value = .012
-    links.new(coordinates.outputs["Generated"], weave.inputs["Vector"])
-    links.new(weave.outputs["Fac"], bump.inputs["Height"])
-    links.new(checker.outputs["Color"], shader.inputs["Base Color"])
-    links.new(bump.outputs["Normal"], shader.inputs["Normal"])
+    material["cartoon_studio_textile"] = True
+    material["textile_accent_rgba"] = [*accent_color, 1.0]
+    material["textile_pattern_scale"] = int(scale)
+    material["textile_pattern_id"] = "pakistani_storybook_woven"
     return material
 
 def hex_rgb(value, fallback):
