@@ -24,8 +24,9 @@ master brief preserved at `docs/MASTER_EXECUTION_PROMPT.md`.
 > it as an artifact — the first execution of that path is the next run, and its log decides
 > whether B1's rendering claim holds. **That first run already proved the render chain:** the
 > pinned Godot rendered both real scenes and the bundled LGPL FFmpeg muxed the MP4; the only
-> failure was final verification, whose null muxer needs no subtitle encoder when the stream
-> is copied (fixed). **The voice half of B1 and the remaining B3–B9 items
+> failures were in final verification (a null-muxer subtitle encoder, then a subtitle track
+> that shortened the measured timeline), both fixed by verifying video/audio duration and
+> the subtitle stream separately. **The voice half of B1 and the remaining B3–B9 items
 > stay open**, starting with `piper-tts` not being in the locked environment.
 
 Every finding has an ID, the evidence that produced it, the brief clause it violates,

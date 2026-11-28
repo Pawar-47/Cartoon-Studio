@@ -77,6 +77,13 @@ def test_render_episode_video_uses_godot_movie_maker_and_muxes_audio_subtitles(
                 stdout=f"Movie Maker finished recording: {frames} frames at {fps} FPS",
                 stderr="",
             )
+        if command[0] == str(ffmpeg) and "-f" in command and "srt" in command:
+            return subprocess.CompletedProcess(
+                command,
+                0,
+                stdout="1\n00:00:00,000 --> 00:00:01,000\nالسلام علیکم!\n",
+                stderr="",
+            )
         if command[0] == str(ffmpeg) and "-c:v" in command:
             concat_path = Path(command[command.index("-i") + 1])
             concat_contents = concat_path.read_text(encoding="utf-8")
@@ -127,10 +134,12 @@ def test_render_episode_video_uses_godot_movie_maker_and_muxes_audio_subtitles(
     assert "-c:a" in mux_calls[0] and "aac" in mux_calls[0]
     assert "-c:s" in mux_calls[0] and "mov_text" in mux_calls[0]
     assert calls[-1][0] == str(ffmpeg)
-    assert "-progress" in calls[-1] and "pipe:1" in calls[-1]
-    # The bundled null muxer has no subtitle encoder, so verification copies
-    # the subtitle stream rather than re-encoding it.
-    assert calls[-1][calls[-1].index("-c:s") + 1] == "copy"
+    verify_calls = [call for call in calls if "-progress" in call]
+    assert len(verify_calls) == 1
+    # The duration check decodes video and audio only; the subtitle stream is
+    # decoded on its own, so a short subtitle track cannot shorten it.
+    assert "-c:s" not in verify_calls[0]
+    assert calls[-1][-2:] == ["srt", "-"]
     assert Path(result["video_path"]).read_bytes() == b"fake-mp4"
 
 
@@ -383,6 +392,13 @@ def _fake_render_commands(godot, ffmpeg, godot_renders):
                 command,
                 0,
                 stdout="out_time_us=2000000\nprogress=end\n",
+                stderr="",
+            )
+        if command[0] == str(ffmpeg) and "-f" in command and "srt" in command:
+            return subprocess.CompletedProcess(
+                command,
+                0,
+                stdout="1\n00:00:00,000 --> 00:00:02,000\ntext\n",
                 stderr="",
             )
         Path(command[-1]).write_bytes(b"fake-mp4")

@@ -184,6 +184,49 @@ def choose_video_encoder(executable: Path) -> str:
     )
 
 
+def _verify_rendered_subtitles(
+    executable: Path,
+    video_path: Path,
+    timeout: float,
+) -> None:
+    """Decode the finished MP4's subtitle stream back to SRT text.
+
+    The stream is decoded rather than copied, so a missing, empty or corrupt
+    subtitle track fails the check. It runs apart from the duration check
+    because the null muxer used there has no subtitle encoder in the bundled
+    build, and because a short subtitle track must never shorten the timeline
+    the duration check measures.
+    """
+    try:
+        result = subprocess.run(
+            [
+                str(executable),
+                "-v",
+                "error",
+                "-i",
+                str(video_path),
+                "-map",
+                "0:s:0",
+                "-f",
+                "srt",
+                "-",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=max(1.0, timeout),
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        raise RenderExecutionError(
+            "FFmpeg could not verify the episode's subtitle stream."
+        ) from error
+    if result.returncode != 0 or not result.stdout.strip():
+        detail = (result.stderr or result.stdout or "").strip()[-2500:]
+        raise RenderExecutionError(
+            f"The final MP4's subtitle stream could not be decoded. {detail}".strip()
+        )
+
+
 def _verify_rendered_mp4(
     executable: Path,
     video_path: Path,
@@ -192,12 +235,6 @@ def _verify_rendered_mp4(
     include_subtitles: bool = True,
 ) -> None:
     maps = ["-map", "0:v:0", "-map", "0:a:0"]
-    if include_subtitles:
-        # The bundled FFmpeg's null muxer has no default subtitle encoder, so
-        # the subtitle stream is copied into it instead of re-encoded. Its
-        # packets must still demux cleanly, and video and audio are fully
-        # decoded by the same pass.
-        maps += ["-map", "0:s:0", "-c:s", "copy"]
     try:
         result = subprocess.run(
             [
@@ -224,9 +261,8 @@ def _verify_rendered_mp4(
         ) from error
     if result.returncode != 0:
         detail = (result.stderr or result.stdout or "").strip()[-2500:]
-        streams = "video/audio/subtitle" if include_subtitles else "video/audio"
         raise RenderExecutionError(
-            f"The final MP4 failed its {streams} decode check. {detail}".strip()
+            f"The final MP4 failed its video/audio decode check. {detail}".strip()
         )
 
     timestamps = re.findall(r"^out_time_us=(\d+)$", result.stdout, flags=re.MULTILINE)
@@ -241,6 +277,8 @@ def _verify_rendered_mp4(
             "The final MP4 duration does not match the episode timeline: "
             f"expected {expected_duration:.3f}s, decoded {actual_duration:.3f}s."
         )
+    if include_subtitles:
+        _verify_rendered_subtitles(executable, video_path, timeout)
 
 
 def _write_render_project(project_directory: Path) -> None:

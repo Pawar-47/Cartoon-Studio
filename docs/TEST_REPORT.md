@@ -1,3 +1,11 @@
+## 2026-11-28 — Real-media render: split subtitle verification from the timeline check
+
+- **Finding:** after the subtitle-encoder fix, the real-media job failed its duration check: `expected 2.000s, decoded 1.000s` (run `46155429609`, job `141010918549`). The proof episode's subtitle file has one cue ending at exactly 1.000s, so the check's measured timeline ended where the subtitle stream ended, not where the video and audio ended.
+- **Change:** `_verify_rendered_mp4` now decodes video and audio only and measures the duration from that pass, then verifies the subtitle stream in a separate pass that decodes it back to SRT text (`_verify_rendered_subtitles`). A missing, empty or corrupt subtitle track still fails, and a short subtitle track can no longer decide the measured timeline.
+- **Tests:** the render fakes answer the SRT decode pass; the render test asserts the duration pass maps no subtitle stream and the last call decodes subtitles to SRT.
+- **Result so far:** the real-media run already proved Godot rendering and FFmpeg assembly; this run has to show whether the MP4 itself is 2s or whether the mux is also shortened by the subtitle track. If the latter, the fix belongs in the mux.
+- **Still open:** `piper-tts` is still outside the locked environment.
+
 ## 2026-11-28 — Real-media render run: subtitle verification fix
 
 - **Finding:** the new `real-media` job (run `46155136141`, job `141010017356`) rendered both real scenes with the pinned Godot runtime, muxed the MP4 with the bundled LGPL FFmpeg, and then failed in final verification: `The final MP4 failed its video/audio/subtitle decode check. … Default encoder for format null (codec none) is probably disabled. … [sost#0:2]`. The null muxer used by the verification pass has no default subtitle encoder, so mapping the subtitle stream into it required one that the LGPL build does not carry. Video and audio never reported a problem.

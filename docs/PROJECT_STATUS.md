@@ -3,7 +3,7 @@
 ## Live checkpoint — 2026-11-28 (real-media run found and fixed a verification defect)
 
 - **The real-media job rendered an MP4.** Its first run (`141010017356`) had Godot render both real scenes, had the bundled LGPL FFmpeg mux them, and then failed final verification because the null muxer has no default subtitle encoder in that build.
-- **Fix:** `_verify_rendered_mp4` copies the subtitle stream into the null muxer (`-c:s copy`) while still decoding video and audio, so verification works with the shipped FFmpeg.
+- **Second finding, second fix:** the corrected run then measured a 1.000s timeline for a 2s episode. The proof SRT's only cue ends at exactly 1.000s, so the subtitle track ended the pass that measured the duration. `_verify_rendered_mp4` now decodes video and audio only for the duration and verifies subtitles in their own SRT decode pass.
 - **Proven by that run:** Godot loads an episode scene from an absolute path outside its temporary project, renders the exact frame count, and the bundled FFmpeg picks a redistribution-safe encoder and muxes the episode.
 - **Still open:** the next real-media run has to confirm the corrected verification; `piper-tts` is still outside the locked environment, and generated scenes and produced audio remain proven only by mocked tests.
 
