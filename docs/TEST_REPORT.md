@@ -15,7 +15,7 @@
 - **Change 2 — bounded and contained.** Only the newest cached version of each scene position is kept, and a cache path outside the project is refused with `RenderPathError`. `render.json` and the job result record `cached_scene_count` and `rendered_scene_count`, so a render states how much work it reused.
 - **Change 3 — packages stay portable and small.** `_project_package_entries` omits `render_cache` while keeping scenes, documents and assets, because the cache is rebuilt from them.
 - **Tests added:** cache reuse across two renders with no Godot call the second time, one edited scene invalidating only itself, newest-only pruning, the outside-project refusal, and the export omission.
-- **Result:** awaiting the next Windows CI run; no Godot runtime, FFmpeg or Windows host was available in this batch.
+- **Result:** green. Windows CI passed in 1m 54s (job `141008060654`) on `b77c8a2`, including the cache-reuse, invalidation, pruning, containment and export tests. No real Godot or FFmpeg ran in that job.
 - **Still open:** there is no total size cap across many edited scenes or many episodes, and a real-media Windows job has still not rendered an episode end to end.
 
 ## 2026-11-28 — Story page queues its render and owns its subtitle mode

@@ -15,7 +15,7 @@
 - **The cache is bounded and stays inside the project.** Only the newest cached version of each scene position is kept, and a cache path outside the project is refused. `render.json` and the job result now record `cached_scene_count` and `rendered_scene_count`, so a render says how much work it skipped.
 - **Packages stay small and honest.** Project export omits `render_cache` (rebuildable intermediate movies) while keeping the scenes, documents and assets that matter.
 - **Tests:** cache reuse, invalidation of one edited scene, newest-only pruning, the outside-project refusal and the export omission.
-- **Verified:** static review only; the next Windows CI run is the proof. No Godot runtime, FFmpeg or browser was available in this batch.
+- **Verified:** Windows CI passed on `b77c8a2` (job `141008060654`, 1m 54s), including the cache tests. No real Godot runtime, FFmpeg or browser was available in that batch.
 - **Still open:** the cache is not size-capped across many edited scenes or many episodes, and a real-media Windows job has still not rendered an episode end to end.
 
 ## Live checkpoint — 2026-11-28 (Story page queues renders, subtitle-mode selector)
