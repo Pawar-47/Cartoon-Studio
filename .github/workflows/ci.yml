@@ -92,6 +92,14 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libegl1 libegl-mesa0 libgl1 libglx-mesa0 libxkbcommon0 libx11-6 libxi6 libxxf86vm1 libxrender1 libxfixes3
+      - name: Download pinned Godot 4.7.2 Linux runtime
+        run: |
+          curl --fail --location --retry 3 --output godot.zip https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip
+          echo "cadd3204e728a35d3f13adb7fd0d7902636b79f6b95c40c265eb73b6c35329e4  godot.zip" | sha256sum --check -
+          mkdir godot-runtime
+          unzip -q godot.zip -d godot-runtime
+          chmod +x godot-runtime/Godot_v4.7.2-stable_linux.x86_64
+          godot-runtime/Godot_v4.7.2-stable_linux.x86_64 --headless --version
       - name: Download pinned Blender 4.5.17 LTS
         env:
           EGL_PLATFORM: surfaceless
@@ -101,9 +109,10 @@ jobs:
           tar -xf blender.tar.xz --directory blender-runtime --strip-components=1
           rm blender.tar.xz
           blender-runtime/blender --background --version
-      - name: Generate character, world and prop with Blender
+      - name: Generate assets and verify Blender to Godot round-trip
         env:
           EGL_PLATFORM: surfaceless
+          CARTOON_STUDIO_GODOT_PATH: ${{ github.workspace }}/godot-runtime/Godot_v4.7.2-stable_linux.x86_64
         run: |
           python scripts/verify_blender_assets.py --blender "$PWD/blender-runtime/blender" --output build/blender-assets
       - name: Upload real Blender outputs for inspection

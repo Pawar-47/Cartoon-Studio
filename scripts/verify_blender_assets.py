@@ -11,6 +11,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.blender_toolchain import BlenderToolchain
+from app.engine import GodotEngineAdapter
 
 
 def read_glb(path: Path) -> dict:
@@ -41,6 +42,8 @@ def main() -> int:
         status = worker.status()
         if not status["supported"]:
             raise RuntimeError(f"Blender runtime is not supported: {status}")
+        godot = GodotEngineAdapter(data_dir=args.output, timeout_seconds=180)
+        godot_status = godot.ping()
         summary = []
         for kind, name in (("character", "Foundry Character Proof"),
                            ("world", "Storybook Village Proof"),
@@ -53,6 +56,14 @@ def main() -> int:
             nodes = gltf.get("nodes", [])
             if not meshes or not nodes:
                 raise RuntimeError(f"{kind}: exported GLB has no mesh or scene nodes")
+            godot_inspection = godot.inspect_glb(
+                result.glb_path, allowed_root=project, timeout_seconds=240
+            )
+            if not godot_inspection.get("ok"):
+                raise RuntimeError(
+                    f"{kind}: Godot 4.7.2 could not import the Blender GLB: "
+                    + str(godot_inspection)
+                )
             if kind == "character":
                 if not gltf.get("skins"):
                     raise RuntimeError("character: exported GLB has no skin")
@@ -69,6 +80,22 @@ def main() -> int:
                         "character: missing facial morph targets "
                         + ", ".join(sorted(required_targets - target_names))
                     )
+                if godot_inspection.get("skeleton_count", 0) < 1:
+                    raise RuntimeError("character: Godot did not import the Blender skeleton")
+                imported_targets = {
+                    str(target.get("name", ""))
+                    for target in godot_inspection.get("morph_targets", [])
+                }
+                if not required_targets.issubset(imported_targets):
+                    raise RuntimeError(
+                        "character: Godot did not import facial targets "
+                        + ", ".join(sorted(required_targets - imported_targets))
+                    )
+                if not any(
+                    mesh.get("skin_bound")
+                    for mesh in godot_inspection.get("mesh_inventory", [])
+                ):
+                    raise RuntimeError("character: Godot imported no skinned mesh")
             target = args.output / kind
             target.mkdir(parents=True, exist_ok=True)
             for source in (
@@ -81,8 +108,11 @@ def main() -> int:
                 "elapsed_seconds": result.elapsed_seconds, "mesh_count": len(meshes),
                 "node_count": len(nodes), "skin_count": len(gltf.get("skins", [])),
                 "preview": str((target / result.preview_path.name).as_posix()),
+                "godot_mesh_count": godot_inspection.get("mesh_count", 0),
+                "godot_skeleton_count": godot_inspection.get("skeleton_count", 0),
+                "godot_morph_target_count": godot_inspection.get("morph_target_count", 0),
             })
-        report = {"blender": status, "assets": summary}
+        report = {"blender": status, "godot": godot_status, "assets": summary}
         (args.output / "blender-runtime-report.json").write_text(
             json.dumps(report, indent=2) + "\\n", encoding="utf-8")
         print(json.dumps(report, indent=2))
