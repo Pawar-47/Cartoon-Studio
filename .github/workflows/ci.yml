@@ -60,7 +60,7 @@ jobs:
           CARTOON_STUDIO_GODOT_PATH: ${{ github.workspace }}/build/godot-runtime/Godot_v4.7.2-stable_win64.exe
         run: uv run --locked python -m pytest -q
       - name: Install pinned Playwright browser
-        if: always()
+        if: success()
         run: |
           npm install --no-save --no-package-lock playwright@1.56.1
           npx playwright install chromium

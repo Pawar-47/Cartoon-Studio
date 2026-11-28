@@ -116,7 +116,8 @@ def character():
     add(ball("Accessory | buckle",(0,-.315,1.02),(.075,.035,.075),gold),"pelvis")
     arm=rig(parts); head=bpy.data.objects["Body | head"]
     bpy.context.view_layer.objects.active=head; head.select_set(True)
-    bpy.ops.object.shape_key_add(from_mix=False)\n    head.data.shape_keys.key_blocks[-1].name="Basis"
+    bpy.ops.object.shape_key_add(from_mix=False)
+    head.data.shape_keys.key_blocks[-1].name="Basis"
     bpy.ops.object.shape_key_add(from_mix=False); head.data.shape_keys.key_blocks[-1].name="Smile"
     bpy.ops.object.shape_key_add(from_mix=False); head.data.shape_keys.key_blocks[-1].name="Blink"
     for v in head.data.shape_keys.key_blocks["Smile"].data:
