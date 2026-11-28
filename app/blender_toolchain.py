@@ -12,6 +12,8 @@ from pathlib import Path
 from typing import Any, Literal
 
 AssetKind = Literal["character", "world", "prop", "building", "vehicle", "vegetation"]
+CultureProfile = Literal["pakistani_storybook_v1"]
+CULTURE_PROFILES = {"pakistani_storybook_v1"}
 KINDS = {"character", "world", "prop", "building", "vehicle", "vegetation"}
 NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 _-]{0,63}$")
 
@@ -91,16 +93,19 @@ class BlenderToolchain:
     def status(self) -> dict[str, Any]:
         if not self.executable.is_file():
             return {"available": False, "supported": False, "version": None,
-                    "executable": None, "supported_asset_kinds": sorted(KINDS),
+                    "executable": None, "supported_asset_kinds": sorted(KINDS), "supported_culture_profiles": sorted(CULTURE_PROFILES),
                     "message": "Blender is optional. Install Blender 4.2 LTS or newer (4.x) to enable offline authoring."}
         info = self.version()
         return {"available": True, "executable": str(self.executable),
-                "supported_asset_kinds": sorted(KINDS), **info}
+                "supported_asset_kinds": sorted(KINDS), "supported_culture_profiles": sorted(CULTURE_PROFILES), **info}
 
     def generate(self, *, project_root: Path, asset_id: str, asset_kind: AssetKind,
-                 name: str, timeout_seconds: float | None = None) -> BlenderAssetResult:
+                 name: str, culture_profile: CultureProfile = "pakistani_storybook_v1",
+                 timeout_seconds: float | None = None) -> BlenderAssetResult:
         if asset_kind not in KINDS:
-            raise ValueError("asset_kind must be character, world, or prop.")
+            raise ValueError("asset_kind must be one of: " + ", ".join(sorted(KINDS)) + ".")
+        if culture_profile not in CULTURE_PROFILES:
+            raise ValueError("Unsupported Blender culture_profile.")
         if not isinstance(asset_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", asset_id):
             raise ValueError("asset_id must contain 1-64 safe identifier characters.")
         if not isinstance(name, str) or not NAME.fullmatch(name.strip()):
@@ -126,7 +131,8 @@ class BlenderToolchain:
             raise FileExistsError("Refusing to overwrite existing Blender asset output.")
         command = [str(self.executable), "--background", "--factory-startup", "--python",
                    str(self.script_path), "--", "--asset-kind", asset_kind, "--asset-id", asset_id,
-                   "--name", name.strip(), "--output-dir", str(output)]
+                   "--name", name.strip(), "--output-dir", str(output),
+                   "--culture-profile", culture_profile]
         started = time.monotonic()
         budget = max(1.0, float(timeout_seconds or self.timeout_seconds))
         try:

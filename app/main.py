@@ -148,7 +148,8 @@ class GlbInspectRequest(BaseModel):
 
 
 class BlenderAssetGenerateRequest(BaseModel):
-    asset_kind: Literal["character", "world", "prop"]
+    asset_kind: Literal["character", "world", "prop", "building", "vehicle", "vegetation"]
+    culture_profile: Literal["pakistani_storybook_v1"] = "pakistani_storybook_v1"
     name: str = Field(min_length=1, max_length=64, pattern=r"^[A-Za-z0-9][A-Za-z0-9 _-]{0,63}$")
 
 
@@ -1688,7 +1689,8 @@ def blender_status() -> dict[str, Any]:
         return BlenderToolchain(DATA_DIR).status()
     except BlenderExecutionError as error:
         return {"available": True, "supported": False,
-                "supported_asset_kinds": ["character", "prop", "world"], "message": str(error)}
+                "supported_asset_kinds": ["building", "character", "prop", "vegetation", "vehicle", "world"],
+                "supported_culture_profiles": ["pakistani_storybook_v1"], "message": str(error)}
 
 
 @app.post("/api/projects/{project_id}/blender-assets", status_code=201)
@@ -1703,6 +1705,7 @@ def generate_blender_asset(project_id: str, payload: BlenderAssetGenerateRequest
         result = BlenderToolchain(DATA_DIR).generate(
             project_root=project_root, asset_id=asset_id,
             asset_kind=payload.asset_kind, name=payload.name,
+            culture_profile=payload.culture_profile,
         )
     except BlenderUnavailableError as error:
         raise HTTPException(status_code=503, detail=str(error)) from error

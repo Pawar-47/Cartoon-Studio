@@ -593,3 +593,10 @@ def test_world_export_persists_and_serves_generated_godot_scene(tmp_path, monkey
     reopened = client.get(f"/api/projects/{project_id}/worlds/{world_id}")
     assert reopened.json()["scene_relative_path"] == result["scene_relative_path"]
 
+
+
+def test_blender_asset_request_accepts_all_six_shared_factory_kinds():
+    for kind in ("building", "character", "prop", "vegetation", "vehicle", "world"):
+        payload = main.BlenderAssetGenerateRequest(asset_kind=kind, name="Pakistani asset")
+        assert payload.asset_kind == kind
+        assert payload.culture_profile == "pakistani_storybook_v1"

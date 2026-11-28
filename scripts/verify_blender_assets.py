@@ -45,16 +45,18 @@ def main() -> int:
         godot = GodotEngineAdapter(data_dir=args.output, timeout_seconds=180)
         godot_status = godot.ping()
         summary = []
-        for kind, name in (("character", "Foundry Character Proof"),
-                           ("world", "Storybook Village Proof"),
-                           ("prop", "Treasure Chest Proof"),
-                           ("building", "Storybook Cottage Proof"),
-                           ("vehicle", "Storybook Car Proof"),
-                           ("vegetation", "Broadleaf Tree Proof")):
+        for kind, name in (("character", "Pakistani Shalwar Kameez Character"),
+                           ("world", "Lahore Bazaar Lane"),
+                           ("prop", "Charpai and Chai Set"),
+                           ("building", "Lahore Haveli Shopfront"),
+                           ("vehicle", "Pakistani Auto Rickshaw"),
+                           ("vegetation", "Mango Tree")):
             asset_id = f"ci-{kind}-proof"
             result = worker.generate(project_root=project, asset_id=asset_id,
                                      asset_kind=kind, name=name, timeout_seconds=900)
             gltf = read_glb(result.glb_path)
+            if result.manifest.get("culture_profile") != "pakistani_storybook_v1":
+                raise RuntimeError(f"{kind}: Pakistani culture profile was not recorded")
             meshes = gltf.get("meshes", [])
             nodes = gltf.get("nodes", [])
             if not meshes or not nodes:
