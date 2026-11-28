@@ -5,6 +5,10 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from app.audio import VOICE_CATALOG
+
+SUPPORTED_VOICE_IDS = tuple(VOICE_CATALOG)
+
 
 class StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -116,10 +120,25 @@ class CharacterSpec(StrictModel):
     resting_expression: ExpressionId = "neutral"
     relationships: list[str] = Field(default_factory=list, max_length=12)
 
+    @field_validator("voice_profile")
+    @classmethod
+    def validate_voice_profile(cls, value: str) -> str:
+        """Reject a voice now, not after the scenes have already been generated."""
+        if value and value not in SUPPORTED_VOICE_IDS:
+            supported = ", ".join(SUPPORTED_VOICE_IDS)
+            raise ValueError(
+                f"Unsupported voice_profile {value!r}; use one of: {supported}, "
+                "or leave it blank to use the default voice."
+            )
+        return value
+
 
 class DialogueLine(StrictModel):
     character_id: str = Field(min_length=1, max_length=40)
     text: str = Field(min_length=1, max_length=1200)
+    # The planned subtitle text in the requested subtitle_mode. Urdu mode uses
+    # ``text``; roman_urdu and english modes require this field.
+    subtitle_text: str = Field(default="", max_length=300)
     emotion: ExpressionId = "neutral"
     delivery: str = Field(default="natural", max_length=80)
     start_seconds: float = Field(ge=0, le=60)
@@ -231,12 +250,29 @@ class EpisodePlan(StrictModel):
     title: str = Field(min_length=1, max_length=100)
     synopsis: str = Field(min_length=1, max_length=1500)
     ending: str = Field(default="", max_length=1500)
-    language: Literal["ur", "en"] = "ur"
+    language: Literal["ur"] = "ur"
     target_duration_seconds: int = Field(default=360, ge=300, le=420)
     world_id: str | None = Field(default=None, max_length=64)
     characters: list[CharacterSpec] = Field(min_length=1, max_length=5)
     scenes: list[ScenePlan] = Field(min_length=5, max_length=7)
     subtitle_mode: Literal["urdu", "roman_urdu", "english", "none"] = "urdu"
+
+    @model_validator(mode="after")
+    def validate_subtitle_text(self) -> EpisodePlan:
+        """Require the planned subtitle line before production, not at render time."""
+        if self.subtitle_mode in ("roman_urdu", "english"):
+            missing = [
+                f"{scene.id}:{index}"
+                for scene in self.scenes
+                for index, line in enumerate(scene.dialogue, start=1)
+                if not line.subtitle_text.strip()
+            ]
+            if missing:
+                raise ValueError(
+                    f"subtitle_mode {self.subtitle_mode!r} requires subtitle_text on "
+                    f"every dialogue line; missing at {', '.join(missing[:5])}."
+                )
+        return self
 
     @model_validator(mode="after")
     def validate_episode_timeline(self) -> EpisodePlan:
@@ -298,7 +334,7 @@ class EpisodePlan(StrictModel):
 
 class StoryPromptRequest(StrictModel):
     idea: str = Field(min_length=5, max_length=2000)
-    language: Literal["ur", "en"] = "ur"
+    language: Literal["ur"] = "ur"
     target_duration_seconds: int = Field(default=360, ge=300, le=420)
     tone: Literal["comedy", "adventure", "family", "mystery", "educational"] = "comedy"
     audience: Literal["family", "children", "general"] = "family"
@@ -311,9 +347,8 @@ class StoryPromptRequest(StrictModel):
 def build_story_prompt(request: StoryPromptRequest) -> str:
     language_rule = (
         "Write all dialogue in natural Pakistani Urdu using Urdu script. "
-        "Do not use Hindi or machine-translated phrasing."
-        if request.language == "ur"
-        else "Write all dialogue in natural conversational English."
+        "Do not use Hindi or machine-translated phrasing. English dialogue is not "
+        "supported by the bundled voice pack, so never switch the episode language."
     )
     schema = json.dumps(EpisodePlan.model_json_schema(), ensure_ascii=False, indent=2)
     characters = ", ".join(request.character_names) or "Create an original small recurring cast."
@@ -360,6 +395,9 @@ PRODUCTION RULES:
 - Every scene needs a reusable location_id, character_ids, actions, expressions,
   camera, lighting, props, audio and transition plan.
 - Dialogue must be natural, character-specific and timed within the scene.
+- Set subtitle_mode to urdu, roman_urdu, english or none.
+  urdu writes the dialogue text itself; roman_urdu and english require a
+  subtitle_text on every dialogue line; none writes no subtitle entries.
 - Set each character voice_profile to one of these Pakistani Urdu voices:
   ur_PK-fasih-medium (male) or ur_PK-aegis_female-medium (female).
 - Include clear physical comedy and visual actions where appropriate.

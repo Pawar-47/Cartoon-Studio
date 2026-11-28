@@ -416,6 +416,65 @@ def test_world_migration_rejects_unknown_version():
         raise AssertionError("Expected ValueError for unknown schema version")
 
 
+def test_story_schema_rejects_english_episodes():
+    from pydantic import ValidationError
+
+    from app.story import EpisodePlan
+
+    plan = valid_episode_plan()
+    plan["language"] = "en"
+    try:
+        EpisodePlan.model_validate(plan)
+    except ValidationError as error:
+        assert "language" in str(error).lower()
+    else:
+        raise AssertionError("The Urdu-only voice pack must reject an English episode")
+
+
+def test_story_schema_rejects_unsupported_voice_profile():
+    from pydantic import ValidationError
+
+    from app.story import EpisodePlan
+
+    plan = valid_episode_plan()
+    plan["characters"][0]["voice_profile"] = "some-hindi-voice"
+    try:
+        EpisodePlan.model_validate(plan)
+    except ValidationError as error:
+        assert "voice_profile" in str(error)
+    else:
+        raise AssertionError("An unsupported voice profile must fail validation")
+
+
+def test_story_schema_accepts_a_supported_voice_profile():
+    from app.audio import VOICE_CATALOG
+    from app.story import EpisodePlan
+
+    plan = valid_episode_plan()
+    plan["characters"][0]["voice_profile"] = next(iter(VOICE_CATALOG))
+    EpisodePlan.model_validate(plan)
+
+
+def test_roman_urdu_subtitles_require_planned_subtitle_text():
+    from pydantic import ValidationError
+
+    from app.story import EpisodePlan
+
+    plan = valid_episode_plan()
+    plan["subtitle_mode"] = "roman_urdu"
+    try:
+        EpisodePlan.model_validate(plan)
+    except ValidationError as error:
+        assert "subtitle_text" in str(error)
+    else:
+        raise AssertionError("Roman Urdu subtitles must require subtitle_text")
+
+    for scene in plan["scenes"]:
+        for line in scene["dialogue"]:
+            line["subtitle_text"] = "Roman subtitle"
+    EpisodePlan.model_validate(plan)
+
+
 def test_world_schema_version_stored_on_create(tmp_path, monkeypatch):
     from app import main
     monkeypatch.setattr(main, "DATA_DIR", tmp_path)
@@ -1551,6 +1610,8 @@ def test_episode_audio_endpoint_saves_and_serves_the_dialogue_mix(
             "sample_rate": 22050,
             "duration_seconds": 300,
             "dialogue_line_count": 5,
+            "subtitle_mode": "urdu",
+            "subtitle_entry_count": 1,
             "voices": ["ur_PK-fasih-medium"],
             "clips": [
                 {
@@ -1571,6 +1632,7 @@ def test_episode_audio_endpoint_saves_and_serves_the_dialogue_mix(
     assert generated.status_code == 200
     payload = generated.json()
     assert payload["dialogue_line_count"] == 5
+    assert payload["subtitle_mode"] == "urdu"
     assert payload["audio_relative_path"].endswith("/dialogue_mix.wav")
     assert payload["clips"][0]["relative_path"].endswith(
         "/clips/scene-01-line-01.wav"

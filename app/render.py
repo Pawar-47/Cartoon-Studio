@@ -26,6 +26,10 @@ RENDER_FPS = 24
 RENDER_WIDTH = 1280
 RENDER_HEIGHT = 720
 RENDER_TIMEOUT_SECONDS = 14_400
+# The four quality presets in app/quality.py render at 15, 24 and 30 fps.
+SUPPORTED_FPS = frozenset({12, 15, 20, 24, 25, 30})
+MIN_RENDER_WIDTH = 640
+MIN_RENDER_HEIGHT = 360
 
 
 def _project_file(path: Path, root: Path, suffix: str) -> Path:
@@ -85,7 +89,11 @@ def _verify_rendered_mp4(
     video_path: Path,
     timeout: float,
     expected_duration: float,
+    include_subtitles: bool = True,
 ) -> None:
+    maps = ["-map", "0:v:0", "-map", "0:a:0"]
+    if include_subtitles:
+        maps += ["-map", "0:s:0"]
     try:
         result = subprocess.run(
             [
@@ -94,12 +102,7 @@ def _verify_rendered_mp4(
                 "error",
                 "-i",
                 str(video_path),
-                "-map",
-                "0:v:0",
-                "-map",
-                "0:a:0",
-                "-map",
-                "0:s:0",
+                *maps,
                 "-progress",
                 "pipe:1",
                 "-f",
@@ -117,8 +120,9 @@ def _verify_rendered_mp4(
         ) from error
     if result.returncode != 0:
         detail = (result.stderr or result.stdout or "").strip()[-2500:]
+        streams = "video/audio/subtitle" if include_subtitles else "video/audio"
         raise RenderExecutionError(
-            f"The final MP4 failed its video/audio/subtitle decode check. {detail}".strip()
+            f"The final MP4 failed its {streams} decode check. {detail}".strip()
         )
 
     timestamps = re.findall(r"^out_time_us=(\d+)$", result.stdout, flags=re.MULTILINE)
@@ -190,6 +194,7 @@ def render_episode_video(
     width: int = RENDER_WIDTH,
     height: int = RENDER_HEIGHT,
     timeout_seconds: int = RENDER_TIMEOUT_SECONDS,
+    include_subtitles: bool = True,
 ) -> dict:
     root = Path(project_root).resolve(strict=True)
     if not root.is_dir():
@@ -203,7 +208,13 @@ def render_episode_video(
         for duration in scene_durations
     ):
         raise RenderPathError("Episode scene durations must be positive whole seconds.")
-    if fps not in {24, 25, 30} or width < 640 or height < 360 or width % 2 or height % 2:
+    if (
+        fps not in SUPPORTED_FPS
+        or width < MIN_RENDER_WIDTH
+        or height < MIN_RENDER_HEIGHT
+        or width % 2
+        or height % 2
+    ):
         raise RenderPathError("Episode render settings are outside the supported range.")
     if timeout_seconds <= 0:
         raise RenderPathError("Episode render timeout must be positive.")
@@ -318,14 +329,13 @@ def render_episode_video(
             str(concat_file),
             "-i",
             str(audio_file),
-            "-i",
-            str(subtitles_file),
-            "-map",
-            "0:v:0",
-            "-map",
-            "1:a:0",
-            "-map",
-            "2:s:0",
+        ]
+        if include_subtitles:
+            command += ["-i", str(subtitles_file)]
+        command += ["-map", "0:v:0", "-map", "1:a:0"]
+        if include_subtitles:
+            command += ["-map", "2:s:0"]
+        command += [
             "-c:v",
             "libx264",
             "-preset",
@@ -338,10 +348,15 @@ def render_episode_video(
             "aac",
             "-b:a",
             "160k",
-            "-c:s",
-            "mov_text",
-            "-metadata:s:s:0",
-            "language=urd",
+        ]
+        if include_subtitles:
+            command += [
+                "-c:s",
+                "mov_text",
+                "-metadata:s:s:0",
+                "language=urd",
+            ]
+        command += [
             "-t",
             str(total_duration),
             "-movflags",
@@ -370,7 +385,9 @@ def render_episode_video(
             output.unlink(missing_ok=True)
             raise RenderExecutionError("The episode render exceeded its time budget.")
         try:
-            _verify_rendered_mp4(ffmpeg, output, remaining, total_duration)
+            _verify_rendered_mp4(
+                ffmpeg, output, remaining, total_duration, include_subtitles
+            )
         except RenderExecutionError:
             output.unlink(missing_ok=True)
             raise
@@ -381,6 +398,7 @@ def render_episode_video(
         "fps": fps,
         "width": width,
         "height": height,
+        "has_subtitles": include_subtitles,
         "size_bytes": output.stat().st_size,
         "rendered_at_elapsed_seconds": round(time.monotonic() - started, 2),
     }

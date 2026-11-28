@@ -61,20 +61,28 @@ def test_episode_render_endpoint_persists_and_serves_mp4(tmp_path, monkeypatch):
         output_path,
         project_root,
         godot_executable,
+        **options,
     ):
         assert len(scene_paths) == 1
         assert scene_durations == [1]
         assert audio_path.is_file() and subtitles_path.is_file()
         assert project_root == main.project_directory(tmp_path, project_id)
         assert godot_executable == tmp_path / "Godot.exe"
+        # A new project uses the balanced preset: 24 fps at 1280x720 with subtitles.
+        assert options == {
+            "fps": 24,
+            "width": 1280,
+            "height": 720,
+            "include_subtitles": True,
+        }
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_bytes(b"verified-mp4-test")
         return {
             "video_path": str(output_path),
             "duration_seconds": 1,
-            "fps": 24,
-            "width": 1280,
-            "height": 720,
+            "fps": options["fps"],
+            "width": options["width"],
+            "height": options["height"],
             "size_bytes": len(b"verified-mp4-test"),
             "rendered_at_elapsed_seconds": 0.01,
         }

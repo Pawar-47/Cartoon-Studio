@@ -1,5 +1,13 @@
 # Decision Log
 
+## 2026-11-28 — Episode contract truthfulness (quality presets, subtitle modes, Urdu-only)
+
+1. **Quality presets are a stored setting, not a second copy of the numbers.** `app/quality.py` is the only preset table; `project.json` `settings.quality_preset` is the only stored choice, and `frame_rate`/`resolution` are derived from it on write. Rejected: a separate settings document or per-render query parameters, which would let the stored project and the rendered file disagree.
+2. **Balanced is the default preset.** It reproduces the numbers the renderer already used (24 fps, 1280x720), so existing projects and tests keep their output until the owner chooses otherwise. Preview (15 fps, 640x360) is the low-cost draft; High Quality is 30 fps at 1080p.
+3. **Roman Urdu and English subtitles use a planned per-line `subtitle_text`.** Rejected: automatic transliteration, which needs an Urdu G2P/transliteration model that is not selected or licensed yet. Validation therefore requires the AI plan to supply the Roman/English line, and `none` produces no subtitle stream.
+4. **Urdu-only episodes until a second voice pack is pinned.** The bundled voices are `ur_PK` only, so `language` accepts `ur` and the UI no longer offers English. Rejected: accepting English and failing later at audio time, which wasted the owner's scene-generation step.
+5. **Voice profiles are validated at plan time.** `CharacterSpec.voice_profile` must be blank (default voice) or a `VOICE_CATALOG` id, so an unsupported voice is refused before scenes are generated.
+
 ## D-001 — GitHub repository is source of truth
 Date: 2026-11-25. Use Pawar-47/Cartoon-Studio as the only primary repository. User explicitly created it for this project. Accepted.
 

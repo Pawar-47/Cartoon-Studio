@@ -12,7 +12,12 @@ An original, local-first Urdu 3D cartoon production studio. This repository is t
 - Validation of 5–7 minute episode plans, 5–7 scenes, character references and timed production cues.
 - Save and reload validated episode plans inside a local project.
 - Character Studio: import and inspect GLB 2.0 models, preview saved models in an interactive local 3D viewer, edit saved character profiles, customize and persist material colour/roughness/metalness recipes and existing facial morph targets, check mesh/skeleton/animation readiness, and save versioned reusable character profiles to a project.
+- World Builder: persistent project worlds with stable IDs, versioned schema migration, reusable templates and a Godot-authored 3D scene with a browser preview.
+- Episode workshop: validate and save a 5–7 minute Urdu episode plan, generate editable Godot scenes from saved worlds and project characters, generate Urdu dialogue audio with timed SRT subtitles, and render the episode MP4 from the project's quality preset (Preview, Low Hardware, Balanced or High Quality).
+- Project export/import as a portable ZIP package; a durable SQLite job record for long operations.
 - GitHub Actions Windows CI installs exact uv-locked dependencies, runs lint/compile/tests and packages a hash-locked bootstrap ZIP.
+
+**Known limitation:** the installed app cannot yet synthesise Urdu speech or assemble an MP4 on a clean machine. The Piper speech dependency is not in the locked environment and FFmpeg is not bundled, so those two steps report a missing dependency rather than producing output. This is the blocking finding in [`docs/MASTER_BRIEF_AUDIT_2026-11-28.md`](docs/MASTER_BRIEF_AUDIT_2026-11-28.md).
 
 Godot 4.7.2 Compatibility is integrated as a pinned, bundled native worker behind a supervised Python adapter. P2.1 passed Windows CI #204. The first P2.2 Character Studio vertical slice also passed Windows CI #208 (45 pytest tests): project-scoped GLB 2.0 import/inspection, rig-readiness reporting, versioned character profiles, project references and recovery. The Character Studio phase is still active; rig authoring, texture painting, new blend-shape authoring, export and animation authoring remain future work.
 

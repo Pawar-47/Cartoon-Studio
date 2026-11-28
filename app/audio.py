@@ -237,12 +237,32 @@ def _srt_timestamp(seconds: float) -> str:
     return f"{hours:02d}:{minutes:02d}:{whole_seconds:02d},{millis:03d}"
 
 
-def _write_subtitles(path: Path, clips: list[dict]) -> None:
+SUBTITLE_MODES = ("urdu", "roman_urdu", "english", "none")
+
+
+def _subtitle_line_text(clip: dict, subtitle_mode: str) -> str:
+    """Return the text this episode's subtitle mode should show for one clip."""
+    if subtitle_mode == "urdu":
+        return str(clip["text"])
+    return str(clip.get("subtitle_text") or "")
+
+
+def _write_subtitles(path: Path, clips: list[dict], subtitle_mode: str = "urdu") -> None:
+    """Write the episode SRT for the requested subtitle mode.
+
+    ``none`` writes an empty file so the render step still has a subtitle input,
+    and the mode recorded in the manifest says the stream carries no text.
+    """
+    if subtitle_mode == "none":
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("", encoding="utf-8")
+        return
     entries = []
     for index, clip in enumerate(clips, start=1):
         start = float(clip["timeline_start_seconds"])
         end = start + float(clip["duration_seconds"])
-        text = str(clip["text"]).replace("\r", " ").replace("\n", " ").strip()
+        text = _subtitle_line_text(clip, subtitle_mode)
+        text = text.replace("\r", " ").replace("\n", " ").strip()
         if not text or end <= start:
             continue
         entries.append(
@@ -261,6 +281,13 @@ def generate_episode_audio(
     if plan.get("language", "ur") != "ur":
         raise SpeechGenerationError(
             "The current offline speech pack supports Pakistani Urdu episodes only."
+        )
+    subtitle_mode = str(plan.get("subtitle_mode", "urdu"))
+    if subtitle_mode not in SUBTITLE_MODES:
+        raise SpeechGenerationError(
+            f"Unsupported subtitle_mode {subtitle_mode!r}; use one of: "
+            + ", ".join(SUBTITLE_MODES)
+            + "."
         )
     scenes = plan.get("scenes", [])
     total_duration = sum(
@@ -318,11 +345,21 @@ def generate_episode_audio(
                     "Shorten the line or move it earlier before generating audio."
                 )
             timeline_start = scene_offset + local_start
+            subtitle_text = ""
+            if subtitle_mode in ("roman_urdu", "english"):
+                subtitle_text = str(line.get("subtitle_text", "")).strip()
+                if not subtitle_text:
+                    clip_path.unlink(missing_ok=True)
+                    raise SpeechGenerationError(
+                        f"Dialogue {line_index} in scene {scene_id} has no "
+                        f"subtitle_text for subtitle_mode {subtitle_mode!r}."
+                    )
             clips.append({
                 "scene_id": scene["id"],
                 "line_index": line_index,
                 "character_id": character_id,
                 "text": text,
+                "subtitle_text": subtitle_text,
                 "voice_id": voice_id,
                 "start_seconds": float(line.get("start_seconds", 0)),
                 "timeline_start_seconds": timeline_start,
@@ -335,7 +372,10 @@ def generate_episode_audio(
     mix_path = output_directory / "dialogue_mix.wav"
     _write_episode_mix(mix_path, total_duration, clips)
     subtitles_path = output_directory / "subtitles.srt"
-    _write_subtitles(subtitles_path, clips)
+    _write_subtitles(subtitles_path, clips, subtitle_mode)
+    subtitle_entry_count = 0 if subtitle_mode == "none" else sum(
+        1 for clip in clips if _subtitle_line_text(clip, subtitle_mode).strip()
+    )
     for clip in clips:
         clip.pop("path", None)
     return {
@@ -344,6 +384,8 @@ def generate_episode_audio(
         "sample_rate": SAMPLE_RATE,
         "duration_seconds": total_duration,
         "dialogue_line_count": len(clips),
+        "subtitle_mode": subtitle_mode,
+        "subtitle_entry_count": subtitle_entry_count,
         "voices": sorted({clip["voice_id"] for clip in clips}),
         "clips": clips,
     }

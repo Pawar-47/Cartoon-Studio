@@ -1,5 +1,17 @@
 # Test Report — 2026-11-28
 
+## Episode contract truthfulness — quality presets, subtitle modes, Urdu-only guard (main)
+
+- **Scope:** stop the app promising what it cannot produce, and make two stored-but-ignored settings real. Branch: `main` only.
+- **Change 1 — quality presets are real.** New `app/quality.py` defines Preview (15 fps, 640x360), Low Hardware (24 fps, 854x480), Balanced (24 fps, 1280x720) and High Quality (30 fps, 1920x1080). New projects default to Balanced, which is what the renderer previously produced, so existing output is unchanged until the preset is changed. `GET /api/quality-presets`, `GET/PUT /api/projects/{id}/settings` store the preset in `project.json` and derive `frame_rate`/`resolution` from it, and `POST /story/render` passes the preset's fps/width/height to `render_episode_video`. `app/render.py` accepts only the preset frame rates (12/15/20/24/25/30) and keeps the 640x360 minimum. The Story page gains a Render quality selector (`render-settings.js`).
+- **Change 2 — subtitle modes are honoured.** `app/audio.py` reads `subtitle_mode`: `urdu` writes the dialogue text, `roman_urdu` and `english` write the per-line `subtitle_text`, `none` writes an empty SRT and the renderer omits the subtitle input and stream. The audio manifest records `subtitle_mode`, `subtitle_entry_count`, and each clip's `subtitle_text`, so the render step decides from stored data rather than from the request.
+- **Change 3 — the Urdu-only guard replaces a dead end.** `EpisodePlan.language` and `StoryPromptRequest.language` now accept `ur` only, the Story page no longer offers English, and the prompt says the bundled voice pack cannot switch language. An English episode is refused by validation with a field error instead of failing later at audio time.
+- **Change 4 — voice profiles are validated before production.** `CharacterSpec.voice_profile` must be blank or a pinned `VOICE_CATALOG` id, so an unsupported voice is refused when the plan is validated instead of after the scenes were generated. The story prompt and JSON Schema carry the rule.
+- **Change 5 — the schema asks for subtitle text.** `DialogueLine.subtitle_text` is part of the plan schema, and `roman_urdu`/`english` modes require it on every line at validation time.
+- **Tests added:** `tests/test_quality.py` (preset table, default, settings round-trip, rejection), five subtitle-mode tests in `tests/test_audio.py`, four schema-guard tests in `tests/test_app.py`, and the render API test now asserts the balanced preset reaches the renderer.
+- **Result:** awaiting the next GitHub Actions run on `main`. No local pytest run was possible in this batch (no Godot runtime, no Windows host), so nothing is claimed as passing.
+- **Not claimed:** the shipped installer still cannot synthesise Urdu speech or assemble an MP4 on a clean machine — `piper-tts` and FFmpeg are not bundled. That remains the blocking finding B1 in `MASTER_BRIEF_AUDIT_2026-11-28.md`.
+
 ## Main work-in-progress audit — 2026-11-28
 
 - **Failure:** Windows CI on `main` at `201c6dd` stopped during collection with `RuntimeError: Form data requires "python-multipart" to be installed` in six test modules. The new project-import endpoint used `UploadFile = File(...)`; `python-multipart` is neither in `pyproject.toml` nor in `requirements.lock`, and the lock check would have rejected adding it without regenerating the lock.

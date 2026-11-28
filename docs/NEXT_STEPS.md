@@ -1,17 +1,20 @@
-# Next Steps — 2026-11-27
+# Next Steps — 2026-11-28
 
-## Current checkpoint — 2026-11-27
+## Current checkpoint — 2026-11-28
 
-Main is at `321c111` with clean working tree. P2.2 code-testable work is complete: original face geometry (generated face geometry replaces the separable Skin surface on the head mesh), saved-profile hair style/color restoration, assembly, morphs, retarget and appearance bake all have test coverage. Local proof: 122 passed, 34 skipped (all environmental), 0 failed; Ruff all checks passed. Pushed to origin `main`.
-
-Phase 3 — World Builder is now ACTIVE per user direction. Persistent/editable worlds, Godot world-scene export and browser previews exist out of order; multi-location reuse and phase acceptance remain open. User visual acceptance for Phases 2–7 shall be performed in Phase 8 per project owner direction.
+Main is at the batch below. Visual acceptance for Phases 2–7 remains Phase 8 per project owner direction. The blocking finding B1 in `docs/MASTER_BRIEF_AUDIT_2026-11-28.md` still holds: the installed app cannot synthesise Urdu speech or assemble an MP4 because `piper-tts` and FFmpeg are not bundled.
 
 ## Immediate next steps
 
-1. Phase 3 World Builder activation: world schema migration complete (`migrate_world_document`, `LATEST_WORLD_SCHEMA_VERSION`, `WORLD_MIGRATIONS` in `app/storage.py`; auto-migration on `get_project_world` read). Multi-location reuse already works via `template_id`. Remaining: world-scene export quality, browser preview visual review, world-linked story production mapping (ties to Phase 4).
-2. P2.2 remaining visual acceptance proceeds in parallel: interactive browser acceptance of hairstyles, portraits, assembly, morphs and retarget preview; broad rig acceptance on representative models. User visual acceptance for all phases is scheduled for Phase 8.
+1. **Batch A — make the shipped app produce an episode (B1).** Pin the voice path (bundled Piper or recorded fallback), bundle a licence-reviewed FFmpeg, resolve `_find_ffmpeg` to the bundled binary, and add a real-media Windows CI job that renders a fixture episode end to end.
+2. **Batch B — real job execution.** Move production/audio/render work to a background worker with per-scene progress, cooperative cancel and the Episode Renderer, Logs and Diagnostics workspaces.
+3. **Batch C — scene cache and checkpoints**, so one failed scene never re-renders the whole episode.
+4. P2.2 remaining visual acceptance proceeds in parallel: interactive browser acceptance of hairstyles, portraits, assembly, morphs and retarget preview; broad rig acceptance on representative models.
 
 ## Completed batches
+
+### Episode contract truthfulness — presets, subtitle modes, guards
+Four quality presets in `app/quality.py`, stored in the project document and read by `POST /story/render` (Preview 15 fps/640x360, Low Hardware 24/854x480, Balanced 24/1280x720 — the new default — High Quality 30/1920x1080), with `GET /api/quality-presets` and `GET/PUT /api/projects/{id}/settings` and a Render quality selector on the Story page. `subtitle_mode` is honoured (urdu / roman_urdu / english / none, the last producing no subtitle stream). English episodes and unsupported voice profiles are now refused at validation, and `roman_urdu`/`english` subtitles require a per-line `subtitle_text`.
 
 ### Job reliability queue — IN PROGRESS
 Production SQLite job queue (`app/job_queue.py`) with bounded retries counted in whole attempts (MAX_ATTEMPTS=3), durable event records, lease-based claiming with expiry-based reclaim, cancellation requests honoured at task boundaries, progress polling and persisted output; schema migrations 3 and 4 create and extend the job tables; production/audio/render/world-export endpoints wired to the queue and claiming for the budget of their own operation; `/jobs`, `/jobs/{id}`, `/jobs/{id}/cancel` API endpoints. 15 unit tests plus 2 API tests.

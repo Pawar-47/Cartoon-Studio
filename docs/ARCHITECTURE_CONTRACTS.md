@@ -85,7 +85,7 @@ Current source implements only project metadata in SQLite, one saved story plan 
       "default_language": "ur",
       "frame_rate": { "numerator": 24, "denominator": 1 },
       "resolution": { "width": 1280, "height": 720 },
-      "quality_preset": "preview"
+      "quality_preset": "balanced"
     },
     "references": {
       "characters": [],
@@ -100,7 +100,9 @@ Current source implements only project metadata in SQLite, one saved story plan 
 The `data` object contains `identity` (display name, personality, relationships), `appearance` (model asset ref, rig compatibility key, body/face/outfit recipe, material overrides), `expressions` (supported expression and viseme keys), and `voice_profile_ref`. Store voice settings and voice asset refs, not API credentials. Each imported model must have a rig/face capability manifest; missing morph targets are explicit capabilities, not silently assumed.
 
 ### Episode and scene documents
-Episode `data`: title, synopsis, language, target_duration_ms (300000–420000), subtitle_mode, ordered scene_ids, character_ids, approval_state and revision notes.
+Episode `data`: title, synopsis, language (`ur` only until a second voice pack is pinned), target_duration_ms (300000–420000), subtitle_mode, ordered scene_ids, character_ids, approval_state and revision notes.
+
+`subtitle_mode` decides the SRT content and the MP4 stream: `urdu` writes each dialogue `text`, `roman_urdu` and `english` write the required per-line `subtitle_text` (validation rejects a line without it), and `none` writes an empty SRT and renders no subtitle stream. `app/quality.py` owns the four render presets; `settings.quality_preset` is the only stored choice and `frame_rate`/`resolution` are derived from it.
 
 Scene `data`: title, duration_ms, location_id, character_ids, prop_asset_ids, environment/lighting settings, transition, and typed tracks:
 - camera: shot, movement, target_id, start_ms, duration_ms;

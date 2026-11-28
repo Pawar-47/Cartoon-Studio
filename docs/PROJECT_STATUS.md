@@ -1,5 +1,13 @@
 # Project Status — 2026-11-28
 
+## Live checkpoint — 2026-11-28 (episode contract truthfulness: presets, subtitle modes, guards)
+
+- **Quality presets are implemented and read at render time.** `app/quality.py` defines Preview (15 fps, 640x360), Low Hardware (24 fps, 854x480), Balanced (24 fps, 1280x720) and High Quality (30 fps, 1920x1080); new projects default to Balanced. `GET /api/quality-presets` and `GET/PUT /api/projects/{id}/settings` store the preset and derive `frame_rate`/`resolution` from it; `POST /story/render` renders at the stored preset. The Story page has a Render quality selector.
+- **Subtitle modes are honoured.** `urdu` writes the dialogue text, `roman_urdu`/`english` write each line's planned `subtitle_text`, `none` writes an empty SRT and the renderer omits the subtitle stream. The audio manifest records the mode and entry count.
+- **Dead ends removed.** English dialogue is refused at validation instead of failing at audio time (the bundled voices are Pakistani Urdu only); an unsupported `voice_profile` is refused at plan validation; `roman_urdu`/`english` subtitles require `subtitle_text` per line.
+- **Verified:** static review only. The next Windows CI run on `main` is the proof.
+- **Still blocking:** the installed app cannot synthesise speech or assemble an MP4 — `piper-tts` and FFmpeg are not bundled. See `MASTER_BRIEF_AUDIT_2026-11-28.md` finding B1 and Batch A.
+
 ## Live checkpoint — 2026-11-28 (main work-in-progress audit)
 
 - Main CI on `main` at `201c6dd` failed in the `Test` step at collection: `RuntimeError: Form data requires "python-multipart" to be installed`, in every test module that imports `app.main`. The project-portability import endpoint was written with `UploadFile = File(...)`, a form dependency that is not in `pyproject.toml` or `requirements.lock`.
@@ -85,18 +93,17 @@ Godot may normalize raw skin-joint ordering during import. The application uses 
 | Phase 3 — World Builder | ACTIVE | P3.1 complete: versioned world model with save/reopen, stable IDs, migrations; civic/commercial (school, hospital, office, police_station) and indoor/outdoor (garage, indoor_room, playground) kinds added. P3.2 complete: environmental props (furniture, water_body, streetlight) added; world template/reuse system (template_id) enables multi-location layout reuse. P3.3 complete: vehicle rig contract (VehicleRigInput), movement state (VehicleMovementInput), and interaction events (VehicleInteractionInput) endpoints added; API tests cover movement, door/enter/exit interactions, and rig registration. World schema migration (migrate_world_document, LATEST_WORLD_SCHEMA_VERSION) auto-upgrades world documents on read. Multi-location reuse and phase acceptance remain open; per user direction, Phase 3 activated before P2.2 visual acceptance closure |
 | Phase 4 — Story and Scene Engine | PARTIAL / FROZEN, OUT-OF-ORDER WORK PRESENT | World-linked plans and cast binding exist; the canonical schema, integrated generation, approval and complete production mapping remain incomplete |
 | Phase 5 — Animation Engine | PARTIAL / OUT-OF-ORDER | Generated scenes contain procedural action-anchor and camera keyframes; no reusable clip library, animation editor, blending or visual acceptance |
-| Phase 6 — Urdu Voice and Lip-Sync | PARTIAL / OUT-OF-ORDER | `app/audio.py` implements pinned Pakistani Urdu Piper voices, a mono WAV mix, SRT subtitles and RMS mouth envelopes; the envelope is heuristic, not phoneme/viseme alignment. Acceptance and visual/audio quality review remain open |
-| Phase 7 — Episode Generator | PARTIAL / OUT-OF-ORDER | Editable Godot scene files, dialogue audio, subtitles, mouth envelopes and a Godot-AVI + FFmpeg MP4 path exist (`app/render.py`); there is no durable render queue, and full 5–7 minute acceptance has not been performed |
+| Phase 6 — Urdu Voice and Lip-Sync | PARTIAL / OUT-OF-ORDER | `app/audio.py` implements pinned Pakistani Urdu Piper voices, a mono WAV mix, SRT subtitles with urdu/roman_urdu/english/none modes and RMS mouth envelopes; the envelope is heuristic, not phoneme/viseme alignment. The pinned `piper-tts` dependency is not in the locked environment, so the installed app cannot synthesise speech yet. Acceptance and visual/audio quality review remain open |
+| Phase 7 — Episode Generator | PARTIAL / OUT-OF-ORDER | Editable Godot scene files, dialogue audio, subtitles, mouth envelopes and a Godot-AVI + FFmpeg MP4 path exist (`app/render.py`), rendered at the project's stored quality preset; the job queue records state, leases and events but executes inside the request thread, and full 5–7 minute acceptance has not been performed |
 | Phase 8 — Optimization and Reliability | DEFERRED | Physical-PC benchmarks remain late-stage work; user visual acceptance for Phases 2–7 shall be performed in Phase 8 per project owner direction |
 
-## Next implementation batch — Phase 3 World Builder
+## Next implementation batch
 
-Phase 3 is now active per user direction. Work continues on:
-1. Multi-location world/location reuse and canonical world schema migration
-2. World-scene export quality and browser preview visual review (world export endpoint wired to job queue via `world_export` operation; queue endpoints cover export jobs)
-3. World-linked story plan production mapping (ties to Phase 4)
-4. Project export/import (PROD-R005): GET /api/projects/{project_id}/export returns portable ZIP; POST /api/projects/import restores as new project; 4 unit tests
-5. P2.2 remaining visual acceptance items proceed in parallel: interactive browser acceptance of hairstyles, portraits, assembly, morphs and retarget preview; broad rig acceptance on representative models
+1. **Batch A — make the shipped app produce an episode.** Decide and pin the voice path (bundled Piper or recorded fallback), bundle a licence-reviewed FFmpeg, resolve `_find_ffmpeg` to the bundled binary, and add a real-media Windows CI job. This is finding B1 and the only thing between the current code and a playable episode.
+2. **Batch B — real job execution, progress, cancel and diagnostics.** Background worker, per-scene progress, cooperative cancel, Episode Renderer and Logs and Diagnostics workspaces.
+3. **Batch C — scene cache and checkpoints**, so one failed scene never re-renders the episode.
+
+World-scene export quality, browser preview visual review and world-linked story production mapping remain open; multi-location reuse via `template_id` is implemented and tested.
 
 User visual acceptance for Phases 2–7 is scheduled for Phase 8 per project owner direction.
 

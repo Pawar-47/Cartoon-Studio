@@ -14,7 +14,7 @@
  <form id="brief-form">
   <label>Story idea<textarea id="idea" rows="5" required minlength="5" maxlength="2000" placeholder="دو دوست بازار جاتے ہیں، ایک غلط فہمی پیدا ہوتی ہے اور پھر مزاحیہ صورتحال بن جاتی ہے۔"></textarea></label>
   <div class="form-grid">
-   <label>Dialogue language<select id="language"><option value="ur">Urdu (Pakistani Urdu)</option><option value="en">English</option></select></label>
+   <label>Dialogue language<select id="language"><option value="ur">Urdu (Pakistani Urdu)</option></select></label>
    <label>Episode length<select id="duration"><option value="300">5 minutes</option><option value="360" selected>6 minutes</option><option value="420">7 minutes</option></select></label>
    <label>Tone<select id="tone"><option value="comedy">Comedy</option><option value="adventure">Adventure</option><option value="family">Family</option><option value="mystery">Mystery</option><option value="educational">Educational</option></select></label>
    <label>Audience<select id="audience"><option value="family">Family</option><option value="children">Children</option><option value="general">General</option></select></label>
@@ -41,11 +41,12 @@
  <div id="plan-summary" class="plan-summary" hidden></div>
  <div class="save-row"><label>Save to project<select id="project-select"><option value="">Choose a project…</option></select></label><button id="save-plan" disabled>Save episode plan</button></div>
  <div class="production-actions"><button id="build-production" disabled>Generate 3D scenes for this episode</button><span id="production-status" class="inline-status"></span></div><div id="production-results" class="production-results"></div>
- <div class="production-actions"><button id="render-episode" class="secondary" disabled>Render final MP4</button><span id="render-status" class="inline-status"></span></div><div id="render-results" class="production-results"></div>
+ <div class="production-actions"><label class="quality-select">Render quality <select id="quality-preset" disabled><option value="">Loading presets…</option></select></label><button id="render-episode" class="secondary" disabled>Render final MP4</button><span id="render-status" class="inline-status"></span><span id="quality-status" class="inline-status"></span></div><div id="render-results" class="production-results"></div>
  <div class="production-actions"><button id="build-audio" class="secondary" disabled>Generate Urdu dialogue audio</button><span id="audio-status" class="inline-status"></span></div><div id="audio-results" class="production-results"></div>
 </section>
 </div>
 <footer>Story plans are saved locally in this Cartoon Studio installation. AI usage limits and provider terms remain controlled by the provider you choose.</footer>
 </main>
 <script src="/static/story.js"></script>
+<script src="/static/render-settings.js"></script>
 </body></html>

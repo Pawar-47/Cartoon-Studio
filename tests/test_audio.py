@@ -146,3 +146,84 @@ def test_rejects_dialogue_that_runs_past_its_scene_boundary(tmp_path, start_seco
             synthesizer=FakeSynthesizer(),
         )
 
+
+def _subtitle_plan(subtitle_mode, subtitle_text="", text="السلام علیکم!"):
+    return {
+        "language": "ur",
+        "subtitle_mode": subtitle_mode,
+        "characters": [{"id": "ali", "voice_profile": DEFAULT_URDU_VOICE}],
+        "scenes": [
+            {
+                "id": "market",
+                "duration_seconds": 30,
+                "dialogue": [
+                    {
+                        "character_id": "ali",
+                        "text": text,
+                        "subtitle_text": subtitle_text,
+                        "start_seconds": 2,
+                        "duration_seconds": 2,
+                    }
+                ],
+            }
+        ],
+    }
+
+
+def test_subtitle_mode_urdu_writes_the_dialogue_text(tmp_path):
+    result = generate_episode_audio(
+        _subtitle_plan("urdu"),
+        tmp_path / "audio",
+        tmp_path / "data",
+        synthesizer=FakeSynthesizer(),
+    )
+    assert result["subtitle_mode"] == "urdu"
+    assert result["subtitle_entry_count"] == 1
+    assert "السلام علیکم!" in Path(result["subtitles_path"]).read_text(encoding="utf-8")
+
+
+def test_subtitle_mode_roman_urdu_writes_the_planned_subtitle_text(tmp_path):
+    result = generate_episode_audio(
+        _subtitle_plan("roman_urdu", subtitle_text="Assalam-o-Alaikum!"),
+        tmp_path / "audio",
+        tmp_path / "data",
+        synthesizer=FakeSynthesizer(),
+    )
+    assert result["subtitle_mode"] == "roman_urdu"
+    assert result["subtitle_entry_count"] == 1
+    subtitles = Path(result["subtitles_path"]).read_text(encoding="utf-8")
+    assert "Assalam-o-Alaikum!" in subtitles
+    assert "السلام علیکم!" not in subtitles
+
+
+def test_subtitle_mode_none_writes_no_entries(tmp_path):
+    result = generate_episode_audio(
+        _subtitle_plan("none"),
+        tmp_path / "audio",
+        tmp_path / "data",
+        synthesizer=FakeSynthesizer(),
+    )
+    assert result["subtitle_mode"] == "none"
+    assert result["subtitle_entry_count"] == 0
+    # The file still exists so the render step keeps a stable input list.
+    assert Path(result["subtitles_path"]).read_text(encoding="utf-8") == ""
+
+
+def test_roman_urdu_rejects_a_line_without_subtitle_text(tmp_path):
+    with pytest.raises(SpeechGenerationError, match="no subtitle_text"):
+        generate_episode_audio(
+            _subtitle_plan("roman_urdu"),
+            tmp_path / "audio",
+            tmp_path / "data",
+            synthesizer=FakeSynthesizer(),
+        )
+
+
+def test_rejects_unknown_subtitle_mode(tmp_path):
+    with pytest.raises(SpeechGenerationError, match="Unsupported subtitle_mode"):
+        generate_episode_audio(
+            _subtitle_plan("klingon"),
+            tmp_path / "audio",
+            tmp_path / "data",
+            synthesizer=FakeSynthesizer(),
+        )

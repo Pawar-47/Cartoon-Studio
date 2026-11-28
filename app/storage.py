@@ -502,10 +502,11 @@ def _project_envelope(row: sqlite3.Row) -> dict[str, Any]:
             "description": row["description"],
             "metadata": metadata if isinstance(metadata, dict) else {},
             "settings": {
+                # Must match app/quality.py DEFAULT_QUALITY_PRESET (balanced).
                 "default_language": "ur",
                 "frame_rate": {"numerator": 24, "denominator": 1},
                 "resolution": {"width": 1280, "height": 720},
-                "quality_preset": "preview",
+                "quality_preset": "balanced",
             },
             "references": {"characters": [], "worlds": [], "episodes": []},
         },

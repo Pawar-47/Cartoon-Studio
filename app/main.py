@@ -40,6 +40,11 @@ from app.engine import (
     GodotEngineAdapter,
 )
 from app.job_queue import MAX_LIST_LIMIT, JobQueue, JobQueueError
+from app.quality import (
+    DEFAULT_QUALITY_PRESET,
+    quality_summary,
+    resolve_quality_profile,
+)
 from app.render import (
     RenderDependencyUnavailable,
     RenderExecutionError,
@@ -170,6 +175,13 @@ app = FastAPI(
     lifespan=lifespan,
 )
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+
+QualityPresetName = Literal["preview", "low_hardware", "balanced", "high_quality"]
+
+
+class ProjectSettingsInput(BaseModel):
+    quality_preset: QualityPresetName
 
 
 class ProjectCreate(BaseModel):
@@ -365,6 +377,17 @@ def _project_record(row: Any) -> ProjectRecord:
     )
 
 
+def _project_settings(quality_preset: str = DEFAULT_QUALITY_PRESET) -> dict[str, Any]:
+    """Return project settings for one quality preset; the preset decides the rest."""
+    profile = resolve_quality_profile(quality_preset)
+    return {
+        "default_language": "ur",
+        "frame_rate": {"numerator": profile.fps, "denominator": 1},
+        "resolution": {"width": profile.width, "height": profile.height},
+        "quality_preset": profile.name,
+    }
+
+
 def _new_project_document(
     project_id: str,
     name: str,
@@ -378,12 +401,7 @@ def _new_project_document(
             "name": name,
             "description": description,
             "metadata": {},
-            "settings": {
-                "default_language": "ur",
-                "frame_rate": {"numerator": 24, "denominator": 1},
-                "resolution": {"width": 1280, "height": 720},
-                "quality_preset": "preview",
-            },
+            "settings": _project_settings(),
             "references": {"characters": [], "worlds": [], "episodes": []},
         },
         now,
@@ -1108,6 +1126,9 @@ def render_episode(project_id: str) -> dict[str, Any]:
                 ),
             )
     project_root = project_directory(DATA_DIR, project_id)
+    project_settings = _read_project_settings(project_id)
+    quality = resolve_quality_profile(str(project_settings.get("quality_preset", "")))
+    include_subtitles = str(audio_data.get("subtitle_mode", "urdu")) != "none"
     scene_paths = [
         resolve_project_relative(DATA_DIR, project_id, scene["scene_relative_path"])
         for scene in scenes
@@ -1134,6 +1155,10 @@ def render_episode(project_id: str) -> dict[str, Any]:
             output_path,
             project_root,
             get_engine_adapter().executable,
+            fps=quality.fps,
+            width=quality.width,
+            height=quality.height,
+            include_subtitles=include_subtitles,
         )
     except RenderDependencyUnavailable as error:
         shutil.rmtree(output_directory, ignore_errors=True)
@@ -1159,6 +1184,8 @@ def render_episode(project_id: str) -> dict[str, Any]:
         "fps": result["fps"],
         "width": result["width"],
         "height": result["height"],
+        "quality_preset": quality.name,
+        "has_subtitles": include_subtitles,
         "size_bytes": result["size_bytes"],
         "rendered_at_elapsed_seconds": result["rendered_at_elapsed_seconds"],
         "generated_at": now,
@@ -1182,6 +1209,8 @@ def render_episode(project_id: str) -> dict[str, Any]:
             "fps": result["fps"],
             "width": result["width"],
             "height": result["height"],
+            "quality_preset": quality.name,
+            "has_subtitles": include_subtitles,
             "status": "ok",
         },
     )
@@ -1340,6 +1369,8 @@ def build_episode_audio(project_id: str) -> dict[str, Any]:
         "duration_seconds": result["duration_seconds"],
         "sample_rate": result["sample_rate"],
         "dialogue_line_count": result["dialogue_line_count"],
+        "subtitle_mode": result["subtitle_mode"],
+        "subtitle_entry_count": result["subtitle_entry_count"],
         "voices": result["voices"],
         "audio_relative_path": audio_relative,
         "subtitles_relative_path": subtitles_relative,
@@ -1363,6 +1394,7 @@ def build_episode_audio(project_id: str) -> dict[str, Any]:
             "build_id": build_id,
             "duration_seconds": result["duration_seconds"],
             "dialogue_line_count": result["dialogue_line_count"],
+            "subtitle_mode": result["subtitle_mode"],
             "status": "ok",
         },
     )
@@ -3316,6 +3348,93 @@ def update_project(project_id: str, payload: ProjectUpdate) -> ProjectRecord:
             "SELECT * FROM projects WHERE id = ?", (project_id,)
         ).fetchone()
     return _project_record(updated)
+
+
+def _read_project_settings(project_id: str) -> dict[str, Any]:
+    """Return the stored project settings, falling back to the defaults."""
+    project_path = project_directory(DATA_DIR, project_id) / "project.json"
+    if not project_path.is_file():
+        return _project_settings()
+    try:
+        document = read_json(project_path)
+    except (OSError, json.JSONDecodeError):
+        return _project_settings()
+    settings = document.get("data", {}).get("settings")
+    return settings if isinstance(settings, dict) else _project_settings()
+
+
+def _quality_payload(name: str) -> dict[str, Any]:
+    profile = resolve_quality_profile(name)
+    return {
+        "name": profile.name,
+        "label": profile.label,
+        "fps": profile.fps,
+        "width": profile.width,
+        "height": profile.height,
+        "note": profile.note,
+    }
+
+
+@app.get("/api/quality-presets")
+def list_quality_presets() -> list[dict[str, Any]]:
+    """Return the four render presets with their frame rate and resolution."""
+    return quality_summary()
+
+
+@app.get("/api/projects/{project_id}/settings")
+def get_project_settings(project_id: str) -> dict[str, Any]:
+    """Return a project's render settings and the preset they resolve to."""
+    initialize_database()
+    try:
+        project_path = project_directory(DATA_DIR, project_id) / "project.json"
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail="Project not found.") from error
+    if not project_path.is_file():
+        raise HTTPException(status_code=404, detail="Project not found.")
+    settings = _read_project_settings(project_id)
+    return {
+        "project_id": project_id,
+        "settings": settings,
+        "quality": _quality_payload(str(settings.get("quality_preset", ""))),
+    }
+
+
+@app.put("/api/projects/{project_id}/settings")
+def update_project_settings(
+    project_id: str, payload: ProjectSettingsInput
+) -> dict[str, Any]:
+    """Change the project's quality preset; the preset sets frame rate and resolution."""
+    initialize_database()
+    now = datetime.now(UTC).isoformat()
+    with connect_db() as connection:
+        row = connection.execute(
+            "SELECT * FROM projects WHERE id = ?", (project_id,)
+        ).fetchone()
+        if row is None:
+            raise HTTPException(status_code=404, detail="Project not found.")
+        project_path = project_directory(DATA_DIR, project_id) / "project.json"
+        if project_path.exists():
+            document = read_json(project_path)
+        else:
+            document = _new_project_document(
+                project_id, row["name"], row["description"], row["created_at"]
+            )
+        settings = document.setdefault("data", {}).setdefault("settings", {})
+        settings.update(_project_settings(payload.quality_preset))
+        document["revision"] = int(document.get("revision", 1)) + 1
+        document["updated_at"] = now
+        digest = write_json_atomic(project_path, document)
+        upsert_document_index(connection, project_id, document, "project.json", digest)
+        connection.execute(
+            "UPDATE projects SET updated_at = ? WHERE id = ?", (now, project_id)
+        )
+    return {
+        "project_id": project_id,
+        "revision": document["revision"],
+        "updated_at": now,
+        "settings": document["data"]["settings"],
+        "quality": _quality_payload(payload.quality_preset),
+    }
 
 
 def _project_package_entries(project_root: Path) -> list[Path]:
