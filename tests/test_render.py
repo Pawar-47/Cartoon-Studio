@@ -6,9 +6,12 @@ from pathlib import Path
 import pytest
 
 from app.render import (
+    VIDEO_ENCODER_PREFERENCE,
     RenderDependencyUnavailable,
     RenderExecutionError,
     RenderPathError,
+    _enforce_scene_cache_limit,
+    _find_ffmpeg,
     _write_render_project,
     render_episode_video,
 )
@@ -480,3 +483,91 @@ def test_scene_cache_must_stay_inside_the_episode_project(tmp_path, monkeypatch)
             ffmpeg_executable=ffmpeg,
             cache_directory=tmp_path / "outside-cache",
         )
+
+
+def test_scene_cache_limit_drops_the_oldest_movies(tmp_path):
+    cache_root = tmp_path / "render_cache"
+    cache_root.mkdir()
+    for index, written_at in enumerate((100, 200, 300), start=1):
+        path = cache_root / f"scene-0{index}-key{index}.avi"
+        path.write_bytes(b"x" * 10)
+        os.utime(path, (written_at, written_at))
+
+    _enforce_scene_cache_limit(cache_root, limit_bytes=1000)
+    assert len(list(cache_root.glob("scene-*.avi"))) == 3
+
+    _enforce_scene_cache_limit(cache_root, limit_bytes=15)
+    remaining = sorted(path.name for path in cache_root.glob("scene-*.avi"))
+    assert remaining == ["scene-03-key3.avi"]
+
+
+def _proof_scene_source(camera_height: float) -> str:
+    return f"""[gd_scene load_steps=2 format=3]
+
+[sub_resource type="SphereMesh" id="SphereMesh_proof"]
+
+[node name="EpisodeScene" type="Node3D"]
+
+[node name="EpisodeCamera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, {camera_height}, 5)
+current = true
+
+[node name="Sphere" type="MeshInstance3D" parent="."]
+mesh = SubResource("SphereMesh_proof")
+"""
+
+
+def test_real_media_render_produces_a_playable_mp4(tmp_path):
+    """Render an episode with the real Godot runtime and FFmpeg binaries.
+
+    The mocked tests cover the render logic; this one proves the production
+    chain on actual media. It runs only where the pinned Godot build and a
+    redistribution-safe FFmpeg are provisioned (the `real-media` Windows CI job),
+    and is skipped everywhere else.
+    """
+    if os.environ.get("CARTOON_STUDIO_REAL_MEDIA") != "1":
+        pytest.skip("The real-media render runs only in the dedicated CI job.")
+    godot_path = os.environ.get("CARTOON_STUDIO_GODOT_PATH", "")
+    if not godot_path or not Path(godot_path).is_file():
+        pytest.skip("The pinned Godot runtime is only provisioned in CI.")
+    try:
+        ffmpeg = _find_ffmpeg(os.environ.get("CARTOON_STUDIO_FFMPEG") or None)
+    except RenderDependencyUnavailable as error:
+        pytest.skip(f"No FFmpeg is provisioned for a real-media render: {error}")
+
+    proof_root = Path(os.environ.get("CARTOON_STUDIO_PROOF_DIR") or tmp_path)
+    project_root = proof_root / "project"
+    project_root.mkdir(parents=True, exist_ok=True)
+    scene_paths = [project_root / "scene-1.tscn", project_root / "scene-2.tscn"]
+    for index, scene_path in enumerate(scene_paths, start=1):
+        scene_path.write_text(
+            _proof_scene_source(1 + index * 0.4), encoding="utf-8"
+        )
+    audio_path = project_root / "dialogue.wav"
+    _write_silent_wav(audio_path, 2)
+    subtitles_path = project_root / "subtitles.srt"
+    subtitles_path.write_text(
+        "1\n00:00:00,000 --> 00:00:01,000\nالسلام علیکم!\n", encoding="utf-8"
+    )
+
+    result = render_episode_video(
+        scene_paths,
+        [1, 1],
+        audio_path,
+        subtitles_path,
+        project_root / "renders" / "episode.mp4",
+        project_root,
+        Path(godot_path),
+        ffmpeg_executable=ffmpeg,
+        width=640,
+        height=360,
+        cache_directory=project_root / "render_cache",
+    )
+
+    assert result["duration_seconds"] == 2
+    assert result["video_encoder"] in VIDEO_ENCODER_PREFERENCE
+    assert result["rendered_scene_count"] == 2
+    assert result["cached_scene_count"] == 0
+    video = Path(result["video_path"])
+    assert video.is_file() and video.stat().st_size > 1024
+    assert len(list((project_root / "render_cache").glob("scene-*.avi"))) == 2

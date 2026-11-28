@@ -16,7 +16,7 @@ An original, local-first Urdu 3D cartoon production studio. This repository is t
 - Episode workshop: validate and save a 5–7 minute Urdu episode plan, generate editable Godot scenes from saved worlds and project characters, generate Urdu dialogue audio with timed SRT subtitles (or record a line by hand), and render the episode MP4 from the project's quality preset (Preview, Low Hardware, Balanced or High Quality).
 - Episode Renderer and Logs and Diagnostics workspaces: queue a render and watch per-scene progress, cancel safely, read a job's event journal, and check Godot/FFmpeg/voice readiness.
 - Project export/import as a portable ZIP package; a durable SQLite job record for long operations, executed by a background worker with per-scene progress, cancellation and a dependency diagnostics endpoint.
-- GitHub Actions Windows CI installs exact uv-locked dependencies, runs lint/compile/tests and packages a hash-locked bootstrap ZIP.
+- GitHub Actions Windows CI installs exact uv-locked dependencies, runs lint/compile/tests and packages a hash-locked bootstrap ZIP; a second `real-media` job renders a real episode with the pinned Godot runtime and the bundled LGPL FFmpeg and uploads the MP4 as proof.
 
 **Known limitations:** the installed app can now assemble an MP4 with the bundled LGPL FFmpeg and a redistribution-safe encoder; the Story page queues its render through the background worker, has a recorded-line panel (mono 16-bit 22,050 Hz WAV) and a subtitle-mode selector. Urdu speech synthesis still needs `piper-tts`, which is not yet in the locked environment; recorded lines are the working dialogue path until the lock is regenerated. See the blocking finding in [`docs/MASTER_BRIEF_AUDIT_2026-11-28.md`](docs/MASTER_BRIEF_AUDIT_2026-11-28.md).
 

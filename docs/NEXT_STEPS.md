@@ -3,7 +3,7 @@
 ## Live checkpoint
 
 - Repository: `Pawar-47/Cartoon-Studio`; active branch `main`.
-- Newest batch: a content-keyed scene cache with restart recovery (Batch C, part 1) — awaits its own CI run.
+- Newest batch: a scene-cache size cap and a real-media Windows render job (Batch C, part 2) — awaits its own CI run.
 - Owner decisions on record: no GPL video encoder; voice uses both a pinned Piper TTS path and a recorded-WAV fallback.
 - Binding source: `docs/MASTER_EXECUTION_PROMPT.md`, all 25 parts. Do not create or switch development branches.
 
@@ -20,15 +20,23 @@ speech, because `piper-tts` is not in the locked environment.
    `.github/workflows/resolve-python-lock.yml` and vendor the wheels plus the two `ur_PK`
    voices into the installer, so TTS works offline. This is the last piece of the episode
    production chain that no shipped path covers.
-2. **A real-media Windows CI job**: render a fixture episode end to end with the bundled
-   Godot runtime and LGPL FFmpeg on a clean runner, proving the production chain rather
-   than only its mocked tests.
-3. **Batch C, part 2**: cap the scene cache's total size across episodes and edited scenes.
+2. **Watch the first `real-media` CI run** and fix whatever it reveals about Godot rendering
+   a real episode scene, then extend it to the generated-scene and produced-audio path.
+3. **Batch C, part 3**: resume a render from the job's last checkpoint after an app restart,
+   rather than relying on the operator to queue it again.
 4. P2.2 remaining visual acceptance proceeds in parallel: interactive browser acceptance of
    hairstyles, portraits, assembly, morphs and retarget preview; broad rig acceptance on
    representative models.
 
 ## Recent completed batches
+
+### Scene-cache size cap and a real-media render job (Batch C, part 2)
+`SCENE_CACHE_LIMIT_BYTES` (8 GiB per episode) plus `_enforce_scene_cache_limit` drop the
+oldest cached scene movies once an episode's cache passes the limit. A new `real-media` job
+in `ci.yml` fetches the pinned Godot runtime and LGPL FFmpeg and runs
+`test_real_media_render_produces_a_playable_mp4`, which renders two real scenes with a
+silent WAV and an Urdu SRT through `render_episode_video` and uploads the MP4 and the
+FFmpeg runtime report as an artifact.
 
 ### Scene cache and restart recovery (Batch C, part 1)
 `render_episode_video` takes a `cache_directory`; each finished scene movie is stored as

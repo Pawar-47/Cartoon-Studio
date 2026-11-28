@@ -59,3 +59,40 @@ jobs:
         env:
           CARTOON_STUDIO_GODOT_PATH: ${{ github.workspace }}/build/godot-runtime/Godot_v4.7.2-stable_win64.exe
         run: uv run --locked python -m pytest -q
+  real-media:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        name: Checkout
+      - uses: actions/setup-python@v5
+        name: Set up Python
+        with:
+          python-version: "3.11"
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e
+        name: Set up uv
+        with:
+          version: "0.13.10"
+          enable-cache: true
+      - name: Install exact locked environment
+        run: uv sync --locked --group dev
+      - name: Fetch pinned Godot 4.7.2 runtime
+        run: uv run --locked python scripts/fetch_godot_runtime.py --output-dir build/godot-runtime
+      - name: Fetch pinned LGPL FFmpeg
+        run: uv run --locked python scripts/fetch_ffmpeg.py --output-dir build/ffmpeg
+      - name: Render an episode with the real Godot and FFmpeg binaries
+        env:
+          CARTOON_STUDIO_REAL_MEDIA: "1"
+          CARTOON_STUDIO_GODOT_PATH: ${{ github.workspace }}/build/godot-runtime/Godot_v4.7.2-stable_win64.exe
+          CARTOON_STUDIO_FFMPEG: ${{ github.workspace }}/build/ffmpeg/ffmpeg.exe
+          CARTOON_STUDIO_PROOF_DIR: ${{ github.workspace }}/build/render-proof
+        run: uv run --locked python -m pytest -q tests/test_render.py::test_real_media_render_produces_a_playable_mp4
+      - name: Upload the rendered proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: Real-Media-Episode-Render
+          path: |
+            build/render-proof/project/renders/episode.mp4
+            build/ffmpeg/ffmpeg-runtime-report.json
+          if-no-files-found: error
+          retention-days: 14

@@ -1,3 +1,13 @@
+## 2026-11-28 — Cache size cap and a real-media render job (Batch C, part 2)
+
+- **Finding 1:** the scene cache kept every version of every rendered scene position. An episode edited and re-rendered at two presets could hold many gigabytes of intermediate movies with no limit.
+- **Change 1:** `SCENE_CACHE_LIMIT_BYTES` (8 GiB per episode) and `_enforce_scene_cache_limit` drop the oldest cached movies once an episode's cache passes it, after each new scene is stored. A render already reading a movie keeps it through its own link.
+- **Finding 2:** every render test mocks Godot and FFmpeg, so the real production chain had never produced an MP4 in CI — the audit's B1 claim rested on code reading alone.
+- **Change 2:** a new `real-media` job in `.github/workflows/ci.yml` downloads the pinned Godot 4.7.2 runtime and the pinned LGPL FFmpeg, then runs `test_real_media_render_produces_a_playable_mp4`. That test builds two real `.tscn` scenes, a silent WAV and an Urdu SRT, calls `render_episode_video` with the real binaries, and asserts the finished MP4, its 2-second verified duration, its redistribution-safe encoder and the two cached scene movies. It is gated on `CARTOON_STUDIO_REAL_MEDIA=1`, so the fast test job skips it, and its MP4 and FFmpeg runtime report are uploaded as an artifact.
+- **Tests added:** the cache-limit unit test (nothing dropped under the limit, oldest dropped over it) and the real-media test.
+- **Result:** awaiting the next Windows CI run. The real-media job is the first execution of this path, so it may fail on a real-Godot detail such as loading a scene from outside the temporary render project; its log will show exactly where.
+- **Still open:** `piper-tts` remains outside the locked environment, and the episode's own scene generation and audio are still proven only by mocked tests.
+
 ## 2026-11-28 — Scene cache and restart recovery (Batch C, part 1)
 
 - **Finding:** every render started from scene one. A cancelled job, a crash or a single failing scene threw away all the scene movies already finished, so a seven-scene episode could re-render for hours to recover one scene.

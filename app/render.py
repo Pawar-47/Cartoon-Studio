@@ -39,6 +39,8 @@ MIN_RENDER_HEIGHT = 360
 BUNDLED_FFMPEG_NAME = "ffmpeg.exe"
 # Bump when a cached scene video is no longer valid for the current renderer.
 SCENE_CACHE_VERSION = 1
+# Oldest cached scene movies are dropped once an episode's cache passes this.
+SCENE_CACHE_LIMIT_BYTES = 8 * 1024**3
 
 # Video encoders this application may redistribute, in preference order.
 #
@@ -353,6 +355,32 @@ def _prune_scene_cache(cache_root: Path, index: int, keep: Path) -> None:
             stale.unlink(missing_ok=True)
 
 
+def _enforce_scene_cache_limit(
+    cache_root: Path,
+    limit_bytes: int | None = None,
+) -> None:
+    """Drop the oldest cached scene movies until the cache fits its size limit.
+
+    Render caches are an optimisation, not project data: keeping an unbounded
+    number of versions of an edited episode must not fill the disk, so the least
+    recently written movies go first. A render already using a movie keeps it
+    through its own link.
+    """
+    limit = SCENE_CACHE_LIMIT_BYTES if limit_bytes is None else limit_bytes
+    if limit <= 0:
+        return
+    entries = [path for path in cache_root.glob("scene-*.avi") if path.is_file()]
+    total = sum(path.stat().st_size for path in entries)
+    if total <= limit:
+        return
+    for path in sorted(entries, key=lambda item: item.stat().st_mtime):
+        if total <= limit:
+            break
+        size = path.stat().st_size
+        path.unlink(missing_ok=True)
+        total -= size
+
+
 def render_episode_video(
     scene_paths: list[Path],
     scene_durations: list[int],
@@ -527,6 +555,7 @@ def render_episode_video(
                 cached_scene = cache_root / f"scene-{index:02d}-{cache_key}.avi"
                 _place_scene(scene_video, cached_scene)
                 _prune_scene_cache(cache_root, index, cached_scene)
+                _enforce_scene_cache_limit(cache_root)
             rendered_scenes += 1
             scene_videos.append(scene_video)
             if progress_callback is not None:

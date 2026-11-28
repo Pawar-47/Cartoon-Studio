@@ -1,5 +1,13 @@
 # Project Status — 2026-11-28
 
+## Live checkpoint — 2026-11-28 (cache size cap and a real-media render job)
+
+- **The scene cache is bounded.** `SCENE_CACHE_LIMIT_BYTES` (8 GiB per episode) and `_enforce_scene_cache_limit` drop the oldest cached scene movies once the cache passes the limit, so repeated edits at several presets cannot fill the disk.
+- **CI now renders a real episode.** A new `real-media` job in `ci.yml` fetches the pinned Godot 4.7.2 runtime and the pinned LGPL FFmpeg, runs `test_real_media_render_produces_a_playable_mp4` (two real scenes, a silent WAV, an Urdu SRT, the real binaries), and uploads the MP4 plus the FFmpeg runtime report as an artifact. The test is gated on `CARTOON_STUDIO_REAL_MEDIA=1`, so the fast job skips it.
+- **This is the first execution of that path.** Nothing about it was provable here, so the first run may fail on a real-Godot detail (for example loading an episode scene from outside the temporary render project); its log will show where.
+- **Tests:** the cache-limit unit test and the real-media render test.
+- **Still open:** `piper-tts` is not in the locked environment, so the shipped app still cannot synthesise Urdu speech; scene generation and audio production remain proven only by mocked tests.
+
 ## Live checkpoint — 2026-11-28 (scene cache and restart recovery, Batch C, part 1)
 
 - **A retried or restarted render reuses the scenes it already finished.** `render_episode_video` takes an optional `cache_directory`; each finished scene movie is stored under `assets/episodes/{episode_id}/render_cache/` named by a SHA-256 of the scene's bytes, the frame rate, resolution and duration, and a cache format version. A scene whose key is cached is linked into the render instead of being rendered again, so cancelling or crashing after four of seven scenes costs only the remaining three.

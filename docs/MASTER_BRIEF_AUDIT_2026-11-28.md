@@ -19,9 +19,11 @@ master brief preserved at `docs/MASTER_EXECUTION_PROMPT.md`.
 > cancellation, and carries a subtitle-mode selector. **The scene cache and restart
 > recovery are implemented:** each finished scene movie is cached under the episode by a
 > SHA-256 of the scene and its render settings, reused on the next render, and excluded
-> from portable packages. **The voice half of B1 and the remaining B3–B9 items stay open**,
-> starting with `piper-tts` not being in the locked environment, the missing real-media
-> render job and the absent cache size cap.
+> from portable packages. **A real-media render job now exists:** CI fetches the pinned
+> Godot runtime and LGPL FFmpeg and renders two real scenes into a verified MP4, uploading
+> it as an artifact — the first execution of that path is the next run, and its log decides
+> whether B1's rendering claim holds. **The voice half of B1 and the remaining B3–B9 items
+> stay open**, starting with `piper-tts` not being in the locked environment.
 
 Every finding has an ID, the evidence that produced it, the brief clause it violates,
 the required action, and the test that proves the action landed. Treat each finding as a
