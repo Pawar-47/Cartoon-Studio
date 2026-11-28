@@ -12,7 +12,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.blender_toolchain import BlenderToolchain
 from app.character_foundry import (
-    FEMALE_MASTER_TEMPLATE_ID, MORPH_TARGETS, default_character_recipe,
+    FEMALE_MASTER_TEMPLATE_ID,
+    MORPH_TARGETS,
+    default_character_recipe,
     validate_character_recipe,
 )
 from app.engine import GodotEngineAdapter
@@ -111,6 +113,10 @@ def main() -> int:
                     for bone in skeleton.get("bones", [])
                 }
                 missing_bones = set(REQUIRED_HUMANOID_BONES) - imported_bones
+                if len(imported_bones) != 19:
+                    raise RuntimeError(
+                        f"character: expected 19 rig bones, imported {len(imported_bones)}"
+                    )
                 if missing_bones:
                     raise RuntimeError(
                         "character: Blender rig is missing canonical bones "
@@ -169,7 +175,7 @@ def main() -> int:
             for skeleton in female_inspection.get("skeletons", [])
             for bone in skeleton.get("bones", [])
         }
-        if set(REQUIRED_HUMANOID_BONES) - female_bones:
+        if len(female_bones) != 19 or set(REQUIRED_HUMANOID_BONES) - female_bones:
             raise RuntimeError("female character: canonical 19-bone rig failed import")
         if female_inspection.get("morph_target_count", 0) < len(MORPH_TARGETS) + 6:
             raise RuntimeError("female character: recipe morph targets failed import")
