@@ -502,7 +502,7 @@ def prop():
     ball("Chai set | kettle body", (0, -.10, .91), (.20, .18, .20), brass, 28)
     ball("Chai set | kettle lid", (0, -.10, 1.12), (.09, .09, .035), brass, 20)
     curve("Chai set | spout", [(-.15, -.10, .98), (-.28, -.10, 1.08), (-.34, -.10, 1.12)], .035, brass)
-    ball("Chai set | cup one", (.38, -.12, .80), (.075, .075, .085), cream if False else rope, 20)
+    ball("Chai set | cup one", (.38, -.12, .80), (.075, .075, .085), rope, 20)
     return {
         "prop_family": "pakistani_charpai_and_chai_set_v1",
         "features": ["four_leg_sheesham_frame", "woven_cotton_rope_bed", "brass_kettle", "tea_cup"],
@@ -531,6 +531,7 @@ def vehicle():
     accent = mat("Rickshaw | truck-art vermilion", (.78, .12, .045), .35)
     blue = mat("Rickshaw | cobalt enamel", (.035, .16, .42), .32)
     glass = mat("Rickshaw | blue windscreen", (.055, .22, .31), .16)
+    wood = mat("Rickshaw | dark timber", (.18, .065, .035))
     rubber = mat("Rickshaw | tyre rubber", (.018, .022, .025), .9)
     chrome = mat("Rickshaw | polished metal", (.66, .62, .52), .28, .7)
     lamp = mat("Rickshaw | headlamp", (1.0, .75, .34), .2)
@@ -649,7 +650,7 @@ def main():
     manifest={"schema_version":1,"asset_id":a.asset_id,"asset_kind":a.asset_kind,"name":a.name,
       "generator":"cartoon-studio-blender-factory","generator_version":"0.3.0","culture_profile":a.culture_profile,
       "blender_version":bpy.app.version_string,"source_file":blend.name,"glb_file":glb.name,
-      "preview_file":preview.name,"editable_source":True,"culture_profile":a.culture_profile,
+      "preview_file":preview.name,"editable_source":True,
       "license":"Original procedural asset; no third-party geometry included.",
       "details":details}
     (out/"manifest.json").write_text(json.dumps(manifest,indent=2),encoding="utf-8")

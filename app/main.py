@@ -1689,7 +1689,9 @@ def blender_status() -> dict[str, Any]:
         return BlenderToolchain(DATA_DIR).status()
     except BlenderExecutionError as error:
         return {"available": True, "supported": False,
-                "supported_asset_kinds": ["building", "character", "prop", "vegetation", "vehicle", "world"],
+                "supported_asset_kinds": [
+                    "building", "character", "prop", "vegetation", "vehicle", "world"
+                ],
                 "supported_culture_profiles": ["pakistani_storybook_v1"], "message": str(error)}
 
 

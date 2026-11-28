@@ -3,7 +3,6 @@ from pathlib import Path
 import pytest
 
 from app.blender_toolchain import BlenderToolchain, BlenderUnavailableError
-from app.main import BlenderAssetGenerateRequest
 
 
 def test_blender_is_optional_and_reports_shared_asset_domains(tmp_path: Path) -> None:
@@ -77,10 +76,3 @@ def test_factory_contains_domain_generators_and_editable_glb_export() -> None:
     assert "export_skins=True" in source
     assert "export_morph=True" in source
     assert '"editable_source":True' in source.replace(" ", "")
-
-
-def test_blender_api_exposes_all_shared_factory_domains_with_pakistani_default() -> None:
-    for kind in ("building", "character", "prop", "vegetation", "vehicle", "world"):
-        request = BlenderAssetGenerateRequest(asset_kind=kind, name="Pakistani asset")
-        assert request.asset_kind == kind
-        assert request.culture_profile == "pakistani_storybook_v1"

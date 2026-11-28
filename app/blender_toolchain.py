@@ -46,7 +46,7 @@ class BlenderAssetResult:
     manifest: dict[str, Any]
 
 class BlenderToolchain:
-    """Optional supervised Blender authoring worker shared by character, world and prop tools."""
+    """Optional supervised Blender authoring worker shared across all asset domains."""
     def __init__(self, data_dir: Path, executable: Path | None = None,
                  script_path: Path | None = None, timeout_seconds: float = 600.0):
         self.data_dir = Path(data_dir).expanduser().resolve()
