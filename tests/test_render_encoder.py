@@ -4,8 +4,8 @@ import pytest
 
 from app.render import (
     GPL_ONLY_VIDEO_ENCODERS,
-    RenderDependencyUnavailable,
     VIDEO_ENCODER_PREFERENCE,
+    RenderDependencyUnavailable,
     choose_video_encoder,
 )
 
