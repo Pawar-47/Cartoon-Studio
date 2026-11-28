@@ -1832,6 +1832,9 @@ def test_renderer_and_logs_workspaces_are_served():
     assert 'id="dependency-list"' in logs.text
     story = client.get("/story")
     assert 'id="recording-line"' in story.text
+    assert 'id="subtitle-mode"' in story.text
+    assert 'id="queue-render"' in story.text
+    assert "/static/story-render-queue.js" in story.text
     dashboard = client.get("/")
     assert 'href="/renderer"' in dashboard.text
     assert 'href="/logs"' in dashboard.text

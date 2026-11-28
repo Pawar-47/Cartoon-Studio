@@ -41,7 +41,7 @@
  <div id="plan-summary" class="plan-summary" hidden></div>
  <div class="save-row"><label>Save to project<select id="project-select"><option value="">Choose a project…</option></select></label><button id="save-plan" disabled>Save episode plan</button></div>
  <div class="production-actions"><button id="build-production" disabled>Generate 3D scenes for this episode</button><span id="production-status" class="inline-status"></span></div><div id="production-results" class="production-results"></div>
- <div class="production-actions"><label class="quality-select">Render quality <select id="quality-preset" disabled><option value="">Loading presets…</option></select></label><button id="render-episode" class="secondary" disabled>Render final MP4</button><span id="render-status" class="inline-status"></span><span id="quality-status" class="inline-status"></span></div><div id="render-results" class="production-results"></div>
+ <div class="production-actions"><label class="quality-select">Render quality <select id="quality-preset" disabled><option value="">Loading presets…</option></select></label><label class="quality-select">Subtitles <select id="subtitle-mode" disabled><option value="urdu">Urdu dialogue text</option><option value="roman_urdu">Roman Urdu planned text</option><option value="english">English planned text</option><option value="none">No subtitles</option></select></label><button id="render-episode" class="secondary" hidden disabled>Render final MP4</button><button id="queue-render" class="secondary" disabled>Render in the background</button><span id="render-status" class="inline-status"></span><span id="quality-status" class="inline-status"></span><span id="subtitle-status" class="inline-status"></span></div><div id="render-results" class="production-results"></div>
  <div class="production-actions"><button id="build-audio" class="secondary" disabled>Generate Urdu dialogue audio</button><span id="audio-status" class="inline-status"></span></div><div id="audio-results" class="production-results"></div>
  <div class="production-actions"><label>Recorded dialogue line <select id="recording-line" disabled><option value="">Save an episode plan first</option></select></label><input id="recording-file" type="file" accept="audio/wav,.wav" disabled><button id="upload-recording" class="secondary" disabled>Store recorded line</button><span id="recording-status" class="inline-status"></span></div><div id="recording-results" class="production-results"></div>
  <p class="world-builder-link"><a href="/renderer">Open the Episode Renderer to queue a render and watch each scene →</a></p>
@@ -52,4 +52,5 @@
 <script src="/static/story.js"></script>
 <script src="/static/render-settings.js"></script>
 <script src="/static/recording-panel.js"></script>
+<script src="/static/story-render-queue.js"></script>
 </body></html>

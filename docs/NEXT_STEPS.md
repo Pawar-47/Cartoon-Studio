@@ -3,16 +3,16 @@
 ## Live checkpoint
 
 - Repository: `Pawar-47/Cartoon-Studio`; active branch `main`.
-- Newest batch: redistribution-safe video encoding with a bundled LGPL FFmpeg (Batch A, FFmpeg half) — awaits its own CI run.
+- Newest batch: the Story page queues its render through the job route and owns a subtitle-mode selector — awaits its own CI run.
 - Owner decisions on record: no GPL video encoder; voice uses both a pinned Piper TTS path and a recorded-WAV fallback.
 - Binding source: `docs/MASTER_EXECUTION_PROMPT.md`, all 25 parts. Do not create or switch development branches.
 
 ## Current objective
 
-Finish Batch A's voice half, then Batch B and Batch C. The FFmpeg half is implemented;
-the installed app can assemble an MP4 with the bundled LGPL FFmpeg and a
-redistribution-safe encoder, but it still cannot synthesise Urdu speech because
-`piper-tts` is not in the locked environment.
+Finish Batch A's voice half, then Batch C. The FFmpeg half is implemented; the installed app
+can assemble an MP4 with the bundled LGPL FFmpeg and a redistribution-safe encoder, and every
+render the UI starts now runs in the background worker. The app still cannot synthesise Urdu
+speech, because `piper-tts` is not in the locked environment.
 
 ## Immediate next steps
 
@@ -20,16 +20,21 @@ redistribution-safe encoder, but it still cannot synthesise Urdu speech because
    `.github/workflows/resolve-python-lock.yml` and vendor the wheels plus the two `ur_PK`
    voices into the installer, so TTS works offline. This is the last piece of the episode
    production chain that no shipped path covers.
-2. **Point the Story page's render button at the queued route** and add a subtitle-mode
-   selector, so the page uses the same progress/cancel path as the Episode Renderer
-   workspace.
-3. **Batch C — scene cache and checkpoints**, so one failed scene never re-renders the whole
+2. **Batch C — scene cache and checkpoints**, so one failed scene never re-renders the whole
    episode and a restart resumes from the last completed scene.
-4. P2.2 remaining visual acceptance proceeds in parallel: interactive browser acceptance of
+3. P2.2 remaining visual acceptance proceeds in parallel: interactive browser acceptance of
    hairstyles, portraits, assembly, morphs and retarget preview; broad rig acceptance on
    representative models.
 
 ## Recent completed batches
+
+### Story page queued render and subtitle-mode selector
+The Story page's visible render control queues `POST /api/projects/{id}/story/render/jobs`
+and hands off to `/renderer?project=…` for progress and cancellation; the synchronous
+`#render-episode` button is hidden and disabled, kept only for the legacy `story.js`
+handler. A Subtitles selector (`urdu`, `roman_urdu`, `english`, `none`) rewrites the pasted
+plan's `subtitle_mode` and invalidates the cached validated plan, and states that dialogue
+audio must be regenerated for the subtitle file to match.
 
 ### Episode Renderer and Logs workspaces, recorded-line control (Batch C, UI)
 `/renderer` queues renders through the `202` job route, shows `progress/total`, cancels
@@ -39,8 +44,6 @@ gains a recorded-line panel backed by the per-line upload endpoint. Dashboard na
 lists both workspaces. The `QUALITY_PRESETS` naming mismatch that broke test collection is
 fixed.
 
-## Recent completed batches
-
 ### Background job execution, progress and cancellation (Batch B)
 `app/worker.py` runs queued operations in one background thread with progress, cancellation
 between scenes and failure recording; `JobQueue` gains `report_progress`, `cancel_requested`
@@ -49,16 +52,12 @@ route body is shared by the synchronous route and the worker handler; `POST
 /api/projects/{id}/story/render/jobs` returns `202` with poll/cancel URLs; `GET
 /api/diagnostics` reports Godot, FFmpeg, voice, schema, job counts and worker state.
 
-## Recent completed batches
-
 ### Recorded Urdu dialogue fallback (Batch A, voice half)
 `PUT /api/projects/{id}/story/audio/lines/{scene_id}/{line_index}` stores a mono 16-bit
 22,050 Hz WAV for one dialogue line (20 MiB limit, scene-boundary check); `GET .../audio/recordings`
 lists recorded lines; `generate_episode_audio(..., recordings=...)` mixes recorded and
 synthesised lines and reports `recorded_line_count`/`tts_line_count` in the audio manifest.
 A recorded line works with no speech engine installed.
-
-## Recent completed batches
 
 ### Redistribution-safe encoding and bundled LGPL FFmpeg
 No GPL encoder is bundled or used. `app/render.py` selects `libopenh264`, `libvpx-vp9`,

@@ -14,8 +14,11 @@ master brief preserved at `docs/MASTER_EXECUTION_PROMPT.md`.
 > `_find_ffmpeg` prefers. **B2 is largely fixed:** a background worker executes renders
 > with per-scene progress and cooperative cancellation, and the Episode Renderer and Logs
 > workspaces use the job endpoints and `/api/diagnostics`; a recorded-WAV dialogue fallback
-> also works without any speech engine. **The voice half of B1 and B3–B9 remain open**,
-> starting with `piper-tts` not being in the locked environment and the missing scene cache.
+> also works without any speech engine. **The synchronous Story-page render path is now
+> closed in the UI:** the page queues the job, hands off to `/renderer` for progress and
+> cancellation, and carries a subtitle-mode selector. **The voice half of B1 and B3–B9
+> remain open**, starting with `piper-tts` not being in the locked environment and the
+> missing scene cache.
 
 Every finding has an ID, the evidence that produced it, the brief clause it violates,
 the required action, and the test that proves the action landed. Treat each finding as a

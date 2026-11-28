@@ -1,5 +1,14 @@
 # Project Status — 2026-11-28
 
+## Live checkpoint — 2026-11-28 (Story page queues renders, subtitle-mode selector)
+
+- **The Story page no longer holds an HTTP request open.** Its visible render control is `#queue-render`: `app/static/story-render-queue.js` posts to `POST /api/projects/{id}/story/render/jobs` and opens `/renderer?project=…`, where progress and cancellation already work. A refused queue request shows the server's message (no saved plan, missing scenes or missing audio) and stays on the page.
+- **The synchronous render control is unreachable from the UI:** `#render-episode` is hidden and disabled, kept only for the legacy handler in `story.js`. The synchronous HTTP route remains for API compatibility.
+- **Subtitle mode is selectable.** The page's Subtitles selector reflects the pasted plan's `subtitle_mode`; changing it rewrites the plan JSON, invalidates the cached validated plan and states that dialogue audio must be regenerated for the subtitle file to match.
+- **Tests:** the page test asserts `#subtitle-mode`, `#queue-render` and the new script are served.
+- **Verified:** static review only; the next Windows CI run covers JavaScript syntax and pytest. No browser acceptance.
+- **Still open:** `piper-tts` remains outside the locked environment, so the TTS path still needs the lock regenerated and the reported install check from `/api/diagnostics`.
+
 ## Live checkpoint — 2026-11-28 (Episode Renderer and Logs workspaces)
 
 - **Episode Renderer workspace** (`/renderer`): queue a render (`202` + poll), see each job's state and `progress/total`, cancel safely, and reach the render details. The browser no longer sits on one long request.
@@ -8,7 +17,7 @@
 - **Navigation:** both workspaces are linked from the dashboard sidebar.
 - **Correction:** the quality preset table is `QUALITY_PRESETS` again, matching its tests, after the rename mismatch that broke collection.
 - **Tests:** a page test covers both workspaces, the recording panel and the dashboard links.
-- **Still open:** the Story page's render button still uses the synchronous route, no subtitle-mode selector exists yet, and `piper-tts` still needs the lock regenerated before TTS works offline.
+- **Superseded:** the Story page now queues through the job route and has a subtitle-mode selector (see the newest checkpoint); `piper-tts` still needs the lock regenerated before TTS works offline.
 
 ## Live checkpoint — 2026-11-28 (background job execution, progress and cancellation)
 
@@ -17,7 +26,7 @@
 - **Queueable render.** `POST /api/projects/{id}/story/render/jobs` returns `202` with a job id and its poll/cancel URLs; the synchronous render route remains for compatibility and reports 409 when cancelled.
 - **Diagnostics.** `GET /api/diagnostics` reports Godot, FFmpeg (path, chosen redistribution-safe encoder, or why it cannot run), the speech engine (installed or not, with the pinned voices), schema version, job counts and worker state.
 - **Tests:** `tests/test_worker.py` plus an app test for the `202` job and diagnostics; the render API test asserts the progress/cancel callbacks.
-- **Still open:** the Episode Renderer and Logs and Diagnostics workspaces do not use these endpoints yet (the Story page still calls the synchronous render, and the recorder control is still missing), and `piper-tts` still needs the lock regenerated.
+- **Superseded:** the Episode Renderer and Logs workspaces, the recorded-line control, and the Story page's queued render and subtitle-mode selector have since landed (see newer checkpoints); `piper-tts` still needs the lock regenerated.
 
 ## Live checkpoint — 2026-11-28 (recorded Urdu dialogue fallback)
 
