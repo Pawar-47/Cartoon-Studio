@@ -94,6 +94,10 @@ def test_factory_contains_domain_generators_and_editable_glb_export() -> None:
     assert "Hand | knuckle." in source
     assert "Hand | thumb joint." in source
     assert "finger_lengths" in source
+    assert "Sindhi topi crown" in source
+    assert "Sindhi topi rosette" in source
+    assert "Pakol crown" in source
+    assert "Pakol rolled brim" in source
     assert "ShaderNodeTexImage" in source
     assert "image.pack()" in source
     assert "bpy.ops.uv.smart_project" in source

@@ -570,6 +570,8 @@ def character(recipe=None):
         hair_style = "short"
     hair_color = hex_rgb(recipe.get("hair_color"), (.045, .018, .012))
     hair_highlight = tuple(min(1.0, value * 1.42 + .045) for value in hair_color)
+    cap_style = str(recipe.get("cap_style", "none"))
+    cap_color = hex_rgb(recipe.get("cap_color"), (.09, .24, .32))
     skin = mat("Skin | warm peach", (.76, .40, .27))
     highlight = mat("Skin | soft highlights", (.91, .58, .41))
     ear_inner = mat("Skin | ear detail", (.43, .16, .12))
@@ -728,6 +730,52 @@ def character(recipe=None):
                   (.16, .085, .09, 0), (.27, .025, .03, 0)],
                  hair, 32), "head")
 
+    # Pakistani headwear is optional and recipe-driven. The Sindhi topi uses
+    # indigo Ajrak-inspired woven fabric and embroidered radial motifs; the
+    # Pakol uses a soft felt crown with a rolled wool brim.
+    if cap_style == "sindhi_topi":
+        cap_fabric = textile_mat(
+            "Headwear | Sindhi topi Ajrak weave",
+            cap_color, tuple(min(1.0, c * 1.55 + .08) for c in cap_color),
+            10, pattern_id="ajrak_geometric_v1",
+        )
+        cap_trim = mat("Headwear | Sindhi topi embroidery", (.88, .66, .30), .78)
+        add(loft(
+            "Headwear | Sindhi topi crown", (0, .015, 3.045),
+            [(-.055, .315, .265, 0), (-.025, .345, .285, 0),
+             (.055, .34, .28, .008), (.14, .30, .25, .018),
+             (.205, .22, .19, .02), (.225, .04, .04, .02)],
+            cap_fabric, 56,
+        ), "head")
+        add(curve(
+            "Headwear | Sindhi topi lower embroidery",
+            [(.31 * math.cos(i * 2 * math.pi / 16), .015 + .265 * math.sin(i * 2 * math.pi / 16), 3.035)
+             for i in range(17)], .012, cap_trim,
+        ), "head")
+        for index in range(8):
+            angle = index * math.pi / 4
+            x, y = .20 * math.cos(angle), .18 * math.sin(angle)
+            add(ball(
+                "Headwear | Sindhi topi rosette %02d" % index,
+                (x, y, 3.245 - .025 * abs(math.sin(angle))),
+                (.026, .026, .012), cap_trim, 16,
+            ), "head")
+    elif cap_style == "pakol":
+        pakol = mat("Headwear | Pakol wool", cap_color, .94)
+        pakol_trim = mat("Headwear | Pakol rolled brim", tuple(min(1.0, c * 1.22 + .04) for c in cap_color), .96)
+        add(loft(
+            "Headwear | Pakol crown", (0, .015, 3.015),
+            [(-.10, .29, .25, 0), (-.04, .34, .29, 0),
+             (.035, .35, .30, .008), (.105, .32, .275, .012),
+             (.17, .25, .22, .015), (.205, .10, .09, .015)],
+            pakol, 56,
+        ), "head")
+        add(curve(
+            "Headwear | Pakol rolled brim",
+            [(.33 * math.cos(i * 2 * math.pi / 32), .015 + .275 * math.sin(i * 2 * math.pi / 32), 3.00)
+             for i in range(33)], .055, pakol_trim,
+        ), "head")
+
     # Pakistani kurta details: band collar, button placket, side slits and restrained piping.
     add(block("Kurta | front placket", (0, -.292, 1.42),
               (.13, .04, .84), shirt, .025), "chest")
@@ -881,6 +929,8 @@ def character(recipe=None):
         "template_id": master_template_id,
         "hair_style": hair_style,
         "hair_color": str(recipe.get("hair_color", "#2b1b13")).lower(),
+        "headwear_style": cap_style,
+        "headwear_color": str(recipe.get("cap_color", "#173c52")).lower(),
         "outfit": "kurta_shalwar_with_peshawari_chappal",
         "female_dupatta": is_female,
         "textile_materials": [

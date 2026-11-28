@@ -78,6 +78,7 @@ def main() -> int:
                     "eye_spacing": 0.20, "torso_width": 0.15,
                 })
                 recipe["hair_style"] = "spiky"
+                recipe["cap_style"] = "sindhi_topi"
                 recipe = validate_character_recipe(recipe)
             result = worker.generate(
                 project_root=project, asset_id=asset_id,
@@ -185,6 +186,7 @@ def main() -> int:
         )
         female_recipe["hair_style"] = "long"
         female_recipe["hair_color"] = "#4a2419"
+        female_recipe["cap_style"] = "pakol"
         female_recipe = validate_character_recipe(female_recipe)
         female_result = worker.generate(
             project_root=project, asset_id="ci-character-female-proof",

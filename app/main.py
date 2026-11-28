@@ -239,6 +239,8 @@ class FoundryCharacterInput(BaseModel):
         default="short", pattern=r"^(short|bob|long|ponytail|spiky|curly|mohawk)$"
     )
     hair_color: str = Field(default="#2b1b13", pattern=r"^#[0-9a-fA-F]{6}$")
+    cap_style: str = Field(default="none", pattern=r"^(none|sindhi_topi|pakol)$")
+    cap_color: str = Field(default="#173c52", pattern=r"^#[0-9a-fA-F]{6}$")
     parameters: dict[str, Annotated[float, Field(ge=-1, le=1)]] = Field(
         default_factory=dict, max_length=32
     )
@@ -1995,6 +1997,8 @@ def create_foundry_character(
         recipe["parameters"].update(payload.parameters)
         recipe["hair_style"] = payload.hair_style
         recipe["hair_color"] = payload.hair_color
+        recipe["cap_style"] = payload.cap_style
+        recipe["cap_color"] = payload.cap_color
         recipe = validate_character_recipe(recipe)
         recipe["culture_profile"] = "pakistani_storybook_v1"
     except ValueError as error:
