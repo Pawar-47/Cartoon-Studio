@@ -1,3 +1,22 @@
+## 2026-11-28 — Dashboard roadmap alignment
+
+- **Finding:** dashboard showed World Builder as a future milestone and episode rendering as “Pending”, although the World Builder foundation and local Godot/FFmpeg rendering path already exist.
+- **Correction:** commit `49516e57577c74f25c33e3d481e0633fa5c2c724` marks Character Studio and World Builder foundations delivered, Story/Urdu audio and episode rendering as active partial work, and changes the render status to “Pipeline partial”.
+- **Regression:** `test_dashboard_is_served` now asserts these status labels and evidence text.
+- **Windows CI #618:** [SUCCESS](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/46067945723) on `49516e5`; dependency lock/install, pinned Godot/fixture setup, Ruff, JavaScript syntax, Python compilation and full pytest step passed.
+
+## 2026-11-28 — World asset selection persistence correction
+
+- **Finding:** the browser installed a selected curated GLB and kept `asset_id`/`asset_path` in its object state, but `WorldObjectInput` omitted both fields. Pydantic therefore discarded them on create/update, so the selection did not persist to the world document.
+- **Correction:** commit `4b1ed4be6beaa3048588e169ff0ca6024a364328` adds the catalogue `asset_id` to the request model. The server validates the catalogue ID and object-kind category, verifies/installs the project-local asset and derives `asset_path` itself; browser-supplied paths are discarded.
+- **Regression tests:** create/save/reopen/update retains the selected asset reference; unknown and category-mismatched IDs are rejected; the engine adapter forwards a resolved project-local GLB path to the Godot worker.
+- **Windows CI #617:** [SUCCESS](https://github.com/Pawar-47/Cartoon-Studio/actions/runs/46066598704) on `4b1ed4be6beaa3048588e169ff0ca6024a364328`. Locked dependency verification/install, pinned Godot/fixture setup, Ruff, JavaScript syntax, Python compile and full pytest step passed.
+- **Not claimed:** the API regression uses a deterministic fixture and adapter test uses a fake worker call. A real downloaded Kenney GLB has not yet passed Godot import/render visual acceptance. No full episode visual/audio acceptance or target-PC benchmark was performed.
+
+## 2026-11-28 — Documentation checkpoint correction
+
+- Commit `8c95fd5` updated the registry/traceability/status/next-step checkpoint metadata. GitHub Actions automatically ran CI #616 for that documentation push, and it passed. The earlier assumption that a documentation-only push would not trigger CI was incorrect; future documentation-only commits will use `[skip ci]` when no workflow validation is needed.
+
 # Test Report — 2026-11-28
 
 ## Episode contract truthfulness — quality presets, subtitle modes, Urdu-only guard (main)

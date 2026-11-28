@@ -11,3 +11,8 @@
 .world-tools .export-world{width:100%;min-height:44px;background:#315d78;color:#fff}
 .world-tools .world-download{display:block;text-align:center;padding:11px;border:1px solid var(--line,#2b3440);border-radius:9px;color:var(--text,#eef2f7);text-decoration:none;font-size:13px}
 .world-tools .world-download[hidden]{display:none}
+
+.object-tool-group{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:8px 0;border-bottom:1px solid var(--line,#2b3440)}
+.object-tool-group strong{grid-column:1/-1;font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted,#9aa6b6)}
+.object-tool-group button{min-width:0;white-space:normal}
+@media(max-width:640px){.object-tool-group{grid-template-columns:1fr 1fr}}

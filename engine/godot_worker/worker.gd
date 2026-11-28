@@ -2821,6 +2821,23 @@ func _world_add_cylinder(parent: Node3D, node_name: String, radius: float, heigh
     parent.add_child(mesh_node)
     return mesh_node
 
+func _world_add_glb_asset(parent: Node3D, asset_path: String, width: float, depth: float) -> bool:
+    var document := GLTFDocument.new()
+    var state := GLTFState.new()
+    var import_error := document.append_from_file(asset_path, state)
+    if import_error != OK:
+        return false
+    var imported_scene := document.generate_scene(state)
+    if imported_scene == null:
+        return false
+    imported_scene.name = "ImportedGLBAsset"
+    var target_span := maxf(width, depth)
+    var uniform_scale := clampf(target_span / 4.0, 0.05, 20.0)
+    imported_scene.scale = Vector3.ONE * uniform_scale
+    parent.add_child(imported_scene)
+    return true
+
+
 func _export_world_scene(payload: Dictionary) -> Dictionary:
     var project_root := _normalise_path(str(payload.get("project_root", "")))
     var output_path := _normalise_path(str(payload.get("output_path", "")))
@@ -2915,7 +2932,15 @@ func _export_world_scene(payload: Dictionary) -> Dictionary:
         anchor.set_meta("label", str(item.get("label", kind.capitalize())))
         root.add_child(anchor)
 
-        if kind == "road":
+        var asset_path := str(item.get("asset_path", ""))
+        if not asset_path.is_empty():
+            if not asset_path.to_lower().begins_with(root_prefix.to_lower()) or not asset_path.to_lower().ends_with(".glb"):
+                return {"error_code": "invalid_world_asset_path", "error": "World asset path must resolve to a project-local GLB."}
+            if not FileAccess.file_exists(asset_path):
+                return {"error_code": "world_asset_missing", "error": "A selected world asset is missing from the project cache."}
+            if not _world_add_glb_asset(anchor, asset_path, width, depth):
+                return {"error_code": "world_asset_import_failed", "error": "Godot could not import a selected world GLB."}
+        elif kind == "road":
             _world_add_box(anchor, "RoadSurface", Vector3(width, 0.12, depth), Vector3.ZERO, "#4b4d50")
             _world_add_box(anchor, "RoadMarking", Vector3(maxf(0.15, width * 0.018), 0.025, depth * 0.82), Vector3(0.0, 0.075, 0.0), "#f5e7b2")
         elif kind == "building" or kind == "shop":

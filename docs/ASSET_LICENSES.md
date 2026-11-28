@@ -162,3 +162,13 @@ No alignment model weights were downloaded or bundled.
 | Ultimate Modular Women Pack | 10 outfit bases, four swappable parts each, 24 animations | CC0 1.0 | https://quaternius.com/packs/ultimatemodularwomen.html |
 
 The existing Ultimate Modular Men Pack entry covers the matching 11-model pack. Together, the two packs provide 21 GLB outfit bases (34.92 MiB total) for the first modular creator slice. The app downloads only model files from the pinned LuanDucate/Ducz.CharacterCreator commit fcd215b58eec5c9ed97d0ba5f696d0e7dc085e08; it does not reuse that repository's unlicensed application code. Each model's byte size and Git blob SHA-1 are pinned in app/character_builder.py.
+
+
+## Curated World Builder GLB library — 2026-11-28
+
+- 28 individual Kenney models are available for lazy, per-project installation: roads/intersections, suburban houses, trees and rocks, vehicles, street furniture, and interior furniture.
+- Creator pack licensing was checked against the official Kenney pages: City Kit (Roads) and City Kit (Suburban) are CC0; the mirror's root LICENSE identifies the models as Kenney-authored CC0 1.0 and the converted GLBs as CC0 as well.
+- Delivery mirror: https://github.com/Hidencod/tge-assets, pinned commit `e5bd31ec8b339b25d66dd5816a21dd517bd1ae87`. The mirror is used only as a file transport source; original author remains Kenney.
+- Each selected GLB is pinned by byte size and Git blob SHA-1. Downloads are capped at 2 MiB per file, verified before atomic installation, and cached under each project's `assets/world-library/` folder. No binary asset pack is committed to this repository.
+- Godot imports installed GLBs at scene-export time. The app retains a procedural fallback for objects with no selected asset.
+- Sources: https://kenney.nl/assets/city-kit-roads ; https://kenney.nl/assets/city-kit-suburban ; https://github.com/Hidencod/tge-assets/blob/e5bd31ec8b339b25d66dd5816a21dd517bd1ae87/LICENSE

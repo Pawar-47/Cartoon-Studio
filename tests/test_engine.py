@@ -494,6 +494,56 @@ def test_animation_probe_rejects_outside_paths_and_invalid_sample_ratio(tmp_path
         )
 
 
+def test_world_export_adapter_accepts_every_persistable_object_kind(tmp_path, monkeypatch):
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    adapter = GodotEngineAdapter(data_dir=tmp_path)
+    kinds = (
+        "road", "building", "shop", "school", "hospital", "office",
+        "police_station", "tree", "vehicle", "lamp", "park", "garage",
+        "indoor_room", "playground", "furniture", "water_body", "streetlight",
+    )
+    world = {
+        "name": "Adapter Contract Test",
+        "theme": "small_town",
+        "ground_color": "#789b58",
+        "sky": "day",
+        "objects": [
+            {
+                "id": f"object-{index}",
+                "kind": kind,
+                "label": kind.replace("_", " ").title(),
+                "x": 10 + index * 4,
+                "y": 50,
+                "width": 12,
+                "height": 8,
+                "rotation": 15,
+                "color": "#c89b67",
+            }
+            for index, kind in enumerate(kinds)
+        ],
+    }
+    captured = {}
+
+    def fake_run(operation, payload, **kwargs):
+        captured["operation"] = operation
+        captured["payload"] = payload
+        return {"ok": True}
+
+    monkeypatch.setattr(adapter, "_run", fake_run)
+    asset_path = project_root / "assets" / "world-library" / "road-straight.glb"
+    asset_path.parent.mkdir(parents=True, exist_ok=True)
+    asset_path.write_bytes(b"glTF-test-fixture")
+    world["objects"][0]["asset_path"] = "assets/world-library/road-straight.glb"
+    output = project_root / "assets" / "worlds" / "contract.tscn"
+    result = adapter.export_world_scene(world, output, allowed_root=project_root)
+    assert result["ok"] is True
+    assert captured["operation"] == "export_world_scene"
+    assert [item["kind"] for item in captured["payload"]["world"]["objects"]] == list(kinds)
+    assert captured["payload"]["world"]["objects"][0]["asset_path"] == str(asset_path.resolve())
+    assert output.parent.is_dir()
+
+
 def test_adapter_timeout_is_logged_and_raised(tmp_path, monkeypatch):
     executable = tmp_path / "godot.exe"
     executable.write_bytes(b"test-runtime")

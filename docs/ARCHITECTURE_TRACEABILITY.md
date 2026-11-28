@@ -1,11 +1,11 @@
 # Architecture Traceability Crosswalk
 
-**Checkpoint:** 2026-11-25; main HEAD facb0dd738e227d643d4e85d80bd5d3f620fc6e1.
+**Crosswalk origin:** 2026-11-25 at main HEAD `facb0dd738e227d643d4e85d80bd5d3f620fc6e1`. **Latest review:** 2026-11-28 at main HEAD `8647693ae6e1e28f225b810416f32ce62ec29ddb`.
 **Purpose:** map every atomic requirement in the 171-row registry to an architecture owner, planned module boundary and delivery phase. This supplements—not replaces—the original requirement text, dependencies, test method, evidence and status in REQUIREMENTS_REGISTRY.md and REQUIREMENT_TRACEABILITY.md.
 
 ## Rules
 - IDs and requirement wording below are copied from the registry; source and priority remain authoritative there.
-- Paths are planned module boundaries, not claims that modules already exist. Current implementation remains FastAPI/SQLite project and story-plan foundation plus static browser UI.
+- This crosswalk was authored as an architecture ownership/phase map. Its planned paths and phase assignments are historical planning data, not a current source inventory. The live application now includes Character Studio, World Builder, Godot worker, audio/render paths and a durable SQLite job queue; each row's source mapping is being revalidated against current main.
 - A requirement is not implemented or verified merely because it has a target path.
 - Physical-PC performance measurements are Phase 8 evidence only. They do not gate P0.5/P0.6/P0.7, Phase 1, or feature implementation.
 - New third-party code, models, voices or assets require provenance/license review before adoption.
@@ -193,3 +193,8 @@
 - Duplicate IDs in source registry: none.
 - This is a complete domain/module ownership map. Individual source paths and tests must replace planned paths as each subsystem is implemented before requirements can advance to IMPLEMENTED, TESTED or VERIFIED.
 - Hardware requirements remain active product constraints. Exact-PC benchmark tests are retained for Phase 8 but are not prerequisites for architecture freeze or phase progression.
+
+
+## 2026-11-28 consolidation note
+
+The 171-row ownership crosswalk has a one-to-one ID set with the current registry, but that structural match does not prove current source-path accuracy. Several planned paths and phase labels predate the implemented modules. Row-by-row source and test reconciliation is in progress; do not use this crosswalk alone to infer implementation or verification status.

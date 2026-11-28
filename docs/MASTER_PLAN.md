@@ -23,17 +23,24 @@ This is a complete production application, not a mockup, theme, prompt generator
 13. Respect provider quotas, project terms, software/model/dataset/asset licenses and user privacy.
 14. User is not responsible for running developer commands, coordinating batches or fixing implementation errors. The lead agent owns repository execution and reporting.
 
-## Current baseline
+## Current baseline — refreshed 2026-11-28
 
-See `docs/BASELINE_AUDIT.md`. The original user-approved 25-part master execution brief is the binding execution contract. The uploaded copy audited on 2026-11-25 is 1,133 lines (SHA-256 `541098eebd96b98e0153770f0bc37a1031a7242fd9cb97bc5a6b52c35c9ddfde`). The repository's `PROJECT_SPECIFICATION.md` is a durable condensed specification, not a verbatim copy of that brief. The exact original 25-part brief is now preserved verbatim at `docs/MASTER_EXECUTION_PROMPT.md` (1,133 lines, 4,642 words; SHA-256 `541098eebd96b98e0153770f0bc37a1031a7242fd9cb97bc5a6b52c35c9ddfde`). The GitHub-fetched file was verified to match the uploaded source text exactly. At the audited HEAD:
-- FastAPI/static dashboard, SQLite project metadata and a manual external-AI Story Generator exist.
-- Story-plan schema, validation and save/load exist.
-- Windows GitHub Actions validation and bootstrap ZIP packaging pass.
-- No production 3D engine is integrated.
-- Ara 3D Gen is only a candidate with a proof workflow; it is not selected.
-- Character/world production, Urdu TTS, lip-sync, complete rendering and final installer remain unimplemented.
-- Existing requirements and traceability documents need a full coverage pass.
-- A partial Story Generator/schema was built ahead of the specified phase order; preserve it, freeze further expansion until Phase 4, and remove its temporary Ara-derived catalog coupling before production use.
+The complete original 25-part `MASTER_EXECUTION_PROMPT.md` is binding; the 171-row requirement registry and traceability matrix remain the atomic coverage records. The old baseline below the initial Phase 0 audit is historical and superseded by the current mainline state.
+
+At mainline alignment commit `17d35ea4b6b87509ee2318bf26eb1078cd39351d` (Windows CI #612 SUCCESS), the repository contains:
+- FastAPI/static browser application, SQLite-backed portable project documents, migrations and recovery.
+- Pinned Godot 4.7.2 Compatibility worker behind a supervised adapter.
+- Self-contained Windows installer build and a previously verified install/upgrade/uninstall/reinstall lifecycle.
+- Character Studio with imported GLB inspection, profiles, modular Quaternius character assembly, proportions, hair/face geometry, appearance/morph editing and retargeting.
+- World Builder with versioned persistent layouts, templates, 17 supported object kinds, Godot scene export and Three.js GLB preview.
+- Story prompt/schema/validation and world/cast-linked editable episode-scene generation.
+- Urdu speech/audio/subtitle generation, heuristic audio-envelope mouth motion and a Godot AVI + FFmpeg MP4 assembly path.
+- Durable SQLite job queue with bounded attempts, leases, expiry reclaim, cancellation/progress and endpoints for production, audio, world export and render.
+- Windows CI, dependency locks, SBOM and installer workflow.
+
+Important gaps remain: World Builder geometry is procedural blockout rather than a reusable detailed environment asset library; vehicle state is not yet animated as a full runtime; story generation remains manual AI handoff; the animation editor/library and blending are incomplete; Urdu phoneme/viseme alignment and native-speaker quality acceptance are outstanding; scene-level render caching/restart-resume and full 5–7 minute episode visual/audio acceptance are not complete; target-PC benchmarks and Phase 8 acceptance remain deferred. The project root still has no selected distribution LICENSE; do not assume one.
+
+See `docs/MAINLINE_ALIGNMENT_AUDIT.md` for the detailed gap analysis and first-pass fixes. Never interpret green CI as final product acceptance.
 
 ## Phase sequence and gates
 
@@ -328,3 +335,19 @@ The next P2.2 sub-phase is the **Modular Character Builder**:
 - Added a project-scoped export endpoint that creates a new versioned asset manifest and download URL. The original source GLB and character asset reference remain unchanged.
 - Added browser export controls and integration coverage using the pinned CC0 RobotExpressive facial-morph fixture.
 - This batch supports named imported morph targets and BaseMaterial3D surfaces; arbitrary shader materials and ambiguous duplicate mesh names are rejected rather than guessed.
+
+
+## 2026-11-28 — World asset catalogue integration and persistence correction
+
+The World Builder now has a curated 28-model Kenney CC0 catalogue connected to scene export: five road models, six suburban house models, five nature models, six vehicle models, three furniture models and three street fixtures. Models are pinned to a source repository commit and each file has a size and Git blob SHA-1 check; downloads are lazy and project-scoped.
+
+A source-level consolidation review found that the API schema dropped browser-supplied `asset_id`/`asset_path` fields. Commit `4b1ed4b` fixed this by accepting the catalogue ID, validating its category against the object kind, installing/verifying it in the project cache, and deriving the path server-side. CI #617 passed the save/reopen/update and adapter path regressions.
+
+This does not yet prove that a real downloaded model renders correctly in the final Godot scene. Real-asset import/render visual acceptance remains open.
+
+
+## 2026-11-28 — Baseline evidence corrections
+
+The registry now uses the approved status vocabulary only. Current status counts: 7 TESTED, 17 IMPLEMENTED, 51 PLANNED, 90 PARTIALLY IMPLEMENTED, 3 RESEARCH REQUIRED, 2 IN PROGRESS and 1 VERIFIED. The registry and traceability matrix retain 171 unique, matching requirement IDs.
+
+The dashboard now reflects the delivered Character Studio and World Builder foundations and accurately labels the episode rendering path as partial. Commit `49516e5` passed Windows CI #618. This does not mean the complete 5–7 minute episode workflow has passed acceptance.

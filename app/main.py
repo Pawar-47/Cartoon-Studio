@@ -73,6 +73,7 @@ from app.storage import (
 )
 from app.story import EpisodePlan, StoryPromptRequest, build_story_prompt
 from app.version import APP_VERSION
+from app.world_assets import ASSETS, WorldAssetError, install_world_asset, list_world_assets
 
 ROOT = Path(__file__).resolve().parent.parent
 _ENV_DATA_DIR = os.environ.get("CARTOON_STUDIO_DATA", "").strip()
@@ -212,6 +213,7 @@ class WorldObjectInput(BaseModel):
     height: float = Field(default=8, ge=2, le=60)
     rotation: float = Field(default=0, ge=0, le=360)
     color: str = Field(default="#c89b67", pattern=r"^#[0-9a-fA-F]{6}$")
+    asset_id: str | None = Field(default=None, min_length=1, max_length=64)
 
 
 class WorldPlanInput(BaseModel):
@@ -1676,6 +1678,55 @@ def _sync_world_reference(project_id: str, world_document: dict[str, Any]) -> No
         )
 
 
+def _attach_world_asset_paths(data: dict[str, Any], project_id: str) -> None:
+    """Resolve selected catalogue IDs to verified project-local GLB paths.
+
+    Never trust a browser-supplied asset_path: the path is derived from the
+    pinned catalogue and the project's verified asset cache.
+    """
+    category_by_kind = {
+        "road": {"road", "street"},
+        "building": {"building"},
+        "shop": {"building"},
+        "school": {"building"},
+        "hospital": {"building"},
+        "office": {"building"},
+        "police_station": {"building"},
+        "tree": {"nature"},
+        "park": {"nature"},
+        "playground": {"nature"},
+        "water_body": {"nature"},
+        "vehicle": {"vehicle"},
+        "lamp": {"street"},
+        "streetlight": {"street"},
+        "garage": {"building"},
+        "indoor_room": {"furniture"},
+        "furniture": {"furniture"},
+    }
+    project_root = project_directory(DATA_DIR, project_id)
+    for item in data.get("objects", []):
+        # Discard any client-supplied path and derive the accepted path from
+        # the curated catalogue ID.
+        item.pop("asset_path", None)
+        asset_id = item.get("asset_id")
+        if asset_id is None:
+            continue
+        spec = ASSETS.get(str(asset_id))
+        if spec is None:
+            raise HTTPException(status_code=422, detail="Unknown world asset selection.")
+        allowed_categories = category_by_kind.get(str(item.get("kind")), set())
+        if spec["category"] not in allowed_categories:
+            raise HTTPException(
+                status_code=422,
+                detail="Selected world asset category does not match the object kind.",
+            )
+        try:
+            installed = install_world_asset(project_root, str(asset_id))
+        except WorldAssetError as error:
+            raise HTTPException(status_code=502, detail=str(error)) from error
+        item["asset_path"] = installed["relative_path"]
+
+
 @app.get("/api/projects/{project_id}/worlds")
 def list_project_worlds(project_id: str) -> list[dict[str, Any]]:
     return _project_worlds(project_id)
@@ -1727,6 +1778,7 @@ def create_project_world(project_id: str, payload: WorldPlanInput) -> dict[str, 
         ).fetchone()
         if project is None:
             raise HTTPException(status_code=404, detail="Project not found.")
+        _attach_world_asset_paths(data, project_id)
         document = migrate_world_document(
             make_envelope(
                 "world", world_id, data, project["created_at"], now,
@@ -1795,6 +1847,7 @@ def update_project_world(
         ).fetchone()
         if project is None or indexed is None:
             raise HTTPException(status_code=404, detail="World not found.")
+        _attach_world_asset_paths(data, project_id)
         path = resolve_project_relative(DATA_DIR, project_id, indexed["relative_path"])
         document = read_json(path)
         document["data"] = data
@@ -2009,6 +2062,37 @@ def vehicle_rig(
         "updated_at": document["updated_at"],
         **document.get("data", {}),
     }
+
+
+
+
+@app.get("/api/world-assets")
+def world_asset_catalog(q: str = "", category: str = "") -> list[dict[str, Any]]:
+    allowed_categories = {"road", "street", "building", "nature", "vehicle", "furniture"}
+    if category and category not in allowed_categories:
+        raise HTTPException(status_code=422, detail="Unsupported world asset category.")
+    if len(q) > 80:
+        raise HTTPException(status_code=422, detail="World asset search is too long.")
+    return list_world_assets(q, category)
+
+
+@app.post("/api/projects/{project_id}/world-assets/{asset_id}")
+def install_project_world_asset(project_id: str, asset_id: str) -> dict[str, Any]:
+    initialize_database()
+    with connect_db() as connection:
+        project = connection.execute(
+            "SELECT id FROM projects WHERE id = ?", (project_id,)
+        ).fetchone()
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found.")
+    project_root = project_directory(DATA_DIR, project_id)
+    try:
+        installed = install_world_asset(project_root, asset_id)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail="World asset not found.") from error
+    except WorldAssetError as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error
+    return installed
 
 
 @app.post("/api/projects/{project_id}/worlds/{world_id}/export")
