@@ -312,6 +312,140 @@ def _character_bone(object_name, source_bone):
     return aliases.get(source_bone, source_bone)
 
 
+def _point_segment_distance(point, start, end):
+    segment = end - start
+    length_squared = segment.length_squared
+    if length_squared < 1e-10:
+        return (point - start).length
+    factor = max(0.0, min(1.0, (point - start).dot(segment) / length_squared))
+    return (point - (start + segment * factor)).length
+
+
+def _mesh_component_count(mesh):
+    adjacency = [[] for _vertex in mesh.vertices]
+    for edge in mesh.edges:
+        left, right = edge.vertices
+        adjacency[left].append(right)
+        adjacency[right].append(left)
+    visited = set()
+    components = 0
+    for vertex in range(len(mesh.vertices)):
+        if vertex in visited:
+            continue
+        components += 1
+        stack = [vertex]
+        visited.add(vertex)
+        while stack:
+            current = stack.pop()
+            for neighbor in adjacency[current]:
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    stack.append(neighbor)
+    return components
+
+
+def _assign_auto_weights(obj, allowed_bones, specs, region_mode):
+    groups = {name: obj.vertex_groups.new(name=name) for name in allowed_bones}
+    segments = {
+        name: (Vector(specs[name][0]), Vector(specs[name][1]))
+        for name in allowed_bones
+    }
+    region_names = (
+        ("region_head", "region_torso") if region_mode == "head_neck"
+        else ("region_torso", "region_arms") if region_mode == "qameez"
+        else ("region_legs",) if region_mode == "shalwar"
+        else ("region_arms",)
+    )
+    region_groups = {
+        name: obj.vertex_groups.new(name=name) for name in region_names
+    }
+    for vertex in obj.data.vertices:
+        point = vertex.co
+        ranked = sorted(
+            (_point_segment_distance(point, start, end), name)
+            for name, (start, end) in segments.items()
+        )
+        nearest = ranked[:2]
+        if len(nearest) == 2 and nearest[1][0] - nearest[0][0] > .16:
+            nearest = nearest[:1]
+        raw = [1.0 / ((distance + .025) ** 2) for distance, _name in nearest]
+        total = sum(raw) or 1.0
+        for (_distance, name), weight in zip(nearest, raw):
+            groups[name].add([vertex.index], weight / total, "REPLACE")
+        if region_mode == "head_neck":
+            region = "region_head" if point.z >= 2.20 else "region_torso"
+        elif region_mode == "qameez":
+            region = "region_arms" if abs(point.x) >= .37 and point.z > 1.12 else "region_torso"
+        elif region_mode == "shalwar":
+            region = "region_legs"
+        else:
+            region = "region_arms"
+        region_groups[region].add([vertex.index], 1.0, "REPLACE")
+
+
+def _fuse_component_group(parts, component_names, label, voxel_size, allowed_bones, specs, region_mode):
+    selected = [
+        (index, obj, source_bone)
+        for index, (obj, source_bone) in enumerate(parts)
+        if obj.name in component_names
+    ]
+    if len(selected) < 2:
+        raise RuntimeError(label + " is missing one or more source components.")
+    for _index, obj, _source_bone in selected:
+        bpy.ops.object.select_all(action="DESELECT")
+        obj.select_set(True)
+        bpy.context.view_layer.objects.active = obj
+        if obj.type != "MESH":
+            bpy.ops.object.convert(target="MESH")
+        for modifier in list(obj.modifiers):
+            bpy.ops.object.modifier_apply(modifier=modifier.name)
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+
+    bpy.ops.object.select_all(action="DESELECT")
+    for _index, obj, _source_bone in selected:
+        obj.select_set(True)
+    fused = selected[0][1]
+    bpy.context.view_layer.objects.active = fused
+    bpy.ops.object.join()
+    fused.name = label
+    fused.data.remesh_voxel_size = voxel_size
+    fused.data.remesh_voxel_adaptivity = 0.0
+    bpy.ops.object.voxel_remesh()
+
+    smoothing = fused.modifiers.new("Welded surface relaxation", "SMOOTH")
+    smoothing.factor = .65
+    smoothing.iterations = 3
+    bpy.context.view_layer.objects.active = fused
+    bpy.ops.object.modifier_apply(modifier=smoothing.name)
+    for polygon in fused.data.polygons:
+        polygon.use_smooth = True
+
+    component_count = _mesh_component_count(fused.data)
+    if component_count != 1:
+        raise RuntimeError(
+            "%s did not produce one continuous surface (%d disconnected islands)"
+            % (label, component_count)
+        )
+    _assign_auto_weights(fused, allowed_bones, specs, region_mode)
+    fused["cartoon_studio_welded_group"] = label
+    fused["cartoon_studio_welded_component_count"] = component_count
+    fused["cartoon_studio_voxel_size"] = voxel_size
+
+    selected_indices = {index for index, _obj, _bone in selected}
+    remaining = [
+        item for index, item in enumerate(parts)
+        if index not in selected_indices
+    ]
+    remaining.insert(min(selected_indices), (fused, "auto"))
+    parts[:] = remaining
+    return {
+        "name": label,
+        "component_count": component_count,
+        "voxel_size": voxel_size,
+        "source_components": len(selected),
+    }
+
+
 def rig(parts):
     specs = {
         "Hips": ((0, 0, .85), (0, 0, 1.10), None),
@@ -334,9 +468,41 @@ def rig(parts):
         "RightLowerLeg": ((.19, 0, .50), (.19, 0, .10), "RightUpperLeg"),
         "RightFoot": ((.19, 0, .10), (.19, -.30, .05), "RightLowerLeg"),
     }
+    welded_groups = [
+        _fuse_component_group(
+            parts, {"Body | neck", "Face | sculpted head"},
+            "Character | welded head and neck", .018,
+            ["Neck", "Head"], specs, "head_neck",
+        ),
+        _fuse_component_group(
+            parts,
+            {"Body | tailored kurta shell", "Sleeve | upper.L", "Sleeve | upper.R"},
+            "Character | welded qameez and sleeves", .018,
+            ["Spine", "Chest", "LeftShoulder", "LeftUpperArm", "RightShoulder", "RightUpperArm"],
+            specs, "qameez",
+        ),
+    ]
+    for side, upper_bone, lower_bone in (
+        ("L", "LeftUpperLeg", "LeftLowerLeg"),
+        ("R", "RightUpperLeg", "RightLowerLeg"),
+    ):
+        welded_groups.append(_fuse_component_group(
+            parts,
+            {"Shalwar | thigh." + side, "Shalwar | shin." + side},
+            "Character | welded shalwar leg " + side, .018,
+            [upper_bone, lower_bone], specs, "shalwar",
+        ))
+    for side, lower_bone, hand_bone in (
+        ("L", "LeftLowerArm", "LeftHand"),
+        ("R", "RightLowerArm", "RightHand"),
+    ):
+        welded_groups.append(_fuse_component_group(
+            parts,
+            {"Arm | forearm." + side, "Hand | palm." + side},
+            "Character | welded forearm and palm " + side, .014,
+            [lower_bone, hand_bone], specs, "arms",
+        ))
 
-    # Convert, apply modelling modifiers/transforms, and label every component
-    # before joining so the exported mesh retains semantic skinning regions.
     for obj, source_bone in parts:
         bpy.ops.object.select_all(action="DESELECT")
         obj.select_set(True)
@@ -355,6 +521,8 @@ def rig(parts):
             bpy.ops.mesh.select_all(action="SELECT")
             bpy.ops.uv.smart_project(island_margin=.025)
             bpy.ops.object.mode_set(mode="OBJECT")
+        if source_bone == "auto":
+            continue
         bone_name = _character_bone(obj.name, source_bone)
         if bone_name not in specs:
             raise RuntimeError("Character component references unknown rig bone: " + bone_name)
@@ -368,8 +536,10 @@ def rig(parts):
         obj.select_set(True)
     mesh = parts[0][0]
     bpy.context.view_layer.objects.active = mesh
+    welded_payload = json.dumps(welded_groups, separators=(",", ":"))
     bpy.ops.object.join()
     mesh.name = "CartoonStudioCharacterMesh"
+    mesh["cartoon_studio_welded_groups"] = welded_payload
 
     data = bpy.data.armatures.new("CartoonStudio_HumanoidRig")
     arm = bpy.data.objects.new("CartoonStudio_HumanoidRig", data)
@@ -391,9 +561,9 @@ def rig(parts):
     modifier.object = arm
     arm["cartoon_studio_rig_profile"] = "cartoon-studio.humanoid.v1"
     arm["cartoon_studio_bone_count"] = len(specs)
-    mesh["cartoon_studio_mesh_profile"] = "pakistani_storybook_character.v1"
+    arm["cartoon_studio_welded_groups"] = welded_payload
+    mesh["cartoon_studio_mesh_profile"] = "pakistani_storybook_character.v2"
     return arm, mesh
-
 
 def add_foundry_shape_keys(mesh, recipe):
     parameters = recipe.get("parameters", {}) if isinstance(recipe, dict) else {}
@@ -977,6 +1147,7 @@ def character(recipe=None):
         "bone_count": 19,
         "mesh_count": 1,
         "component_count": len(parts),
+        "welded_component_groups": json.loads(arm.get("cartoon_studio_welded_groups", "[]")),
         "shape_keys": morph_targets,
         "morph_targets": morph_targets,
         "character_profile": "pakistani_storybook_shalwar_kameez_v2",
