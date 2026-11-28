@@ -153,7 +153,8 @@ function frameCharacter(preset = "full") {
   if (!camera || !controls || !characterBounds || characterBounds.isEmpty()) return;
   const size = characterBounds.getSize(new THREE.Vector3());
   const center = characterBounds.getCenter(new THREE.Vector3());
-  const direction = new THREE.Vector3(0.9, 0.65, -1.15).normalize();
+  const frontDirection = detectCharacterFaceDirection(center);
+  const direction = new THREE.Vector3(0.9, 0.65, 1.15 * frontDirection).normalize();
   let targetY = center.y;
   let distance = cameraDistance;
   if (preset === "head") {
@@ -277,7 +278,7 @@ function detectCharacterFaceDirection(headCenter) {
   let featureSamples = 0;
   const vertex = new THREE.Vector3();
   currentObject.traverse((node) => {
-    if (!node.isMesh || !/(head|face|skull)/i.test(node.name || "") || !node.geometry?.attributes?.position) return;
+    if (!node.isMesh || !node.geometry?.attributes?.position) return;
     const geometry = node.geometry;
     const index = geometry.index;
     const vertexCount = index ? index.count : geometry.attributes.position.count;
