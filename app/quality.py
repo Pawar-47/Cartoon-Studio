@@ -25,7 +25,7 @@ class QualityProfile:
     note: str
 
 
-QUALITY_PROFILES = {
+QUALITY_PRESETS = {
     "preview": QualityProfile(
         name="preview",
         label="Preview",
@@ -60,14 +60,14 @@ QUALITY_PROFILES = {
     ),
 }
 DEFAULT_QUALITY_PRESET = "balanced"
-QUALITY_PRESET_NAMES = tuple(QUALITY_PROFILES)
+QUALITY_PRESET_NAMES = tuple(QUALITY_PRESETS)
 
 
 def resolve_quality_profile(name: str | None) -> QualityProfile:
     """Return the profile for a preset name, falling back to the default."""
-    if name and name in QUALITY_PROFILES:
-        return QUALITY_PROFILES[name]
-    return QUALITY_PROFILES[DEFAULT_QUALITY_PRESET]
+    if name and name in QUALITY_PRESETS:
+        return QUALITY_PRESETS[name]
+    return QUALITY_PRESETS[DEFAULT_QUALITY_PRESET]
 
 
 def quality_summary() -> list[dict[str, object]]:
@@ -82,5 +82,5 @@ def quality_summary() -> list[dict[str, object]]:
             "note": profile.note,
             "default": profile.name == DEFAULT_QUALITY_PRESET,
         }
-        for profile in QUALITY_PROFILES.values()
+        for profile in QUALITY_PRESETS.values()
     ]
