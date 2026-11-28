@@ -102,7 +102,9 @@ def main() -> int:
                         + ", ".join(sorted(required_targets - target_names))
                     )
                 if godot_inspection.get("skeleton_count", 0) != 1:
-                    raise RuntimeError("character: Godot did not import exactly one Blender skeleton")
+                    raise RuntimeError(
+                        "character: Godot did not import exactly one Blender skeleton"
+                    )
                 imported_bones = {
                     str(bone.get("name", ""))
                     for skeleton in godot_inspection.get("skeletons", [])

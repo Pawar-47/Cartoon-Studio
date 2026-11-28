@@ -134,7 +134,7 @@ class BlenderToolchain:
         if any(path.exists() for path in (source, glb, manifest_path, preview)) or (recipe is not None and recipe_file.exists()):
             raise FileExistsError("Refusing to overwrite existing Blender asset output.")
         if recipe is not None:
-            recipe_file.write_text(json.dumps(recipe, indent=2, ensure_ascii=False) + "\\n", encoding="utf-8")
+            recipe_file.write_text(json.dumps(recipe, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         command = [str(self.executable), "--background", "--factory-startup", "--python",
                    str(self.script_path), "--", "--asset-kind", asset_kind, "--asset-id", asset_id,
                    "--name", name.strip(), "--output-dir", str(output),
