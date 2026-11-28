@@ -30,6 +30,12 @@ from app.character_builder import (
     get_character_catalog,
     get_model_spec,
 )
+from app.blender_toolchain import (
+    BlenderExecutionError,
+    BlenderTimeoutError,
+    BlenderToolchain,
+    BlenderUnavailableError,
+)
 from app.character_foundry import (
     MASTER_TEMPLATE_ID,
     default_character_recipe,
@@ -139,6 +145,11 @@ class ProjectUpdate(BaseModel):
 
 class GlbInspectRequest(BaseModel):
     relative_path: str = Field(min_length=1, max_length=512)
+
+
+class BlenderAssetGenerateRequest(BaseModel):
+    asset_kind: Literal["character", "world", "prop"]
+    name: str = Field(min_length=1, max_length=64, pattern=r"^[A-Za-z0-9][A-Za-z0-9 _-]{0,63}$")
 
 
 class WorldObjectInput(BaseModel):
@@ -1667,6 +1678,53 @@ def download_project_world_scene(project_id: str, world_id: str) -> FileResponse
 def character_studio() -> FileResponse:
     return FileResponse(STATIC_DIR / "characters.html")
 
+
+
+
+@app.get("/api/blender/status")
+def blender_status() -> dict[str, Any]:
+    """Report the optional shared Blender authoring worker."""
+    try:
+        return BlenderToolchain(DATA_DIR).status()
+    except BlenderExecutionError as error:
+        return {"available": True, "supported": False,
+                "supported_asset_kinds": ["character", "prop", "world"], "message": str(error)}
+
+
+@app.post("/api/projects/{project_id}/blender-assets", status_code=201)
+def generate_blender_asset(project_id: str, payload: BlenderAssetGenerateRequest) -> dict[str, Any]:
+    """Generate an editable .blend source and a Godot-ready GLB."""
+    initialize_database()
+    project_root = project_directory(DATA_DIR, project_id)
+    if not project_root.is_dir():
+        raise HTTPException(status_code=404, detail="Project not found.")
+    asset_id = str(uuid.uuid4())
+    try:
+        result = BlenderToolchain(DATA_DIR).generate(
+            project_root=project_root, asset_id=asset_id,
+            asset_kind=payload.asset_kind, name=payload.name,
+        )
+    except BlenderUnavailableError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    except BlenderTimeoutError as error:
+        raise HTTPException(status_code=504, detail=str(error)) from error
+    except (BlenderExecutionError, ValueError, FileExistsError) as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    try:
+        inspection = get_engine_adapter().inspect_glb(
+            result.glb_path, allowed_root=project_root,
+            timeout_seconds=FOUNDRY_INSPECTION_TIMEOUT_SECONDS,
+        )
+    except (EngineError, OSError) as error:
+        inspection = {"available": False, "message": str(error)}
+    return {"project_id": project_id, "asset": {
+        "id": result.asset_id, "kind": result.asset_kind, "name": result.name,
+        "source_path": result.source_path.relative_to(project_root).as_posix(),
+        "glb_path": result.glb_path.relative_to(project_root).as_posix(),
+        "manifest_path": result.manifest_path.relative_to(project_root).as_posix(),
+        "blender_version": result.blender_version, "elapsed_seconds": result.elapsed_seconds,
+        "manifest": result.manifest, "godot_inspection": inspection,
+    }}
 
 
 @app.put("/api/projects/{project_id}/foundry-characters/{character_id}")

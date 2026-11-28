@@ -4,8 +4,8 @@ import { mkdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 const root = process.cwd();
-const output = path.join(root, "build", "visual-acceptance");
-const dataDir = path.join(root, "build", "visual-acceptance-data");
+const output = path.join(root, "build", "browser-acceptance");
+const dataDir = path.join(root, "build", "browser-acceptance-data");
 const baseUrl = "http://127.0.0.1:8765";
 await mkdir(output, { recursive: true });
 await mkdir(dataDir, { recursive: true });
@@ -33,43 +33,6 @@ async function setInputValue(page, selector, value) {
   }, String(value));
 }
 
-async function capturePreview(page, filename) {
-  const preview = page.locator("#model-preview");
-  await preview.waitFor({ state: "visible" });
-  // page.screenshot({ clip }) uses viewport coordinates. A visible element
-  // can still have page coordinates outside that viewport after the page has
-  // scrolled, so bring the canvas into view before measuring it.
-  await preview.scrollIntoViewIfNeeded();
-  const bounds = await preview.boundingBox();
-  const viewport = page.viewportSize();
-  if (!bounds || !viewport || bounds.width <= 0 || bounds.height <= 0) {
-    throw new Error("Character preview has no visible screenshot bounds.");
-  }
-  // Avoid locator.screenshot(): its actionability stability wait can time out
-  // while the WebGL canvas is continuously repainting. Intersect its measured
-  // bounds with the viewport so the page screenshot clip is always valid.
-  const left = Math.max(0, Math.floor(bounds.x));
-  const top = Math.max(0, Math.floor(bounds.y));
-  const right = Math.min(viewport.width, Math.ceil(bounds.x + bounds.width));
-  const bottom = Math.min(viewport.height, Math.ceil(bounds.y + bounds.height));
-  if (right <= left || bottom <= top) {
-    throw new Error(
-      "Character preview is outside the screenshot viewport: "
-        + JSON.stringify({ bounds, viewport }),
-    );
-  }
-  await page.screenshot({
-    path: path.join(output, filename),
-    clip: {
-      x: left,
-      y: top,
-      width: right - left,
-      height: bottom - top,
-    },
-    animations: "disabled",
-    timeout: 60_000,
-  });
-}
 
 async function waitForServer() {
   const deadline = Date.now() + 120_000;
@@ -105,7 +68,7 @@ async function waitForEngine(request) {
 try {
   process.env.CARTOON_STUDIO_DATA = dataDir;
   if (!process.env.CARTOON_STUDIO_GODOT_PATH) {
-    throw new Error("CARTOON_STUDIO_GODOT_PATH is required for visual acceptance.");
+    throw new Error("CARTOON_STUDIO_GODOT_PATH is required for functional browser acceptance.");
   }
   server = spawn("uv", [
     "run", "--locked", "uvicorn", "app.main:app",
@@ -160,7 +123,7 @@ try {
   const projectResponse = await request.post(baseUrl + "/api/projects", {
     data: {
       name: "Phase 2 Browser Acceptance",
-      description: "Ephemeral Windows CI visual acceptance project.",
+      description: "Ephemeral Windows CI functional browser acceptance project.",
     },
   });
   if (!projectResponse.ok()) {
@@ -204,7 +167,6 @@ try {
         && getComputedStyle(canvas).display !== "none";
     });
     await page.waitForTimeout(1200);
-    await page.screenshot({ path: path.join(output, "01-male-foundry-preview.png"), fullPage: true });
     record("Male Foundry character created and Three.js preview canvas displayed.");
 
     charactersResponse = await request.get(
@@ -246,7 +208,6 @@ try {
         status: document.querySelector("#foundry-status")?.textContent,
         morph: document.querySelector("#foundry-head-width")?.value,
       }));
-      await capturePreview(page, "02-foundry-edit-mode-failure.png");
       throw new Error("Edit Foundry recipe did not activate edit mode within 10 seconds: " + JSON.stringify(state));
     });
     const editModeState = await page.evaluate(() => ({
@@ -285,7 +246,6 @@ try {
     const previewStatus = await page.locator("#preview-status").textContent();
     record("Foundry edit result: " + editStatus);
     record("Foundry preview result: " + previewStatus);
-    await capturePreview(page, "02-male-foundry-edit-result.png");
     if (!editStatus?.includes("saved.") || previewStatus?.startsWith("Preview unavailable:")) {
       throw new Error("Foundry edit/preview did not finish successfully: " + editStatus
         + " | preview: " + previewStatus);
@@ -298,7 +258,6 @@ try {
     if (!male || male.revision !== 2 || male.data.foundry_recipe.parameters.head_width !== 0.6) {
       throw new Error("Foundry edit did not preserve character identity and revision.");
     }
-    await capturePreview(page, "02-male-foundry-edited.png");
     record("Saved recipe reopened, edited and persisted under the same character ID.");
   } else {
     record("Female-only acceptance mode: skipping already-passed male create/edit workflow.");
@@ -317,7 +276,6 @@ try {
     { timeout: FOUNDRY_SAVE_TIMEOUT_MS },
   );
   await page.waitForTimeout(1200);
-  await capturePreview(page, "03-female-foundry-preview.png");
   charactersResponse = await request.get(
     baseUrl + "/api/projects/" + project.id + "/characters",
   );
@@ -353,7 +311,6 @@ try {
     null,
     { timeout: 30_000 },
   );
-  await capturePreview(page, "04-preview-export-ready.png");
   const [turnaroundDownload] = await Promise.all([
     page.waitForEvent("download"),
     page.locator("#export-turnaround-png").click(),
@@ -373,10 +330,10 @@ try {
   if (browserErrors.length) {
     throw new Error("Browser emitted errors:\n" + browserErrors.join("\n"));
   }
-  record("VISUAL ACCEPTANCE PASSED.");
+  record("FUNCTIONAL BROWSER ACCEPTANCE PASSED.");
 } catch (error) {
   failed = true;
-  record("VISUAL ACCEPTANCE FAILED: " + error.stack);
+  record("FUNCTIONAL BROWSER ACCEPTANCE FAILED: " + error.stack);
   throw error;
 } finally {
   // Bound cleanup so a successful acceptance run cannot hang the CI job.
