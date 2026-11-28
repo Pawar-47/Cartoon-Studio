@@ -77,3 +77,32 @@ jobs:
           path: build/browser-acceptance/
           if-no-files-found: warn
           retention-days: 14
+
+  blender-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        name: Checkout
+      - uses: actions/setup-python@v5
+        name: Set up Python
+        with:
+          python-version: "3.11"
+      - name: Download pinned Blender 4.5.17 LTS
+        run: |
+          curl --fail --location --retry 3 --output blender.tar.xz https://download.blender.org/release/Blender4.5/blender-4.5.17-linux-x64.tar.xz
+          mkdir blender-runtime
+          tar -xf blender.tar.xz --directory blender-runtime --strip-components=1
+          rm blender.tar.xz
+          blender-runtime/blender --background --version
+      - name: Generate character, world and prop with Blender
+        run: |
+          python scripts/verify_blender_assets.py --blender "$PWD/blender-runtime/blender" --output build/blender-assets
+      - name: Upload real Blender outputs for inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blender-generated-assets
+          path: build/blender-assets/
+          if-no-files-found: warn
+          retention-days: 14

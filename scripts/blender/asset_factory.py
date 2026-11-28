@@ -167,8 +167,15 @@ def main():
     scene.world=w; w.color=(.16,.19,.24)
     bpy.ops.object.light_add(type="AREA",location=(4,-6,8)); bpy.context.object.data.energy=1100
     bpy.context.object.data.shape="DISK"; bpy.context.object.data.size=6
-    bpy.ops.object.camera_add(location=(5.8,-9.5,5))
-    camera=bpy.context.object; camera.rotation_euler=(Vector((0,0,1.35))-camera.location).to_track_quat("-Z","Y").to_euler()
+    if a.asset_kind=="character":
+        camera_location=(3.7,-8.5,3.0); target=(0,0,1.48)
+    elif a.asset_kind=="prop":
+        camera_location=(3.2,-5.2,2.5); target=(0,0,.72)
+    else:
+        camera_location=(10.5,-17.5,9.0); target=(0,0,1.45)
+    bpy.ops.object.camera_add(location=camera_location)
+    camera=bpy.context.object; camera.rotation_euler=(Vector(target)-camera.location).to_track_quat("-Z","Y").to_euler()
+    camera.data.lens=55
     scene.camera=camera; scene.render.engine="BLENDER_EEVEE_NEXT"
     scene.render.resolution_x=1200; scene.render.resolution_y=1200
     scene["cartoon_studio_asset_kind"]=a.asset_kind; scene["cartoon_studio_asset_id"]=a.asset_id
@@ -176,10 +183,27 @@ def main():
     bpy.ops.wm.save_as_mainfile(filepath=str(blend))
     bpy.ops.export_scene.gltf(filepath=str(glb),export_format="GLB",export_animations=True,
       export_skins=True,export_morph=True,export_materials="EXPORT",export_cameras=False,export_lights=False)
+    # Produce a review image alongside the editable source and runtime GLB.
+    # Workbench keeps this headless preview deterministic and does not require a GPU.
+    preview=out/(a.asset_id+"_preview.png")
+    scene.render.engine="BLENDER_WORKBENCH"
+    scene.display.shading.light="STUDIO"
+    scene.display.shading.studio_light="paint.sl"
+    scene.display.shading.color_type="MATERIAL"
+    scene.display.shading.show_cavity=True
+    scene.display.shading.cavity_type="WORLD"
+    scene.render.resolution_x=900; scene.render.resolution_y=900
+    scene.render.resolution_percentage=100
+    scene.render.image_settings.file_format="PNG"
+    scene.render.filepath=str(preview)
+    bpy.ops.render.render(write_still=True)
+    scene.render.engine="BLENDER_EEVEE_NEXT"
+    bpy.ops.wm.save_as_mainfile(filepath=str(blend))
     manifest={"schema_version":1,"asset_id":a.asset_id,"asset_kind":a.asset_kind,"name":a.name,
-      "generator":"cartoon-studio-blender-factory","generator_version":"0.1.0",
+      "generator":"cartoon-studio-blender-factory","generator_version":"0.2.0",
       "blender_version":bpy.app.version_string,"source_file":blend.name,"glb_file":glb.name,
-      "editable_source":True,"license":"Original procedural asset; no third-party geometry included.",
+      "preview_file":preview.name,"editable_source":True,
+      "license":"Original procedural asset; no third-party geometry included.",
       "details":details}
     (out/"manifest.json").write_text(json.dumps(manifest,indent=2),encoding="utf-8")
     print("CARTOON_STUDIO_ASSET_COMPLETE "+json.dumps(manifest))

@@ -38,6 +38,7 @@ class BlenderAssetResult:
     source_path: Path
     glb_path: Path
     manifest_path: Path
+    preview_path: Path
     blender_version: str
     elapsed_seconds: float
     manifest: dict[str, Any]
@@ -120,7 +121,8 @@ class BlenderToolchain:
         output.mkdir(parents=True, exist_ok=True)
         source, glb, manifest_path = (output / f"{asset_id}.blend",
                                       output / f"{asset_id}.glb", output / "manifest.json")
-        if any(path.exists() for path in (source, glb, manifest_path)):
+        preview = output / f"{asset_id}_preview.png"
+        if any(path.exists() for path in (source, glb, manifest_path, preview)):
             raise FileExistsError("Refusing to overwrite existing Blender asset output.")
         command = [str(self.executable), "--background", "--factory-startup", "--python",
                    str(self.script_path), "--", "--asset-kind", asset_kind, "--asset-id", asset_id,
@@ -139,11 +141,13 @@ class BlenderToolchain:
         log = (result.stdout + "\n" + result.stderr)[-12000:]
         if result.returncode:
             raise BlenderExecutionError(f"Blender exited with {result.returncode}.\n{log}")
-        missing = [p.name for p in (source, glb, manifest_path) if not p.is_file()]
+        missing = [p.name for p in (source, glb, manifest_path, preview) if not p.is_file()]
         if missing:
             raise BlenderExecutionError("Blender did not produce " + ", ".join(missing) + f".\n{log}")
         if source.stat().st_size < 1024 or glb.stat().st_size < 1024:
             raise BlenderExecutionError("Blender produced an incomplete asset.")
+        if preview.stat().st_size < 4096 or preview.read_bytes()[:8] != b"\\x89PNG\\r\\n\\x1a\\n":
+            raise BlenderExecutionError("Blender did not produce a valid review PNG.")
         with glb.open("rb") as stream:
             header = stream.read(12)
         if len(header) != 12 or header[:4] != b"glTF" or int.from_bytes(header[4:8], "little") != 2:
@@ -153,8 +157,9 @@ class BlenderToolchain:
         except (OSError, json.JSONDecodeError) as exc:
             raise BlenderExecutionError(f"Blender manifest is invalid: {exc}") from exc
         expected = {"asset_id": asset_id, "asset_kind": asset_kind, "name": name.strip(),
-                    "source_file": source.name, "glb_file": glb.name}
+                    "source_file": source.name, "glb_file": glb.name,
+                    "preview_file": preview.name}
         if any(manifest.get(key) != value for key, value in expected.items()):
             raise BlenderExecutionError("Blender manifest does not match the requested asset.")
         return BlenderAssetResult(asset_id, asset_kind, name.strip(), source, glb,
-                                  manifest_path, info["version"], round(elapsed, 3), manifest)
+                                  manifest_path, preview, info["version"], round(elapsed, 3), manifest)
