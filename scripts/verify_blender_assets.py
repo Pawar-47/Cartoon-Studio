@@ -5,7 +5,10 @@ import json
 import shutil
 import struct
 import tempfile
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.blender_toolchain import BlenderToolchain
 
@@ -24,7 +27,9 @@ def read_glb(path: Path) -> dict:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run real Blender asset generation and inspect exported GLBs.")
+    parser = argparse.ArgumentParser(
+        description="Run real Blender asset generation and inspect exported GLBs."
+    )
     parser.add_argument("--blender", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
@@ -56,7 +61,10 @@ def main() -> int:
                     raise RuntimeError("character: exported GLB has no facial morph targets")
             target = args.output / kind
             target.mkdir(parents=True, exist_ok=True)
-            for source in (result.source_path, result.glb_path, result.manifest_path, result.preview_path):
+            for source in (
+                result.source_path, result.glb_path,
+                result.manifest_path, result.preview_path,
+            ):
                 shutil.copy2(source, target / source.name)
             summary.append({
                 "kind": kind, "name": name, "blender_version": result.blender_version,
