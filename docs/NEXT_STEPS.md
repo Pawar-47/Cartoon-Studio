@@ -3,7 +3,7 @@
 ## Live checkpoint
 
 - Repository: `Pawar-47/Cartoon-Studio`; active branch `main`.
-- Newest batch: a scene-cache size cap and a real-media Windows render job (Batch C, part 2) — awaits its own CI run.
+- Newest batch: the FFmpeg runtime is pinned to a dated release and the real-media job is being brought past final verification — awaits its own CI run.
 - Owner decisions on record: no GPL video encoder; voice uses both a pinned Piper TTS path and a recorded-WAV fallback.
 - Binding source: `docs/MASTER_EXECUTION_PROMPT.md`, all 25 parts. Do not create or switch development branches.
 
@@ -29,6 +29,9 @@ speech, because `piper-tts` is not in the locked environment.
    representative models.
 
 ## Recent completed batches
+
+### FFmpeg pinned to a dated release
+`engine/ffmpeg_runtime.json` pointed at FFmpeg-Builds' moving `latest` tag, so the archive hash failed as soon as upstream published a new build. It now pins the dated release `autobuild-2026-11-28-13-45`, the exact `ffmpeg-n8.1.3-1004-g8524289d26-win64-lgpl-8.1.zip` asset and its SHA-256 from that release's `checksums.sha256`; `tests/test_ffmpeg_runtime_manifest.py` refuses a non-dated URL, a non-hex hash or a GPL encoder in the allowed list.
 
 ### Scene-cache size cap and a real-media render job (Batch C, part 2)
 `SCENE_CACHE_LIMIT_BYTES` (8 GiB per episode) plus `_enforce_scene_cache_limit` drop the
@@ -81,7 +84,7 @@ A recorded line works with no speech engine installed.
 No GPL encoder is bundled or used. `app/render.py` selects `libopenh264`, `libvpx-vp9`,
 `libaom-av1`, `libsvtav1` or native `mpeg4` from the build's encoder list and refuses a
 GPL-only build; the chosen encoder is recorded in `render.json`. `engine/ffmpeg_runtime.json`
-pins BtbN's win64 LGPL FFmpeg n8.1 by URL and SHA-256; `scripts/fetch_ffmpeg.py` verifies
+pins a dated win64 LGPL FFmpeg n8.1 release by URL and SHA-256; `scripts/fetch_ffmpeg.py` verifies
 the hash, encoders and licence notices; `_find_ffmpeg` prefers the bundled
 `engine/ffmpeg/ffmpeg.exe`; the release workflow fetches it, adds it to the SBOM and copies
 it with its notices into both installer bundles.

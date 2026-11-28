@@ -1,3 +1,11 @@
+## 2026-11-28 — The FFmpeg pin pointed at a moving release
+
+- **Finding:** the `real-media` job failed before rendering (job `141023008299`): `FFmpeg archive SHA-256 mismatch: expected 84cde51e…, got 404617f0…`. `engine/ffmpeg_runtime.json` pointed at `.../releases/download/latest/...`, and FFmpeg-Builds publishes a new auto-build to `latest` continuously, so the same URL's bytes change. The hash check could therefore only pass until the next upstream rebuild; the manifest's warning described the defect instead of preventing it.
+- **Change:** the manifest now pins the dated release `autobuild-2026-11-28-13-45` and the exact asset `ffmpeg-n8.1.3-1004-g8524289d26-win64-lgpl-8.1.zip`, with the SHA-256 `9d158940…` taken from that release's `checksums.sha256`, plus the new `release_tag` and `checksums_url` fields. The upstream repository rename (`BtbN/FFmpeg-Builds` → `FFmpeg-Builds/FFmpeg-Builds`) is reflected in the URLs.
+- **Guard:** new `tests/test_ffmpeg_runtime_manifest.py` fails if the download URL is not a dated release, if the release tag is missing from the download or checksums URL, if the hash is not 64 hex characters, if the archive name is not in the URL, or if a GPL encoder appears among the allowed encoders.
+- **Result:** awaiting the next run. Godot rendering and FFmpeg assembly were already carried to a finished MP4 by the earlier runs; this pin has to get the job back to that point and past verification.
+- **Still open:** `piper-tts` remains outside the locked environment, and `docs/DECISION_LOG.md` still describes the upstream as BtbN although the release now lives under FFmpeg-Builds.
+
 ## 2026-11-28 — Real-media render: split subtitle verification from the timeline check
 
 - **Finding:** after the subtitle-encoder fix, the real-media job failed its duration check: `expected 2.000s, decoded 1.000s` (run `46155429609`, job `141010918549`). The proof episode's subtitle file has one cue ending at exactly 1.000s, so the check's measured timeline ended where the subtitle stream ended, not where the video and audio ended.

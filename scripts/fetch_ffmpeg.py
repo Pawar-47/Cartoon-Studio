@@ -29,8 +29,9 @@ def download_and_verify(
         raise RuntimeError(
             "FFmpeg archive SHA-256 mismatch: "
             f"expected {expected_sha256}, got {actual}. "
-            "BtbN's 'latest' release may have moved; re-pin engine/ffmpeg_runtime.json "
-            "after reviewing the new build's licence and encoders."
+            "The pinned FFmpeg release does not match its recorded SHA-256; a "
+            "dated release should be immutable, so re-pin engine/ffmpeg_runtime.json "
+            "only after reviewing the new build's licence and encoders."
         )
 
 

@@ -1,15 +1,17 @@
 {
   "component": "FFmpeg",
-  "version": "n8.1-latest",
+  "version": "n8.1.3-1004-g8524289d26",
   "license": "LGPL-2.1-or-later",
-  "license_note": "BtbN FFmpeg-Builds win64 LGPL archive: it omits GPL-only components such as libx264, libx265 and libxvid, so the application can redistribute it. Bundled encoder options are chosen from the build's own encoder list by app/render.py; OpenH264 and VP9 are BSD, the native MPEG-4 Part 2 encoder is LGPL.",
+  "license_note": "FFmpeg-Builds win64 LGPL archive: it omits GPL-only components such as libx264, libx265 and libxvid, so the application can redistribute it. Bundled encoder options are chosen from the build's own encoder list by app/render.py; OpenH264 and VP9 are BSD, the native MPEG-4 Part 2 encoder is LGPL.",
   "platform": "windows-x86_64",
-  "archive_name": "ffmpeg-n8.1-latest-win64-lgpl-8.1.zip",
-  "archive_sha256": "84cde51e0012b9cddbefbeef7bd124267c98fb2d46fd8ca4ae69aa39dc38fc00",
-  "archive_size": 170932824,
-  "download_url": "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n8.1-latest-win64-lgpl-8.1.zip",
-  "release_url": "https://github.com/BtbN/FFmpeg-Builds/releases/tag/latest",
-  "release_page": "https://github.com/BtbN/FFmpeg-Builds",
+  "release_tag": "autobuild-2026-11-28-13-45",
+  "archive_name": "ffmpeg-n8.1.3-1004-g8524289d26-win64-lgpl-8.1.zip",
+  "archive_sha256": "9d158940d77b1f5686698f50e2b88c012fcf6593d2b870d7d31f54a96107bbd3",
+  "archive_size_note": "about 163 MiB",
+  "download_url": "https://github.com/FFmpeg-Builds/FFmpeg-Builds/releases/download/autobuild-2026-11-28-13-45/ffmpeg-n8.1.3-1004-g8524289d26-win64-lgpl-8.1.zip",
+  "checksums_url": "https://github.com/FFmpeg-Builds/FFmpeg-Builds/releases/download/autobuild-2026-11-28-13-45/checksums.sha256",
+  "release_url": "https://github.com/FFmpeg-Builds/FFmpeg-Builds/releases/tag/autobuild-2026-11-28-13-45",
+  "release_page": "https://github.com/FFmpeg-Builds/FFmpeg-Builds",
   "binary_name": "ffmpeg.exe",
   "required_encoders": ["aac", "mov_text"],
   "allowed_video_encoders": [
@@ -22,5 +24,5 @@
   "forbidden_video_encoders": ["libx264", "libx265", "libxvid"],
   "license_url": "https://ffmpeg.org/legal.html",
   "source_url": "https://ffmpeg.org/download.html",
-  "note": "The download URL points at BtbN's moving 'latest' release. The pinned SHA-256 is checked on every fetch, so a silent upstream change fails the build with a clear re-pin message instead of shipping an unverified binary."
+  "note": "The archive is pinned to one dated auto-build release, never the moving 'latest' tag whose bytes change with every upstream rebuild, and the SHA-256 from that release's checksums.sha256 is checked on every fetch. Adopting a newer build means re-pinning this file after reviewing its licence and encoders."
 }

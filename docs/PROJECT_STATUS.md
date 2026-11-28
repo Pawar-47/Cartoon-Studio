@@ -1,5 +1,12 @@
 # Project Status — 2026-11-28
 
+## Live checkpoint — 2026-11-28 (FFmpeg pinned to a dated release)
+
+- **The moving pin is gone.** `engine/ffmpeg_runtime.json` pointed at FFmpeg-Builds' moving `latest` tag, so the hash check failed as soon as upstream published a new build (job `141023008299`: `expected 84cde51e…, got 404617f0…`). It now pins the dated release `autobuild-2026-11-28-13-45`, the exact `ffmpeg-n8.1.3-1004-g8524289d26-win64-lgpl-8.1.zip` asset and its SHA-256 from that release's `checksums.sha256`.
+- **A test now holds that shape:** `tests/test_ffmpeg_runtime_manifest.py` refuses a non-dated download URL, a hash that is not 64 hex characters, an archive name missing from the URL, and any GPL encoder in the allowed list.
+- **Verified:** the pin's hash comes from the release's own checksums file; the fetch, encoder and licence checks in `scripts/fetch_ffmpeg.py` are unchanged.
+- **Still open:** the next run has to confirm the fetch and the corrected render verification; `piper-tts` remains outside the locked environment.
+
 ## Live checkpoint — 2026-11-28 (real-media run found and fixed a verification defect)
 
 - **The real-media job rendered an MP4.** Its first run (`141010017356`) had Godot render both real scenes, had the bundled LGPL FFmpeg mux them, and then failed final verification because the null muxer has no default subtitle encoder in that build.
@@ -64,7 +71,7 @@
 
 - **Owner decisions applied:** video must use a redistribution-licensed encoder, and voice uses both paths (pinned Piper TTS plus a recorded fallback).
 - **Encoder policy:** `app/render.py` chooses the first available encoder from `libopenh264`, `libvpx-vp9`, `libaom-av1`, `libsvtav1`, `mpeg4`, and refuses a build whose only video encoder is GPL (`libx264`/`libx265`/`libxvid`). The chosen encoder is recorded in `render.json`.
-- **Bundled runtime:** `engine/ffmpeg_runtime.json` pins BtbN's win64 LGPL FFmpeg n8.1 by URL and SHA-256; `scripts/fetch_ffmpeg.py` verifies the hash, the encoders and the licence notices; `_find_ffmpeg` prefers the bundled `engine/ffmpeg/ffmpeg.exe`, so the installed app assembles MP4s without a system FFmpeg. `release-windows.yml` fetches it, adds it to the SBOM and copies it (with notices) into both installer bundles.
+- **Bundled runtime:** `engine/ffmpeg_runtime.json` pins a dated win64 LGPL FFmpeg n8.1 release by URL and SHA-256 (from that release's `checksums.sha256`); `scripts/fetch_ffmpeg.py` verifies the hash, the encoders and the licence notices; `_find_ffmpeg` prefers the bundled `engine/ffmpeg/ffmpeg.exe`, so the installed app assembles MP4s without a system FFmpeg. `release-windows.yml` fetches it, adds it to the SBOM and copies it (with notices) into both installer bundles.
 - **Tests:** `tests/test_render_encoder.py` covers preference order, the native fallback, GPL-only refusal and bundled-path resolution; the render test asserts VP9 and never `libx264`.
 - **Verified:** static review only; the release bundle path is `workflow_dispatch` and is proven only when that workflow is run.
 - **Still open (next batch, voice half of the decision):** pin `piper-tts` into the lock via `.github/workflows/resolve-python-lock.yml`, bundle the wheels, and add the per-line recorded-WAV fallback with its endpoint and UI.
