@@ -1,5 +1,14 @@
 # Project Status — 2026-11-28
 
+## Live checkpoint — 2026-11-28 (Batch E: licensed clip library with baked cross-fades)
+
+- **A licensed clip pack is optional but real.** `app/animation_library.py` maps every brief `action_id` to a canonical clip name and defines a CC0-only manifest. `scripts/install_animation_clips.py` verifies the owner-supplied archive by SHA-256, guards paths and sizes, reads named glTF animations, requires coverage of every action and writes `animation_clips/animation_clips.json`. A bad hash or missing clip writes nothing.
+- **The worker actually uses clips.** `worker.gd` resolves the manifest's clip file, indexes animations by normalised name and samples bone-rotation tracks into the episode timeline with 0.25 s cross-fades at cue boundaries. Missing or unusable clips fall back to the procedural pose; each scene reports `clip_action_count`, `procedural_fallback_action_count` and the cross-fade length.
+- **Licence evidence:** the official Quaternius pack page and its itch.io listing both state CC0 for the Universal Animation Library; QAL packs are excluded because they forbid redistributing the assets. No clip file is bundled by the repository.
+- **Tests:** manifest and mapping validation, installer acceptance/bad-hash/missing-action cases, and a pinned-Godot test that installs a clip GLB and asserts a cue used the clip with baked keys instead of the fallback.
+- **Verified:** `Batch D` (`f4e776f`) passed both CI jobs, including the pinned-Godot location staging and the real-media MP4. Batch E awaits its own run; the native clip test runs only on Windows CI.
+- **Still open:** the actual CC0 pack is owner-supplied (itch.io download is gated), `piper-tts` remains outside the locked environment, and lip-sync is still a loudness envelope (audit B7).
+
 ## Live checkpoint — 2026-11-28 (Batch D: saved world locations drive episode scenes)
 
 - **A world owns its locations.** The world document (schema 1.0.2) carries `locations: [{id, label}]` and every object carries `location_id` (empty = shared scenery such as the street). Migration `1.0.1 → 1.0.2` adds the array on read; the API and the engine adapter both refuse an object whose location the world does not declare, and refuse duplicate or malformed location IDs. The World Builder has a Saved Locations panel and a per-object location selector.

@@ -1,5 +1,11 @@
 # Decision Log
 
+## 2026-11-28 — Batch E: licensed animation clips
+
+1. **Only the exact CC0 pack is eligible.** The Universal Animation Library is CC0 on its own page and itch.io listing. QAL packs are excluded: QAL v1.0 forbids redistributing the assets themselves, which conflicts with a redistributable application. No clip file is bundled by default; the owner installs one after hash review.
+2. **Bake blending into the episode animation.** Godot's runtime AnimationTree does not participate in the headless MovieWriter render, so clip tracks are sampled into the scene's own `Animation` with quaternion slerp over a 0.25 s fade-in/out. This makes transitions visible in the rendered MP4 without an extra runtime layer.
+3. **Procedural poses stay as the fallback.** An absent, partially installed or incompatible pack must never stop production; a scene reports whether each cue used a clip or the fallback so the limitation is visible rather than silent.
+
 ## 2026-11-28 — Background worker, progress and cancellation (Batch B)
 
 1. **One worker thread, one claimed job at a time.** The target hardware is the reason the queue was sequential; running two renders in parallel would trade reliability for a stall. A second job waits its turn and is visible as `queued`.

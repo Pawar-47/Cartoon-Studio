@@ -3,8 +3,8 @@
 ## Live checkpoint
 
 - Repository: `Pawar-47/Cartoon-Studio`; active branch `main`.
-- Newest batch: **Batch D — saved world locations drive episode scenes.** A world owns `locations`, a scene names one as `world:<id>`, the worker stages the scene there and drops the other places, and the story prompt offers the world's own vocabulary. Awaits its own CI run.
-- Last green CI: `87ab743`, both jobs (`test` 1m 24s, job `141047535082`; `real-media` 35s, job `141047535371`) — the pinned Godot rendered a real episode and the bundled LGPL FFmpeg produced a verified MP4.
+- Newest batch: **Batch E — licensed clip library with baked cross-fades.** A manifest maps action IDs to named glTF clips from an owner-installed CC0 pack; `worker.gd` samples clip bone tracks into the episode timeline with 0.25 s fade-in/out, falling back to procedural poses when no pack is installed. Awaits its own CI run.
+- Last green CI: `f4e776f`, both jobs (`test` 1m 57s, job `141054471473`; `real-media` 40s, job `141054471164`) — the pinned Godot staged five scenes across two saved world locations and the bundled LGPL FFmpeg produced a verified MP4.
 - Owner decisions on record: no GPL video encoder; voice uses both a pinned Piper TTS path and a recorded-WAV fallback.
 - Binding source: `docs/MASTER_EXECUTION_PROMPT.md`, all 25 parts. Do not create or switch development branches.
 
@@ -16,18 +16,18 @@ now has one vocabulary: a saved world location is a real place that episodes sta
 
 ## Immediate next steps
 
-1. **Batch E — animation library and blending.** Adopt a licensed clip set keyed by stable
-   `action_id`, load it in the worker, cross-fade at cue boundaries and keep the procedural pose
-   as the fallback, with a per-action native proof.
-2. **Batch F — Urdu lip-sync.** Replace the loudness envelope with a G2P → viseme track plus
-   blink/gaze, and keep the manual correction path the brief requires.
-3. **Voice pack.** Pin `piper-tts` and `onnxruntime` through
+1. **Batch F — Urdu lip-sync.** Replace the loudness envelope with a G2P → viseme track plus blink/gaze, and keep the manual correction path the brief requires.
+2. **Voice pack.** Pin `piper-tts` and `onnxruntime` through
    `.github/workflows/resolve-python-lock.yml`, vendor the wheels and the two `ur_PK` voices into
    the installer, and prove a real synthesis with `test_real_urdu_tts_sample`.
-4. **Props and audio cues (audit D4/D5).** Bind scene `props` to world objects and consume
+3. **Props and audio cues (audit D4/D5).** Bind scene `props` to world objects and consume
    `scene.audio` cues with a real mixing stage, or remove the fields until they are consumed.
+4. **Settings workspace and asset registry.** The brief's Part 16 still lacks a Settings page
+   and an in-app asset/licence registry (audit G7), and Part 12/13 have no runtime (audit B8).
 
 ## Recent completed batches
+
+### Batch E — licensed clip library with baked cross-fades
 
 ### Batch D — one vocabulary for story, world and production
 A world document (schema 1.0.2) carries `locations: [{id, label}]` and each object carries

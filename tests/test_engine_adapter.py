@@ -1147,6 +1147,88 @@ def test_pinned_godot_worker_builds_episode_scenes_with_world_and_character_glb(
     )
 
 
+def test_pinned_godot_worker_uses_installed_clip_instead_of_procedural_pose(tmp_path):
+    """A hash-verified CC0 clip is sampled and cross-faded in a real scene."""
+    import hashlib
+    import json
+
+    from app.animation_library import MANIFEST_FILENAME
+    from tools.godot_engine_proof.generate_humanoid_target_fixture import read_glb, write_glb
+
+    adapter = _real_godot_adapter(tmp_path)
+    project_root = tmp_path / "clip-episode-project"
+    project_root.mkdir()
+    clips_dir = project_root / "animation_clips"
+    clips_dir.mkdir()
+    # Build the clip GLB from the same CC0 Adventurer the cast uses, so its
+    # animation tracks address exactly the same skeleton bone names.
+    source_clip = ensure_model_asset(
+        project_root / "assets" / "character-library", "Male", "Adventurer"
+    )
+    document, chunks = read_glb(source_clip)
+    assert document["animations"]
+    document["animations"][0]["name"] = "Wave"
+    clip_path = clips_dir / "animation_library.glb"
+    write_glb(clip_path, document, chunks)
+    manifest = {
+        "manifest_version": 1,
+        "license": "CC0-1.0",
+        "license_source": "https://quaternius.com/packs/universalanimationlibrary.html",
+        "source_url": "https://quaternius.itch.io/universal-animation-library",
+        "sha256": hashlib.sha256(clip_path.read_bytes()).hexdigest(),
+        "clips": [{"name": "Wave", "file": "animation_library.glb"}],
+        "actions": {"wave": "wave", "idle": "wave", "walk": "wave"},
+        "clip_names": {"Wave": "Wave"},
+        "clip_file": "animation_library.glb",
+    }
+    (clips_dir / MANIFEST_FILENAME).write_text(json.dumps(manifest), encoding="utf-8")
+    world_path = project_root / "assets" / "worlds" / "town.tscn"
+    adapter.export_world_scene(
+        {"name": "Town", "theme": "small_town", "ground_color": "#789b58", "sky": "day", "objects": []},
+        world_path, allowed_root=project_root,
+    )
+    source_character_path = ensure_model_asset(
+        project_root / "assets" / "character-library", "Male", "Adventurer"
+    )
+    character_path = project_root / "assets" / "characters" / "ali.glb"
+    character_path.parent.mkdir(parents=True, exist_ok=True)
+    adapter.export_character_appearance(
+        source_character_path, [], [], character_path, allowed_root=project_root
+    )
+    episode = {
+        "title": "Clip Episode",
+        "characters": [{"id": "ali", "name": "Ali"}],
+        "scenes": [
+            {
+                "id": f"scene-{index}",
+                "title": f"Scene {index}",
+                "duration_seconds": 60,
+                "location_id": "street-cafe",
+                "character_ids": ["ali"],
+                "dialogue": [],
+                "actions": (
+                    [{"character_id": "ali", "action_id": "wave",
+                      "start_seconds": 1, "duration_seconds": 3}]
+                    if index == 1 else []
+                ),
+                "camera": [], "audio": [], "props": [],
+            }
+            for index in range(1, 6)
+        ],
+    }
+    output = project_root / "assets" / "episodes" / "clip-build" / "scenes"
+    result = adapter.export_episode_scenes(
+        episode, world_path, [{"id": "ali", "name": "Ali", "asset_path": str(character_path)}],
+        output, allowed_root=project_root,
+    )
+    assert result["ok"] is True
+    first = result["scenes"][0]
+    assert first["clip_action_count"] == 1
+    assert first["procedural_fallback_action_count"] == 0
+    assert first["skeletal_animation_track_count"] > 0
+    assert first["skeletal_animation_keyframe_count"] > first["skeletal_animation_track_count"]
+
+
 def test_pinned_godot_worker_stages_each_scene_in_its_saved_world_location(tmp_path):
     adapter = _real_godot_adapter(tmp_path)
     project_root = tmp_path / "located-episode-project"

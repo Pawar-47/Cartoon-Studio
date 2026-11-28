@@ -1,3 +1,17 @@
+## 2026-11-28 — Batch D passed Windows CI
+
+- **Result:** commit `f4e776f` passed both jobs: `test` 1m 57s (job `141054471473`) and `real-media` 40s (job `141054471164`). The pinned-Godot location-staging test ran in the `test` job: five scenes were staged across two saved world locations with their own objects plus the shared road, and other locations were dropped. The real-media job still produced its verified MP4 after the location change.
+
+## 2026-11-28 — Batch E: licensed clip library with baked cross-fading
+
+- **Finding:** Part 10 requires a reusable animation library with smooth transitions (audit B6). `worker.gd` had only procedural pose anchors and sampled bone rotations; no clip was ever loaded, and the brief's 28 action families were not backed by licensed clips.
+- **Licence check:** the official Quaternius page and itch.io listing for the *Universal Animation Library* both state CC0 for that exact pack. QAL packs are excluded: QAL v1.0 forbids redistributing the assets themselves. No clip is bundled by default.
+- **Change 1 — reviewed installer.** `app/animation_library.py` is the single mapping from stable `action_id` to normalised clip name and holds the manifest contract. `scripts/install_animation_clips.py <archive.zip> <project> --source-url … --sha256 …` verifies the archive hash, extracts GLB files under a size and path guard, reads their named glTF animations, requires a clip for every brief action, and writes `animation_clips/animation_clips.json`. A bad hash, missing clip or unsafe name is a hard error; nothing is written.
+- **Change 2 — baked blending in the worker.** `worker.gd` lazily loads the installed pack and resolves an action's clip by normalised name. `_add_episode_clip_track` samples the clip's bone rotation tracks into the episode animation at 12 samples per second and slerps from the rest pose across a 0.25 s fade-in and fade-out at each cue boundary, so cross-fades survive the headless MovieWriter render without a runtime AnimationTree. A missing or incompatible clip falls back to the existing procedural tracks; the scene result reports `clip_action_count`, `procedural_fallback_action_count` and the cross-fade seconds.
+- **Tests added:** action mapping and manifest validation; installer acceptance, bad-hash refusal (with no files written) and missing-action refusal; and a pinned-Godot test that installs a verified clip GLB, produces five scenes and asserts the wave cue used a clip with baked keys instead of the procedural fallback.
+- **Result:** awaiting the next Windows CI run. The native clip test runs only there; nothing in this batch was executed locally.
+- **Still open:** the installed pack is owner-supplied, not bundled — the real Quaternius download is gated behind itch.io, so CI proves the installer against a synthetic GLB while the actual CC0 pack needs the owner's download. `piper-tts` remains outside the locked environment, and lip-sync is still a loudness envelope (audit B7).
+
 ## 2026-11-28 — Batch D: one vocabulary for story, world and production
 
 - **Finding:** a scene's `location_id` was decorative. It had to be one of 70 Ara-derived catalog names (`street-cafe`, `cyclorama`, `night-club`…), while the World Builder's vocabulary was object kinds with coordinates, so a saved episode could not name a saved place. `worker.gd` instantiated the entire world into every scene and stored `location_id` as metadata nothing read, so "the same place looks the same every episode" was unenforced (audit B5).

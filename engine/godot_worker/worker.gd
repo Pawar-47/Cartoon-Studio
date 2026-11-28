@@ -6,6 +6,14 @@ const PROTOCOL_VERSION := 1
 # face surface is therefore identified after export/re-import by this material name.
 const GENERATED_FACE_SURFACE_NAME := "CartoonStudio_GeneratedFace"
 
+# A licensed clip pack is optional. When installed, the manifest maps stable
+# action IDs to GLB files; the worker samples matching bone tracks into the
+# episode animation and cross-fades them at cue boundaries. A missing or
+# unusable clip always falls back to the procedural pose, so production never
+# stops because an optional asset pack is absent.
+const ANIMATION_CLIP_MANIFEST := "animation_clips.json"
+const CLIP_CROSSFADE_SECONDS := 0.25
+
 
 func _initialize() -> void:
     var arguments := OS.get_cmdline_user_args()
@@ -3535,6 +3543,179 @@ func _episode_action_bone_rotation(action_id: String, role: String, phase: float
     return Vector3.ZERO
 
 
+func _load_episode_clip_manifest(project_root: String) -> Dictionary:
+    var manifest_path := project_root.path_join("animation_clips/animation_clips.json")
+    if not FileAccess.file_exists(manifest_path):
+        manifest_path = project_root.path_join(ANIMATION_CLIP_MANIFEST)
+    if not FileAccess.file_exists(manifest_path):
+        return {}
+    var manifest_text := FileAccess.get_file_as_string(manifest_path)
+    var parsed: Variant = JSON.parse_string(manifest_text)
+    if typeof(parsed) != TYPE_DICTIONARY:
+        return {}
+    var manifest: Dictionary = parsed
+    if int(manifest.get("manifest_version", -1)) != 1:
+        return {}
+    if str(manifest.get("license", "")) != "CC0-1.0":
+        return {}
+    var action_map: Variant = manifest.get("actions", {})
+    if typeof(action_map) != TYPE_DICTIONARY:
+        return {}
+    return manifest
+
+
+func _normalise_clip_name(value: String) -> String:
+    var result := ""
+    for character in value.to_lower():
+        if (character >= "a" and character <= "z") or (character >= "0" and character <= "9"):
+            result += character
+    return result
+
+
+func _episode_clip_animations(path: String) -> Dictionary:
+    """Load a clip GLB and index its Animation resources by normalised name."""
+    var document := GLTFDocument.new()
+    var state := GLTFState.new()
+    if document.append_from_file(path, state) != OK:
+        return {}
+    var scene := document.generate_scene(state)
+    if scene == null:
+        return {}
+    var animations_by_name: Dictionary = {}
+    for player_node in scene.find_children("*", "AnimationPlayer", true, false):
+        var player := player_node as AnimationPlayer
+        if player == null:
+            continue
+        for animation_name in player.get_animation_list():
+            var clip: Animation = player.get_animation(animation_name)
+            if clip != null:
+                animations_by_name[_normalise_clip_name(str(animation_name))] = clip
+    scene.free()
+    return animations_by_name
+
+
+func _episode_clip_for_action(
+    manifest: Dictionary,
+    project_root: String,
+    action_id: String,
+    cache: Dictionary
+) -> Animation:
+    var action_map: Dictionary = manifest.get("actions", {})
+    var desired_name := str(action_map.get(action_id, ""))
+    if desired_name.is_empty():
+        return null
+    var file_name := str(manifest.get("clip_file", ""))
+    if file_name.is_empty() or "/" in file_name or "\\" in file_name:
+        return null
+    if cache.has(file_name):
+        var loaded: Dictionary = cache[file_name]
+        var cached_clip: Animation = loaded.get(desired_name, null)
+        return cached_clip
+    var clip_path := project_root.path_join("animation_clips").path_join(file_name)
+    if not clip_path.to_lower().begins_with(project_root.trim_suffix("/").to_lower() + "/") or not FileAccess.file_exists(clip_path):
+        cache[file_name] = {}
+        return null
+    var animations := _episode_clip_animations(clip_path)
+    cache[file_name] = animations
+    return animations.get(desired_name, null)
+
+
+func _clip_bone_index(clip_path: String, skeleton: Skeleton3D) -> int:
+    """Resolve an imported clip's animated bone against this character's rig."""
+    var path := clip_path.trim_prefix("bones/")
+    if path.ends_with(":rotation"):
+        path = path.trim_suffix(":rotation")
+    if path.ends_with("/rotation"):
+        path = path.trim_suffix("/rotation")
+    # glTF track paths can include a rig prefix and node path. Try the full
+    # tail first, then each colon-separated segment from the right.
+    var candidates := [path.get_file()]
+    var segments := path.split(":")
+    for index in range(segments.size() - 1, -1, -1):
+        var segment := str(segments[index]).get_file()
+        if not candidates.has(segment):
+            candidates.append(segment)
+    for candidate in candidates:
+        if candidate.is_valid_int():
+            var numeric := int(candidate)
+            if numeric >= 0 and numeric < skeleton.get_bone_count():
+                return numeric
+        var found := skeleton.find_bone(candidate)
+        if found >= 0:
+            return found
+        for bone_index in range(skeleton.get_bone_count()):
+            if str(skeleton.get_bone_name(bone_index)).get_file() == candidate:
+                return bone_index
+    return -1
+
+
+func _add_episode_clip_track(
+    animation: Animation,
+    scene_root: Node3D,
+    skeleton: Skeleton3D,
+    clip: Animation,
+    start_time: float,
+    end_time: float
+) -> Dictionary:
+    """Sample a licensed clip's bone rotations into the episode timeline.
+
+    Blending is baked into the keys: each sample is a quaternion slerp between
+    the previous clip pose and this one across a short cross-fade, so the
+    MovieWriter render sees the transition without a runtime AnimationTree.
+    """
+    if clip.get_track_count() == 0:
+        return 0
+    var skeleton_path := str(scene_root.get_path_to(skeleton))
+    var sample_count := maxi(3, int(ceil((end_time - start_time) * 12.0)))
+    var track_indices: Dictionary = {}
+    var track_count := 0
+    for clip_track_index in range(clip.get_track_count()):
+        if clip.track_get_type(clip_track_index) != Animation.TYPE_VALUE:
+            continue
+        var clip_path := str(clip.track_get_path(clip_track_index))
+        var bone_index := _clip_bone_index(clip_path, skeleton)
+        if bone_index < 0 or bone_index >= skeleton.get_bone_count():
+            continue
+        var target_path := NodePath(skeleton_path + ":bones/" + str(bone_index) + "/rotation")
+        var existing := animation.find_track(target_path, Animation.TYPE_VALUE)
+        if existing < 0:
+            existing = animation.add_track(Animation.TYPE_VALUE)
+            animation.track_set_path(existing, target_path)
+            track_count += 1
+        track_indices[clip_track_index] = existing
+    if track_count == 0:
+        return 0
+    var blend_seconds := minf(CLIP_CROSSFADE_SECONDS, maxf((end_time - start_time) * 0.25, 0.0))
+    var keyframe_count := 0
+    for sample_index in range(sample_count):
+        var phase := float(sample_index) / float(sample_count - 1)
+        var key_time := lerpf(start_time, end_time, phase)
+        var source_time := phase * clip.length
+        var weight := 1.0
+        if blend_seconds > 0.0:
+            var elapsed := key_time - start_time
+            var fade_in := clampf(elapsed / blend_seconds, 0.0, 1.0)
+            var fade_out := clampf((end_time - key_time) / blend_seconds, 0.0, 1.0)
+            weight = minf(fade_in, fade_out)
+        for clip_track_index in track_indices:
+            var target_track := int(track_indices[clip_track_index])
+            var sampled: Variant = clip.value_track_interpolate(clip_track_index, source_time)
+            var clip_rotation := sampled as Quaternion
+            if clip_rotation == null:
+                continue
+            var bone_index := _clip_bone_index(str(clip.track_get_path(clip_track_index)), skeleton)
+            if bone_index < 0:
+                continue
+            var base_rotation := skeleton.get_bone_pose_rotation(bone_index)
+            animation.track_insert_key(
+                target_track,
+                key_time,
+                base_rotation.slerp(clip_rotation, weight)
+            )
+            keyframe_count += 1
+    return {"track_count": track_count, "keyframe_count": keyframe_count}
+
+
 func _add_episode_skeletal_action_tracks(
     animation: Animation,
     scene_root: Node3D,
@@ -3586,9 +3767,14 @@ func _build_episode_timeline(
     scene_root: Node3D,
     scene_data: Dictionary,
     character_anchors: Dictionary,
-    stage_origin: Vector3 = Vector3.ZERO
+    stage_origin: Vector3 = Vector3.ZERO,
+    project_root: String = ""
 ) -> Dictionary:
     var duration := float(scene_data.get("duration_seconds", 30))
+    var clip_manifest := _load_episode_clip_manifest(project_root)
+    var clip_cache: Dictionary = {}
+    var clip_action_count := 0
+    var fallback_action_count := 0
     var animation := Animation.new()
     animation.length = duration
     var track_count := 0
@@ -3661,14 +3847,37 @@ func _build_episode_timeline(
             )
             animation.track_insert_key(rotation_track, end_time, base_rotation)
             track_count += 2
-            var skeletal_result := _add_episode_skeletal_action_tracks(
-                animation, scene_root, anchor, str(cue.get("action_id", "idle")),
-                start_time, end_time
-            )
-            var skeletal_tracks := int(skeletal_result.get("track_count", 0))
-            skeletal_animation_track_count += skeletal_tracks
-            skeletal_animation_keyframe_count += int(skeletal_result.get("keyframe_count", 0))
-            track_count += skeletal_tracks
+            var clip_used := false
+            if not clip_manifest.is_empty():
+                var clip: Animation = _episode_clip_for_action(
+                    clip_manifest, project_root, str(cue.get("action_id", "idle")), clip_cache
+                )
+                if clip != null:
+                    for skeleton_value in anchor.find_children("*", "Skeleton3D", true, false):
+                        var skeleton := skeleton_value as Skeleton3D
+                        if skeleton == null:
+                            continue
+                        var clip_result := _add_episode_clip_track(
+                            animation, scene_root, skeleton, clip, start_time, end_time
+                        )
+                        var clip_tracks := int(clip_result.get("track_count", 0))
+                        if clip_tracks > 0:
+                            clip_used = true
+                            clip_action_count += 1
+                            skeletal_animation_track_count += clip_tracks
+                            skeletal_animation_keyframe_count += int(clip_result.get("keyframe_count", 0))
+                            track_count += clip_tracks
+                            break
+            if not clip_used:
+                fallback_action_count += 1
+                var skeletal_result := _add_episode_skeletal_action_tracks(
+                    animation, scene_root, anchor, str(cue.get("action_id", "idle")),
+                    start_time, end_time
+                )
+                var skeletal_tracks := int(skeletal_result.get("track_count", 0))
+                skeletal_animation_track_count += skeletal_tracks
+                skeletal_animation_keyframe_count += int(skeletal_result.get("keyframe_count", 0))
+                track_count += skeletal_tracks
             var expression_id := str(cue.get("expression", "neutral"))
             if expression_id != "neutral":
                 var expression_tracks := _add_episode_expression_tracks(
@@ -3818,7 +4027,10 @@ func _build_episode_timeline(
         "speech_mouth_keyframe_count": speech_mouth_keyframe_count,
         "audio_driven_speech_cue_count": audio_driven_speech_cue_count,
         "audio_envelope_keyframe_count": audio_envelope_keyframe_count,
-        "camera_cue_count": camera_cue_count
+        "camera_cue_count": camera_cue_count,
+        "clip_action_count": clip_action_count,
+        "procedural_fallback_action_count": fallback_action_count,
+        "clip_crossfade_seconds": CLIP_CROSSFADE_SECONDS
     }
 
 
@@ -3965,7 +4177,7 @@ func _export_episode_scenes(payload: Dictionary) -> Dictionary:
             character_anchor.add_child(character_scene)
             placed_count += 1
         var timeline_result := _build_episode_timeline(
-            scene_root, scene_data, character_anchors, stage_origin
+            scene_root, scene_data, character_anchors, stage_origin, project_root
         )
         if not bool(timeline_result.get("ok", false)):
             scene_root.free()
@@ -4024,7 +4236,10 @@ func _export_episode_scenes(payload: Dictionary) -> Dictionary:
             "speech_mouth_keyframe_count": timeline_result["speech_mouth_keyframe_count"],
             "audio_driven_speech_cue_count": timeline_result["audio_driven_speech_cue_count"],
             "audio_envelope_keyframe_count": timeline_result["audio_envelope_keyframe_count"],
-            "camera_cue_count": timeline_result["camera_cue_count"]
+            "camera_cue_count": timeline_result["camera_cue_count"],
+            "clip_action_count": timeline_result["clip_action_count"],
+            "procedural_fallback_action_count": timeline_result["procedural_fallback_action_count"],
+            "clip_crossfade_seconds": timeline_result["clip_crossfade_seconds"]
         })
     return {
         "ok": true,
