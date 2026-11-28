@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -8,6 +9,13 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from app.audio import VOICE_CATALOG
 
 SUPPORTED_VOICE_IDS = tuple(VOICE_CATALOG)
+
+# A scene names either a catalog backdrop or a location owned by the episode's
+# saved world. The ``world:`` prefix keeps the two vocabularies apart, so a typo
+# can never silently resolve to a different place, and a world's own locations
+# never collide with the catalog's identifiers.
+WORLD_LOCATION_PREFIX = "world:"
+WORLD_LOCATION_PATTERN = r"^world:[a-z][a-z0-9_-]{0,39}$"
 
 
 class StrictModel(BaseModel):
@@ -241,9 +249,21 @@ class ScenePlan(StrictModel):
     @field_validator("location_id")
     @classmethod
     def validate_location_id(cls, value: str) -> str:
-        if value not in LOCATION_CATALOG:
-            raise ValueError("Location ID is not in the production scene catalog.")
-        return value
+        """Accept a catalog backdrop or a location the episode's world owns.
+
+        A saved world owns reusable locations, so a scene names one as
+        ``world:<location-id>``. The project-scoped save checks that the
+        reference exists in the selected world; anything that is neither a
+        catalog ID nor a world reference is refused here.
+        """
+        if value in LOCATION_CATALOG:
+            return value
+        if re.fullmatch(WORLD_LOCATION_PATTERN, value):
+            return value
+        raise ValueError(
+            "Location ID must be a production scene catalog ID or a saved world "
+            "location written as world:<location-id>."
+        )
 
 
 class EpisodePlan(StrictModel):
@@ -332,6 +352,13 @@ class EpisodePlan(StrictModel):
         return self
 
 
+class WorldLocationRef(StrictModel):
+    """One saved location of the episode's world, as offered to the prompt."""
+
+    id: str = Field(min_length=1, max_length=40, pattern=r"^[a-z][a-z0-9_-]*$")
+    label: str = Field(min_length=1, max_length=80)
+
+
 class StoryPromptRequest(StrictModel):
     idea: str = Field(min_length=5, max_length=2000)
     language: Literal["ur"] = "ur"
@@ -342,6 +369,7 @@ class StoryPromptRequest(StrictModel):
     continuity_notes: str = Field(default="", max_length=2000)
     world_context: str = Field(default="", max_length=3000)
     world_id: str | None = Field(default=None, max_length=64)
+    world_locations: list[WorldLocationRef] = Field(default_factory=list, max_length=24)
 
 
 def build_story_prompt(request: StoryPromptRequest) -> str:
@@ -356,6 +384,21 @@ def build_story_prompt(request: StoryPromptRequest) -> str:
     location_catalog = "\n".join(
         f"- {location_id}: {name}" for location_id, name in LOCATION_CATALOG.items()
     )
+    if request.world_locations:
+        saved_locations = "\n".join(
+            f"- {WORLD_LOCATION_PREFIX}{item.id}: {item.label}"
+            for item in request.world_locations
+        )
+        location_rule = (
+            "This episode is set in a saved world, so write every scene's location_id as\n"
+            "  world:<location-id> using one of the saved world locations listed below.\n"
+            "  Use a location catalog ID only for a scene that happens outside that world."
+        )
+    else:
+        saved_locations = "None supplied; this episode is not bound to saved world locations."
+        location_rule = (
+            "Use only exact location_id values from the production location catalog below."
+        )
     expression_ids = ", ".join(EXPRESSION_IDS)
     continuity = request.continuity_notes or (
         "Preserve established character identities and relationships."
@@ -405,11 +448,15 @@ PRODUCTION RULES:
 - Use action_id values that can later map to the reusable animation library.
 - Use only wide, medium or close shots and locked, orbit or dolly camera movement.
 - Use only cut or fade scene transitions.
-- Use only exact location_id values from the production location catalog below.
+LOCATION RULES:
+{location_rule}
 - Use only these exact expression IDs: {expression_ids}.
 - Use only the exact action IDs listed below; never invent clip IDs.
 
-VALID LOCATION CATALOG:
+VALID SAVED WORLD LOCATIONS:
+{saved_locations}
+
+VALID LOCATION CATALOG (generic backdrops):
 {location_catalog}
 
 VALID EXPRESSION IDS:

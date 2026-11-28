@@ -16,3 +16,12 @@
 .object-tool-group strong{grid-column:1/-1;font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted,#9aa6b6)}
 .object-tool-group button{min-width:0;white-space:normal}
 @media(max-width:640px){.object-tool-group{grid-template-columns:1fr 1fr}}
+
+
+.location-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.location-list li{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border:1px solid var(--line,#2b3440);border-radius:9px;font-size:12px}
+.location-list .location-id{display:block;color:var(--muted,#9aa6b6);font-size:11px}
+.location-list .location-empty{justify-content:flex-start;color:var(--muted,#9aa6b6)}
+.location-list button{padding:4px 8px;font-size:11px;background:#5d3030;color:#fff}
+.location-add{display:grid;grid-template-columns:1fr auto;gap:8px}
+.location-add button{white-space:nowrap;padding:8px 10px;font-size:12px}

@@ -564,6 +564,101 @@ def test_roman_urdu_subtitles_require_planned_subtitle_text():
     EpisodePlan.model_validate(plan)
 
 
+def test_world_locations_persist_and_objects_must_reference_a_declared_one(
+    tmp_path, monkeypatch
+):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "world-locations.sqlite3")
+    monkeypatch.setattr(main, "_INITIALIZED_DB_KEY", None)
+    project = client.post("/api/projects", json={"name": "Located World"})
+    project_id = project.json()["id"]
+    payload = {
+        "name": "Market Town",
+        "locations": [
+            {"id": "market-square", "label": "Market square"},
+            {"id": "corner-shop", "label": "Corner shop"},
+        ],
+        "objects": [
+            {
+                "id": "shop-1", "kind": "shop", "label": "Corner Shop",
+                "x": 30, "y": 30, "location_id": "corner-shop",
+            },
+            {
+                "id": "road-1", "kind": "road", "label": "Main Road",
+                "x": 50, "y": 60, "width": 80,
+            },
+        ],
+    }
+    created = client.post(f"/api/projects/{project_id}/worlds", json=payload)
+    assert created.status_code == 201
+    world_id = created.json()["id"]
+    assert [item["id"] for item in created.json()["locations"]] == [
+        "market-square",
+        "corner-shop",
+    ]
+    assert created.json()["objects"][0]["location_id"] == "corner-shop"
+    # An object without a location is shared scenery, not a location member.
+    assert created.json()["objects"][1]["location_id"] == ""
+
+    reopened = client.get(f"/api/projects/{project_id}/worlds/{world_id}")
+    assert [item["id"] for item in reopened.json()["locations"]] == [
+        "market-square",
+        "corner-shop",
+    ]
+
+    undeclared = {
+        **payload,
+        "objects": [{**payload["objects"][0], "location_id": "nowhere"}],
+    }
+    rejected = client.put(f"/api/projects/{project_id}/worlds/{world_id}", json=undeclared)
+    assert rejected.status_code == 422
+    assert "undeclared location" in rejected.json()["detail"]
+
+    duplicated = {
+        **payload,
+        "locations": [
+            {"id": "market-square", "label": "Market square"},
+            {"id": "market-square", "label": "Same square"},
+        ],
+        "objects": [],
+    }
+    duplicates = client.put(
+        f"/api/projects/{project_id}/worlds/{world_id}", json=duplicated
+    )
+    assert duplicates.status_code == 422
+
+
+def test_world_document_migration_adds_saved_locations():
+    from app.storage import LATEST_WORLD_SCHEMA_VERSION, migrate_world_document
+
+    document = {
+        "schema_version": "1.0.1",
+        "data": {"name": "Old Town", "objects": [{"id": "obj-1", "kind": "shop"}]},
+    }
+    migrated = migrate_world_document(document)
+    assert migrated["schema_version"] == LATEST_WORLD_SCHEMA_VERSION == "1.0.2"
+    assert migrated["data"]["locations"] == []
+    assert migrated["data"]["objects"][0]["location_kind"] == "generic"
+
+    malformed = {
+        "schema_version": "1.0.2",
+        "data": {
+            "locations": [
+                {"id": "corner-shop", "label": "Corner shop"},
+                {"id": "", "label": "No identifier"},
+                "not-a-location",
+                {"id": "corner-shop", "label": "Duplicate"},
+            ],
+            "objects": [],
+        },
+    }
+    assert migrate_world_document(malformed)["data"]["locations"] == [
+        {"id": "corner-shop", "label": "Corner shop"}
+    ]
+
+
 def test_world_schema_version_stored_on_create(tmp_path, monkeypatch):
     from app import main
     monkeypatch.setattr(main, "DATA_DIR", tmp_path)
@@ -577,7 +672,7 @@ def test_world_schema_version_stored_on_create(tmp_path, monkeypatch):
     assert created.status_code == 201
     world_path = tmp_path / "projects" / project_id / "worlds" / f"{created.json()['id']}.json"
     document = json.loads(world_path.read_text(encoding="utf-8"))
-    assert document["schema_version"] == "1.0.1"
+    assert document["schema_version"] == main.LATEST_WORLD_SCHEMA_VERSION
 
 
 def test_world_create_with_minimal_fields_fills_defaults(tmp_path, monkeypatch):
@@ -913,6 +1008,27 @@ def test_story_prompt_builder_returns_schema():
     assert "properties" in response.json()["schema"]
 
 
+def test_story_prompt_lists_the_saved_world_locations():
+    response = client.post(
+        "/api/story-prompts",
+        json={
+            "idea": "Two friends fix a mix-up at the corner shop before the market closes.",
+            "world_id": "5b0d1f6c-0000-4000-8000-000000000000",
+            "world_locations": [
+                {"id": "corner-shop", "label": "Corner shop"},
+                {"id": "market-square", "label": "Market square"},
+            ],
+        },
+    )
+    assert response.status_code == 200
+    prompt = response.json()["prompt"]
+    assert "This episode is set in a saved world" in prompt
+    assert "world:corner-shop: Corner shop" in prompt
+    assert "world:market-square: Market square" in prompt
+    # The generic catalog stays available for scenes outside the saved world.
+    assert "street-cafe" in prompt
+
+
 def test_story_plan_validation_and_persistence(tmp_path, monkeypatch):
     from app import main
 
@@ -968,6 +1084,14 @@ def test_story_plan_rejects_unknown_location_id():
     plan["scenes"][0]["location_id"] = "imaginary-market"
     response = client.post("/api/story-plans/validate", json=plan)
     assert response.status_code == 422
+
+
+def test_story_plan_accepts_a_saved_world_location_reference():
+    plan = valid_episode_plan()
+    plan["scenes"][0]["location_id"] = "world:corner-shop"
+    response = client.post("/api/story-plans/validate", json=plan)
+    assert response.status_code == 200
+    assert response.json()["scenes"][0]["location_id"] == "world:corner-shop"
 
 
 def test_story_plan_rejects_unknown_expression():
@@ -1427,7 +1551,7 @@ def test_world_object_defaults_survive_create_and_update(tmp_path, monkeypatch):
             encoding="utf-8"
         )
     )
-    assert document["schema_version"] == "1.0.1"
+    assert document["schema_version"] == "1.0.2"
     assert document["data"]["objects"][0]["location_kind"] == "generic"
 
 
@@ -1479,6 +1603,69 @@ def test_episode_can_be_bound_to_an_exported_world_in_its_project(tmp_path, monk
     assert saved.json()["plan"]["world_id"] == world.json()["id"]
     reopened = client.get(f"/api/projects/{project_id}/story")
     assert reopened.json()["plan"]["world_id"] == world.json()["id"]
+
+
+def test_episode_scene_locations_must_belong_to_the_selected_world(
+    tmp_path, monkeypatch
+):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "episode-world-locations.sqlite3")
+    monkeypatch.setattr(main, "_INITIALIZED_DB_KEY", None)
+    project = client.post("/api/projects", json={"name": "Located Episode"})
+    project_id = project.json()["id"]
+    world = client.post(
+        f"/api/projects/{project_id}/worlds",
+        json={
+            "name": "Market Town",
+            "locations": [
+                {"id": "corner-shop", "label": "Corner shop"},
+                {"id": "market-square", "label": "Market square"},
+            ],
+            "objects": [],
+        },
+    )
+    assert world.status_code == 201
+    world_id = world.json()["id"]
+
+    class FakeWorldExporter:
+        def export_world_scene(self, world_data, output_path, allowed_root, **kwargs):
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text("[gd_scene format=3]", encoding="utf-8")
+            output_path.with_suffix(".glb").write_bytes(b"glTF-preview")
+            return {
+                "ok": True,
+                "object_count": 0,
+                "scene_reopened": True,
+                "lighting_preset": "day",
+            }
+
+    monkeypatch.setattr(main, "get_engine_adapter", FakeWorldExporter)
+    exported = client.post(f"/api/projects/{project_id}/worlds/{world_id}/export")
+    assert exported.status_code == 200
+
+    plan = valid_episode_plan()
+    plan["world_id"] = world_id
+    for scene in plan["scenes"]:
+        scene["location_id"] = "world:corner-shop"
+    saved = client.put(f"/api/projects/{project_id}/story", json=plan)
+    assert saved.status_code == 200
+    assert saved.json()["plan"]["scenes"][0]["location_id"] == "world:corner-shop"
+
+    # A location the world does not own is refused, not silently staged elsewhere.
+    plan["scenes"][0]["location_id"] = "world:town-hall"
+    rejected = client.put(f"/api/projects/{project_id}/story", json=plan)
+    assert rejected.status_code == 422
+    assert "world:town-hall" in rejected.json()["detail"]
+    assert "world:corner-shop" in rejected.json()["detail"]
+
+    # A saved-world reference without a selected world is refused too.
+    plan["scenes"][0]["location_id"] = "world:corner-shop"
+    plan["world_id"] = None
+    missing_world = client.put(f"/api/projects/{project_id}/story", json=plan)
+    assert missing_world.status_code == 422
+    assert "select the world first" in missing_world.json()["detail"]
 
 
 def test_episode_rejects_unexported_or_foreign_world_reference(tmp_path, monkeypatch):

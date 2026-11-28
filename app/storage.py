@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 LATEST_SCHEMA_VERSION = 4
-LATEST_WORLD_SCHEMA_VERSION = "1.0.1"
+LATEST_WORLD_SCHEMA_VERSION = "1.0.2"
 # Portable envelope version shared by every document type (project, world, episode, character).
 DOCUMENT_SCHEMA_VERSION = "1.0.0"
 
@@ -189,8 +189,24 @@ def _migration_world_1_0_0_to_1_0_1(document: dict[str, Any]) -> dict[str, Any]:
     return document
 
 
+def _migration_world_1_0_1_to_1_0_2(document: dict[str, Any]) -> dict[str, Any]:
+    """Migrate a world document from schema 1.0.1 to 1.0.2.
+
+    1.0.2 gives a world its own reusable locations: a ``locations`` array an
+    episode scene can name, plus the per-object ``location_id`` that says which
+    saved location an object belongs to. Objects that predate it stay shared
+    scenery, which is what an absent ``location_id`` already means.
+    """
+    data = document.setdefault("data", {})
+    if not isinstance(data.get("locations"), list):
+        data["locations"] = []
+    document["schema_version"] = "1.0.2"
+    return document
+
+
 WORLD_MIGRATIONS = (
     ("1.0.0", "1.0.1", _migration_world_1_0_0_to_1_0_1),
+    ("1.0.1", "1.0.2", _migration_world_1_0_1_to_1_0_2),
 )
 
 WORLD_MIGRATION_STEPS = {
@@ -203,12 +219,32 @@ def _normalize_world_objects(document: dict[str, Any]) -> dict[str, Any]:
     data = document.get("data")
     if not isinstance(data, dict):
         return document
+    locations = data.get("locations")
+    normalized_locations: list[dict[str, str]] = []
+    seen_locations: set[str] = set()
+    if isinstance(locations, list):
+        for item in locations:
+            if not isinstance(item, dict):
+                continue
+            location_id = str(item.get("id", "")).strip()
+            label = str(item.get("label", "")).strip()
+            if not location_id or not label or location_id in seen_locations:
+                continue
+            seen_locations.add(location_id)
+            normalized_locations.append({"id": location_id, "label": label})
+    data["locations"] = normalized_locations
     objects = data.get("objects")
     if not isinstance(objects, list):
         return document
     for obj in objects:
-        if isinstance(obj, dict) and "location_kind" not in obj:
+        if not isinstance(obj, dict):
+            continue
+        if "location_kind" not in obj:
             obj["location_kind"] = "generic"
+        # An object without a saved location is shared scenery, so the field is
+        # always present with that meaning rather than sometimes absent.
+        if "location_id" not in obj:
+            obj["location_id"] = ""
     return document
 
 

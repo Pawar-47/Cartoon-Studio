@@ -820,11 +820,12 @@ def test_world_scene_export_validates_layout_and_builds_worker_request(tmp_path,
         "theme": "small_town",
         "sky": "day",
         "ground_color": "#789b58",
+        "locations": [{"id": "town-green", "label": "Town green"}],
         "objects": [
             {
                 "id": "tree-1", "kind": "tree", "label": "Tree",
                 "x": 50, "y": 50, "width": 12, "height": 10,
-                "rotation": 0, "color": "#4c9850",
+                "rotation": 0, "color": "#4c9850", "location_id": "town-green",
             }
         ],
     }
@@ -832,6 +833,9 @@ def test_world_scene_export_validates_layout_and_builds_worker_request(tmp_path,
     assert result["ok"] is True
     assert captured["operation"] == "export_world_scene"
     assert captured["payload"]["world"] == world
+    assert captured["payload"]["world"]["locations"] == [
+        {"id": "town-green", "label": "Town green"}
+    ]
     assert output.parent.is_dir()
 
 
@@ -844,6 +848,92 @@ def test_world_scene_export_rejects_output_path_escape(tmp_path):
             {"objects": []}, tmp_path / "outside.tscn", allowed_root=project_root
         )
 
+
+
+def test_world_scene_export_rejects_an_undeclared_object_location(tmp_path):
+    adapter = _fake_adapter(tmp_path)
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    output = project_root / "assets" / "worlds" / "town.tscn"
+    with pytest.raises(EnginePathError, match="does not declare"):
+        adapter.export_world_scene(
+            {
+                "name": "Town",
+                "locations": [{"id": "corner-shop", "label": "Corner shop"}],
+                "objects": [
+                    {
+                        "id": "shop-1", "kind": "shop", "label": "Shop",
+                        "x": 20, "y": 20, "location_id": "town-hall",
+                    }
+                ],
+            },
+            output,
+            allowed_root=project_root,
+        )
+
+
+def test_world_scene_export_rejects_malformed_saved_locations(tmp_path):
+    adapter = _fake_adapter(tmp_path)
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    output = project_root / "assets" / "worlds" / "town.tscn"
+    with pytest.raises(EnginePathError, match="lowercase slugs"):
+        adapter.export_world_scene(
+            {"name": "Town", "locations": [{"id": "Town Hall", "label": "Hall"}], "objects": []},
+            output,
+            allowed_root=project_root,
+        )
+    with pytest.raises(EnginePathError, match="unique"):
+        adapter.export_world_scene(
+            {
+                "name": "Town",
+                "locations": [
+                    {"id": "hall", "label": "Hall"},
+                    {"id": "hall", "label": "Same hall"},
+                ],
+                "objects": [],
+            },
+            output,
+            allowed_root=project_root,
+        )
+
+
+def test_episode_scene_export_rejects_an_invalid_location_reference(tmp_path):
+    adapter = _fake_adapter(tmp_path)
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    world_path = project_root / "worlds" / "town.tscn"
+    world_path.parent.mkdir(parents=True)
+    world_path.write_text("[gd_scene format=3]", encoding="utf-8")
+    character_path = project_root / "assets" / "characters" / "ali.glb"
+    character_path.parent.mkdir(parents=True)
+    character_path.write_bytes(b"glTF")
+
+    def episode_with(location_id):
+        return {
+            "title": "Location Test",
+            "characters": [{"id": "ali", "name": "Ali"}],
+            "scenes": [
+                {
+                    "id": f"scene-{index}",
+                    "title": f"Scene {index}",
+                    "duration_seconds": 60,
+                    "location_id": location_id,
+                    "character_ids": ["ali"],
+                    "dialogue": [], "actions": [], "camera": [], "audio": [], "props": [],
+                }
+                for index in range(1, 6)
+            ],
+        }
+
+    with pytest.raises(EnginePathError, match="location ID"):
+        adapter.export_episode_scenes(
+            episode_with("Upper Case Place"),
+            world_path,
+            [{"id": "ali", "name": "Ali", "asset_path": str(character_path)}],
+            project_root / "assets" / "episodes" / "build-invalid" / "scenes",
+            allowed_root=project_root,
+        )
 
 
 def test_pinned_godot_worker_exports_and_reopens_a_real_world_scene(tmp_path):
@@ -1055,6 +1145,99 @@ def test_pinned_godot_worker_builds_episode_scenes_with_world_and_character_glb(
         and scene["animation_track_count"] == 3
         for scene in result["scenes"][1:]
     )
+
+
+def test_pinned_godot_worker_stages_each_scene_in_its_saved_world_location(tmp_path):
+    adapter = _real_godot_adapter(tmp_path)
+    project_root = tmp_path / "located-episode-project"
+    project_root.mkdir()
+    world_path = project_root / "assets" / "worlds" / "located-town.tscn"
+    world_export = adapter.export_world_scene(
+        {
+            "name": "Located Town",
+            "theme": "market",
+            "ground_color": "#789b58",
+            "sky": "day",
+            "locations": [
+                {"id": "corner-shop", "label": "Corner shop"},
+                {"id": "market-square", "label": "Market square"},
+            ],
+            "objects": [
+                {
+                    "id": "road-1", "kind": "road", "label": "Main Road",
+                    "x": 50, "y": 50, "width": 80, "height": 12,
+                    "rotation": 0, "color": "#4b4d50",
+                },
+                {
+                    "id": "shop-1", "kind": "shop", "label": "Corner Shop",
+                    "x": 26, "y": 30, "width": 18, "height": 16,
+                    "rotation": 0, "color": "#d9a46b", "location_id": "corner-shop",
+                },
+                {
+                    "id": "park-1", "kind": "park", "label": "Market Green",
+                    "x": 82, "y": 82, "width": 20, "height": 18,
+                    "rotation": 0, "color": "#70a35b", "location_id": "market-square",
+                },
+            ],
+        },
+        world_path,
+        allowed_root=project_root,
+    )
+    assert world_export["location_count"] == 2
+    assert world_export["located_object_count"] == 2
+    source_character_path = ensure_model_asset(
+        project_root / "assets" / "character-library", "Male", "Adventurer"
+    )
+    character_path = project_root / "assets" / "characters" / "ali.glb"
+    character_path.parent.mkdir(parents=True, exist_ok=True)
+    face_export = adapter.export_character_appearance(
+        source_character_path,
+        [],
+        [],
+        character_path,
+        allowed_root=project_root,
+        face_features={"enabled": True},
+    )
+    assert face_export["ok"] is True
+    locations = ["world:corner-shop", "world:market-square"]
+    episode = {
+        "title": "Located Episode",
+        "characters": [{"id": "ali", "name": "Ali"}],
+        "scenes": [
+            {
+                "id": f"scene-{index}",
+                "title": f"Scene {index}",
+                "duration_seconds": 60,
+                "location_id": locations[index % 2],
+                "character_ids": ["ali"],
+                "dialogue": [], "actions": [], "camera": [], "audio": [], "props": [],
+            }
+            for index in range(1, 6)
+        ],
+    }
+    output = project_root / "assets" / "episodes" / "build-located" / "scenes"
+    result = adapter.export_episode_scenes(
+        episode,
+        world_path,
+        [{"id": "ali", "name": "Ali", "asset_path": str(character_path)}],
+        output,
+        allowed_root=project_root,
+    )
+    assert result["ok"] is True
+    assert all(scene["scene_reopened"] for scene in result["scenes"])
+    # Every scene keeps its own location plus the shared road, and drops the other
+    # location's objects, so the same saved place looks the same in every episode.
+    for scene in result["scenes"]:
+        assert scene["location_object_count"] == 1
+        assert scene["removed_object_count"] == 1
+        text = Path(scene["scene_path"]).read_text(encoding="utf-8")
+        assert "WorldObject_001_road" in text
+        if scene["location_id"] == "world:corner-shop":
+            assert "WorldObject_002_shop" in text
+            assert "WorldObject_003_park" not in text
+        else:
+            assert "WorldObject_003_park" in text
+            assert "WorldObject_002_shop" not in text
 
 
 def test_generated_face_replacement_rejects_rig_without_skin_surface(tmp_path):

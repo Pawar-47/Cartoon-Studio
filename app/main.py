@@ -75,7 +75,12 @@ from app.storage import connect_db as open_database
 from app.storage import (
     initialize_database as migrate_database,
 )
-from app.story import EpisodePlan, StoryPromptRequest, build_story_prompt
+from app.story import (
+    WORLD_LOCATION_PREFIX,
+    EpisodePlan,
+    StoryPromptRequest,
+    build_story_prompt,
+)
 from app.version import APP_VERSION
 from app.worker import JobContext, OperationCancelled, OperationWorker
 from app.world_assets import ASSETS, WorldAssetError, install_world_asset, list_world_assets
@@ -232,6 +237,13 @@ class GlbInspectRequest(BaseModel):
     relative_path: str = Field(min_length=1, max_length=512)
 
 
+class WorldLocationInput(BaseModel):
+    """One reusable place inside a saved world, owned by the world document."""
+
+    id: str = Field(min_length=1, max_length=40, pattern=r"^[a-z][a-z0-9_-]*$")
+    label: str = Field(min_length=1, max_length=80)
+
+
 class WorldObjectInput(BaseModel):
     id: str = Field(min_length=1, max_length=64)
     kind: Literal[
@@ -240,6 +252,9 @@ class WorldObjectInput(BaseModel):
         "furniture", "water_body", "streetlight"
     ] = Field(...)
     label: str = Field(min_length=1, max_length=80)
+    # The saved location this object belongs to. Empty means shared scenery that
+    # every location of the world shows, such as the street and the sky.
+    location_id: str = Field(default="", max_length=40, pattern=r"^([a-z][a-z0-9_-]*)?$")
     x: float = Field(ge=0, le=100)
     y: float = Field(ge=0, le=100)
     width: float = Field(default=12, ge=2, le=100)
@@ -254,6 +269,7 @@ class WorldPlanInput(BaseModel):
     theme: Literal["small_town", "village", "market", "park"] = "small_town"
     ground_color: str = Field(default="#789b58", pattern=r"^#[0-9a-fA-F]{6}$")
     sky: Literal["day", "sunset", "night"] = "day"
+    locations: list[WorldLocationInput] = Field(default_factory=list, max_length=24)
     objects: list[WorldObjectInput] = Field(default_factory=list, max_length=100)
     template_id: str | None = Field(default=None, max_length=64)
 
@@ -860,6 +876,19 @@ def save_story_plan(project_id: str, plan: EpisodePlan) -> dict[str, Any]:
                 status_code=422,
                 detail=f"Character asset for {character['name']} is not rig-ready.",
             )
+    world_location_references = {
+        str(scene.get("location_id", ""))
+        for scene in plan_data["scenes"]
+        if str(scene.get("location_id", "")).startswith(WORLD_LOCATION_PREFIX)
+    }
+    if world_location_references and not plan_data.get("world_id"):
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "These scenes name a saved world location, so select the world first: "
+                + ", ".join(sorted(world_location_references))
+            ),
+        )
     if plan_data.get("world_id"):
         selected_world = next(
             (
@@ -873,6 +902,22 @@ def save_story_plan(project_id: str, plan: EpisodePlan) -> dict[str, Any]:
             raise HTTPException(
                 status_code=422,
                 detail="The selected world does not belong to this project.",
+            )
+        saved_locations = {
+            f"{WORLD_LOCATION_PREFIX}{location['id']}"
+            for location in selected_world.get("locations", [])
+            if isinstance(location, dict) and location.get("id")
+        }
+        unknown_locations = sorted(world_location_references - saved_locations)
+        if unknown_locations:
+            available = ", ".join(sorted(saved_locations)) or "no saved locations yet"
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "The selected world does not have these saved locations: "
+                    + ", ".join(unknown_locations)
+                    + f". Its saved locations are: {available}."
+                ),
             )
         scene_relative_path = str(selected_world.get("scene_relative_path", ""))
         if (
@@ -1018,6 +1063,31 @@ def build_episode_production(project_id: str) -> dict[str, Any]:
     world_scene = resolve_project_relative(DATA_DIR, project_id, world_relative)
     if not world_scene.is_file():
         raise HTTPException(status_code=422, detail="The selected world scene file is missing.")
+    # The world's saved locations are its reusable places. Editing a world can
+    # retire one, so production refuses a stale reference instead of staging the
+    # scene in a place that no longer exists.
+    saved_world_locations = {
+        f"{WORLD_LOCATION_PREFIX}{location['id']}"
+        for location in world.get("locations", [])
+        if isinstance(location, dict) and location.get("id")
+    }
+    stale_locations = sorted(
+        {
+            str(scene.get("location_id", ""))
+            for scene in plan["scenes"]
+            if str(scene.get("location_id", "")).startswith(WORLD_LOCATION_PREFIX)
+            and scene.get("location_id") not in saved_world_locations
+        }
+    )
+    if stale_locations:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "The saved world no longer has these locations: "
+                + ", ".join(stale_locations)
+                + ". Edit the episode to use a saved location or update the world."
+            ),
+        )
     available_assets = {
         item["asset_id"]: item for item in _project_character_assets(project_id)
     }
@@ -1107,6 +1177,9 @@ def build_episode_production(project_id: str) -> dict[str, Any]:
         scenes.append({
             "scene_id": item["scene_id"],
             "title": item["title"],
+            "location_id": item.get("location_id", ""),
+            "location_object_count": item.get("location_object_count", 0),
+            "removed_object_count": item.get("removed_object_count", 0),
             "duration_seconds": item["duration_seconds"],
             "character_count": item["character_count"],
             "dialogue_line_count": item["dialogue_line_count"],
@@ -2036,6 +2109,34 @@ def _attach_world_asset_paths(data: dict[str, Any], project_id: str) -> None:
         item["asset_path"] = installed["relative_path"]
 
 
+def _validate_world_locations(data: dict[str, Any]) -> None:
+    """Refuse a world whose objects point at a location it does not declare.
+
+    A world's locations are its reusable places; an episode scene names one as
+    ``world:<id>``. An object that claims a location the world does not declare
+    would be invisible in every location, so it is refused at save time instead.
+    """
+    declared: set[str] = set()
+    for location in data.get("locations", []):
+        location_id = str(location.get("id", "")).strip()
+        if not location_id or location_id in declared:
+            raise HTTPException(
+                status_code=422,
+                detail="World location IDs must be unique non-empty identifiers.",
+            )
+        declared.add(location_id)
+    for obj in data.get("objects", []):
+        location_id = str(obj.get("location_id", "")).strip()
+        if location_id and location_id not in declared:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"World object {obj.get('label') or obj.get('id', 'object')} belongs "
+                    f"to undeclared location {location_id!r}. Add that location first."
+                ),
+            )
+
+
 @app.get("/api/projects/{project_id}/worlds")
 def list_project_worlds(project_id: str) -> list[dict[str, Any]]:
     return _project_worlds(project_id)
@@ -2077,10 +2178,14 @@ def create_project_world(project_id: str, payload: WorldPlanInput) -> dict[str, 
         data.setdefault("sky", template_data.get("sky", "day"))
         if not data.get("objects"):
             data["objects"] = [dict(obj) for obj in template_data.get("objects", [])]
+        if not data.get("locations"):
+            data["locations"] = [dict(item) for item in template_data.get("locations", [])]
     data.setdefault("theme", "small_town")
     data.setdefault("ground_color", "#789b58")
     data.setdefault("sky", "day")
+    data.setdefault("locations", [])
     data.setdefault("objects", [])
+    _validate_world_locations(data)
     with connect_db() as connection:
         project = connection.execute(
             "SELECT id, created_at FROM projects WHERE id = ?", (project_id,)
@@ -2143,6 +2248,7 @@ def update_project_world(
     data["name"] = data["name"].strip()
     if not data["name"]:
         raise HTTPException(status_code=422, detail="World name cannot be blank.")
+    _validate_world_locations(data)
     with connect_db() as connection:
         project = connection.execute(
             "SELECT id FROM projects WHERE id = ?", (project_id,)

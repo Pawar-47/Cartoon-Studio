@@ -26,8 +26,14 @@ master brief preserved at `docs/MASTER_EXECUTION_PROMPT.md`.
 > pinned Godot rendered both real scenes and the bundled LGPL FFmpeg muxed the MP4; the only
 > failures were in final verification (a null-muxer subtitle encoder, then a subtitle track
 > that shortened the measured timeline), both fixed by verifying video/audio duration and
-> the subtitle stream separately. **The voice half of B1 and the remaining B3–B9 items
-> stay open**, starting with `piper-tts` not being in the locked environment.
+> the subtitle stream separately. **The location half of B5 is fixed (Batch D):** a world document
+> now owns its own `locations`, an object declares which one it belongs to, a scene names one as
+> `world:<location-id>`, the save route refuses an unknown or retired one, the story prompt offers
+> the world's own vocabulary, and `worker.gd` stages each scene in that location and drops the
+> other places — proven by a pinned-Godot test that asserts a scene keeps its own location's
+> objects plus the shared road. `props` (D5) and scene `audio` cues (D4) are still unconsumed.
+> **The voice half of B1 and the remaining B6–B9 items stay open**, starting with `piper-tts`
+> not being in the locked environment.
 
 Every finding has an ID, the evidence that produced it, the brief clause it violates,
 the required action, and the test that proves the action landed. Treat each finding as a

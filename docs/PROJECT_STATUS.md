@@ -1,11 +1,22 @@
 # Project Status — 2026-11-28
 
+## Live checkpoint — 2026-11-28 (Batch D: saved world locations drive episode scenes)
+
+- **A world owns its locations.** The world document (schema 1.0.2) carries `locations: [{id, label}]` and every object carries `location_id` (empty = shared scenery such as the street). Migration `1.0.1 → 1.0.2` adds the array on read; the API and the engine adapter both refuse an object whose location the world does not declare, and refuse duplicate or malformed location IDs. The World Builder has a Saved Locations panel and a per-object location selector.
+- **A scene names a saved location.** `ScenePlan.location_id` accepts a catalog backdrop or `world:<location-id>`. Saving refuses a location the selected world does not own, and refuses a world reference when no world is selected, naming the valid locations. Production refuses a location the world has since retired.
+- **Production stages the scene there.** `worker.gd` keeps only the scene's location plus the world's shared scenery, drops every other place, places the cast at that location's centre and aims the episode camera at it. Scene results and the production manifest carry `location_id`, `location_object_count` and `removed_object_count`.
+- **The prompt offers the world's own vocabulary:** `POST /api/story-prompts` takes `world_locations` and lists them as `world:<id>: <label>`; the Story page sends the selected world's locations.
+- **Tests:** world-location persistence and validation, the 1.0.1 → 1.0.2 migration, plan acceptance of `world:` references, the save-route rejections, the prompt listing, adapter refusals, and a pinned-Godot test that stages five scenes across two saved locations and asserts each scene drops the other location's objects.
+- **Verified:** nothing local — no Godot, no browser. The pinned-Godot staging test and the page assertions decide it on the next Windows CI run.
+- **Still open:** scene `props` and scene `audio` cues are still unconsumed (audit D4/D5); `piper-tts` remains outside the locked environment.
+
 ## Live checkpoint — 2026-11-28 (FFmpeg pinned to a dated release)
 
 - **The moving pin is gone.** `engine/ffmpeg_runtime.json` pointed at FFmpeg-Builds' moving `latest` tag, so the hash check failed as soon as upstream published a new build (job `141023008299`: `expected 84cde51e…, got 404617f0…`). It now pins the dated release `autobuild-2026-11-28-13-45`, the exact `ffmpeg-n8.1.3-1004-g8524289d26-win64-lgpl-8.1.zip` asset and its SHA-256 from that release's `checksums.sha256`.
 - **A test now holds that shape:** `tests/test_ffmpeg_runtime_manifest.py` refuses a non-dated download URL, a hash that is not 64 hex characters, an archive name missing from the URL, and any GPL encoder in the allowed list.
 - **Verified:** the pin's hash comes from the release's own checksums file; the fetch, encoder and licence checks in `scripts/fetch_ffmpeg.py` are unchanged.
-- **Still open:** the next run has to confirm the fetch and the corrected render verification; `piper-tts` remains outside the locked environment.
+- **Verified:** Windows CI passed on `87ab743`: `test` in 1m 24s (job `141047535082`) and `real-media` in 35s (job `141047535371`). The dated pin fetched by hash, the pinned Godot rendered both real scenes, the bundled LGPL FFmpeg muxed them, and the corrected verification measured the timeline from video and audio and decoded the subtitle stream separately.
+- **Still open:** `piper-tts` remains outside the locked environment.
 
 ## Live checkpoint — 2026-11-28 (real-media run found and fixed a verification defect)
 
@@ -103,8 +114,8 @@
 | 0 — Specification, research, architecture | COMPLETE | Master brief preserved; 171 atomic requirements and matching traceability; research, architecture and bounded engine/queue proofs recorded |
 | 1 — GitHub/CI/CD and Windows delivery | COMPLETE | Reproducible locked dependencies, CI, self-contained installer build and install/upgrade/uninstall/reinstall lifecycle proof |
 | 2 — Character Studio | PARTIAL | Modular characters, import, profile persistence, proportions, hair/face geometry, morphs and retargeting implemented; interactive visual signoff and broad rig acceptance remain |
-| 3 — World Builder | ACTIVE / PARTIAL | Versioned world docs, templates, scene export, GLB preview and 17 object kinds; visual quality and vehicle runtime behaviour remain |
-| 4 — Story and Scene Engine | PARTIAL | Structured prompt/schema, validation, world/cast binding and editable scene generation; integrated generation, approval, repair and complete mapping remain |
+| 3 — World Builder | ACTIVE / PARTIAL | Versioned world docs with owner-declared saved locations, templates, scene export, GLB preview and 17 object kinds; episode scenes stage in a saved location and drop the others; visual quality and vehicle runtime behaviour remain |
+| 4 — Story and Scene Engine | PARTIAL | Structured prompt/schema, validation, world/cast binding and editable scene generation; scenes name saved world locations (`world:<id>`) and the prompt offers them; integrated generation, approval, repair, props and audio mapping remain |
 | 5 — Animation Engine | PARTIAL | Procedural action/camera/expression tracks; reusable motion library, blending, timeline editor and visual acceptance remain |
 | 6 — Urdu Voice and Lip-Sync | PARTIAL | Offline Urdu speech/audio mix and subtitles with urdu/roman_urdu/english/none modes and a heuristic mouth envelope; `piper-tts` is not in the locked environment, so the installed app cannot synthesise speech yet; native-speaker evaluation and phoneme/viseme alignment remain |
 | 7 — Episode Generator | PARTIAL | Editable scene generation, audio, Godot/FFmpeg MP4 path rendered at the project's quality preset, a background worker with per-scene progress and cancellation, durable job records and a content-keyed scene cache that reuses finished scenes after a cancel or crash; full episode acceptance and a cache size cap remain |
@@ -112,8 +123,11 @@
 
 ## Next implementation batch
 
-1. **Batch A — make the shipped app produce an episode.** Decide and pin the voice path (bundled Piper or recorded fallback), bundle a licence-reviewed FFmpeg, resolve `_find_ffmpeg` to the bundled binary, and add a real-media Windows CI job. This is finding B1 in `MASTER_BRIEF_AUDIT_2026-11-28.md` and the only thing between the current code and a playable episode.
-2. **Batch B — real job execution, progress, cancel and diagnostics.** Background worker, per-scene progress, cooperative cancel, Episode Renderer and Logs and Diagnostics workspaces.
-3. **Batch C — scene cache and checkpoints**, so one failed scene never re-renders the episode.
+1. **Batch A — the shipped app produces a playable episode: DONE.** Recorded voice lines work with no speech engine, `_find_ffmpeg` prefers the bundled LGPL FFmpeg, no GPL encoder is used, and the `real-media` CI job renders a real MP4. The remaining half is the voice pack: `piper-tts` is still outside the locked environment.
+2. **Batch B — real job execution, progress, cancel and diagnostics: DONE.** Background worker, per-scene progress, cooperative cancel, Episode Renderer and Logs workspaces, `/api/diagnostics`.
+3. **Batch C — scene cache and checkpoints: DONE.** Content-keyed scene movies, newest-only pruning, an 8 GiB per-episode cap, and `render_cache` excluded from portable packages.
+4. **Batch D — one vocabulary for story, world and production: DONE for locations.** Saved world locations drive episode staging; props (D5) and scene audio cues (D4) are still unconsumed.
+5. **Next (Batch E/F) — the animation library and Urdu lip-sync.** A licensed clip set keyed by `action_id` with cross-fading, then G2P → viseme tracks for the mouth rather than the current loudness envelope.
+6. **Voice pack** — pin `piper-tts` and `onnxruntime` through `.github/workflows/resolve-python-lock.yml`, vendor the wheels and the two `ur_PK` voices into the installer, and prove a real synthesis with `test_real_urdu_tts_sample`.
 
 World-scene export quality, browser preview visual review and world-linked story production mapping remain open; multi-location reuse via `template_id` is implemented and tested. User visual acceptance for Phases 2–7 is scheduled for Phase 8 per project owner direction.

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -19,6 +20,12 @@ ENGINE_BINARY_NAME = "Godot_v4.7.2-stable_win64.exe"
 WORKER_PROTOCOL_VERSION = 1
 MAX_TIMEOUT_SECONDS = 180.0
 MAX_GLB_BYTES = 512 * 1024 * 1024
+MAX_WORLD_LOCATIONS = 24
+WORLD_LOCATION_ID = re.compile(r"^[a-z][a-z0-9_-]{0,39}$")
+# A scene names either a catalog backdrop or a location the saved world owns.
+SCENE_LOCATION_REFERENCE = re.compile(
+    r"^(?:[a-z][a-z0-9_-]{0,79}|world:[a-z][a-z0-9_-]{0,39})$"
+)
 
 
 class EngineError(RuntimeError):
@@ -586,9 +593,32 @@ class GodotEngineAdapter:
             "small_town", "village", "market", "park"
         }:
             raise EnginePathError("World layout contains an unsupported theme.")
+        # A world owns its reusable locations, and every object says which one it
+        # belongs to. The worker receives the same contract the API enforces, so a
+        # script or an older document cannot smuggle an undeclared location in.
+        locations = world.get("locations", [])
+        if not isinstance(locations, list) or len(locations) > MAX_WORLD_LOCATIONS:
+            raise EnginePathError("World layout supports up to 24 saved locations.")
+        location_ids: set[str] = set()
+        for location in locations:
+            if not isinstance(location, dict):
+                raise EnginePathError("World locations must be objects.")
+            location_id = str(location.get("id", ""))
+            if not WORLD_LOCATION_ID.fullmatch(location_id):
+                raise EnginePathError("World location IDs must be lowercase slugs.")
+            if location_id in location_ids:
+                raise EnginePathError("World location IDs must be unique.")
+            if not str(location.get("label", "")).strip():
+                raise EnginePathError("World locations need a label.")
+            location_ids.add(location_id)
         for item in world.get("objects", []):
             if not isinstance(item, dict) or item.get("kind") not in allowed_kinds:
                 raise EnginePathError("World layout contains an unsupported object.")
+            object_location = str(item.get("location_id", ""))
+            if object_location and object_location not in location_ids:
+                raise EnginePathError(
+                    "World object belongs to a location the world does not declare."
+                )
             bounds = (
                 ("x", 0, 100), ("y", 0, 100), ("width", 2, 100),
                 ("height", 2, 60), ("rotation", 0, 360),
@@ -695,6 +725,8 @@ class GodotEngineAdapter:
                 or not scene_id.replace("-", "").replace("_", "").isalnum()
             ):
                 raise EnginePathError("Episode contains an unsafe scene ID.")
+            if not SCENE_LOCATION_REFERENCE.fullmatch(str(scene.get("location_id", ""))):
+                raise EnginePathError("Episode scene location ID is invalid.")
             if not set(scene.get("character_ids", [])).issubset(seen_ids):
                 raise EnginePathError("Episode scene references a character without a GLB asset.")
         output_dir.mkdir(parents=True, exist_ok=True)

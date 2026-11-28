@@ -2911,7 +2911,12 @@ func _export_world_scene(payload: Dictionary) -> Dictionary:
     root.add_child(world_camera)
 
     _world_add_box(root, "Ground", Vector3(100.0, 0.5, 100.0), Vector3(0.0, -0.28, 0.0), ground_color)
+    var declared_locations: Variant = world.get("locations", [])
+    var location_count := 0
+    if typeof(declared_locations) == TYPE_ARRAY:
+        location_count = declared_locations.size()
     var object_count := 0
+    var located_object_count := 0
     for object_value in objects_value:
         if typeof(object_value) != TYPE_DICTIONARY:
             continue
@@ -2926,10 +2931,20 @@ func _export_world_scene(payload: Dictionary) -> Dictionary:
         var rotation := float(item.get("rotation", 0.0))
         var tint := str(item.get("color", "#c89b67"))
         var anchor := Node3D.new()
-        anchor.name = "WorldObject_%03d_%s" % [object_count + 1, kind]
+        var anchor_name := "WorldObject_%03d_%s" % [object_count + 1, kind]
+        var object_location := str(item.get("location_id", ""))
+        if not object_location.is_empty():
+            # The location is carried in the node name as well as in metadata, so a
+            # scene staged in one location can drop the other places after reload
+            # without depending on metadata alone.
+            anchor_name += "__loc_" + object_location
+        anchor.name = anchor_name
         anchor.position = Vector3(x, 0.0, z)
         anchor.rotation_degrees.y = -rotation
         anchor.set_meta("label", str(item.get("label", kind.capitalize())))
+        # The location an object belongs to travels with the node, so an episode
+        # scene staged in one location can drop the objects of every other one.
+        anchor.set_meta("location_id", str(item.get("location_id", "")))
         root.add_child(anchor)
 
         var asset_path := str(item.get("asset_path", ""))
@@ -3038,6 +3053,8 @@ func _export_world_scene(payload: Dictionary) -> Dictionary:
             _world_add_box(anchor, "ParkGrass", Vector3(width, 0.16, depth), Vector3(0.0, 0.08, 0.0), "#5eaa61")
             _world_add_box(anchor, "ParkPath", Vector3(width * 0.16, 0.08, depth * 0.9), Vector3(0.0, 0.2, 0.0), "#d6c29c")
         object_count += 1
+        if not str(item.get("location_id", "")).is_empty():
+            located_object_count += 1
 
 
     var theme_prop_count := 0
@@ -3147,6 +3164,8 @@ func _export_world_scene(payload: Dictionary) -> Dictionary:
         "glb_exported": FileAccess.file_exists(output_glb_path),
         "world_name": str(world.get("name", "Cartoon World")),
         "object_count": object_count,
+        "location_count": location_count,
+        "located_object_count": located_object_count,
         "theme_prop_count": theme_prop_count,
         "world_theme": theme_name,
         "scene_reopened": true,
@@ -3566,7 +3585,8 @@ func _add_episode_skeletal_action_tracks(
 func _build_episode_timeline(
     scene_root: Node3D,
     scene_data: Dictionary,
-    character_anchors: Dictionary
+    character_anchors: Dictionary,
+    stage_origin: Vector3 = Vector3.ZERO
 ) -> Dictionary:
     var duration := float(scene_data.get("duration_seconds", 30))
     var animation := Animation.new()
@@ -3582,8 +3602,8 @@ func _build_episode_timeline(
     var skeletal_animation_keyframe_count := 0
     var camera := Camera3D.new()
     camera.name = "EpisodeCamera"
-    camera.position = Vector3(0.0, 7.0, 16.0)
-    camera.look_at(Vector3(0.0, 1.0, 0.0), Vector3.UP)
+    camera.position = stage_origin + Vector3(0.0, 7.0, 16.0)
+    camera.look_at(stage_origin + Vector3(0.0, 1.0, 0.0), Vector3.UP)
     camera.current = true
     scene_root.add_child(camera)
     var camera_position_track := animation.add_track(Animation.TYPE_VALUE)
@@ -3733,7 +3753,7 @@ func _build_episode_timeline(
             var cue: Dictionary = camera_entry
             var shot := str(cue.get("shot", "wide"))
             var movement := str(cue.get("movement", "locked"))
-            var target := Vector3(0.0, 1.0, 0.0)
+            var target := stage_origin + Vector3(0.0, 1.0, 0.0)
             var target_id := str(cue.get("target", "all"))
             if character_anchors.has(target_id):
                 var target_anchor: Node3D = character_anchors[target_id]
@@ -3869,6 +3889,45 @@ func _export_episode_scenes(payload: Dictionary) -> Dictionary:
         var world_instance := world_packed.instantiate()
         world_instance.name = "EstablishedWorld"
         scene_root.add_child(world_instance)
+        # A scene names one saved location of the world, so this copy keeps that
+        # location plus the world's shared scenery (objects without a location:
+        # streets, lamps, theme props) and drops every other place. The same
+        # saved location therefore looks the same in every episode.
+        var location_reference := str(scene_data.get("location_id", ""))
+        var wanted_location := ""
+        if location_reference.begins_with("world:"):
+            wanted_location = location_reference.substr(6)
+        var location_objects: Array[Node3D] = []
+        var dropped_objects: Array[Node] = []
+        if not wanted_location.is_empty():
+            for world_child in world_instance.get_children():
+                if not (world_child is Node3D):
+                    continue
+                if not str(world_child.name).begins_with("WorldObject_"):
+                    continue
+                var object_location := str(world_child.get_meta("location_id", ""))
+                if object_location.is_empty():
+                    var marker := "__loc_"
+                    var marker_index := str(world_child.name).find(marker)
+                    if marker_index >= 0:
+                        object_location = str(world_child.name).substr(
+                            marker_index + marker.length()
+                        )
+                if object_location.is_empty():
+                    continue
+                if object_location == wanted_location:
+                    location_objects.append(world_child as Node3D)
+                else:
+                    dropped_objects.append(world_child)
+        for dropped_node in dropped_objects:
+            world_instance.remove_child(dropped_node)
+            dropped_node.free()
+        var stage_origin := Vector3.ZERO
+        if location_objects.size() > 0:
+            var accumulated := Vector3.ZERO
+            for location_node in location_objects:
+                accumulated += location_node.position
+            stage_origin = accumulated * (1.0 / float(location_objects.size()))
         var cast_root := Node3D.new()
         cast_root.name = "Cast"
         scene_root.add_child(cast_root)
@@ -3899,14 +3958,14 @@ func _export_episode_scenes(payload: Dictionary) -> Dictionary:
             character_anchor.name = "Character_" + character_id
             character_anchor.set_meta("character_id", character_id)
             character_anchor.set_meta("character_name", str(character_data.get("name", character_id)))
-            character_anchor.position = Vector3((float(placed_count) - float(scene_character_ids.size() - 1) * 0.5) * 2.8, 0.0, 4.0)
+            character_anchor.position = stage_origin + Vector3((float(placed_count) - float(scene_character_ids.size() - 1) * 0.5) * 2.8, 0.0, 3.6)
             cast_root.add_child(character_anchor)
             character_anchors[character_id] = character_anchor
             character_scene.name = "Model"
             character_anchor.add_child(character_scene)
             placed_count += 1
         var timeline_result := _build_episode_timeline(
-            scene_root, scene_data, character_anchors
+            scene_root, scene_data, character_anchors, stage_origin
         )
         if not bool(timeline_result.get("ok", false)):
             scene_root.free()
@@ -3946,6 +4005,9 @@ func _export_episode_scenes(payload: Dictionary) -> Dictionary:
         generated_scenes.append({
             "scene_id": scene_id,
             "title": str(scene_data.get("title", scene_id)),
+            "location_id": location_reference,
+            "location_object_count": location_objects.size(),
+            "removed_object_count": dropped_objects.size(),
             "duration_seconds": int(scene_data.get("duration_seconds", 0)),
             "character_count": placed_count,
             "dialogue_line_count": scene_data.get("dialogue", []).size(),

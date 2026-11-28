@@ -114,6 +114,11 @@ Scene `data`: title, duration_ms, location_id, character_ids, prop_asset_ids, en
 
 Canonical timing uses integer milliseconds. Engine adapters convert to frames using the project's rational frame rate. This avoids float drift while retaining a lossless conversion path for the current prototype's seconds-based schema. All cue intervals are half-open `[start_ms, start_ms + duration_ms)` and must fit inside their scene.
 
+### World, location and scene binding
+A scene's place is owned by the world, not by a free-text catalog. World `data` (schema 1.0.2) carries `locations: [{id, label}]`, where `id` is a lowercase slug the world declares and `label` is what a person reads. Every world object may carry `location_id`; an empty value means shared scenery (the street, the lamps, the theme props) that appears in every location. An object whose `location_id` is not declared by its world is refused by both the world API and the engine adapter, and duplicate, unlabelled or non-slug location IDs are refused, so an object can never become invisible in every location.
+
+A scene names one of them as `world:<location-id>`, or a generic catalog backdrop such as `street-cafe` for a scene outside the saved world. `PUT /story` verifies a `world:` reference against the selected world and names the valid locations when it fails; production refuses a location the world has since retired rather than staging the scene elsewhere. The engine contract is: keep the scene's location plus the world's shared scenery, drop the other places, place the cast at that location's centre, and aim the episode camera at it. `location_id`, `location_object_count` and `removed_object_count` are reported per scene and recorded in the production manifest.
+
 ### Render job document
 ```json
 {
