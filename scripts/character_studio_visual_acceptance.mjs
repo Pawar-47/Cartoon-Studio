@@ -33,6 +33,30 @@ async function setInputValue(page, selector, value) {
   }, String(value));
 }
 
+async function capturePreview(page, filename) {
+  const preview = page.locator("#model-preview");
+  await preview.waitFor({ state: "visible" });
+  const bounds = await preview.boundingBox();
+  if (!bounds || bounds.width <= 0 || bounds.height <= 0) {
+    throw new Error("Character preview has no visible screenshot bounds.");
+  }
+  // Avoid locator.screenshot(): its actionability stability wait can time out
+  // while the WebGL canvas is continuously repainting. Clip a page screenshot
+  // to the measured canvas bounds instead; this captures the live preview
+  // without waiting for the animated element to become artificially stable.
+  await page.screenshot({
+    path: path.join(output, filename),
+    clip: {
+      x: Math.max(0, Math.floor(bounds.x)),
+      y: Math.max(0, Math.floor(bounds.y)),
+      width: Math.ceil(bounds.width),
+      height: Math.ceil(bounds.height),
+    },
+    animations: "disabled",
+    timeout: 60_000,
+  });
+}
+
 async function waitForServer() {
   const deadline = Date.now() + 120_000;
   while (Date.now() < deadline) {
@@ -208,7 +232,7 @@ try {
         status: document.querySelector("#foundry-status")?.textContent,
         morph: document.querySelector("#foundry-head-width")?.value,
       }));
-      await page.locator("#model-preview").screenshot({ path: path.join(output, "02-foundry-edit-mode-failure.png"), timeout: 60_000 });
+      await capturePreview(page, "02-foundry-edit-mode-failure.png");
       throw new Error("Edit Foundry recipe did not activate edit mode within 10 seconds: " + JSON.stringify(state));
     });
     const editModeState = await page.evaluate(() => ({
@@ -247,7 +271,7 @@ try {
     const previewStatus = await page.locator("#preview-status").textContent();
     record("Foundry edit result: " + editStatus);
     record("Foundry preview result: " + previewStatus);
-    await page.locator("#model-preview").screenshot({ path: path.join(output, "02-male-foundry-edit-result.png"), timeout: 60_000 });
+    await capturePreview(page, "02-male-foundry-edit-result.png");
     if (!editStatus?.includes("saved.") || previewStatus?.startsWith("Preview unavailable:")) {
       throw new Error("Foundry edit/preview did not finish successfully: " + editStatus
         + " | preview: " + previewStatus);
@@ -260,7 +284,7 @@ try {
     if (!male || male.revision !== 2 || male.data.foundry_recipe.parameters.head_width !== 0.6) {
       throw new Error("Foundry edit did not preserve character identity and revision.");
     }
-    await page.locator("#model-preview").screenshot({ path: path.join(output, "02-male-foundry-edited.png"), timeout: 60_000 });
+    await capturePreview(page, "02-male-foundry-edited.png");
     record("Saved recipe reopened, edited and persisted under the same character ID.");
   } else {
     record("Female-only acceptance mode: skipping already-passed male create/edit workflow.");
@@ -279,7 +303,7 @@ try {
     { timeout: FOUNDRY_SAVE_TIMEOUT_MS },
   );
   await page.waitForTimeout(1200);
-  await page.locator("#model-preview").screenshot({ path: path.join(output, "03-female-foundry-preview.png"), timeout: 60_000 });
+  await capturePreview(page, "03-female-foundry-preview.png");
   charactersResponse = await request.get(
     baseUrl + "/api/projects/" + project.id + "/characters",
   );
@@ -315,7 +339,7 @@ try {
     null,
     { timeout: 30_000 },
   );
-  await page.locator("#model-preview").screenshot({ path: path.join(output, "04-preview-export-ready.png"), timeout: 60_000 });
+  await capturePreview(page, "04-preview-export-ready.png");
   const [turnaroundDownload] = await Promise.all([
     page.waitForEvent("download"),
     page.locator("#export-turnaround-png").click(),
