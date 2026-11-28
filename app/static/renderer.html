@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#10151d"><title>Episode Renderer · Cartoon Studio</title>
+<link rel="stylesheet" href="/static/styles.css"><link rel="stylesheet" href="/static/story.css">
+</head>
+<body>
+<main class="story-page">
+<header class="story-header"><div><a class="back-link" href="/">← Dashboard</a><span class="eyebrow">PHASE 7 · EPISODE RENDERER</span><h1>Render and monitor episodes</h1><p>Queue the render, watch each scene finish, cancel safely and download the finished MP4.</p></div><span class="pill">Background worker · Local only</span></header>
+<div class="story-grid">
+<section class="panel">
+ <span class="eyebrow">01 / QUEUE</span><h2>Start a render</h2>
+ <label>Project<select id="project-select"><option value="">Choose a project…</option></select></label>
+ <div class="button-row"><button id="queue-render" disabled>Queue episode render</button><span id="queue-status" class="inline-status"></span></div>
+ <p class="helper">A render needs a saved episode plan with generated scenes and Urdu dialogue audio. The worker renders one scene at a time and keeps finished scenes if you cancel.</p>
+ <a class="back-link" href="/story">Open the Story Generator →</a>
+</section>
+<section class="panel">
+ <span class="eyebrow">02 / JOBS</span><h2>Render jobs</h2>
+ <div class="button-row"><button id="refresh-jobs" class="secondary">Refresh</button><span id="jobs-status" class="inline-status"></span></div>
+ <div id="job-list" class="production-results"><p class="helper">Choose a project to list its jobs.</p></div>
+</section>
+</div>
+<footer>Rendering happens on this computer with the bundled Godot runtime and LGPL FFmpeg. Nothing is uploaded.</footer>
+</main>
+<script src="/static/renderer.js"></script>
+</body></html>

@@ -16,21 +16,28 @@ redistribution-safe encoder, but it still cannot synthesise Urdu speech because
 
 ## Immediate next steps
 
-1. **Episode Renderer and Logs and Diagnostics workspaces.** The endpoints exist
-   (`POST .../story/render/jobs`, job poll/cancel, `/api/diagnostics`); build the pages that
-   use them: job list with live progress and cancel, download when complete, dependency
-   health, and the job event journal. Point the Story page's render button at the queued
-   route instead of the blocking one.
-2. **Record control in the Story workspace** for the recorded dialogue fallback: choose a
-   line, record, review the stored WAV, and show recorded/synthesised per line.
-3. **Pin `piper-tts` and `onnxruntime`** into the locked environment through
+1. **Pin `piper-tts` and `onnxruntime`** into the locked environment through
    `.github/workflows/resolve-python-lock.yml` and vendor the wheels plus the two `ur_PK`
-   voices into the installer, so TTS works offline.
-4. **Batch C — scene cache and checkpoints**, so one failed scene never re-renders the whole
+   voices into the installer, so TTS works offline. This is the last piece of the episode
+   production chain that no shipped path covers.
+2. **Point the Story page's render button at the queued route** and add a subtitle-mode
+   selector, so the page uses the same progress/cancel path as the Episode Renderer
+   workspace.
+3. **Batch C — scene cache and checkpoints**, so one failed scene never re-renders the whole
    episode and a restart resumes from the last completed scene.
-5. P2.2 remaining visual acceptance proceeds in parallel: interactive browser acceptance of
+4. P2.2 remaining visual acceptance proceeds in parallel: interactive browser acceptance of
    hairstyles, portraits, assembly, morphs and retarget preview; broad rig acceptance on
    representative models.
+
+## Recent completed batches
+
+### Episode Renderer and Logs workspaces, recorded-line control (Batch C, UI)
+`/renderer` queues renders through the `202` job route, shows `progress/total`, cancels
+safely and links to the render details; `/logs` shows Godot/FFmpeg/voice diagnostics,
+worker state, schema and job counts plus a selected job's event journal; the Story page
+gains a recorded-line panel backed by the per-line upload endpoint. Dashboard navigation
+lists both workspaces. The `QUALITY_PRESETS` naming mismatch that broke test collection is
+fixed.
 
 ## Recent completed batches
 

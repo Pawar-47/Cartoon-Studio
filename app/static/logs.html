@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#10151d"><title>Logs and Diagnostics · Cartoon Studio</title>
+<link rel="stylesheet" href="/static/styles.css"><link rel="stylesheet" href="/static/story.css">
+</head>
+<body>
+<main class="story-page">
+<header class="story-header"><div><a class="back-link" href="/">← Dashboard</a><span class="eyebrow">SYSTEM · LOGS AND DIAGNOSTICS</span><h1>What this installation can do</h1><p>Check the Godot runtime, FFmpeg, the speech engine and the background worker, then read a job's event journal.</p></div><span class="pill">Local only</span></header>
+<div class="story-grid">
+<section class="panel">
+ <span class="eyebrow">01 / DEPENDENCIES</span><h2>Dependency readiness</h2>
+ <div class="button-row"><button id="refresh-diagnostics" class="secondary">Refresh</button><span id="diagnostics-status" class="inline-status"></span></div>
+ <ul id="dependency-list" class="diagnostics-list"><li class="helper">Reading the diagnostics…</li></ul>
+</section>
+<section class="panel">
+ <span class="eyebrow">02 / JOB JOURNAL</span><h2>Job event history</h2>
+ <label>Project<select id="project-select"><option value="">Choose a project…</option></select></label>
+ <label>Job<select id="job-select"><option value="">Choose a job…</option></select></label>
+ <div class="button-row"><button id="load-journal" class="secondary" disabled>Load journal</button><span id="journal-status" class="inline-status"></span></div>
+ <div id="journal" class="production-results"><p class="helper">Choose a job to read its events.</p></div>
+</section>
+</div>
+<footer>Diagnostics report what is installed; nothing here downloads or installs anything.</footer>
+</main>
+<script src="/static/logs.js"></script>
+</body></html>

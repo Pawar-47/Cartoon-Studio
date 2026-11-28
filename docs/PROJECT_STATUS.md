@@ -1,5 +1,15 @@
 # Project Status — 2026-11-28
 
+## Live checkpoint — 2026-11-28 (Episode Renderer and Logs workspaces)
+
+- **Episode Renderer workspace** (`/renderer`): queue a render (`202` + poll), see each job's state and `progress/total`, cancel safely, and reach the render details. The browser no longer sits on one long request.
+- **Logs and Diagnostics workspace** (`/logs`): Godot/FFmpeg/voice readiness with the chosen redistribution-safe encoder, worker state, schema version, job counts, and a selected job's event journal.
+- **Recorded dialogue control** in the Story page: pick a plan line, upload the WAV and see which lines are recorded, backed by the existing per-line endpoint.
+- **Navigation:** both workspaces are linked from the dashboard sidebar.
+- **Correction:** the quality preset table is `QUALITY_PRESETS` again, matching its tests, after the rename mismatch that broke collection.
+- **Tests:** a page test covers both workspaces, the recording panel and the dashboard links.
+- **Still open:** the Story page's render button still uses the synchronous route, no subtitle-mode selector exists yet, and `piper-tts` still needs the lock regenerated before TTS works offline.
+
 ## Live checkpoint — 2026-11-28 (background job execution, progress and cancellation)
 
 - **Real background worker.** `app/worker.py` runs queued operations outside the request thread: it claims, executes, reports progress, honours cancellation between scenes and records completion or failure; `app/main.py` starts it in the lifespan. A render no longer blocks the browser for hours, and closing the tab no longer leaves the work unattended.
@@ -56,8 +66,8 @@
 | 4 — Story and Scene Engine | PARTIAL | Structured prompt/schema, validation, world/cast binding and editable scene generation; integrated generation, approval, repair and complete mapping remain |
 | 5 — Animation Engine | PARTIAL | Procedural action/camera/expression tracks; reusable motion library, blending, timeline editor and visual acceptance remain |
 | 6 — Urdu Voice and Lip-Sync | PARTIAL | Offline Urdu speech/audio mix and subtitles with urdu/roman_urdu/english/none modes and a heuristic mouth envelope; `piper-tts` is not in the locked environment, so the installed app cannot synthesise speech yet; native-speaker evaluation and phoneme/viseme alignment remain |
-| 7 — Episode Generator | PARTIAL | Editable scene generation, audio, Godot/FFmpeg MP4 path rendered at the project's quality preset, and durable job records; the queue executes inside the request thread, FFmpeg is not bundled, and scene cache/restart-resume and full episode acceptance remain |
-| 8 — Optimization and Reliability | DEFERRED | Quality presets are implemented; target-PC benchmarks, full visual/audio signoff and final production acceptance remain |
+| 7 — Episode Generator | PARTIAL | Editable scene generation, audio, Godot/FFmpeg MP4 path rendered at the project's quality preset, a background worker with per-scene progress and cancellation, and durable job records; scene cache/restart-resume and full episode acceptance remain |
+| 8 — Optimization and Reliability | DEFERRED | Quality presets are implemented and the render, diagnostics and log workspaces exist; target-PC benchmarks, full visual/audio signoff and final production acceptance remain |
 
 ## Next implementation batch
 

@@ -1869,6 +1869,16 @@ def world_builder() -> FileResponse:
     return FileResponse(STATIC_DIR / "worlds.html")
 
 
+@app.get("/renderer", include_in_schema=False)
+def episode_renderer() -> FileResponse:
+    return FileResponse(STATIC_DIR / "renderer.html")
+
+
+@app.get("/logs", include_in_schema=False)
+def logs_and_diagnostics() -> FileResponse:
+    return FileResponse(STATIC_DIR / "logs.html")
+
+
 def _project_worlds(project_id: str) -> list[dict[str, Any]]:
     initialize_database()
     with connect_db() as connection:

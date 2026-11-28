@@ -19,6 +19,17 @@
 
 # Test Report — 2026-11-28
 
+## Episode Renderer and Logs workspaces, recorded-line control (Batch C, UI)
+
+- **Change 1 — Episode Renderer workspace.** `/renderer` lists the project's render jobs, shows each job's state and `progress/total` as a progress bar, refreshes while a render is active, cancels a queued or running job through the existing cancel endpoint, and links to the render details. The queue button posts to `POST /api/projects/{id}/story/render/jobs` (`202` + poll), so the browser never waits for the render.
+- **Change 2 — Logs and Diagnostics workspace.** `/logs` shows the diagnostics from `GET /api/diagnostics` (Godot, FFmpeg with the chosen redistribution-safe encoder, speech engine, worker state, schema version, job counts) and reads a selected job's full event journal through `GET /api/projects/{id}/jobs/{job_id}`.
+- **Change 3 — recorded dialogue control.** The Story page gains a recorded-line panel: it lists the plan's dialogue lines as `scene · line · character`, uploads a WAV to `PUT /api/projects/{id}/story/audio/lines/{scene}/{line}`, and lists the lines already recorded. It reads the plan from the page's existing JSON editor, so it needs no second plan source.
+- **Change 4 — navigation.** The dashboard sidebar links both workspaces as real pages instead of leaving them unrepresented.
+- **Correction:** `app/quality.py` exported the preset table as `QUALITY_PROFILES` while `tests/test_quality.py` imported `QUALITY_PRESETS`, which failed collection on every run. The constant is now `QUALITY_PRESETS` everywhere.
+- **Tests:** a page test asserts `/renderer`, `/logs`, the Story recording panel and the two dashboard links are served.
+- **Result:** awaiting the next GitHub Actions run; no local pytest run and no browser acceptance was possible in this batch.
+- **Still open:** the Story page's own render button still uses the synchronous route (the renderer page is the queued path), there is no subtitle-mode selector yet, and `piper-tts` is still outside the locked environment.
+
 ## Background job execution, per-scene progress and cancellation (Batch B)
 
 - **Change 1 — real worker.** New `app/worker.py` runs queued operations in one background thread: it claims a job, executes the registered handler, records completion or failure, and honours cancellation between units. The job is claimed with the operation's full budget, and every progress tick also extends the lease. `app/main.py` starts the worker in the FastAPI lifespan and stops it on shutdown.

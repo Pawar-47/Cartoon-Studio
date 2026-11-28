@@ -13,7 +13,8 @@ An original, local-first Urdu 3D cartoon production studio. This repository is t
 - Save and reload validated episode plans inside a local project.
 - Character Studio: import and inspect GLB 2.0 models, preview saved models in an interactive local 3D viewer, edit saved character profiles, customize and persist material colour/roughness/metalness recipes and existing facial morph targets, check mesh/skeleton/animation readiness, and save versioned reusable character profiles to a project.
 - World Builder: persistent project worlds with stable IDs, versioned schema migration, reusable templates and a Godot-authored 3D scene with a browser preview.
-- Episode workshop: validate and save a 5–7 minute Urdu episode plan, generate editable Godot scenes from saved worlds and project characters, generate Urdu dialogue audio with timed SRT subtitles, and render the episode MP4 from the project's quality preset (Preview, Low Hardware, Balanced or High Quality).
+- Episode workshop: validate and save a 5–7 minute Urdu episode plan, generate editable Godot scenes from saved worlds and project characters, generate Urdu dialogue audio with timed SRT subtitles (or record a line by hand), and render the episode MP4 from the project's quality preset (Preview, Low Hardware, Balanced or High Quality).
+- Episode Renderer and Logs and Diagnostics workspaces: queue a render and watch per-scene progress, cancel safely, read a job's event journal, and check Godot/FFmpeg/voice readiness.
 - Project export/import as a portable ZIP package; a durable SQLite job record for long operations, executed by a background worker with per-scene progress, cancellation and a dependency diagnostics endpoint.
 - GitHub Actions Windows CI installs exact uv-locked dependencies, runs lint/compile/tests and packages a hash-locked bootstrap ZIP.
 

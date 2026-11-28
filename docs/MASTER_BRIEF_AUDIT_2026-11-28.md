@@ -11,9 +11,11 @@ master brief preserved at `docs/MASTER_EXECUTION_PROMPT.md`.
 > require a per-line `subtitle_text`. **The FFmpeg half of B1 is fixed:** no GPL encoder is
 > bundled or used, the video encoder is chosen from a redistribution-safe preference list at
 > render time, and the installer now carries a hash-pinned LGPL FFmpeg build that
-> `_find_ffmpeg` prefers. See `docs/DECISION_LOG.md` and `docs/TEST_REPORT.md`. **The voice
-> half of B1 and B2–B9 remain open**, starting with `piper-tts` not being in the locked
-> environment and the recorded-WAV fallback.
+> `_find_ffmpeg` prefers. **B2 is largely fixed:** a background worker executes renders
+> with per-scene progress and cooperative cancellation, and the Episode Renderer and Logs
+> workspaces use the job endpoints and `/api/diagnostics`; a recorded-WAV dialogue fallback
+> also works without any speech engine. **The voice half of B1 and B3–B9 remain open**,
+> starting with `piper-tts` not being in the locked environment and the missing scene cache.
 
 Every finding has an ID, the evidence that produced it, the brief clause it violates,
 the required action, and the test that proves the action landed. Treat each finding as a

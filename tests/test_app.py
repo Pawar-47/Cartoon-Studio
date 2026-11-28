@@ -1821,6 +1821,22 @@ def test_episode_audio_uses_stored_recordings(tmp_path, monkeypatch):
     assert built.json()["tts_line_count"] == 4
 
 
+def test_renderer_and_logs_workspaces_are_served():
+    renderer = client.get("/renderer")
+    assert renderer.status_code == 200
+    assert "Episode Renderer" in renderer.text
+    assert 'id="queue-render"' in renderer.text
+    logs = client.get("/logs")
+    assert logs.status_code == 200
+    assert "Logs and Diagnostics" in logs.text
+    assert 'id="dependency-list"' in logs.text
+    story = client.get("/story")
+    assert 'id="recording-line"' in story.text
+    dashboard = client.get("/")
+    assert 'href="/renderer"' in dashboard.text
+    assert 'href="/logs"' in dashboard.text
+
+
 def test_episode_render_job_is_queued_and_diagnostics_report_dependencies(
     tmp_path, monkeypatch
 ):
