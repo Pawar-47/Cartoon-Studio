@@ -1041,6 +1041,34 @@ def test_project_export_returns_zip_package(tmp_path, monkeypatch):
         assert project_doc["data"]["name"] == "Exportable Project"
 
 
+def test_project_export_omits_the_rebuildable_scene_cache(tmp_path, monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "export-cache.sqlite3")
+    created = client.post("/api/projects", json={"name": "Cached Project"})
+    project_id = created.json()["id"]
+    episode_root = (
+        main.project_directory(tmp_path, project_id) / "assets" / "episodes" / "ep-1"
+    )
+    cache_file = episode_root / "render_cache" / "scene-01-abc123.avi"
+    cache_file.parent.mkdir(parents=True)
+    cache_file.write_bytes(b"scene-movie")
+    scene_file = episode_root / "scenes" / "scene-01.tscn"
+    scene_file.parent.mkdir(parents=True)
+    scene_file.write_text("[gd_scene format=3]\n", encoding="utf-8")
+
+    exported = client.get(f"/api/projects/{project_id}/export")
+    assert exported.status_code == 200
+
+    import zipfile
+
+    with zipfile.ZipFile(io.BytesIO(exported.content)) as archive:
+        names = archive.namelist()
+    assert "assets/episodes/ep-1/scenes/scene-01.tscn" in names
+    assert not any("render_cache" in name for name in names)
+
+
 def test_project_import_round_trip(tmp_path, monkeypatch):
     from app import main
 

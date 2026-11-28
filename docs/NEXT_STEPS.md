@@ -3,7 +3,7 @@
 ## Live checkpoint
 
 - Repository: `Pawar-47/Cartoon-Studio`; active branch `main`.
-- Newest batch: the Story page queues its render through the job route and owns a subtitle-mode selector — awaits its own CI run.
+- Newest batch: a content-keyed scene cache with restart recovery (Batch C, part 1) — awaits its own CI run.
 - Owner decisions on record: no GPL video encoder; voice uses both a pinned Piper TTS path and a recorded-WAV fallback.
 - Binding source: `docs/MASTER_EXECUTION_PROMPT.md`, all 25 parts. Do not create or switch development branches.
 
@@ -20,13 +20,23 @@ speech, because `piper-tts` is not in the locked environment.
    `.github/workflows/resolve-python-lock.yml` and vendor the wheels plus the two `ur_PK`
    voices into the installer, so TTS works offline. This is the last piece of the episode
    production chain that no shipped path covers.
-2. **Batch C — scene cache and checkpoints**, so one failed scene never re-renders the whole
-   episode and a restart resumes from the last completed scene.
-3. P2.2 remaining visual acceptance proceeds in parallel: interactive browser acceptance of
+2. **A real-media Windows CI job**: render a fixture episode end to end with the bundled
+   Godot runtime and LGPL FFmpeg on a clean runner, proving the production chain rather
+   than only its mocked tests.
+3. **Batch C, part 2**: cap the scene cache's total size across episodes and edited scenes.
+4. P2.2 remaining visual acceptance proceeds in parallel: interactive browser acceptance of
    hairstyles, portraits, assembly, morphs and retarget preview; broad rig acceptance on
    representative models.
 
 ## Recent completed batches
+
+### Scene cache and restart recovery (Batch C, part 1)
+`render_episode_video` takes a `cache_directory`; each finished scene movie is stored as
+`scene-NN-<sha256>.avi` keyed by the scene file, frame rate, resolution, duration and
+`SCENE_CACHE_VERSION`, and reused through a hard link (or copy) on the next render. An
+edited scene or a changed preset invalidates only itself, only the newest version per scene
+position is kept, a cache path outside the project is refused, `render.json` records
+`cached_scene_count`/`rendered_scene_count`, and portable packages omit `render_cache`.
 
 ### Story page queued render and subtitle-mode selector
 The Story page's visible render control queues `POST /api/projects/{id}/story/render/jobs`

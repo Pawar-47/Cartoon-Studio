@@ -8,6 +8,7 @@ import pytest
 from app.render import (
     RenderDependencyUnavailable,
     RenderExecutionError,
+    RenderPathError,
     _write_render_project,
     render_episode_video,
 )
@@ -342,3 +343,140 @@ def test_render_removes_mp4_when_final_verification_fails(
     assert len(mux_calls) == 1
     assert mux_calls[0][mux_calls[0].index("-c:v") + 1] == "libvpx-vp9"
     assert "libx264" not in mux_calls[0]
+
+
+def _fake_render_commands(godot, ffmpeg, godot_renders):
+    """Return a subprocess.run fake that renders movies without Godot or FFmpeg."""
+
+    def fake_run(command, **kwargs):
+        if command[0] == str(ffmpeg) and "-encoders" in command:
+            return subprocess.CompletedProcess(
+                command,
+                0,
+                stdout=(
+                    " V..... libvpx-vp9   libvpx VP9\n"
+                    " A..... aac         AAC\n"
+                    " S..... mov_text    mov_text\n"
+                ),
+                stderr="",
+            )
+        if command[0] == str(godot):
+            movie_path = Path(command[command.index("--write-movie") + 1])
+            movie_path.write_bytes(b"scene-movie")
+            godot_renders.append(Path(command[command.index("--") + 1]).name)
+            frames = command[command.index("--quit-after") + 1]
+            fps = command[command.index("--fixed-fps") + 1]
+            return subprocess.CompletedProcess(
+                command,
+                0,
+                stdout=f"{frames} frames at {fps} FPS",
+                stderr="",
+            )
+        if command[0] == str(ffmpeg) and "-progress" in command:
+            return subprocess.CompletedProcess(
+                command,
+                0,
+                stdout="out_time_us=2000000\nprogress=end\n",
+                stderr="",
+            )
+        Path(command[-1]).write_bytes(b"fake-mp4")
+        return subprocess.CompletedProcess(command, 0, stdout="", stderr="")
+
+    return fake_run
+
+
+def test_scene_cache_reuses_finished_scenes_and_invalidates_an_edited_one(
+    tmp_path, monkeypatch
+):
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    scenes = []
+    for index in (1, 2):
+        scene_path = project_root / f"scene-{index}.tscn"
+        scene_path.write_text(
+            f"[gd_scene format=3]\n; scene {index}\n", encoding="utf-8"
+        )
+        scenes.append(scene_path)
+    audio_path = project_root / "dialogue.wav"
+    _write_silent_wav(audio_path, 2)
+    subtitles_path = project_root / "subtitles.srt"
+    subtitles_path.write_text("", encoding="utf-8")
+    godot = tmp_path / "Godot.exe"
+    ffmpeg = tmp_path / "ffmpeg.exe"
+    godot.write_bytes(b"godot-test")
+    ffmpeg.write_bytes(b"ffmpeg-test")
+    cache_directory = project_root / "render_cache"
+    godot_renders = []
+    monkeypatch.setattr(
+        "app.render.subprocess.run",
+        _fake_render_commands(godot, ffmpeg, godot_renders),
+    )
+
+    def render(name):
+        return render_episode_video(
+            scenes,
+            [1, 1],
+            audio_path,
+            subtitles_path,
+            project_root / "renders" / name,
+            project_root,
+            godot,
+            ffmpeg_executable=ffmpeg,
+            cache_directory=cache_directory,
+        )
+
+    first = render("first.mp4")
+    assert first["rendered_scene_count"] == 2
+    assert first["cached_scene_count"] == 0
+    assert sorted(godot_renders) == ["scene-1.tscn", "scene-2.tscn"]
+    assert len(list(cache_directory.glob("scene-*.avi"))) == 2
+
+    second = render("second.mp4")
+    assert second["rendered_scene_count"] == 0
+    assert second["cached_scene_count"] == 2
+    assert len(godot_renders) == 2
+    assert Path(second["video_path"]).read_bytes() == b"fake-mp4"
+
+    scenes[1].write_text("[gd_scene format=3]\n; scene 2 edited\n", encoding="utf-8")
+    third = render("third.mp4")
+    assert third["rendered_scene_count"] == 1
+    assert third["cached_scene_count"] == 1
+    assert godot_renders.count("scene-1.tscn") == 1
+    assert godot_renders.count("scene-2.tscn") == 2
+
+
+def test_scene_cache_must_stay_inside_the_episode_project(tmp_path, monkeypatch):
+    project_root = tmp_path / "project"
+    project_root.mkdir()
+    scene_path = project_root / "scene.tscn"
+    scene_path.write_text("[gd_scene format=3]\n", encoding="utf-8")
+    audio_path = project_root / "dialogue.wav"
+    _write_silent_wav(audio_path, 1)
+    subtitles_path = project_root / "subtitles.srt"
+    subtitles_path.write_text("", encoding="utf-8")
+    godot = tmp_path / "Godot.exe"
+    ffmpeg = tmp_path / "ffmpeg.exe"
+    godot.write_bytes(b"godot-test")
+    ffmpeg.write_bytes(b"ffmpeg-test")
+
+    def fake_run(command, **kwargs):
+        return subprocess.CompletedProcess(
+            command,
+            0,
+            stdout=" V..... libvpx-vp9\n A..... aac\n S..... mov_text\n",
+            stderr="",
+        )
+
+    monkeypatch.setattr("app.render.subprocess.run", fake_run)
+    with pytest.raises(RenderPathError, match="scene cache"):
+        render_episode_video(
+            [scene_path],
+            [1],
+            audio_path,
+            subtitles_path,
+            project_root / "renders" / "episode.mp4",
+            project_root,
+            godot,
+            ffmpeg_executable=ffmpeg,
+            cache_directory=tmp_path / "outside-cache",
+        )

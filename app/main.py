@@ -1224,6 +1224,9 @@ def _execute_episode_render(
                 ),
             )
     project_root = project_directory(DATA_DIR, project_id)
+    cache_directory = resolve_project_relative(
+        DATA_DIR, project_id, f"assets/episodes/{episode_id}/render_cache"
+    )
     project_settings = _read_project_settings(project_id)
     quality = resolve_quality_profile(str(project_settings.get("quality_preset", "")))
     include_subtitles = str(audio_data.get("subtitle_mode", "urdu")) != "none"
@@ -1255,6 +1258,7 @@ def _execute_episode_render(
         width=quality.width,
         height=quality.height,
         include_subtitles=include_subtitles,
+        cache_directory=cache_directory,
         progress_callback=report,
         cancel_check=cancelled,
     )
@@ -1272,6 +1276,8 @@ def _execute_episode_render(
         "height": result["height"],
         "quality_preset": quality.name,
         "has_subtitles": include_subtitles,
+        "cached_scene_count": result.get("cached_scene_count", 0),
+        "rendered_scene_count": result.get("rendered_scene_count", 0),
         "video_encoder": result.get("video_encoder"),
         "video_codec": result.get("video_codec"),
         "size_bytes": result["size_bytes"],
@@ -1313,6 +1319,8 @@ def _render_job_handler(context: JobContext) -> dict[str, Any]:
         "height": result["height"],
         "quality_preset": result["quality_preset"],
         "has_subtitles": result["has_subtitles"],
+        "cached_scene_count": result.get("cached_scene_count", 0),
+        "rendered_scene_count": result.get("rendered_scene_count", 0),
         "video_encoder": result.get("video_encoder"),
         "status": "ok",
     }
@@ -1380,6 +1388,8 @@ def render_episode(project_id: str) -> dict[str, Any]:
             "height": result["height"],
             "quality_preset": result["quality_preset"],
             "has_subtitles": result["has_subtitles"],
+        "cached_scene_count": result.get("cached_scene_count", 0),
+        "rendered_scene_count": result.get("rendered_scene_count", 0),
             "status": "ok",
         },
     )
@@ -3820,9 +3830,24 @@ def update_project_settings(
     }
 
 
+def _is_derived_project_path(relative_path: str) -> bool:
+    """Return True for a rebuildable file a portable package must not carry.
+
+    The scene cache holds one large intermediate movie per scene. It is rebuilt
+    from the episode's scenes and render settings, so exporting it would only
+    inflate every package without adding anything the import needs.
+    """
+    return "render_cache" in relative_path.split("/")
+
+
 def _project_package_entries(project_root: Path) -> list[Path]:
-    """Return every file to place in a portable project package, project.json first."""
-    files = [path for path in sorted(project_root.rglob("*")) if path.is_file()]
+    """Return every file to place in a portable package, project.json first."""
+    files = [
+        path
+        for path in sorted(project_root.rglob("*"))
+        if path.is_file()
+        and not _is_derived_project_path(path.relative_to(project_root).as_posix())
+    ]
     files.sort(key=lambda path: path.relative_to(project_root).as_posix() != "project.json")
     return files
 
@@ -3869,10 +3894,10 @@ def _remap_project_package_documents(project_root: Path, old_id: str, new_id: st
 def export_project(project_id: str):
     """Export a project as a portable ZIP package.
 
-    The package is the project directory zipped verbatim: project.json at the
-    root plus the world, episode and character documents and the assets they
+    The package is the project directory zipped as a snapshot: project.json at
+    the root plus the world, episode and character documents and the assets they
     reference, so another Cartoon Studio instance can reopen and revise the
-    episode (PROD-R005).
+    episode (PROD-R005). Rebuildable render caches are left out.
     """
     initialize_database()
     with connect_db() as connection:

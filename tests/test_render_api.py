@@ -69,12 +69,20 @@ def test_episode_render_endpoint_persists_and_serves_mp4(tmp_path, monkeypatch):
         assert project_root == main.project_directory(tmp_path, project_id)
         assert godot_executable == tmp_path / "Godot.exe"
         # A new project uses the balanced preset: 24 fps at 1280x720 with subtitles.
-        assert {key: value for key, value in options.items() if key != "progress_callback"
-                and key != "cancel_check"} == {
+        assert {
+            key: value
+            for key, value in options.items()
+            if key not in ("progress_callback", "cancel_check")
+        } == {
             "fps": 24,
             "width": 1280,
             "height": 720,
             "include_subtitles": True,
+            "cache_directory": main.resolve_project_relative(
+                tmp_path,
+                project_id,
+                f"assets/episodes/{episode_id}/render_cache",
+            ),
         }
         assert callable(options["progress_callback"])
         assert callable(options["cancel_check"])

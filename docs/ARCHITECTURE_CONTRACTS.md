@@ -46,6 +46,7 @@ Engine-specific resource paths, node names, skeleton mappings and clip names are
 - SQLite is the transactional index for project IDs, document revisions, asset metadata, render jobs/events and migration versions.
 - JSON manifests/documents and binary media remain ordinary files in the project folder.
 - Render outputs are chunked by scene and job; completed chunks are immutable inputs to assembly.
+- Each finished scene movie is cached inside the episode (`assets/episodes/{episode_id}/render_cache/`) under a SHA-256 of the scene file, frame rate, resolution, duration and cache format version. Only the newest cached version per scene position is kept, the cache is excluded from portable packages, and a render reports how many scenes it reused.
 - Keep CARTOON_STUDIO_DATA as the override. Packaged default should be the user's application-data directory, not the source checkout.
 - A migration ledger and backup-before-migrate behavior are required before introducing schema-changing tables.
 

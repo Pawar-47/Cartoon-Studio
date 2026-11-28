@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import os
 import re
 import shutil
@@ -36,6 +37,8 @@ SUPPORTED_FPS = frozenset({12, 15, 20, 24, 25, 30})
 MIN_RENDER_WIDTH = 640
 MIN_RENDER_HEIGHT = 360
 BUNDLED_FFMPEG_NAME = "ffmpeg.exe"
+# Bump when a cached scene video is no longer valid for the current renderer.
+SCENE_CACHE_VERSION = 1
 
 # Video encoders this application may redistribute, in preference order.
 #
@@ -298,6 +301,58 @@ def ffmpeg_status() -> dict[str, object]:
     }
 
 
+def _scene_cache_key(
+    scene_path: Path,
+    fps: int,
+    width: int,
+    height: int,
+    duration: int,
+) -> str:
+    """Fingerprint a scene and the render settings its cached video belongs to.
+
+    The key covers the scene file's bytes, the exact frame rate, resolution and
+    duration, and a cache format version, so an edited scene, a changed quality
+    preset or a new cache format never reuses a stale video.
+    """
+    digest = hashlib.sha256()
+    digest.update(f"cartoon-studio-scene-cache-v{SCENE_CACHE_VERSION}\0".encode())
+    digest.update(f"{fps}x{width}x{height}:{duration}\0".encode())
+    with scene_path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()[:16]
+
+
+def _place_scene(source: Path, destination: Path) -> None:
+    """Put an identical scene video at the destination without rewriting it.
+
+    The cache and the temporary render directory sit on the same project volume,
+    so a hard link reuses the movie instead of copying it; a filesystem that
+    refuses the link falls back to a copy, and the destination only appears once
+    it is complete.
+    """
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    partial = destination.with_name(destination.name + ".part")
+    partial.unlink(missing_ok=True)
+    try:
+        os.link(source, partial)
+    except OSError:
+        shutil.copyfile(source, partial)
+    partial.replace(destination)
+
+
+def _prune_scene_cache(cache_root: Path, index: int, keep: Path) -> None:
+    """Drop cached versions of a scene that the current file replaced.
+
+    Scene videos are large, so only the newest version of each scene position is
+    kept. A render already reading an older version keeps working through its own
+    link, so pruning never breaks work in progress.
+    """
+    for stale in cache_root.glob(f"scene-{index:02d}-*.avi"):
+        if stale.name != keep.name:
+            stale.unlink(missing_ok=True)
+
+
 def render_episode_video(
     scene_paths: list[Path],
     scene_durations: list[int],
@@ -314,6 +369,7 @@ def render_episode_video(
     include_subtitles: bool = True,
     progress_callback: Callable[[int, int], None] | None = None,
     cancel_check: Callable[[], bool] | None = None,
+    cache_directory: Path | None = None,
 ) -> dict:
     """Render the episode scene by scene and assemble the MP4.
 
@@ -322,6 +378,10 @@ def render_episode_video(
     consulted before each scene and before assembly so a cancelled job stops
     without rendering the remaining scenes. Both are optional; a synchronous
     caller gets exactly the previous behaviour.
+
+    ``cache_directory`` keeps every finished scene video keyed by the scene's
+    bytes and its render settings, so a retried or restarted render reuses the
+    scenes it already finished instead of rendering the whole episode again.
     """
     def cancelled() -> bool:
         return bool(cancel_check and cancel_check())
@@ -361,6 +421,15 @@ def render_episode_video(
     if output.exists():
         raise RenderPathError("Refusing to overwrite an existing episode MP4.")
     output.parent.mkdir(parents=True, exist_ok=True)
+    cache_root: Path | None = None
+    if cache_directory is not None:
+        candidate_cache = Path(cache_directory).resolve(strict=False)
+        if candidate_cache == root or root not in candidate_cache.parents:
+            raise RenderPathError(
+                "The scene cache must stay inside the episode project."
+            )
+        candidate_cache.mkdir(parents=True, exist_ok=True)
+        cache_root = candidate_cache
 
     try:
         with wave.open(str(audio_file), "rb") as audio:
@@ -384,6 +453,8 @@ def render_episode_video(
         render_project.mkdir()
         _write_render_project(render_project)
         scene_videos: list[Path] = []
+        cached_scenes = 0
+        rendered_scenes = 0
         for index, (scene_path, duration) in enumerate(
             zip(scenes, scene_durations, strict=True),
             start=1,
@@ -397,6 +468,17 @@ def render_episode_video(
                 raise RenderExecutionError("The episode render exceeded its time budget.")
             scene_video = temporary_root / f"scene-{index:02d}.avi"
             frames = duration * fps
+            cache_key = ""
+            if cache_root is not None:
+                cache_key = _scene_cache_key(scene_path, fps, width, height, duration)
+                cached_video = cache_root / f"scene-{index:02d}-{cache_key}.avi"
+                if cached_video.is_file() and cached_video.stat().st_size > 0:
+                    _place_scene(cached_video, scene_video)
+                    scene_videos.append(scene_video)
+                    cached_scenes += 1
+                    if progress_callback is not None:
+                        progress_callback(index, len(scenes))
+                    continue
             command = [
                 str(godot),
                 "--path",
@@ -441,6 +523,11 @@ def render_episode_video(
                     f"Godot did not render scene {index} at its exact frame count "
                     f"({expected_frame_report}). {detail}".strip()
                 )
+            if cache_root is not None:
+                cached_scene = cache_root / f"scene-{index:02d}-{cache_key}.avi"
+                _place_scene(scene_video, cached_scene)
+                _prune_scene_cache(cache_root, index, cached_scene)
+            rendered_scenes += 1
             scene_videos.append(scene_video)
             if progress_callback is not None:
                 progress_callback(index, len(scenes))
@@ -531,6 +618,8 @@ def render_episode_video(
         "width": width,
         "height": height,
         "has_subtitles": include_subtitles,
+        "cached_scene_count": cached_scenes,
+        "rendered_scene_count": rendered_scenes,
         "video_encoder": video_encoder,
         "video_codec": VIDEO_ENCODER_KIND[video_encoder],
         "size_bytes": output.stat().st_size,

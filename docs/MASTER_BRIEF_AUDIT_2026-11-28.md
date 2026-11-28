@@ -16,9 +16,12 @@ master brief preserved at `docs/MASTER_EXECUTION_PROMPT.md`.
 > workspaces use the job endpoints and `/api/diagnostics`; a recorded-WAV dialogue fallback
 > also works without any speech engine. **The synchronous Story-page render path is now
 > closed in the UI:** the page queues the job, hands off to `/renderer` for progress and
-> cancellation, and carries a subtitle-mode selector. **The voice half of B1 and B3–B9
-> remain open**, starting with `piper-tts` not being in the locked environment and the
-> missing scene cache.
+> cancellation, and carries a subtitle-mode selector. **The scene cache and restart
+> recovery are implemented:** each finished scene movie is cached under the episode by a
+> SHA-256 of the scene and its render settings, reused on the next render, and excluded
+> from portable packages. **The voice half of B1 and the remaining B3–B9 items stay open**,
+> starting with `piper-tts` not being in the locked environment, the missing real-media
+> render job and the absent cache size cap.
 
 Every finding has an ID, the evidence that produced it, the brief clause it violates,
 the required action, and the test that proves the action landed. Treat each finding as a

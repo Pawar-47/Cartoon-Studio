@@ -1,5 +1,15 @@
 # Project Status — 2026-11-28
 
+## Live checkpoint — 2026-11-28 (scene cache and restart recovery, Batch C, part 1)
+
+- **A retried or restarted render reuses the scenes it already finished.** `render_episode_video` takes an optional `cache_directory`; each finished scene movie is stored under `assets/episodes/{episode_id}/render_cache/` named by a SHA-256 of the scene's bytes, the frame rate, resolution and duration, and a cache format version. A scene whose key is cached is linked into the render instead of being rendered again, so cancelling or crashing after four of seven scenes costs only the remaining three.
+- **An edited scene or a changed preset re-renders only what changed.** The key covers the scene file and the render settings, so `scene-2` edited at High Quality invalidates that scene alone. `SCENE_CACHE_VERSION` invalidates every cached movie when the renderer itself changes.
+- **The cache is bounded and stays inside the project.** Only the newest cached version of each scene position is kept, and a cache path outside the project is refused. `render.json` and the job result now record `cached_scene_count` and `rendered_scene_count`, so a render says how much work it skipped.
+- **Packages stay small and honest.** Project export omits `render_cache` (rebuildable intermediate movies) while keeping the scenes, documents and assets that matter.
+- **Tests:** cache reuse, invalidation of one edited scene, newest-only pruning, the outside-project refusal and the export omission.
+- **Verified:** static review only; the next Windows CI run is the proof. No Godot runtime, FFmpeg or browser was available in this batch.
+- **Still open:** the cache is not size-capped across many edited scenes or many episodes, and a real-media Windows job has still not rendered an episode end to end.
+
 ## Live checkpoint — 2026-11-28 (Story page queues renders, subtitle-mode selector)
 
 - **The Story page no longer holds an HTTP request open.** Its visible render control is `#queue-render`: `app/static/story-render-queue.js` posts to `POST /api/projects/{id}/story/render/jobs` and opens `/renderer?project=…`, where progress and cancellation already work. A refused queue request shows the server's message (no saved plan, missing scenes or missing audio) and stays on the page.
@@ -75,7 +85,7 @@
 | 4 — Story and Scene Engine | PARTIAL | Structured prompt/schema, validation, world/cast binding and editable scene generation; integrated generation, approval, repair and complete mapping remain |
 | 5 — Animation Engine | PARTIAL | Procedural action/camera/expression tracks; reusable motion library, blending, timeline editor and visual acceptance remain |
 | 6 — Urdu Voice and Lip-Sync | PARTIAL | Offline Urdu speech/audio mix and subtitles with urdu/roman_urdu/english/none modes and a heuristic mouth envelope; `piper-tts` is not in the locked environment, so the installed app cannot synthesise speech yet; native-speaker evaluation and phoneme/viseme alignment remain |
-| 7 — Episode Generator | PARTIAL | Editable scene generation, audio, Godot/FFmpeg MP4 path rendered at the project's quality preset, a background worker with per-scene progress and cancellation, and durable job records; scene cache/restart-resume and full episode acceptance remain |
+| 7 — Episode Generator | PARTIAL | Editable scene generation, audio, Godot/FFmpeg MP4 path rendered at the project's quality preset, a background worker with per-scene progress and cancellation, durable job records and a content-keyed scene cache that reuses finished scenes after a cancel or crash; full episode acceptance and a cache size cap remain |
 | 8 — Optimization and Reliability | DEFERRED | Quality presets are implemented and the render, diagnostics and log workspaces exist; target-PC benchmarks, full visual/audio signoff and final production acceptance remain |
 
 ## Next implementation batch
