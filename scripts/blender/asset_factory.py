@@ -7,7 +7,7 @@ from mathutils import Vector
 def args():
     values=sys.argv[sys.argv.index("--")+1:] if "--" in sys.argv else []
     p=argparse.ArgumentParser()
-    p.add_argument("--asset-kind",choices=("character","world","prop"),required=True)
+    p.add_argument("--asset-kind",choices=("character","world","prop","building","vehicle","vegetation"),required=True)
     p.add_argument("--asset-id",required=True); p.add_argument("--name",required=True)
     p.add_argument("--output-dir",type=Path,required=True)
     return p.parse_args(values)
@@ -372,10 +372,93 @@ def prop():
     for x in (-.65,-.32,0,.32,.65): block("Treasure chest | band",(x,-.535,1.13),(.035,.025,.21),gold,.01)
     return {"prop_family":"storybook_treasure_chest_v1"}
 
+
+def building():
+    plaster = mat("Building | warm ochre plaster", (.78, .43, .23))
+    trim = mat("Building | limestone trim", (.94, .82, .61))
+    roof = mat("Building | deep terracotta roof", (.32, .075, .045))
+    wood = mat("Building | painted teal door", (.035, .25, .28))
+    glass = mat("Building | blue glass", (.08, .34, .48), .2)
+    dark = mat("Building | shadow recess", (.055, .075, .085))
+    block("House | foundation", (0, 0, .16), (4.4, 3.2, .32), dark, .08)
+    block("House | main facade", (0, 0, 1.65), (4, 2.8, 2.8), plaster, .09)
+    for sign in (-1, 1):
+        slab = block("House | pitched roof", (sign * .92, 0, 3.18),
+                     (2.25, 3.18, .22), roof, .045)
+        slab.rotation_euler[1] = sign * -.48
+    block("House | front eave", (0, -1.57, 2.93), (4.35, .16, .16), trim, .035)
+    block("House | front step", (0, -1.58, .20), (1.25, .55, .16), trim, .035)
+    block("House | door frame", (0, -1.435, 1.05), (.94, .13, 1.9), trim, .04)
+    block("House | front door", (0, -1.52, 1.03), (.72, .08, 1.72), wood, .035)
+    ball("House | brass door knob", (.25, -1.58, 1.02), (.045, .035, .045), trim, 20)
+    for x in (-1.22, 1.22):
+        block("House | window surround", (x, -1.445, 1.95), (.88, .13, .98), trim, .04)
+        block("House | window glass", (x, -1.52, 1.95), (.68, .045, .77), glass, .02)
+        block("House | window mullion", (x, -1.55, 1.95), (.045, .035, .78), trim, .01)
+        block("House | window crossbar", (x, -1.55, 1.95), (.7, .035, .045), trim, .01)
+    return {"building_family": "storybook_cottage_v1", "features": ["gable_roof", "door", "two_divided_windows"]}
+
+
+def vehicle():
+    body = mat("Vehicle | ocean blue enamel", (.025, .24, .43), .3, .18)
+    roof = mat("Vehicle | pale aqua roof", (.28, .67, .68), .28, .12)
+    glass = mat("Vehicle | smoked blue glass", (.035, .13, .19), .16, .12)
+    rubber = mat("Vehicle | tire rubber", (.018, .022, .027), .88)
+    hub = mat("Vehicle | warm alloy", (.72, .56, .31), .32, .65)
+    lamp = mat("Vehicle | warm headlamps", (1.0, .72, .28), .2)
+    red = mat("Vehicle | tail lamps", (.65, .035, .025), .25)
+    dark = mat("Vehicle | grille", (.025, .045, .055), .55)
+    block("Car | lower chassis", (0, 0, .72), (3.15, 1.48, .62), body, .24)
+    block("Car | hood", (0, -.77, .91), (1.85, .65, .25), body, .12)
+    block("Car | cabin", (0, .12, 1.38), (1.82, 1.45, .92), roof, .25)
+    for sign in (-1, 1):
+        block("Car | side window", (sign * .925, .12, 1.48), (.055, 1.05, .55), glass, .08)
+        block("Car | door panel", (sign * .79, -.02, .82), (.08, .94, .42), body, .06)
+        block("Car | door handle", (sign * .85, .18, 1.03), (.035, .22, .045), hub, .015)
+        for y in (-.92, .93):
+            bpy.ops.mesh.primitive_cylinder_add(vertices=48, radius=.39, depth=.22,
+                location=(sign * 1.43, y, .43), rotation=(math.pi / 2, 0, 0))
+            smooth(bpy.context.object, rubber, .035)
+            bpy.ops.mesh.primitive_cylinder_add(vertices=32, radius=.22, depth=.235,
+                location=(sign * 1.43, y, .43), rotation=(math.pi / 2, 0, 0))
+            smooth(bpy.context.object, hub, .018)
+    for x in (-.63, .63):
+        ball("Car | headlamp", (x, -1.12, .91), (.19, .07, .12), lamp, 24)
+        ball("Car | tail lamp", (x, .77, .88), (.14, .07, .10), red, 24)
+    block("Car | front grille", (0, -1.18, .68), (.78, .07, .19), dark, .045)
+    block("Car | front bumper", (0, -1.19, .49), (2.55, .16, .13), hub, .05)
+    block("Car | rear bumper", (0, 1.02, .52), (2.55, .15, .13), hub, .05)
+    return {"vehicle_family": "storybook_compact_car_v1", "features": ["four_wheels", "glazed_cabin", "headlamps", "bumpers"]}
+
+
+def vegetation():
+    bark = mat("Tree | chestnut bark", (.25, .095, .035))
+    leaf_dark = mat("Tree | deep foliage", (.075, .27, .095))
+    leaf_mid = mat("Tree | leaf green", (.18, .43, .12))
+    leaf_light = mat("Tree | sunlit foliage", (.39, .58, .16))
+    bpy.ops.mesh.primitive_cone_add(vertices=20, radius1=.28, radius2=.16,
+                                    depth=2.7, location=(0, 0, 1.35))
+    smooth(bpy.context.object, bark, .04)
+    for sign in (-1, 1):
+        curve("Tree | branch", [(0, 0, 1.65), (sign * .42, 0, 2.05),
+                                (sign * .65, 0, 2.42)], .09, bark)
+    for name, loc, scale, material in (
+        ("lower", (0, 0, 2.45), (1.12, .88, .92), leaf_dark),
+        ("left", (-.62, -.04, 2.82), (.78, .72, .82), leaf_mid),
+        ("right", (.61, .02, 2.88), (.82, .75, .88), leaf_mid),
+        ("top", (0, .03, 3.35), (.78, .70, .82), leaf_light),
+    ):
+        ball("Tree | crown " + name, loc, scale, material, 40)
+    for sign in (-1, 1):
+        curve("Tree | surface root", [(0, 0, .18), (sign * .34, -.08, .08),
+                                      (sign * .62, -.12, .035)], .075, bark)
+    return {"vegetation_family": "storybook_broadleaf_tree_v1", "features": ["branching_trunk", "layered_crown", "surface_roots"]}
+
 def main():
     a=args(); out=a.output_dir.resolve(); out.mkdir(parents=True,exist_ok=True)
     bpy.ops.object.select_all(action="SELECT"); bpy.ops.object.delete(use_global=False)
-    details=character() if a.asset_kind=="character" else world() if a.asset_kind=="world" else prop()
+    builders = {"character": character, "world": world, "prop": prop, "building": building, "vehicle": vehicle, "vegetation": vegetation}
+    details = builders[a.asset_kind]()
     scene=bpy.context.scene
     w=bpy.data.worlds[0] if bpy.data.worlds else bpy.data.worlds.new("Cartoon Studio | studio")
     scene.world=w; w.color=(.16,.19,.24)

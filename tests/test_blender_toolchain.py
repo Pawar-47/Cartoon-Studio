@@ -11,7 +11,7 @@ def test_blender_is_optional_and_reports_shared_asset_domains(tmp_path: Path) ->
 
     assert status["available"] is False
     assert status["supported"] is False
-    assert status["supported_asset_kinds"] == ["character", "prop", "world"]
+    assert status["supported_asset_kinds"] == ["building", "character", "prop", "vegetation", "vehicle", "world"]
     with pytest.raises(BlenderUnavailableError):
         worker.version()
 
@@ -58,8 +58,11 @@ def test_factory_contains_domain_generators_and_editable_glb_export() -> None:
     )
     source = script.read_text(encoding="utf-8")
 
-    for domain in ('"character"', '"world"', '"prop"'):
+    for domain in ("character", "world", "prop", "building", "vehicle", "vegetation"):
         assert domain in source
+    assert "def building():" in source
+    assert "def vehicle():" in source
+    assert "def vegetation():" in source
     assert "export_skins=True" in source
     assert "export_morph=True" in source
     assert '"editable_source":True' in source.replace(" ", "")

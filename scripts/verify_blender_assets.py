@@ -47,7 +47,10 @@ def main() -> int:
         summary = []
         for kind, name in (("character", "Foundry Character Proof"),
                            ("world", "Storybook Village Proof"),
-                           ("prop", "Treasure Chest Proof")):
+                           ("prop", "Treasure Chest Proof"),
+                           ("building", "Storybook Cottage Proof"),
+                           ("vehicle", "Storybook Car Proof"),
+                           ("vegetation", "Broadleaf Tree Proof")):
             asset_id = f"ci-{kind}-proof"
             result = worker.generate(project_root=project, asset_id=asset_id,
                                      asset_kind=kind, name=name, timeout_seconds=900)

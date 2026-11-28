@@ -11,8 +11,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
-AssetKind = Literal["character", "world", "prop"]
-KINDS = {"character", "world", "prop"}
+AssetKind = Literal["character", "world", "prop", "building", "vehicle", "vegetation"]
+KINDS = {"character", "world", "prop", "building", "vehicle", "vegetation"}
 NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 _-]{0,63}$")
 
 class BlenderToolchainError(RuntimeError):
