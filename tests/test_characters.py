@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import shutil
 import struct
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
@@ -24,6 +26,47 @@ def make_glb() -> bytes:
     encoded += b" " * ((4 - len(encoded) % 4) % 4)
     chunk = struct.pack("<II", len(encoded), 0x4E4F534A) + encoded
     return struct.pack("<4sII", b"glTF", 2, 12 + len(chunk)) + chunk
+
+
+
+def fake_foundry_blender_generate(project_root, asset_id, name, recipe, destination):
+    output_dir = project_root / "assets" / "blender" / asset_id
+    output_dir.mkdir(parents=True, exist_ok=True)
+    glb_path = output_dir / f"{asset_id}.glb"
+    glb_path.write_bytes(make_glb())
+    source_path = output_dir / f"{asset_id}.blend"
+    source_path.write_bytes(b"BLENDER-v4.5.17" + bytes(2048))
+    preview_path = output_dir / f"{asset_id}_preview.png"
+    preview_path.write_bytes(b"\x89PNG\r\n\x1a\n" + b"fake-preview")
+    manifest_path = output_dir / "manifest.json"
+    morph_targets = [
+        "head_width", "jaw_width", "chin_length", "cheek_fullness",
+        "eye_spacing", "nose_width", "mouth_width", "torso_width",
+        "shoulder_width", "leg_length", "Smile", "JawOpen", "Blink",
+        "Open", "Phoneme_A", "Phoneme_O",
+    ]
+    manifest = {
+        "generator_version": "0.3.0",
+        "culture_profile": "pakistani_storybook_v1",
+        "details": {
+            "morph_targets": morph_targets,
+            "rig_profile_id": "cartoon-studio.humanoid.v1",
+            "hair_style": recipe.get("hair_style", "short"),
+            "hair_color": recipe.get("hair_color", "#2b1b13"),
+            "outfit": "pakistani_kurta_shalwar_with_peshawari_chappal",
+        },
+    }
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(glb_path, destination)
+    return SimpleNamespace(
+        glb_path=glb_path,
+        source_path=source_path,
+        manifest_path=manifest_path,
+        preview_path=preview_path,
+        manifest=manifest,
+        blender_version="4.5.17",
+    )
 
 
 class FakeEngine:
@@ -152,6 +195,7 @@ def setup_project(tmp_path, monkeypatch):
     monkeypatch.setattr(main, "DB_PATH", tmp_path / "characters.sqlite3")
     monkeypatch.setattr(main, "_INITIALIZED_DB_KEY", None)
     monkeypatch.setattr(main, "get_engine_adapter", lambda: FakeEngine())
+    monkeypatch.setattr(main, "_generate_foundry_blender_asset", fake_foundry_blender_generate)
     client = TestClient(main.app)
     project = client.post("/api/projects", json={"name": "Character Project"})
     assert project.status_code == 201
@@ -823,6 +867,12 @@ def test_foundry_generation_creates_project_character_and_replayable_recipe(
     )
     assert manifest.status_code == 200
     assert manifest.json()["generator"]["template_id"] == saved_recipe["master_template_id"]
+    blender_source = client.get(result["blender_source_url"])
+    blender_preview = client.get(result["blender_preview_url"])
+    assert blender_source.status_code == 200
+    assert blender_source.content.startswith(b"BLENDER")
+    assert blender_preview.status_code == 200
+    assert blender_preview.content.startswith(b"\x89PNG\r\n\x1a\n")
     downloaded = client.get(result["asset_url"])
     assert downloaded.status_code == 200
     assert downloaded.content == asset_path.read_bytes()
@@ -850,6 +900,8 @@ def test_foundry_recipe_update_preserves_identity_and_original_asset(tmp_path, m
     recipe = json.loads((tmp_path / "projects" / project_id / updated["recipe_path"]).read_text())
     assert recipe["character_id"] == original["id"]
     assert recipe["parameters"]["head_width"] == 0.75
+    assert client.get(updated["blender_source_url"]).status_code == 200
+    assert client.get(updated["blender_preview_url"]).status_code == 200
     listed = client.get(f"/api/projects/{project_id}/characters").json()
     assert len([item for item in listed if item["id"] == original["id"]]) == 1
 
