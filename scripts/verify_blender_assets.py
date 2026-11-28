@@ -96,6 +96,7 @@ def main() -> int:
                     for name in mesh.get("extras", {}).get("targetNames", [])
                 }
                 required_targets = set(MORPH_TARGETS) | {
+                    "GazeLeft", "GazeRight", "GazeUp", "GazeDown",
                     "Smile", "JawOpen", "Blink", "Open", "Phoneme_A", "Phoneme_O"
                 }
                 if not required_targets.issubset(target_names):
@@ -195,8 +196,18 @@ def main() -> int:
             raise RuntimeError(
                 "female character: canonical humanoid rig mapping/hierarchy is invalid"
             )
-        if female_inspection.get("morph_target_count", 0) < len(MORPH_TARGETS) + 6:
-            raise RuntimeError("female character: recipe morph targets failed import")
+        female_targets = {
+            str(target.get("name", ""))
+            for target in female_inspection.get("morph_targets", [])
+        }
+        required_gaze_targets = {"GazeLeft", "GazeRight", "GazeUp", "GazeDown"}
+        if not required_gaze_targets.issubset(female_targets):
+            raise RuntimeError(
+                "female character: Godot did not import gaze controls "
+                + ", ".join(sorted(required_gaze_targets - female_targets))
+            )
+        if female_inspection.get("morph_target_count", 0) < len(MORPH_TARGETS) + 10:
+            raise RuntimeError("female character: recipe and gaze morph targets failed import")
         female_target = args.output / "character-female"
         female_target.mkdir(parents=True, exist_ok=True)
         for source in (

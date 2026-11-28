@@ -225,7 +225,13 @@ def _character_region(object_name):
         return "nose"
     if "mouth" in name or "lip" in name:
         return "mouth"
-    if any(token in name for token in ("eye", "iris", "pupil", "brow", "eyelid")):
+    if any(token in name for token in ("sclera", "iris", "pupil", "catchlight")):
+        return "eye_surface"
+    if "eyelid" in name:
+        return "eyelids"
+    if "brow" in name:
+        return "brows"
+    if "eye" in name:
         return "eyes"
     if any(token in name for token in ("head", "hair", "ear", "face", "cheek")):
         return "head"
@@ -376,9 +382,29 @@ def add_foundry_shape_keys(mesh, recipe):
             point.y = base.y - .025
     add_key("cheek_fullness", ("head",), cheek, parameters.get("cheek_fullness", 0.0))
     add_key(
-        "eye_spacing", ("eyes",),
+        "eye_spacing", ("eyes", "eye_surface", "eyelids", "brows"),
         lambda p, b: setattr(p, "x", b.x + math.copysign(.075, b.x)),
         parameters.get("eye_spacing", 0.0),
+    )
+    add_key(
+        "GazeLeft", ("eye_surface",),
+        lambda p, b: setattr(p, "x", b.x - .045),
+        expressions.get("GazeLeft", 0.0),
+    )
+    add_key(
+        "GazeRight", ("eye_surface",),
+        lambda p, b: setattr(p, "x", b.x + .045),
+        expressions.get("GazeRight", 0.0),
+    )
+    add_key(
+        "GazeUp", ("eye_surface",),
+        lambda p, b: setattr(p, "z", b.z + .035),
+        expressions.get("GazeUp", 0.0),
+    )
+    add_key(
+        "GazeDown", ("eye_surface",),
+        lambda p, b: setattr(p, "z", b.z - .035),
+        expressions.get("GazeDown", 0.0),
     )
     add_key("nose_width", ("nose",), lambda p, b: scale_x(p, b, 1.32), parameters.get("nose_width", 0.0))
     add_key("mouth_width", ("mouth",), lambda p, b: scale_x(p, b, 1.30), parameters.get("mouth_width", 0.0))
@@ -404,9 +430,11 @@ def add_foundry_shape_keys(mesh, recipe):
         if base.z < 2.54 and base.y < -.05:
             point.z = base.z - .055
     add_key("JawOpen", ("head", "mouth"), jaw_open, expressions.get("JawOpen", 0.0))
+    # Blink only deforms the eyeball, iris, pupil and catchlight region;
+    # brows and eyelid curves remain intact instead of collapsing with the eye.
     add_key(
-        "Blink", ("eyes",),
-        lambda p, b: setattr(p, "z", 2.62 + (b.z - 2.62) * .16),
+        "Blink", ("eye_surface",),
+        lambda p, b: setattr(p, "z", 2.62 + (b.z - 2.62) * .08),
         expressions.get("Blink", 0.0),
     )
     add_key(
@@ -426,11 +454,13 @@ def add_foundry_shape_keys(mesh, recipe):
     mesh["cartoon_studio_morph_targets"] = json.dumps(
         ["head_width", "jaw_width", "chin_length", "cheek_fullness", "eye_spacing",
          "nose_width", "mouth_width", "torso_width", "shoulder_width", "leg_length",
+         "GazeLeft", "GazeRight", "GazeUp", "GazeDown",
          "Smile", "JawOpen", "Blink", "Open", "Phoneme_A", "Phoneme_O"]
     )
     return [
         "head_width", "jaw_width", "chin_length", "cheek_fullness", "eye_spacing",
         "nose_width", "mouth_width", "torso_width", "shoulder_width", "leg_length",
+        "GazeLeft", "GazeRight", "GazeUp", "GazeDown",
         "Smile", "JawOpen", "Blink", "Open", "Phoneme_A", "Phoneme_O",
     ]
 
@@ -695,7 +725,10 @@ def character(recipe=None):
 
     arm, character_mesh = rig(parts)
     morph_targets = add_foundry_shape_keys(character_mesh, recipe)
-    arm["facial_controls"] = ["Smile", "JawOpen", "Blink", "Open", "Phoneme_A", "Phoneme_O"]
+    arm["facial_controls"] = [
+        "GazeLeft", "GazeRight", "GazeUp", "GazeDown",
+        "Smile", "JawOpen", "Blink", "Open", "Phoneme_A", "Phoneme_O",
+    ]
     arm["template_id"] = master_template_id
     return {
         "rig": arm.name,
