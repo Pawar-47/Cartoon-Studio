@@ -1,5 +1,12 @@
 # Project Status — 2026-11-28
 
+## Live checkpoint — 2026-11-28 (real-media run found and fixed a verification defect)
+
+- **The real-media job rendered an MP4.** Its first run (`141010017356`) had Godot render both real scenes, had the bundled LGPL FFmpeg mux them, and then failed final verification because the null muxer has no default subtitle encoder in that build.
+- **Fix:** `_verify_rendered_mp4` copies the subtitle stream into the null muxer (`-c:s copy`) while still decoding video and audio, so verification works with the shipped FFmpeg.
+- **Proven by that run:** Godot loads an episode scene from an absolute path outside its temporary project, renders the exact frame count, and the bundled FFmpeg picks a redistribution-safe encoder and muxes the episode.
+- **Still open:** the next real-media run has to confirm the corrected verification; `piper-tts` is still outside the locked environment, and generated scenes and produced audio remain proven only by mocked tests.
+
 ## Live checkpoint — 2026-11-28 (cache size cap and a real-media render job)
 
 - **The scene cache is bounded.** `SCENE_CACHE_LIMIT_BYTES` (8 GiB per episode) and `_enforce_scene_cache_limit` drop the oldest cached scene movies once the cache passes the limit, so repeated edits at several presets cannot fill the disk.

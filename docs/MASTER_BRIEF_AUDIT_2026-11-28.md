@@ -22,7 +22,10 @@ master brief preserved at `docs/MASTER_EXECUTION_PROMPT.md`.
 > from portable packages. **A real-media render job now exists:** CI fetches the pinned
 > Godot runtime and LGPL FFmpeg and renders two real scenes into a verified MP4, uploading
 > it as an artifact — the first execution of that path is the next run, and its log decides
-> whether B1's rendering claim holds. **The voice half of B1 and the remaining B3–B9 items
+> whether B1's rendering claim holds. **That first run already proved the render chain:** the
+> pinned Godot rendered both real scenes and the bundled LGPL FFmpeg muxed the MP4; the only
+> failure was final verification, whose null muxer needs no subtitle encoder when the stream
+> is copied (fixed). **The voice half of B1 and the remaining B3–B9 items
 > stay open**, starting with `piper-tts` not being in the locked environment.
 
 Every finding has an ID, the evidence that produced it, the brief clause it violates,

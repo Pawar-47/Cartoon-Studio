@@ -1,3 +1,11 @@
+## 2026-11-28 — Real-media render run: subtitle verification fix
+
+- **Finding:** the new `real-media` job (run `46155136141`, job `141010017356`) rendered both real scenes with the pinned Godot runtime, muxed the MP4 with the bundled LGPL FFmpeg, and then failed in final verification: `The final MP4 failed its video/audio/subtitle decode check. … Default encoder for format null (codec none) is probably disabled. … [sost#0:2]`. The null muxer used by the verification pass has no default subtitle encoder, so mapping the subtitle stream into it required one that the LGPL build does not carry. Video and audio never reported a problem.
+- **Change:** `_verify_rendered_mp4` now copies the subtitle stream into the null muxer (`-c:s copy`) instead of re-encoding it. The subtitle packets still have to demux cleanly for the check to pass, and video and audio are still fully decoded by the same pass. The mux command is unchanged.
+- **Test:** the render test asserts the verification command carries `-c:s copy`.
+- **Result so far:** the real-media job proves Godot renders a real episode scene and the bundled FFmpeg muxes it into an MP4; the next run has to show the corrected verification pass. The absolute episode-scene path passed to `render_runner.gd` worked, so that risk is closed.
+- **Side finding:** the same verification pass runs on every Windows CI run only through mocked tests, so the subtitle-encoder assumption had never been exercised before.
+
 ## 2026-11-28 — Cache size cap and a real-media render job (Batch C, part 2)
 
 - **Finding 1:** the scene cache kept every version of every rendered scene position. An episode edited and re-rendered at two presets could hold many gigabytes of intermediate movies with no limit.

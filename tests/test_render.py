@@ -128,6 +128,9 @@ def test_render_episode_video_uses_godot_movie_maker_and_muxes_audio_subtitles(
     assert "-c:s" in mux_calls[0] and "mov_text" in mux_calls[0]
     assert calls[-1][0] == str(ffmpeg)
     assert "-progress" in calls[-1] and "pipe:1" in calls[-1]
+    # The bundled null muxer has no subtitle encoder, so verification copies
+    # the subtitle stream rather than re-encoding it.
+    assert calls[-1][calls[-1].index("-c:s") + 1] == "copy"
     assert Path(result["video_path"]).read_bytes() == b"fake-mp4"
 
 

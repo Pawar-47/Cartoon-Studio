@@ -193,7 +193,11 @@ def _verify_rendered_mp4(
 ) -> None:
     maps = ["-map", "0:v:0", "-map", "0:a:0"]
     if include_subtitles:
-        maps += ["-map", "0:s:0"]
+        # The bundled FFmpeg's null muxer has no default subtitle encoder, so
+        # the subtitle stream is copied into it instead of re-encoded. Its
+        # packets must still demux cleanly, and video and audio are fully
+        # decoded by the same pass.
+        maps += ["-map", "0:s:0", "-c:s", "copy"]
     try:
         result = subprocess.run(
             [
