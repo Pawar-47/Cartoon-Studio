@@ -241,6 +241,11 @@ class FoundryCharacterInput(BaseModel):
     hair_color: str = Field(default="#2b1b13", pattern=r"^#[0-9a-fA-F]{6}$")
     cap_style: str = Field(default="none", pattern=r"^(none|sindhi_topi|pakol)$")
     cap_color: str = Field(default="#173c52", pattern=r"^#[0-9a-fA-F]{6}$")
+    facial_hair_style: str = Field(
+        default="none",
+        pattern=r"^(none|moustache|stubble|short_beard|full_beard|goatee)$",
+    )
+    facial_hair_color: str = Field(default="#2b1b13", pattern=r"^#[0-9a-fA-F]{6}$")
     parameters: dict[str, Annotated[float, Field(ge=-1, le=1)]] = Field(
         default_factory=dict, max_length=32
     )
@@ -1848,6 +1853,10 @@ def update_foundry_character(
     recipe["parameters"] = dict(payload.parameters)
     recipe["hair_style"] = payload.hair_style
     recipe["hair_color"] = payload.hair_color
+    recipe["cap_style"] = payload.cap_style
+    recipe["cap_color"] = payload.cap_color
+    recipe["facial_hair_style"] = payload.facial_hair_style
+    recipe["facial_hair_color"] = payload.facial_hair_color
     try:
         recipe = validate_character_recipe(recipe)
         recipe["culture_profile"] = "pakistani_storybook_v1"
@@ -1999,6 +2008,8 @@ def create_foundry_character(
         recipe["hair_color"] = payload.hair_color
         recipe["cap_style"] = payload.cap_style
         recipe["cap_color"] = payload.cap_color
+        recipe["facial_hair_style"] = payload.facial_hair_style
+        recipe["facial_hair_color"] = payload.facial_hair_color
         recipe = validate_character_recipe(recipe)
         recipe["culture_profile"] = "pakistani_storybook_v1"
     except ValueError as error:

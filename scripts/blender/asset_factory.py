@@ -572,11 +572,20 @@ def character(recipe=None):
     hair_highlight = tuple(min(1.0, value * 1.42 + .045) for value in hair_color)
     cap_style = str(recipe.get("cap_style", "none"))
     cap_color = hex_rgb(recipe.get("cap_color"), (.09, .24, .32))
+    facial_hair_style = str(recipe.get("facial_hair_style", "none"))
+    if facial_hair_style not in {"none", "moustache", "stubble", "short_beard", "full_beard", "goatee"}:
+        facial_hair_style = "none"
+    facial_hair_color = hex_rgb(recipe.get("facial_hair_color"), hair_color)
     skin = mat("Skin | warm peach", (.76, .40, .27))
     highlight = mat("Skin | soft highlights", (.91, .58, .41))
     ear_inner = mat("Skin | ear detail", (.43, .16, .12))
     hair = mat("Hair | recipe color", hair_color)
     hair_light = mat("Hair | recipe highlight", hair_highlight)
+    facial_hair = mat("Facial hair | recipe color", facial_hair_color, .88)
+    facial_hair_highlight = mat(
+        "Facial hair | subtle highlights",
+        tuple(min(1.0, channel * 1.18 + .018) for channel in facial_hair_color), .9,
+    )
     kurta_base = (.55, .12, .25) if is_female else (.018, .27, .31)
     kurta_accent = (.68, .20, .34) if is_female else (.035, .34, .37)
     kurta = textile_mat("Clothing | Pakistani woven kurta", kurta_base, kurta_accent, 13)
@@ -677,6 +686,52 @@ def character(recipe=None):
         add(ball("Face | cheek highlight." + side,
                  (sign * .225, -.222, 2.405), (.075, .035, .055),
                  highlight, 24), "head")
+
+    # Facial hair is a separate head-rigged layer, positioned below the nose.
+    if facial_hair_style in {"moustache", "short_beard", "full_beard", "goatee"}:
+        for sign, side in ((-1, "L"), (1, "R")):
+            add(curve(
+                "Facial hair | moustache." + side,
+                [(sign * .012, -.337, 2.315), (sign * .065, -.35, 2.345),
+                 (sign * .125, -.335, 2.335), (sign * .17, -.302, 2.30)],
+                .026, facial_hair,
+            ), "head")
+    if facial_hair_style in {"stubble", "short_beard", "full_beard", "goatee"}:
+        if facial_hair_style == "stubble":
+            for row, z in enumerate((2.39, 2.32, 2.25, 2.18)):
+                for column in range(7):
+                    x = (column - 3) * .065
+                    if abs(x) > .19 and row < 2:
+                        continue
+                    add(ball(
+                        "Facial hair | stubble %02d.%02d" % (row, column),
+                        (x, -.292 + abs(x) * .19, z - abs(x) * .12),
+                        (.012, .009, .012), facial_hair, 12,
+                    ), "head")
+        else:
+            if facial_hair_style in {"short_beard", "full_beard"}:
+                for sign, side in ((-1, "L"), (1, "R")):
+                    add(curve(
+                        "Facial hair | cheek line." + side,
+                        [(sign * .27, -.235, 2.40), (sign * .265, -.265, 2.30),
+                         (sign * .22, -.285, 2.20), (sign * .13, -.29, 2.13)],
+                        .035 if facial_hair_style == "full_beard" else .023,
+                        facial_hair,
+                    ), "head")
+            if facial_hair_style in {"short_beard", "full_beard", "goatee"}:
+                add(ball(
+                    "Facial hair | chin beard",
+                    (0, -.275, 2.145),
+                    (.145, .052, .115) if facial_hair_style != "full_beard" else (.205, .06, .16),
+                    facial_hair, 28,
+                ), "head")
+            if facial_hair_style == "full_beard":
+                add(curve(
+                    "Facial hair | jawline",
+                    [(-.22, -.285, 2.20), (-.15, -.31, 2.12),
+                     (0, -.32, 2.095), (.15, -.31, 2.12), (.22, -.285, 2.20)],
+                    .045, facial_hair_highlight,
+                ), "head")
 
     add(loft(
         "Hair | sculpted cap", (0, .012, 2.91),

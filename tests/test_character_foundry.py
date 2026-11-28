@@ -74,6 +74,8 @@ def test_default_recipe_is_versioned_and_engine_neutral() -> None:
     assert set(recipe["parameters"]) == set(MORPH_TARGETS)
     assert recipe["cap_style"] == "none"
     assert recipe["cap_color"] == "#173c52"
+    assert recipe["facial_hair_style"] == "none"
+    assert recipe["facial_hair_color"] == "#2b1b13"
     assert validate_character_recipe(recipe) == recipe
 
 
@@ -369,6 +371,19 @@ def test_foundry_recipe_rejects_unknown_hair_style_and_invalid_color() -> None:
     recipe = default_character_recipe()
     recipe["cap_color"] = "blue"
     with pytest.raises(ValueError, match="cap_color"):
+        validate_character_recipe(recipe)
+    recipe = default_character_recipe()
+    recipe["facial_hair_style"] = "handlebar"
+    with pytest.raises(ValueError, match="facial-hair"):
+        validate_character_recipe(recipe)
+    recipe = default_character_recipe()
+    recipe["facial_hair_style"] = "full_beard"
+    recipe["facial_hair_color"] = "#6A4632"
+    normalized = validate_character_recipe(recipe)
+    assert normalized["facial_hair_style"] == "full_beard"
+    assert normalized["facial_hair_color"] == "#6a4632"
+    recipe["facial_hair_color"] = "brown"
+    with pytest.raises(ValueError, match="facial_hair_color"):
         validate_character_recipe(recipe)
 
 

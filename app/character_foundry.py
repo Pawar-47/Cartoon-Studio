@@ -278,6 +278,8 @@ def default_character_recipe(
         "hair_color": "#2b1b13",
         "cap_style": "none",
         "cap_color": "#173c52",
+        "facial_hair_style": "none",
+        "facial_hair_color": "#2b1b13",
         "accessory_asset_ids": [],
         "rig_profile_id": RIG_PROFILE_ID,
         "generated_asset": None,
@@ -345,6 +347,17 @@ def validate_character_recipe(recipe: Any) -> dict[str, Any]:
         raise ValueError("cap_color must be a six-digit hexadecimal color.")
     normalized["cap_style"] = cap_style
     normalized["cap_color"] = cap_color.lower()
+    facial_hair_style = recipe.get("facial_hair_style", "none")
+    allowed_facial_hair_styles = {
+        "none", "moustache", "stubble", "short_beard", "full_beard", "goatee"
+    }
+    if not isinstance(facial_hair_style, str) or facial_hair_style not in allowed_facial_hair_styles:
+        raise ValueError("Unsupported facial-hair style.")
+    facial_hair_color = recipe.get("facial_hair_color", "#2b1b13")
+    if not isinstance(facial_hair_color, str) or re.fullmatch(r"#[0-9a-fA-F]{6}", facial_hair_color) is None:
+        raise ValueError("facial_hair_color must be a six-digit hexadecimal color.")
+    normalized["facial_hair_style"] = facial_hair_style
+    normalized["facial_hair_color"] = facial_hair_color.lower()
     expression_weights = recipe.get("expression_weights", {})
     if not isinstance(expression_weights, dict):
         raise ValueError("expression_weights must be an object.")
