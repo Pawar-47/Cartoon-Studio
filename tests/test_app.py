@@ -1,6 +1,7 @@
 import io
 import json
 import uuid
+import wave
 
 from fastapi.testclient import TestClient
 
@@ -1665,6 +1666,161 @@ def test_episode_production_endpoint_persists_scene_build_manifest(tmp_path, mon
 
 
 
+def _recorded_wav_bytes(duration_seconds=1.0):
+    import array
+
+    samples = array.array(
+        "h", [900, -900] * int(22050 * duration_seconds / 2)
+    )
+    buffer = io.BytesIO()
+    with wave.open(buffer, "wb") as output:
+        output.setnchannels(1)
+        output.setsampwidth(2)
+        output.setframerate(22050)
+        output.writeframes(samples.tobytes())
+    return buffer.getvalue()
+
+
+def test_recorded_dialogue_line_is_stored_and_listed(tmp_path, monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "recorded.sqlite3")
+    monkeypatch.setattr(main, "_INITIALIZED_DB_KEY", None)
+    project = client.post("/api/projects", json={"name": "Recorded Lines"})
+    project_id = project.json()["id"]
+    plan = valid_episode_plan()
+    saved = client.put(f"/api/projects/{project_id}/story", json=plan)
+    assert saved.status_code == 200
+    episode_id = saved.json()["episode_id"]
+
+    uploaded = client.put(
+        f"/api/projects/{project_id}/story/audio/lines/scene-1/1",
+        content=_recorded_wav_bytes(1.0),
+        headers={"Content-Type": "audio/wav"},
+    )
+    assert uploaded.status_code == 200, uploaded.text
+    body = uploaded.json()
+    assert body["scene_id"] == "scene-1"
+    assert body["line_index"] == 1
+    assert body["relative_path"] == (
+        f"assets/episodes/{episode_id}/audio/recordings/scene-01-line-01.wav"
+    )
+    recorded_path = tmp_path / "projects" / project_id / body["relative_path"]
+    assert recorded_path.is_file()
+
+    listed = client.get(f"/api/projects/{project_id}/story/audio/recordings")
+    assert listed.status_code == 200
+    assert [item["scene_id"] for item in listed.json()["recordings"]] == ["scene-1"]
+
+    recordings = main._episode_recordings(project_id, episode_id, plan)
+    assert recordings[("scene-1", 1)] == recorded_path
+
+
+def test_recorded_dialogue_line_rejects_bad_audio_and_bad_targets(tmp_path, monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "recorded-bad.sqlite3")
+    monkeypatch.setattr(main, "_INITIALIZED_DB_KEY", None)
+    project = client.post("/api/projects", json={"name": "Recorded Bad"})
+    project_id = project.json()["id"]
+    assert client.put(
+        f"/api/projects/{project_id}/story", json=valid_episode_plan()
+    ).status_code == 200
+
+    # A non-WAV body is refused instead of being written as a clip.
+    assert (
+        client.put(
+            f"/api/projects/{project_id}/story/audio/lines/scene-1/1",
+            content=b"not a wav",
+            headers={"Content-Type": "audio/wav"},
+        ).status_code
+        == 422
+    )
+    # An unknown scene and an unknown line are both 404.
+    assert (
+        client.put(
+            f"/api/projects/{project_id}/story/audio/lines/scene-9/1",
+            content=_recorded_wav_bytes(0.5),
+            headers={"Content-Type": "audio/wav"},
+        ).status_code
+        == 404
+    )
+    assert (
+        client.put(
+            f"/api/projects/{project_id}/story/audio/lines/scene-1/99",
+            content=_recorded_wav_bytes(0.5),
+            headers={"Content-Type": "audio/wav"},
+        ).status_code
+        == 404
+    )
+    # A recording that runs past its scene is refused before it is stored.
+    assert (
+        client.put(
+            f"/api/projects/{project_id}/story/audio/lines/scene-1/1",
+            content=_recorded_wav_bytes(120.0),
+            headers={"Content-Type": "audio/wav"},
+        ).status_code
+        == 422
+    )
+
+
+def test_episode_audio_uses_stored_recordings(tmp_path, monkeypatch):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "recorded-build.sqlite3")
+    monkeypatch.setattr(main, "_INITIALIZED_DB_KEY", None)
+    project = client.post("/api/projects", json={"name": "Recorded Build"})
+    project_id = project.json()["id"]
+    saved = client.put(
+        f"/api/projects/{project_id}/story", json=valid_episode_plan()
+    )
+    episode_id = saved.json()["episode_id"]
+    recording = (
+        main.project_directory(tmp_path, project_id)
+        / "assets"
+        / "episodes"
+        / episode_id
+        / "audio"
+        / "recordings"
+        / "scene-01-line-01.wav"
+    )
+    recording.parent.mkdir(parents=True)
+    recording.write_bytes(_recorded_wav_bytes(1.0))
+
+    captured = {}
+
+    def fake_audio_builder(episode, output_directory, data_dir, recordings=None):
+        captured["recordings"] = recordings
+        output_directory.mkdir(parents=True, exist_ok=True)
+        audio_path = output_directory / "dialogue_mix.wav"
+        audio_path.write_bytes(b"RIFF-recorded")
+        subtitles_path = output_directory / "subtitles.srt"
+        subtitles_path.write_text("", encoding="utf-8")
+        return {
+            "audio_path": str(audio_path),
+            "subtitles_path": str(subtitles_path),
+            "sample_rate": 22050,
+            "duration_seconds": 300,
+            "dialogue_line_count": 5,
+            "subtitle_mode": "urdu",
+            "subtitle_entry_count": 0,
+            "recorded_line_count": 1,
+            "tts_line_count": 4,
+            "voices": ["ur_PK-fasih-medium"],
+            "clips": [],
+        }
+
+    monkeypatch.setattr(main, "generate_episode_audio", fake_audio_builder)
+    built = client.post(f"/api/projects/{project_id}/story/audio")
+    assert built.status_code == 200, built.text
+    assert captured["recordings"] == {("scene-1", 1): recording}
+    assert built.json()["recorded_line_count"] == 1
+    assert built.json()["tts_line_count"] == 4
+
+
 def test_episode_audio_endpoint_saves_and_serves_the_dialogue_mix(
     tmp_path, monkeypatch
 ):
@@ -1684,7 +1840,8 @@ def test_episode_audio_endpoint_saves_and_serves_the_dialogue_mix(
     saved = client.put(f"/api/projects/{project_id}/story", json=plan)
     assert saved.status_code == 200
 
-    def fake_audio_builder(episode, output_directory, data_dir):
+    def fake_audio_builder(episode, output_directory, data_dir, recordings=None):
+        assert recordings == {}
         output_directory.mkdir(parents=True, exist_ok=True)
         audio_path = output_directory / "dialogue_mix.wav"
         audio_path.write_bytes(b"RIFF-cartoon-studio-test")
@@ -1704,6 +1861,8 @@ def test_episode_audio_endpoint_saves_and_serves_the_dialogue_mix(
             "dialogue_line_count": 5,
             "subtitle_mode": "urdu",
             "subtitle_entry_count": 1,
+            "recorded_line_count": 0,
+            "tts_line_count": 5,
             "voices": ["ur_PK-fasih-medium"],
             "clips": [
                 {

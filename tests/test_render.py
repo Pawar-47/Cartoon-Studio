@@ -49,7 +49,12 @@ def test_render_episode_video_uses_godot_movie_maker_and_muxes_audio_subtitles(
         nonlocal concat_contents
         calls.append(command)
         if command[0] == str(ffmpeg) and "-encoders" in command:
-            encoders = " V..... libx264\n A..... aac\n S..... mov_text\n"
+            # The bundled LGPL build: AAC and mov_text, VP9 but no GPL libx264.
+            encoders = (
+                " V..... libvpx-vp9   libvpx VP9\n"
+                " A..... aac         AAC\n"
+                " S..... mov_text    mov_text\n"
+            )
             return subprocess.CompletedProcess(
                 command, 0, stdout=encoders, stderr=""
             )
@@ -110,7 +115,11 @@ def test_render_episode_video_uses_godot_movie_maker_and_muxes_audio_subtitles(
     mux_calls = [call for call in calls if "-c:v" in call]
     assert len(mux_calls) == 1
     assert mux_calls[0][0] == str(ffmpeg)
-    assert "libx264" in mux_calls[0]
+    # VP9 is the redistribution-safe encoder of the bundled LGPL build; the
+    # GPL libx264 encoder must never be selected.
+    assert mux_calls[0][mux_calls[0].index("-c:v") + 1] == "libvpx-vp9"
+    assert "libx264" not in mux_calls[0]
+    assert result["video_encoder"] == "libvpx-vp9"
     assert "-c:a" in mux_calls[0] and "aac" in mux_calls[0]
     assert "-c:s" in mux_calls[0] and "mov_text" in mux_calls[0]
     assert calls[-1][0] == str(ffmpeg)

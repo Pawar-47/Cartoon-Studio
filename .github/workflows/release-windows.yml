@@ -30,10 +30,12 @@ jobs:
         run: uv sync --locked --group dev
       - name: Fetch pinned Godot 4.7.2 runtime
         run: uv run --locked python scripts/fetch_godot_runtime.py --output-dir build/godot-runtime
+      - name: Fetch pinned LGPL FFmpeg runtime
+        run: uv run --locked python scripts/fetch_ffmpeg.py --output-dir build/ffmpeg
       - name: Fetch pinned CC0 facial morph fixture
         run: uv run --locked python scripts/fetch_robot_expressive_fixture.py --output-dir tests/fixtures/third_party
       - name: Lint
-        run: uv run --locked ruff check app tests scripts/fetch_godot_runtime.py scripts/fetch_robot_expressive_fixture.py scripts/augment_sbom.py
+        run: uv run --locked ruff check app tests scripts/fetch_godot_runtime.py scripts/fetch_ffmpeg.py scripts/fetch_robot_expressive_fixture.py scripts/augment_sbom.py
       - name: Compile Python
         run: uv run --locked python -m compileall -q app scripts
       - name: Test
@@ -47,7 +49,7 @@ jobs:
       - name: Export dependency inventory
         run: uv export --locked --all-groups --format cyclonedx1.5 --output-file dependency-sbom.cdx.json
       - name: Add Godot runtime to CycloneDX inventory
-        run: uv run --locked python scripts/augment_sbom.py --sbom dependency-sbom.cdx.json --manifest engine/godot_runtime.json --runtime-report build/godot-runtime/godot-runtime-report.json --web-runtime-manifest third_party/threejs-runtime.json
+        run: uv run --locked python scripts/augment_sbom.py --sbom dependency-sbom.cdx.json --manifest engine/godot_runtime.json --runtime-report build/godot-runtime/godot-runtime-report.json --web-runtime-manifest third_party/threejs-runtime.json --ffmpeg-manifest engine/ffmpeg_runtime.json --ffmpeg-report build/ffmpeg/ffmpeg-runtime-report.json
       - name: Package Windows bootstrap
         shell: pwsh
         run: |
@@ -68,6 +70,10 @@ jobs:
           New-Item -ItemType Directory -Force -Path $engineRoot | Out-Null
           Copy-Item build/godot-runtime/Godot_v4.7.2-stable_win64.exe -Destination $engineRoot -Force
           Copy-Item engine/godot_worker -Destination $engineRoot -Recurse -Force
+          $ffmpegRoot = Join-Path $engineRoot "ffmpeg"
+          New-Item -ItemType Directory -Force -Path $ffmpegRoot | Out-Null
+          Copy-Item build/ffmpeg/ffmpeg.exe -Destination $ffmpegRoot -Force
+          Copy-Item build/ffmpeg/notices -Destination $ffmpegRoot -Recurse -Force
           $engineNotices = Join-Path $engineRoot "notices"
           New-Item -ItemType Directory -Force -Path $engineNotices | Out-Null
           Copy-Item "third_party/godot-4.7.2/LICENSE.txt", "third_party/godot-4.7.2/COPYRIGHT.txt", "third_party/godot-4.7.2/AUTHORS.md" -Destination $engineNotices -Force
@@ -84,6 +90,10 @@ jobs:
           New-Item -ItemType Directory -Force -Path $engineRoot | Out-Null
           Copy-Item build/godot-runtime/Godot_v4.7.2-stable_win64.exe -Destination $engineRoot -Force
           Copy-Item engine/godot_worker -Destination $engineRoot -Recurse -Force
+          $ffmpegRoot = Join-Path $engineRoot "ffmpeg"
+          New-Item -ItemType Directory -Force -Path $ffmpegRoot | Out-Null
+          Copy-Item build/ffmpeg/ffmpeg.exe -Destination $ffmpegRoot -Force
+          Copy-Item build/ffmpeg/notices -Destination $ffmpegRoot -Recurse -Force
           $engineNotices = Join-Path $engineRoot "notices"
           New-Item -ItemType Directory -Force -Path $engineNotices | Out-Null
           Copy-Item "third_party/godot-4.7.2/LICENSE.txt", "third_party/godot-4.7.2/COPYRIGHT.txt", "third_party/godot-4.7.2/AUTHORS.md" -Destination $engineNotices -Force

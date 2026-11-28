@@ -4,13 +4,16 @@
 (`a88379f`, green Windows CI job `140713831551`) measured against the binding 25-part
 master brief preserved at `docs/MASTER_EXECUTION_PROMPT.md`.
 
-> **Status update (same day, later batch).** Findings **D1, D2, D3, D6 and B10 are fixed on
+> **Status update (same day, later batches).** Findings **D1, D2, D3, D6 and B10 are fixed on
 > `main`**: the four quality presets are stored and read by the renderer, `subtitle_mode`
 > is honoured end to end (urdu / roman_urdu / english / none), English episodes and
 > unsupported voice profiles are refused at validation, and `roman_urdu`/`english` subtitles
-> require a per-line `subtitle_text`. See `docs/DECISION_LOG.md` and `docs/TEST_REPORT.md`
-> for that batch. **B1 and B2–B9 remain open**, starting with the shipped app's missing
-> Piper and FFmpeg dependencies.
+> require a per-line `subtitle_text`. **The FFmpeg half of B1 is fixed:** no GPL encoder is
+> bundled or used, the video encoder is chosen from a redistribution-safe preference list at
+> render time, and the installer now carries a hash-pinned LGPL FFmpeg build that
+> `_find_ffmpeg` prefers. See `docs/DECISION_LOG.md` and `docs/TEST_REPORT.md`. **The voice
+> half of B1 and B2–B9 remain open**, starting with `piper-tts` not being in the locked
+> environment and the recorded-WAV fallback.
 
 Every finding has an ID, the evidence that produced it, the brief clause it violates,
 the required action, and the test that proves the action landed. Treat each finding as a

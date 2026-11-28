@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import array
 import hashlib
+import io
 import math
 import os
 import urllib.error
@@ -154,6 +155,37 @@ class PiperEngine:
             ) from error
 
 
+def validate_recorded_audio(data: bytes) -> float:
+    """Validate an uploaded recorded WAV and return its duration in seconds.
+
+    A recording replaces one dialogue line, so it must match the mix contract:
+    mono 16-bit PCM at 22,050 Hz. Anything else is refused instead of being
+    silently resampled or mixed at the wrong rate.
+    """
+    if not data:
+        raise SpeechGenerationError("The recorded audio is empty.")
+    try:
+        with wave.open(io.BytesIO(data), "rb") as source:
+            channels = source.getnchannels()
+            sample_width = source.getsampwidth()
+            sample_rate = source.getframerate()
+            frames = source.getnframes()
+            raw = source.readframes(frames)
+    except (OSError, EOFError, wave.Error) as error:
+        raise SpeechGenerationError(
+            "The recorded audio is not a readable WAV file."
+        ) from error
+    if channels != 1 or sample_width != 2 or sample_rate != SAMPLE_RATE:
+        raise SpeechGenerationError(
+            "A recorded dialogue line must be mono 16-bit PCM at 22,050 Hz; "
+            f"this file is {channels} channel(s), {sample_width * 8}-bit at "
+            f"{sample_rate} Hz."
+        )
+    if not raw:
+        raise SpeechGenerationError("The recorded audio contains no samples.")
+    return len(raw) / (sample_width * channels) / sample_rate
+
+
 def _read_pcm(path: Path) -> tuple[int, array.array]:
     try:
         with wave.open(str(path), "rb") as source:
@@ -277,7 +309,15 @@ def generate_episode_audio(
     output_directory: Path,
     data_dir: Path,
     synthesizer: object | None = None,
+    recordings: dict[tuple[str, int], Path] | None = None,
 ) -> dict:
+    """Produce the episode dialogue mix, subtitles and mouth envelopes.
+
+    ``recordings`` maps ``(scene_id, line_index)`` to a WAV that replaces the
+    synthetic line. A recorded line works without any speech engine installed,
+    so a recording can be used when Piper is unavailable or when the owner
+    prefers a human voice.
+    """
     if plan.get("language", "ur") != "ur":
         raise SpeechGenerationError(
             "The current offline speech pack supports Pakistani Urdu episodes only."
@@ -289,6 +329,7 @@ def generate_episode_audio(
             + ", ".join(SUBTITLE_MODES)
             + "."
         )
+    recorded = dict(recordings or {})
     scenes = plan.get("scenes", [])
     total_duration = sum(
         int(scene.get("duration_seconds", 0)) for scene in scenes
@@ -334,7 +375,18 @@ def generate_episode_audio(
                     f"Character {character_id} has an unsupported voice profile: {voice_id}"
                 )
             clip_path = clips_directory / f"scene-{scene_index:02d}-line-{line_index:02d}.wav"
-            engine.synthesize(text, voice_id, clip_path)
+            recording = recorded.get((str(scene["id"]), line_index))
+            if recording is not None:
+                source = Path(recording)
+                if not source.is_file():
+                    raise SpeechGenerationError(
+                        f"The recorded line {scene_id}:{line_index} is missing."
+                    )
+                clip_path.write_bytes(source.read_bytes())
+                line_source = "recorded"
+            else:
+                engine.synthesize(text, voice_id, clip_path)
+                line_source = "tts"
             _, samples = _read_pcm(clip_path)
             actual_duration = len(samples) / SAMPLE_RATE
             remaining_scene_time = scene_duration - local_start
@@ -361,6 +413,7 @@ def generate_episode_audio(
                 "text": text,
                 "subtitle_text": subtitle_text,
                 "voice_id": voice_id,
+                "source": line_source,
                 "start_seconds": float(line.get("start_seconds", 0)),
                 "timeline_start_seconds": timeline_start,
                 "duration_seconds": round(actual_duration, 3),
@@ -386,6 +439,8 @@ def generate_episode_audio(
         "dialogue_line_count": len(clips),
         "subtitle_mode": subtitle_mode,
         "subtitle_entry_count": subtitle_entry_count,
+        "recorded_line_count": sum(1 for clip in clips if clip["source"] == "recorded"),
+        "tts_line_count": sum(1 for clip in clips if clip["source"] == "tts"),
         "voices": sorted({clip["voice_id"] for clip in clips}),
         "clips": clips,
     }

@@ -1,0 +1,26 @@
+{
+  "component": "FFmpeg",
+  "version": "n8.1-latest",
+  "license": "LGPL-2.1-or-later",
+  "license_note": "BtbN FFmpeg-Builds win64 LGPL archive: it omits GPL-only components such as libx264, libx265 and libxvid, so the application can redistribute it. Bundled encoder options are chosen from the build's own encoder list by app/render.py; OpenH264 and VP9 are BSD, the native MPEG-4 Part 2 encoder is LGPL.",
+  "platform": "windows-x86_64",
+  "archive_name": "ffmpeg-n8.1-latest-win64-lgpl-8.1.zip",
+  "archive_sha256": "84cde51e0012b9cddbefbeef7bd124267c98fb2d46fd8ca4ae69aa39dc38fc00",
+  "archive_size": 170932824,
+  "download_url": "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n8.1-latest-win64-lgpl-8.1.zip",
+  "release_url": "https://github.com/BtbN/FFmpeg-Builds/releases/tag/latest",
+  "release_page": "https://github.com/BtbN/FFmpeg-Builds",
+  "binary_name": "ffmpeg.exe",
+  "required_encoders": ["aac", "mov_text"],
+  "allowed_video_encoders": [
+    "libopenh264",
+    "libvpx-vp9",
+    "libaom-av1",
+    "libsvtav1",
+    "mpeg4"
+  ],
+  "forbidden_video_encoders": ["libx264", "libx265", "libxvid"],
+  "license_url": "https://ffmpeg.org/legal.html",
+  "source_url": "https://ffmpeg.org/download.html",
+  "note": "The download URL points at BtbN's moving 'latest' release. The pinned SHA-256 is checked on every fetch, so a silent upstream change fails the build with a clear re-pin message instead of shipping an unverified binary."
+}

@@ -17,7 +17,7 @@ An original, local-first Urdu 3D cartoon production studio. This repository is t
 - Project export/import as a portable ZIP package; a durable SQLite job record for long operations.
 - GitHub Actions Windows CI installs exact uv-locked dependencies, runs lint/compile/tests and packages a hash-locked bootstrap ZIP.
 
-**Known limitation:** the installed app cannot yet synthesise Urdu speech or assemble an MP4 on a clean machine. The Piper speech dependency is not in the locked environment and FFmpeg is not bundled, so those two steps report a missing dependency rather than producing output. This is the blocking finding in [`docs/MASTER_BRIEF_AUDIT_2026-11-28.md`](docs/MASTER_BRIEF_AUDIT_2026-11-28.md).
+**Known limitations:** the installed app can now assemble an MP4 with the bundled LGPL FFmpeg and a redistribution-safe encoder, and any dialogue line can be recorded (mono 16-bit 22,050 Hz WAV) as a fallback, but Urdu speech synthesis needs `piper-tts`, which is not yet in the locked environment; the Story page also still needs a record control. See the blocking finding in [`docs/MASTER_BRIEF_AUDIT_2026-11-28.md`](docs/MASTER_BRIEF_AUDIT_2026-11-28.md).
 
 Godot 4.7.2 Compatibility is integrated as a pinned, bundled native worker behind a supervised Python adapter. P2.1 passed Windows CI #204. The first P2.2 Character Studio vertical slice also passed Windows CI #208 (45 pytest tests): project-scoped GLB 2.0 import/inspection, rig-readiness reporting, versioned character profiles, project references and recovery. The Character Studio phase is still active; rig authoring, texture painting, new blend-shape authoring, export and animation authoring remain future work.
 

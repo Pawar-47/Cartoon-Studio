@@ -23,6 +23,7 @@ from app.audio import (
     SpeechEngineUnavailable,
     SpeechGenerationError,
     generate_episode_audio,
+    validate_recorded_audio,
 )
 from app.character_builder import (
     CharacterLibraryError,
@@ -93,6 +94,7 @@ MAX_PROJECT_IMPORT_BYTES = 256 * 1024 * 1024
 # uncompressed total is bounded separately from the upload size.
 MAX_PROJECT_IMPORT_UNCOMPRESSED_BYTES = 512 * 1024 * 1024
 MAX_PROJECT_IMPORT_ENTRIES = 20_000
+MAX_RECORDED_LINE_BYTES = 20 * 1024 * 1024
 # The API process both enqueues each long operation and executes it in-process, so
 # the job is claimed for the whole budget of that operation instead of the queue's
 # short default lease; otherwise a second claim could reclaim work still running.
@@ -1188,6 +1190,8 @@ def render_episode(project_id: str) -> dict[str, Any]:
         "height": result["height"],
         "quality_preset": quality.name,
         "has_subtitles": include_subtitles,
+        "video_encoder": result.get("video_encoder"),
+        "video_codec": result.get("video_codec"),
         "size_bytes": result["size_bytes"],
         "rendered_at_elapsed_seconds": result["rendered_at_elapsed_seconds"],
         "generated_at": now,
@@ -1327,6 +1331,127 @@ def download_episode_video(project_id: str, render_id: str) -> FileResponse:
     )
 
 
+def _episode_recordings(
+    project_id: str, episode_id: str, plan: dict[str, Any]
+) -> dict[tuple[str, int], Path]:
+    """Map (scene_id, line_index) to a recorded WAV when one exists.
+
+    Recordings let a line be produced without the speech engine: the file name
+    is derived from the scene and line position, so no separate index can drift
+    away from the files on disk.
+    """
+    base = (
+        project_directory(DATA_DIR, project_id)
+        / "assets"
+        / "episodes"
+        / episode_id
+        / "audio"
+        / "recordings"
+    )
+    found: dict[tuple[str, int], Path] = {}
+    for scene_index, scene in enumerate(plan.get("scenes", []), start=1):
+        for line_index in range(1, len(scene.get("dialogue", [])) + 1):
+            path = base / f"scene-{scene_index:02d}-line-{line_index:02d}.wav"
+            if path.is_file():
+                found[(str(scene.get("id")), line_index)] = path
+    return found
+
+
+@app.put("/api/projects/{project_id}/story/audio/lines/{scene_id}/{line_index}")
+async def upload_recorded_dialogue_line(
+    project_id: str, scene_id: str, line_index: int, request: Request
+) -> dict[str, Any]:
+    """Store a recorded WAV for one dialogue line.
+
+    The request body is the WAV itself (``Content-Type: audio/wav``), so the
+    recorded fallback needs no form parser. The file must be mono 16-bit PCM at
+    22,050 Hz and must fit inside its scene, because the mix and scene timing
+    contracts are the same for a recorded line as for a synthesised one.
+    """
+    saved = get_story_plan(project_id)
+    plan = saved["plan"]
+    episode_id = saved["episode_id"]
+    scenes = plan.get("scenes", [])
+    scene_position = next(
+        (
+            position
+            for position, scene in enumerate(scenes, start=1)
+            if scene.get("id") == scene_id
+        ),
+        None,
+    )
+    if scene_position is None:
+        raise HTTPException(status_code=404, detail="Scene not found in the saved plan.")
+    scene = scenes[scene_position - 1]
+    dialogue = scene.get("dialogue", [])
+    if not 1 <= line_index <= len(dialogue):
+        raise HTTPException(status_code=404, detail="Dialogue line not found in the scene.")
+    declared_length = request.headers.get("content-length", "")
+    if declared_length.isdigit() and int(declared_length) > MAX_RECORDED_LINE_BYTES:
+        raise HTTPException(
+            status_code=413, detail="The recorded line exceeds the 20 MiB limit."
+        )
+    data = await request.body()
+    if len(data) > MAX_RECORDED_LINE_BYTES:
+        raise HTTPException(
+            status_code=413, detail="The recorded line exceeds the 20 MiB limit."
+        )
+    try:
+        duration_seconds = validate_recorded_audio(data)
+    except SpeechGenerationError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    line = dialogue[line_index - 1]
+    remaining = float(scene.get("duration_seconds", 0)) - float(
+        line.get("start_seconds", 0)
+    )
+    if duration_seconds > remaining + (1 / 22050):
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "The recorded line runs past its scene: "
+                f"{duration_seconds:.3f}s does not fit in the remaining {remaining:.3f}s."
+            ),
+        )
+    relative_path = (
+        f"assets/episodes/{episode_id}/audio/recordings/"
+        f"scene-{scene_position:02d}-line-{line_index:02d}.wav"
+    )
+    target = resolve_project_relative(DATA_DIR, project_id, relative_path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(data)
+    return {
+        "project_id": project_id,
+        "episode_id": episode_id,
+        "scene_id": scene_id,
+        "line_index": line_index,
+        "relative_path": relative_path,
+        "duration_seconds": round(duration_seconds, 3),
+        "size_bytes": len(data),
+    }
+
+
+@app.get("/api/projects/{project_id}/story/audio/recordings")
+def list_recorded_dialogue_lines(project_id: str) -> dict[str, Any]:
+    """List the dialogue lines that already have a recorded WAV."""
+    saved = get_story_plan(project_id)
+    recordings = _episode_recordings(project_id, saved["episode_id"], saved["plan"])
+    return {
+        "project_id": project_id,
+        "episode_id": saved["episode_id"],
+        "recordings": [
+            {
+                "scene_id": scene_id,
+                "line_index": line_index,
+                "relative_path": path.relative_to(
+                    project_directory(DATA_DIR, project_id)
+                ).as_posix(),
+                "size_bytes": path.stat().st_size,
+            }
+            for (scene_id, line_index), path in sorted(recordings.items())
+        ],
+    }
+
+
 @app.post("/api/projects/{project_id}/story/audio")
 def build_episode_audio(project_id: str) -> dict[str, Any]:
     saved = get_story_plan(project_id)
@@ -1337,11 +1462,13 @@ def build_episode_audio(project_id: str) -> dict[str, Any]:
     output_directory = resolve_project_relative(DATA_DIR, project_id, relative_output)
     queue = get_job_queue()
     job_id = _claim_job(queue, project_id, "episode_audio")
+    recordings = _episode_recordings(project_id, episode_id, plan)
     try:
         result = generate_episode_audio(
             plan,
             output_directory,
             DATA_DIR,
+            recordings=recordings,
         )
     except SpeechEngineUnavailable as error:
         shutil.rmtree(output_directory, ignore_errors=True)
@@ -1373,6 +1500,8 @@ def build_episode_audio(project_id: str) -> dict[str, Any]:
         "dialogue_line_count": result["dialogue_line_count"],
         "subtitle_mode": result["subtitle_mode"],
         "subtitle_entry_count": result["subtitle_entry_count"],
+        "recorded_line_count": result["recorded_line_count"],
+        "tts_line_count": result["tts_line_count"],
         "voices": result["voices"],
         "audio_relative_path": audio_relative,
         "subtitles_relative_path": subtitles_relative,
@@ -1397,6 +1526,7 @@ def build_episode_audio(project_id: str) -> dict[str, Any]:
             "duration_seconds": result["duration_seconds"],
             "dialogue_line_count": result["dialogue_line_count"],
             "subtitle_mode": result["subtitle_mode"],
+            "recorded_line_count": result["recorded_line_count"],
             "status": "ok",
         },
     )

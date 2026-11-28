@@ -30,6 +30,40 @@ RENDER_TIMEOUT_SECONDS = 14_400
 SUPPORTED_FPS = frozenset({12, 15, 20, 24, 25, 30})
 MIN_RENDER_WIDTH = 640
 MIN_RENDER_HEIGHT = 360
+BUNDLED_FFMPEG_NAME = "ffmpeg.exe"
+
+# Video encoders this application may redistribute, in preference order.
+#
+# libx264, libx265 and libxvid are deliberately absent: they are GPL-only, and
+# bundling them would put GPL obligations on the whole installer. The first
+# available encoder below is used, so the same code works with the bundled LGPL
+# FFmpeg build and with a system FFmpeg that has more encoders.
+VIDEO_ENCODER_PREFERENCE = (
+    # BSD, Cisco OpenH264; MP4/H.264 with the CSP patent grant for its binary.
+    "libopenh264",
+    # BSD; VP9 in MP4, the fallback when OpenH264 is not in the build.
+    "libvpx-vp9",
+    # BSD; AV1 in MP4.
+    "libaom-av1",
+    "libsvtav1",
+    # Native FFmpeg MPEG-4 Part 2 (LGPL), kept as the last resort.
+    "mpeg4",
+)
+VIDEO_ENCODER_OPTIONS = {
+    "libopenh264": ["-b:v", "2500k", "-pix_fmt", "yuv420p"],
+    "libvpx-vp9": ["-crf", "34", "-b:v", "0", "-pix_fmt", "yuv420p"],
+    "libaom-av1": ["-crf", "38", "-b:v", "0", "-pix_fmt", "yuv420p"],
+    "libsvtav1": ["-crf", "40", "-preset", "10", "-pix_fmt", "yuv420p"],
+    "mpeg4": ["-q:v", "5", "-pix_fmt", "yuv420p"],
+}
+GPL_ONLY_VIDEO_ENCODERS = frozenset({"libx264", "libx265", "libxvid"})
+VIDEO_ENCODER_KIND = {
+    "libopenh264": "H.264 (OpenH264, BSD binary)",
+    "libvpx-vp9": "VP9 (BSD)",
+    "libaom-av1": "AV1 (BSD)",
+    "libsvtav1": "AV1 (BSD)",
+    "mpeg4": "MPEG-4 Part 2 (FFmpeg native)",
+}
 
 
 def _project_file(path: Path, root: Path, suffix: str) -> Path:
@@ -41,17 +75,32 @@ def _project_file(path: Path, root: Path, suffix: str) -> Path:
     return resolved
 
 
-def _find_ffmpeg(explicit_path: str | Path | None = None) -> Path:
-    candidate = (
-        str(explicit_path)
-        if explicit_path
-        else os.environ.get("CARTOON_STUDIO_FFMPEG", "").strip()
-        or shutil.which("ffmpeg")
+def _bundled_ffmpeg() -> Path | None:
+    """Return the FFmpeg that ships beside the application, when it is installed."""
+    bundle_root = Path(__file__).resolve().parent.parent
+    candidates = (
+        bundle_root / "engine" / "ffmpeg" / BUNDLED_FFMPEG_NAME,
+        bundle_root / "third_party" / "ffmpeg" / BUNDLED_FFMPEG_NAME,
+        bundle_root / "build" / "ffmpeg" / BUNDLED_FFMPEG_NAME,
     )
+    return next((path for path in candidates if path.is_file()), None)
+
+
+def _find_ffmpeg(explicit_path: str | Path | None = None) -> Path:
+    """Resolve FFmpeg: explicit path, then the bundled build, then environment/PATH."""
+    if explicit_path:
+        candidate: str | Path | None = explicit_path
+    else:
+        candidate = _bundled_ffmpeg()
+    if candidate is None:
+        candidate = os.environ.get("CARTOON_STUDIO_FFMPEG", "").strip()
+    if not candidate:
+        candidate = shutil.which("ffmpeg")
     if not candidate:
         raise RenderDependencyUnavailable(
-            "FFmpeg was not found. Install a Windows FFmpeg build, add ffmpeg.exe to PATH, "
-            "and restart Cartoon Studio. Free builds are listed at https://ffmpeg.org/download.html."
+            "FFmpeg was not found and the bundled engine/ffmpeg/ffmpeg.exe is missing. "
+            "Install the Cartoon Studio installer build, or set CARTOON_STUDIO_FFMPEG to "
+            "an LGPL FFmpeg executable."
         )
     executable = Path(candidate).expanduser().resolve(strict=False)
     if not executable.is_file():
@@ -59,7 +108,7 @@ def _find_ffmpeg(explicit_path: str | Path | None = None) -> Path:
     return executable
 
 
-def _verify_ffmpeg_encoders(executable: Path) -> None:
+def _available_encoders(executable: Path) -> list[str]:
     try:
         result = subprocess.run(
             [str(executable), "-hide_banner", "-encoders"],
@@ -72,16 +121,57 @@ def _verify_ffmpeg_encoders(executable: Path) -> None:
         raise RenderDependencyUnavailable(
             "FFmpeg could not be started to verify its MP4 encoding support."
         ) from error
-    available = result.stdout + "\n" + result.stderr
-    required = ("libx264", "aac", "mov_text")
-    missing = [encoder for encoder in required if encoder not in available]
-    if result.returncode != 0 or missing:
-        missing_text = ", ".join(missing) if missing else "encoder listing"
+    if result.returncode != 0:
         raise RenderDependencyUnavailable(
-            "The configured FFmpeg build cannot create the required MP4. "
-            f"Missing encoders: {missing_text}. Install a full Windows build with "
-            "libx264, AAC and mov_text support."
+            "FFmpeg could not list its encoders, so the MP4 output cannot be verified."
         )
+    listing = result.stdout + "\n" + result.stderr
+    names: list[str] = []
+    for line in listing.splitlines():
+        parts = line.split()
+        if len(parts) < 2:
+            continue
+        flags = parts[0]
+        # Encoder rows look like " V..... libx264 ..." or " A....D aac ...":
+        # one or two letters for the media type and capabilities, then dots.
+        if not 5 <= len(flags) <= 6 or flags[0] not in "VASD":
+            continue
+        if not all(character == "." or character.isalpha() for character in flags[1:]):
+            continue
+        if parts[1].startswith("="):
+            continue
+        names.append(parts[1])
+    return names
+
+
+def choose_video_encoder(executable: Path) -> str:
+    """Return the first redistribution-safe video encoder the build supports.
+
+    The video encoder is chosen from the build's own encoder list so the same
+    code works with the bundled LGPL FFmpeg and with a fuller system build. A
+    build whose only video encoders are GPL is refused rather than used.
+    """
+    available = _available_encoders(executable)
+    for encoder in ("aac", "mov_text"):
+        if encoder not in available:
+            raise RenderDependencyUnavailable(
+                "The configured FFmpeg build cannot create the required MP4. "
+                f"Missing encoder: {encoder}. Install a build with AAC and mov_text."
+            )
+    for encoder in VIDEO_ENCODER_PREFERENCE:
+        if encoder in available:
+            return encoder
+    gpl = sorted(set(available) & GPL_ONLY_VIDEO_ENCODERS)
+    if gpl:
+        raise RenderDependencyUnavailable(
+            "The configured FFmpeg build offers only GPL video encoders "
+            f"({', '.join(gpl)}). Cartoon Studio bundles an LGPL FFmpeg with "
+            "OpenH264 or VP9; replace the system FFmpeg with that build."
+        )
+    raise RenderDependencyUnavailable(
+        "The configured FFmpeg build has no redistribution-safe video encoder. "
+        "Install a build with libopenh264, libvpx-vp9 or the native mpeg4 encoder."
+    )
 
 
 def _verify_rendered_mp4(
@@ -225,7 +315,7 @@ def render_episode_video(
     if not godot.is_file():
         raise RenderDependencyUnavailable("The pinned Godot runtime is not installed.")
     ffmpeg = _find_ffmpeg(ffmpeg_executable)
-    _verify_ffmpeg_encoders(ffmpeg)
+    video_encoder = choose_video_encoder(ffmpeg)
     output = Path(output_path).resolve(strict=False)
     if output == root or root not in output.parents or output.suffix.lower() != ".mp4":
         raise RenderPathError("The final MP4 must be saved inside the episode project.")
@@ -337,13 +427,8 @@ def render_episode_video(
             command += ["-map", "2:s:0"]
         command += [
             "-c:v",
-            "libx264",
-            "-preset",
-            "veryfast",
-            "-crf",
-            "21",
-            "-pix_fmt",
-            "yuv420p",
+            video_encoder,
+            *VIDEO_ENCODER_OPTIONS[video_encoder],
             "-c:a",
             "aac",
             "-b:a",
@@ -399,6 +484,8 @@ def render_episode_video(
         "width": width,
         "height": height,
         "has_subtitles": include_subtitles,
+        "video_encoder": video_encoder,
+        "video_codec": VIDEO_ENCODER_KIND[video_encoder],
         "size_bytes": output.stat().st_size,
         "rendered_at_elapsed_seconds": round(time.monotonic() - started, 2),
     }

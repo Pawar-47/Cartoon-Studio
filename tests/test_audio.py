@@ -227,3 +227,59 @@ def test_rejects_unknown_subtitle_mode(tmp_path):
             tmp_path / "data",
             synthesizer=FakeSynthesizer(),
         )
+
+
+def _recorded_wav(path, duration_seconds=0.1):
+    samples = array.array("h", [900, -900] * int(22050 * duration_seconds / 2))
+    with wave.open(str(path), "wb") as output:
+        output.setnchannels(1)
+        output.setsampwidth(2)
+        output.setframerate(22050)
+        output.writeframes(samples.tobytes())
+    return path
+
+
+class _UnavailableSynthesizer:
+    def synthesize(self, text, voice_id, output_path):
+        raise AssertionError("A recorded line must not call the speech engine")
+
+
+def test_recorded_line_replaces_the_speech_engine(tmp_path):
+    recording = _recorded_wav(tmp_path / "recorded.wav")
+    result = generate_episode_audio(
+        _subtitle_plan("urdu"),
+        tmp_path / "audio",
+        tmp_path / "data",
+        synthesizer=_UnavailableSynthesizer(),
+        recordings={("market", 1): recording},
+    )
+    assert result["recorded_line_count"] == 1
+    assert result["tts_line_count"] == 0
+    assert result["clips"][0]["source"] == "recorded"
+    assert Path(result["audio_path"]).is_file()
+
+
+def test_missing_recorded_file_is_reported(tmp_path):
+    with pytest.raises(SpeechGenerationError, match="recorded line"):
+        generate_episode_audio(
+            _subtitle_plan("urdu"),
+            tmp_path / "audio",
+            tmp_path / "data",
+            synthesizer=_UnavailableSynthesizer(),
+            recordings={("market", 1): tmp_path / "not-there.wav"},
+        )
+
+
+def test_recorded_audio_must_match_the_mix_contract(tmp_path):
+    from app.audio import validate_recorded_audio
+
+    assert validate_recorded_audio(_recorded_wav(tmp_path / "ok.wav").read_bytes()) > 0
+    with wave.open(str(tmp_path / "stereo.wav"), "wb") as output:
+        output.setnchannels(2)
+        output.setsampwidth(2)
+        output.setframerate(44100)
+        output.writeframes(b"\x00\x00" * 100)
+    with pytest.raises(SpeechGenerationError, match="mono 16-bit PCM"):
+        validate_recorded_audio((tmp_path / "stereo.wav").read_bytes())
+    with pytest.raises(SpeechGenerationError, match="readable WAV"):
+        validate_recorded_audio(b"not a wav file")
