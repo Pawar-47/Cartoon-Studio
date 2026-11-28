@@ -19,6 +19,17 @@
 
 # Test Report — 2026-11-28
 
+## Background job execution, per-scene progress and cancellation (Batch B)
+
+- **Change 1 — real worker.** New `app/worker.py` runs queued operations in one background thread: it claims a job, executes the registered handler, records completion or failure, and honours cancellation between units. The job is claimed with the operation's full budget, and every progress tick also extends the lease. `app/main.py` starts the worker in the FastAPI lifespan and stops it on shutdown.
+- **Change 2 — progress and cancel.** `JobQueue.report_progress` persists progress/total (ownership checked, no journal noise per tick), `cancel_requested` reads the flag, and new `mark_cancelled` records a cancelled job after its worker honoured the request. `app/render.py` accepts `progress_callback` (called after each scene) and `cancel_check` (before each scene and before assembly), raising `RenderCancelled` so a cancelled render keeps its completed scenes and stops.
+- **Change 3 — one render path, two callers.** The render route body moved into `_execute_episode_render(project_id, report, cancelled)`, used by both the synchronous route and the worker handler, so validation, rendering and manifest persistence cannot drift between them. The synchronous route still exists and now reports 409 on cancellation.
+- **Change 4 — queueable render.** `POST /api/projects/{id}/story/render/jobs` enqueues the render, wakes the worker and returns `202` with the job id and its poll/cancel URLs, so the browser no longer holds one request open for the whole render.
+- **Change 5 — diagnostics.** `GET /api/diagnostics` reports Godot, FFmpeg (resolved path, chosen encoder, or the reason it cannot run), the speech engine (installed or not, with the pinned voices), the schema version, job counts and whether the worker is running. It never pretends an optional dependency is installed.
+- **Tests added:** `tests/test_worker.py` (registered operation completes with output, unknown operation fails, raising handler re-queues, cancellation honoured between units, cancelled exception marks the job cancelled, empty queue, progress ownership) and an app test for the `202` job plus diagnostics. The render API fake now asserts the progress/cancel callbacks are passed.
+- **Result:** awaiting the next GitHub Actions run; no local pytest run was possible in this batch.
+- **Still open:** the Episode Renderer, Logs and Diagnostics workspaces do not consume these endpoints yet (the Story page still uses the synchronous render), and `piper-tts` remains outside the locked environment.
+
 ## Recorded Urdu dialogue fallback (Batch A, voice half)
 
 - **Owner decision applied:** voice uses both paths. The pinned Piper TTS path stays the default, and any dialogue line can now be recorded and used instead.

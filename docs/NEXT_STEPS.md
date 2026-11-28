@@ -16,20 +16,31 @@ redistribution-safe encoder, but it still cannot synthesise Urdu speech because
 
 ## Immediate next steps
 
-1. **Finish the TTS half of Batch A.** Add `piper-tts` and `onnxruntime` to the locked
-   environment through `.github/workflows/resolve-python-lock.yml`, vendor the wheels into the
-   installer, and bundle the two pinned `ur_PK` voices so speech synthesis works offline.
-   The recorded fallback (per-line WAV upload, validation, mixing) is already implemented.
-2. **Record control in the Story workspace**, so the recorded fallback is reachable without
-   the API: pick a dialogue line, record, review the stored WAV, and show whether the line is
-   recorded or synthesised before generation.
-3. **Batch B — real job execution.** Background worker, per-scene progress, cooperative
-   cancel, and the Episode Renderer, Logs and Diagnostics workspaces.
-4. **Batch C — scene cache and checkpoints**, so one failed scene never re-renders the
-   whole episode.
+1. **Episode Renderer and Logs and Diagnostics workspaces.** The endpoints exist
+   (`POST .../story/render/jobs`, job poll/cancel, `/api/diagnostics`); build the pages that
+   use them: job list with live progress and cancel, download when complete, dependency
+   health, and the job event journal. Point the Story page's render button at the queued
+   route instead of the blocking one.
+2. **Record control in the Story workspace** for the recorded dialogue fallback: choose a
+   line, record, review the stored WAV, and show recorded/synthesised per line.
+3. **Pin `piper-tts` and `onnxruntime`** into the locked environment through
+   `.github/workflows/resolve-python-lock.yml` and vendor the wheels plus the two `ur_PK`
+   voices into the installer, so TTS works offline.
+4. **Batch C — scene cache and checkpoints**, so one failed scene never re-renders the whole
+   episode and a restart resumes from the last completed scene.
 5. P2.2 remaining visual acceptance proceeds in parallel: interactive browser acceptance of
    hairstyles, portraits, assembly, morphs and retarget preview; broad rig acceptance on
    representative models.
+
+## Recent completed batches
+
+### Background job execution, progress and cancellation (Batch B)
+`app/worker.py` runs queued operations in one background thread with progress, cancellation
+between scenes and failure recording; `JobQueue` gains `report_progress`, `cancel_requested`
+and `mark_cancelled`; `app/render.py` accepts `progress_callback`/`cancel_check`; the render
+route body is shared by the synchronous route and the worker handler; `POST
+/api/projects/{id}/story/render/jobs` returns `202` with poll/cancel URLs; `GET
+/api/diagnostics` reports Godot, FFmpeg, voice, schema, job counts and worker state.
 
 ## Recent completed batches
 

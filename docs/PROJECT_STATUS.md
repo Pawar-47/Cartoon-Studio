@@ -1,5 +1,14 @@
 # Project Status — 2026-11-28
 
+## Live checkpoint — 2026-11-28 (background job execution, progress and cancellation)
+
+- **Real background worker.** `app/worker.py` runs queued operations outside the request thread: it claims, executes, reports progress, honours cancellation between scenes and records completion or failure; `app/main.py` starts it in the lifespan. A render no longer blocks the browser for hours, and closing the tab no longer leaves the work unattended.
+- **Progress and cancel are real.** `GET /api/projects/{id}/jobs/{job_id}` now advances per rendered scene (each tick also extends the lease), `POST .../jobs/{job_id}/cancel` stops a running render before its next scene, and a cancelled job keeps the scenes it already rendered.
+- **Queueable render.** `POST /api/projects/{id}/story/render/jobs` returns `202` with a job id and its poll/cancel URLs; the synchronous render route remains for compatibility and reports 409 when cancelled.
+- **Diagnostics.** `GET /api/diagnostics` reports Godot, FFmpeg (path, chosen redistribution-safe encoder, or why it cannot run), the speech engine (installed or not, with the pinned voices), schema version, job counts and worker state.
+- **Tests:** `tests/test_worker.py` plus an app test for the `202` job and diagnostics; the render API test asserts the progress/cancel callbacks.
+- **Still open:** the Episode Renderer and Logs and Diagnostics workspaces do not use these endpoints yet (the Story page still calls the synchronous render, and the recorder control is still missing), and `piper-tts` still needs the lock regenerated.
+
 ## Live checkpoint — 2026-11-28 (recorded Urdu dialogue fallback)
 
 - **Owner decision applied:** voice uses both paths. A dialogue line can now be recorded and used instead of TTS: `PUT /api/projects/{id}/story/audio/lines/{scene}/{line}` stores a mono 16-bit 22,050 Hz WAV under the episode, `GET /api/projects/{id}/story/audio/recordings` lists recorded lines, and `generate_episode_audio` mixes recorded and synthesised lines, recording each clip's `source` and the counts in the audio manifest. A recorded line never calls the speech engine.

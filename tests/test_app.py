@@ -1821,6 +1821,56 @@ def test_episode_audio_uses_stored_recordings(tmp_path, monkeypatch):
     assert built.json()["tts_line_count"] == 4
 
 
+def test_episode_render_job_is_queued_and_diagnostics_report_dependencies(
+    tmp_path, monkeypatch
+):
+    from app import main
+
+    monkeypatch.setattr(main, "DATA_DIR", tmp_path)
+    monkeypatch.setattr(main, "DB_PATH", tmp_path / "render-job.sqlite3")
+    monkeypatch.setattr(main, "_INITIALIZED_DB_KEY", None)
+    monkeypatch.setattr(main, "_JOB_QUEUE", None)
+    monkeypatch.setattr(main, "_JOB_QUEUE_KEY", None)
+    monkeypatch.setattr(main, "_WORKER", None)
+    monkeypatch.setattr(main, "_WORKER_KEY", None)
+    monkeypatch.setattr(
+        "app.render._find_ffmpeg",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            main.RenderDependencyUnavailable("FFmpeg was not found.")
+        ),
+    )
+    project = client.post("/api/projects", json={"name": "Render Job Project"})
+    project_id = project.json()["id"]
+    assert client.put(
+        f"/api/projects/{project_id}/story", json=valid_episode_plan()
+    ).status_code == 200
+
+    queued = client.post(f"/api/projects/{project_id}/story/render/jobs")
+    assert queued.status_code == 202, queued.text
+    job_id = queued.json()["job_id"]
+    assert queued.json()["state"] == "queued"
+    assert queued.json()["poll_url"].endswith(f"/jobs/{job_id}")
+
+    opened = client.get(f"/api/projects/{project_id}/jobs/{job_id}")
+    assert opened.status_code == 200
+    assert opened.json()["state"] == "queued"
+    assert opened.json()["operation"] == "episode_render"
+
+    diagnosed = client.get("/api/diagnostics")
+    assert diagnosed.status_code == 200
+    body = diagnosed.json()
+    assert body["godot"].keys() >= {"available", "executable"}
+    assert body["ffmpeg"]["available"] is False
+    assert "FFmpeg was not found." in body["ffmpeg"]["error"]
+    assert body["voice"]["voices"] == [
+        "ur_PK-aegis_female-medium",
+        "ur_PK-fasih-medium",
+    ]
+    assert body["worker"]["running"] is False
+    assert body["database"]["schema_version"] == 4
+    assert body["database"]["jobs"]["queued"] == 1
+
+
 def test_episode_audio_endpoint_saves_and_serves_the_dialogue_mix(
     tmp_path, monkeypatch
 ):

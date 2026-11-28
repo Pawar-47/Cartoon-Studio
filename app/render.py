@@ -7,6 +7,7 @@ import subprocess
 import tempfile
 import time
 import wave
+from collections.abc import Callable
 from pathlib import Path
 
 
@@ -20,6 +21,10 @@ class RenderPathError(RuntimeError):
 
 class RenderExecutionError(RuntimeError):
     pass
+
+
+class RenderCancelled(RenderExecutionError):
+    """Raised when the owner cancelled the render between scenes."""
 
 
 RENDER_FPS = 24
@@ -271,6 +276,28 @@ script = ExtResource("1")
     shutil.copy2(runner_source, project_directory / "render_runner.gd")
 
 
+def ffmpeg_status() -> dict[str, object]:
+    """Return the resolved FFmpeg, its chosen encoder, or why it cannot run."""
+    try:
+        executable = _find_ffmpeg()
+    except RenderDependencyUnavailable as error:
+        return {"available": False, "executable": None, "error": str(error)}
+    try:
+        encoder = choose_video_encoder(executable)
+    except RenderDependencyUnavailable as error:
+        return {
+            "available": False,
+            "executable": str(executable),
+            "error": str(error),
+        }
+    return {
+        "available": True,
+        "executable": str(executable),
+        "video_encoder": encoder,
+        "video_codec": VIDEO_ENCODER_KIND[encoder],
+    }
+
+
 def render_episode_video(
     scene_paths: list[Path],
     scene_durations: list[int],
@@ -285,7 +312,19 @@ def render_episode_video(
     height: int = RENDER_HEIGHT,
     timeout_seconds: int = RENDER_TIMEOUT_SECONDS,
     include_subtitles: bool = True,
+    progress_callback: Callable[[int, int], None] | None = None,
+    cancel_check: Callable[[], bool] | None = None,
 ) -> dict:
+    """Render the episode scene by scene and assemble the MP4.
+
+    ``progress_callback`` receives ``(scenes_done, scene_count)`` after each
+    scene so a background job can report real progress, and ``cancel_check`` is
+    consulted before each scene and before assembly so a cancelled job stops
+    without rendering the remaining scenes. Both are optional; a synchronous
+    caller gets exactly the previous behaviour.
+    """
+    def cancelled() -> bool:
+        return bool(cancel_check and cancel_check())
     root = Path(project_root).resolve(strict=True)
     if not root.is_dir():
         raise RenderPathError("The episode project directory does not exist.")
@@ -349,6 +388,10 @@ def render_episode_video(
             zip(scenes, scene_durations, strict=True),
             start=1,
         ):
+            if cancelled():
+                raise RenderCancelled(
+                    f"The episode render was cancelled before scene {index}."
+                )
             remaining = deadline - time.monotonic()
             if remaining <= 0:
                 raise RenderExecutionError("The episode render exceeded its time budget.")
@@ -399,7 +442,11 @@ def render_episode_video(
                     f"({expected_frame_report}). {detail}".strip()
                 )
             scene_videos.append(scene_video)
+            if progress_callback is not None:
+                progress_callback(index, len(scenes))
 
+        if cancelled():
+            raise RenderCancelled("The episode render was cancelled before assembly.")
         concat_file = temporary_root / "episode-scenes.txt"
         concat_file.write_text(
             "".join(f"file '{video.name}'\n" for video in scene_videos),

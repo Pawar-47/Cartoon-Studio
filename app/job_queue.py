@@ -397,6 +397,88 @@ class JobQueue:
             )
             self._event(db, job_id, "job_cancelled")
 
+    def report_progress(
+        self,
+        job_id: str,
+        worker_id: str,
+        progress: int,
+        total: int | None = None,
+        now: float | None = None,
+    ) -> bool:
+        """Persist a running job's progress and extend its lease.
+
+        Returns False when the job is no longer running or no longer owned by
+        this worker, so a cancelled or reclaimed job stops reporting. Progress
+        ticks are not written to the event journal: a render reports one tick
+        per scene, and the journal is for state changes, not progress.
+        """
+        timestamp = _timestamp(now)
+        with _connect(self.db_path) as db:
+            row = db.execute(
+                "SELECT state, lease_owner FROM jobs WHERE job_id = ?", (job_id,)
+            ).fetchone()
+            if row is None or row["state"] != "running":
+                return False
+            owner = row["lease_owner"]
+            if owner is not None and owner != worker_id:
+                return False
+            if total is None:
+                db.execute(
+                    """
+                    UPDATE jobs SET progress = ?, updated_at = ?, lease_expires_at = ?
+                    WHERE job_id = ?
+                    """,
+                    (
+                        max(0, int(progress)),
+                        _iso(now),
+                        timestamp + LEASE_SECONDS,
+                        job_id,
+                    ),
+                )
+            else:
+                db.execute(
+                    """
+                    UPDATE jobs SET progress = ?, total = ?, updated_at = ?,
+                        lease_expires_at = ?
+                    WHERE job_id = ?
+                    """,
+                    (
+                        max(0, int(progress)),
+                        max(1, int(total)),
+                        _iso(now),
+                        timestamp + LEASE_SECONDS,
+                        job_id,
+                    ),
+                )
+        return True
+
+    def cancel_requested(self, job_id: str) -> bool:
+        """Return whether cancellation has been requested for a job."""
+        with _connect(self.db_path) as db:
+            row = db.execute(
+                "SELECT cancel_requested FROM jobs WHERE job_id = ?", (job_id,)
+            ).fetchone()
+        return bool(row and row["cancel_requested"])
+
+    def mark_cancelled(
+        self, job_id: str, worker_id: str, reason: str = "", now: float | None = None
+    ) -> None:
+        """Mark a running job cancelled after its worker honoured the request."""
+        with _connect(self.db_path) as db:
+            db.execute("BEGIN IMMEDIATE")
+            _require_running(db, job_id, worker_id)
+            db.execute(
+                """
+                UPDATE jobs SET state = 'cancelled', cancel_requested = 1,
+                    lease_owner = NULL, lease_expires_at = NULL,
+                    updated_at = ?, error = ? WHERE job_id = ?
+                """,
+                (_iso(now), reason or None, job_id),
+            )
+            self._event(
+                db, job_id, "job_cancelled", {"worker": worker_id, "reason": reason}
+            )
+
     def snapshot(self, job_id: str) -> dict[str, Any]:
         """Return the full job state including events."""
         with _connect(self.db_path) as db:

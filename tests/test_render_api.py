@@ -69,12 +69,15 @@ def test_episode_render_endpoint_persists_and_serves_mp4(tmp_path, monkeypatch):
         assert project_root == main.project_directory(tmp_path, project_id)
         assert godot_executable == tmp_path / "Godot.exe"
         # A new project uses the balanced preset: 24 fps at 1280x720 with subtitles.
-        assert options == {
+        assert {key: value for key, value in options.items() if key != "progress_callback"
+                and key != "cancel_check"} == {
             "fps": 24,
             "width": 1280,
             "height": 720,
             "include_subtitles": True,
         }
+        assert callable(options["progress_callback"])
+        assert callable(options["cancel_check"])
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_bytes(b"verified-mp4-test")
         return {

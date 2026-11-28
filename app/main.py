@@ -8,7 +8,7 @@ import os
 import shutil
 import uuid
 import zipfile
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
@@ -20,6 +20,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from app.audio import (
+    VOICE_CATALOG,
     SpeechEngineUnavailable,
     SpeechGenerationError,
     generate_episode_audio,
@@ -47,9 +48,11 @@ from app.quality import (
     resolve_quality_profile,
 )
 from app.render import (
+    RenderCancelled,
     RenderDependencyUnavailable,
     RenderExecutionError,
     RenderPathError,
+    ffmpeg_status,
     render_episode_video,
 )
 from app.rig_analysis import analyze_rig
@@ -74,6 +77,7 @@ from app.storage import (
 )
 from app.story import EpisodePlan, StoryPromptRequest, build_story_prompt
 from app.version import APP_VERSION
+from app.worker import JobContext, OperationCancelled, OperationWorker
 from app.world_assets import ASSETS, WorldAssetError, install_world_asset, list_world_assets
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -105,6 +109,8 @@ JOB_LEASE_SECONDS = {
     "episode_render": 4 * 3600.0,
 }
 DEFAULT_JOB_LEASE_SECONDS = 3600.0
+_WORKER: OperationWorker | None = None
+_WORKER_KEY: tuple[str, str] | None = None
 
 
 def connect_db():
@@ -119,6 +125,26 @@ def get_job_queue() -> JobQueue:
     _JOB_QUEUE = JobQueue(DATA_DIR, DB_PATH)
     _JOB_QUEUE_KEY = key
     return _JOB_QUEUE
+
+
+def get_operation_worker() -> OperationWorker:
+    """Return the background worker for this data directory.
+
+    The worker is created on first use but started only by the application
+    lifespan, so importing the app or running a unit test never leaves a thread
+    behind. A request that queues a job wakes the worker when it is running.
+    """
+    global _WORKER, _WORKER_KEY
+    key = (str(DATA_DIR.resolve()), str(DB_PATH.resolve()))
+    if _WORKER is not None and _WORKER_KEY == key:
+        return _WORKER
+    _WORKER = OperationWorker(
+        get_job_queue(),
+        {"episode_render": _render_job_handler},
+        lease_seconds=JOB_LEASE_SECONDS["episode_render"],
+    )
+    _WORKER_KEY = key
+    return _WORKER
 
 
 def get_engine_adapter() -> GodotEngineAdapter:
@@ -168,7 +194,12 @@ def initialize_database() -> None:
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     initialize_database()
-    yield
+    worker = get_operation_worker()
+    worker.start()
+    try:
+        yield
+    finally:
+        worker.stop()
 
 
 app = FastAPI(
@@ -735,12 +766,66 @@ def status() -> dict[str, Any]:
     }
 
 
+@app.get("/api/diagnostics")
+def diagnostics() -> dict[str, Any]:
+    """Report whether the local production dependencies are present.
+
+    This is the honest readiness surface for the Logs and Diagnostics
+    workspace: it says whether Godot, FFmpeg and the speech engine can run
+    here, without pretending an optional dependency is installed.
+    """
+    initialize_database()
+    adapter = get_engine_adapter()
+    godot = {
+        "available": adapter.available,
+        "executable": str(adapter.executable),
+    }
+    ffmpeg = ffmpeg_status()
+    try:
+        import piper  # noqa: F401
+
+        voice = {"available": True, "voices": sorted(VOICE_CATALOG)}
+    except ImportError:
+        voice = {
+            "available": False,
+            "voices": sorted(VOICE_CATALOG),
+            "error": (
+                "piper-tts is not installed; record dialogue lines or install the "
+                "voice add-on."
+            ),
+        }
+    with connect_db() as connection:
+        schema_version = connection.execute(
+            "SELECT MAX(version) FROM schema_migrations"
+        ).fetchone()[0]
+        job_counts = {
+            str(row["state"]): int(row["total"])
+            for row in connection.execute(
+                "SELECT state, COUNT(*) AS total FROM jobs GROUP BY state"
+            ).fetchall()
+        }
+    worker = get_operation_worker()
+    return {
+        "application": "Cartoon Studio",
+        "version": APP_VERSION,
+        "data_dir": str(DATA_DIR),
+        "database": {"schema_version": schema_version, "jobs": job_counts},
+        "godot": godot,
+        "ffmpeg": ffmpeg,
+        "voice": voice,
+        "worker": {"running": worker.running, "worker_id": worker.worker_id},
+    }
+
+
 @app.post("/api/story-prompts")
 def create_story_prompt(payload: StoryPromptRequest) -> dict[str, Any]:
     return {
         "prompt": build_story_prompt(payload),
         "schema": EpisodePlan.model_json_schema(),
     }
+
+
+
 
 
 @app.post("/api/story-plans/validate", response_model=EpisodePlan)
@@ -1095,8 +1180,17 @@ def _latest_episode_manifest(
     return manifest
 
 
-@app.post("/api/projects/{project_id}/story/render")
-def render_episode(project_id: str) -> dict[str, Any]:
+def _execute_episode_render(
+    project_id: str,
+    report: Callable[[int, int], None],
+    cancelled: Callable[[], bool],
+) -> dict[str, Any]:
+    """Render the saved episode end to end, reporting per-scene progress.
+
+    Shared by the synchronous route and the background worker, so both paths
+    validate, render and persist exactly the same way; only progress reporting
+    and cancellation differ.
+    """
     saved = get_story_plan(project_id)
     episode_id = saved["episode_id"]
     production = _latest_episode_manifest(project_id, "episode_production", episode_id)
@@ -1148,34 +1242,22 @@ def render_episode(project_id: str) -> dict[str, Any]:
     relative_output = f"assets/episodes/{episode_id}/renders/{render_id}"
     output_directory = resolve_project_relative(DATA_DIR, project_id, relative_output)
     output_path = output_directory / "episode.mp4"
-    queue = get_job_queue()
-    job_id = _claim_job(queue, project_id, "episode_render")
-    try:
-        result = render_episode_video(
-            scene_paths,
-            scene_durations,
-            audio_path,
-            subtitles_path,
-            output_path,
-            project_root,
-            get_engine_adapter().executable,
-            fps=quality.fps,
-            width=quality.width,
-            height=quality.height,
-            include_subtitles=include_subtitles,
-        )
-    except RenderDependencyUnavailable as error:
-        shutil.rmtree(output_directory, ignore_errors=True)
-        _record_job_failure(queue, job_id, str(error))
-        raise HTTPException(status_code=503, detail=str(error)) from error
-    except RenderPathError as error:
-        shutil.rmtree(output_directory, ignore_errors=True)
-        _record_job_failure(queue, job_id, str(error))
-        raise HTTPException(status_code=422, detail=str(error)) from error
-    except RenderExecutionError as error:
-        shutil.rmtree(output_directory, ignore_errors=True)
-        _record_job_failure(queue, job_id, str(error))
-        raise HTTPException(status_code=502, detail=str(error)) from error
+    report(0, len(scenes))
+    result = render_episode_video(
+        scene_paths,
+        scene_durations,
+        audio_path,
+        subtitles_path,
+        output_path,
+        project_root,
+        get_engine_adapter().executable,
+        fps=quality.fps,
+        width=quality.width,
+        height=quality.height,
+        include_subtitles=include_subtitles,
+        progress_callback=report,
+        cancel_check=cancelled,
+    )
     video_relative = str(
         Path(result["video_path"]).resolve().relative_to(project_root.resolve())
     ).replace("\\", "/")
@@ -1206,25 +1288,102 @@ def render_episode(project_id: str) -> dict[str, Any]:
         upsert_document_index(
             connection, project_id, manifest, relative_manifest, digest
         )
-    _record_job_success(
-        queue,
-        job_id,
-        {
-            "render_id": render_id,
-            "duration_seconds": result["duration_seconds"],
-            "fps": result["fps"],
-            "width": result["width"],
-            "height": result["height"],
-            "quality_preset": quality.name,
-            "has_subtitles": include_subtitles,
-            "status": "ok",
-        },
-    )
     return {
         "build_id": render_id,
         **data,
         "video_url": f"/api/projects/{project_id}/story/render/{render_id}/mp4",
     }
+
+
+def _render_job_handler(context: JobContext) -> dict[str, Any]:
+    """Run a queued episode render for the background worker."""
+    try:
+        result = _execute_episode_render(
+            context.project_id, context.report, context.cancelled
+        )
+    except RenderCancelled as error:
+        raise OperationCancelled(str(error)) from error
+    except HTTPException as error:
+        raise RuntimeError(str(error.detail)) from error
+    return {
+        "render_id": result["build_id"],
+        "duration_seconds": result["duration_seconds"],
+        "fps": result["fps"],
+        "width": result["width"],
+        "height": result["height"],
+        "quality_preset": result["quality_preset"],
+        "has_subtitles": result["has_subtitles"],
+        "video_encoder": result.get("video_encoder"),
+        "status": "ok",
+    }
+
+
+@app.post("/api/projects/{project_id}/story/render/jobs", status_code=202)
+def queue_episode_render(project_id: str) -> dict[str, Any]:
+    """Queue the episode render for the background worker.
+
+    The browser gets the job id immediately and polls ``/jobs/{job_id}`` for
+    progress, instead of holding one HTTP request open for the whole render.
+    """
+    initialize_database()
+    get_story_plan(project_id)
+    queue = get_job_queue()
+    job_id = queue.enqueue(project_id, "episode_render", total_units=1)
+    get_operation_worker().wake()
+    return {
+        "job_id": job_id,
+        "operation": "episode_render",
+        "state": "queued",
+        "poll_url": f"/api/projects/{project_id}/jobs/{job_id}",
+        "cancel_url": f"/api/projects/{project_id}/jobs/{job_id}/cancel",
+    }
+
+
+@app.post("/api/projects/{project_id}/story/render")
+def render_episode(project_id: str) -> dict[str, Any]:
+    queue = get_job_queue()
+    job_id = _claim_job(queue, project_id, "episode_render")
+    try:
+        result = _execute_episode_render(
+            project_id,
+            lambda progress, total: queue.report_progress(
+                job_id, JOB_WORKER_ID, progress, total=total
+            ),
+            lambda: queue.cancel_requested(job_id),
+        )
+    except RenderCancelled as error:
+        try:
+            queue.mark_cancelled(job_id, JOB_WORKER_ID, reason=str(error))
+        except JobQueueError as queue_error:
+            print(
+                f"[job] could not record cancellation for {job_id}: {queue_error}",
+                flush=True,
+            )
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    except RenderDependencyUnavailable as error:
+        _record_job_failure(queue, job_id, str(error))
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    except RenderPathError as error:
+        _record_job_failure(queue, job_id, str(error))
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    except RenderExecutionError as error:
+        _record_job_failure(queue, job_id, str(error))
+        raise HTTPException(status_code=502, detail=str(error)) from error
+    _record_job_success(
+        queue,
+        job_id,
+        {
+            "render_id": result["build_id"],
+            "duration_seconds": result["duration_seconds"],
+            "fps": result["fps"],
+            "width": result["width"],
+            "height": result["height"],
+            "quality_preset": result["quality_preset"],
+            "has_subtitles": result["has_subtitles"],
+            "status": "ok",
+        },
+    )
+    return result
 
 
 @app.get("/api/projects/{project_id}/jobs")

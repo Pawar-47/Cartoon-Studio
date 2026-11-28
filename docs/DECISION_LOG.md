@@ -1,5 +1,14 @@
 # Decision Log
 
+## 2026-11-28 — Background worker, progress and cancellation (Batch B)
+
+1. **One worker thread, one claimed job at a time.** The target hardware is the reason the queue was sequential; running two renders in parallel would trade reliability for a stall. A second job waits its turn and is visible as `queued`.
+2. **The job is claimed for the operation's full budget, and progress ticks extend the lease.** Godot renders one scene per process, so no heartbeat can be emitted mid-scene; the lease therefore covers the whole operation, and a progress tick refreshes it between scenes.
+3. **Cancellation is cooperative, between scenes.** The render checks the cancel flag before each scene and before assembly and raises `RenderCancelled`; completed scene videos and the manifest state stay intact, and the job is recorded as `cancelled`, not `failed`.
+4. **One render path, two callers.** The route body lives in `_execute_episode_render(project_id, report, cancelled)`; the synchronous route and the worker handler both call it, so validation, rendering, manifest writing and the progress contract cannot drift apart.
+5. **The synchronous route remains.** Existing callers and tests keep their contract; the queued route (`202` + poll) is the path the Episode Renderer workspace will use. The synchronous route now answers `409` when the owner cancels it.
+6. **Diagnostics reports readiness, never optimism.** `/api/diagnostics` names the resolved Godot and FFmpeg paths and the chosen redistribution-safe encoder, and says plainly when the speech engine is not installed.
+
 ## 2026-11-28 — Redistribution-safe video encoding (Batch A, FFmpeg half)
 
 1. **No GPL video encoder is bundled or used.** `libx264`, `libx265` and `libxvid` are refused by `app/render.py` (`GPL_ONLY_VIDEO_ENCODERS`): bundling them would put GPL obligations on the whole installer. The video encoder is chosen at render time from the build's own encoder list, in this order: `libopenh264` (BSD, CSP patent grant for the binary), `libvpx-vp9` (BSD), `libaom-av1`/`libsvtav1` (BSD), then the native `mpeg4` encoder (LGPL). The chosen encoder is recorded in the render manifest next to the codec name.
