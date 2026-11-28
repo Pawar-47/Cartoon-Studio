@@ -11,7 +11,14 @@ def test_blender_is_optional_and_reports_shared_asset_domains(tmp_path: Path) ->
 
     assert status["available"] is False
     assert status["supported"] is False
-    assert status["supported_asset_kinds"] == ["building", "character", "prop", "vegetation", "vehicle", "world"]
+    assert status["supported_asset_kinds"] == [
+        "building",
+        "character",
+        "prop",
+        "vegetation",
+        "vehicle",
+        "world",
+    ]
     with pytest.raises(BlenderUnavailableError):
         worker.version()
 
@@ -25,7 +32,7 @@ def test_generation_rejects_unknown_asset_kind_and_unsafe_id(tmp_path: Path) -> 
         worker.generate(
             project_root=project,
             asset_id="safe",
-            asset_kind="vehicle",  # type: ignore[arg-type]
+            asset_kind="spaceship",  # type: ignore[arg-type]
             name="Car",
         )
     with pytest.raises(ValueError, match="asset_id"):
