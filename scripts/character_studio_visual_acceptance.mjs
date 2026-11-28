@@ -269,7 +269,13 @@ try {
   await page.locator("#foundry-hair-style").selectOption("bob");
   await setInputValue(page, "#foundry-hair-color", "#9b3c70");
   await setInputValue(page, "#foundry-head-width", "-0.2");
-  await page.locator("#foundry-create").click();
+  await page.waitForFunction(() => {
+    const button = document.querySelector("#foundry-create");
+    return button && !button.disabled;
+  }, null, { timeout: 30_000 });
+  // The live WebGL preview continuously repaints and can prevent Playwright's
+  // stability heuristic from settling even when the form button is enabled.
+  await page.locator("#foundry-create").click({ force: true });
   await page.waitForFunction(
     () => document.querySelector("#foundry-status")?.textContent?.includes("saved."),
     null,
