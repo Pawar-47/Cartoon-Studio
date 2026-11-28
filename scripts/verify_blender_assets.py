@@ -57,7 +57,7 @@ def main() -> int:
             if not meshes or not nodes:
                 raise RuntimeError(f"{kind}: exported GLB has no mesh or scene nodes")
             godot_inspection = godot.inspect_glb(
-                result.glb_path, allowed_root=project, timeout_seconds=240
+                result.glb_path, allowed_root=project, timeout_seconds=180
             )
             if not godot_inspection.get("ok"):
                 raise RuntimeError(
