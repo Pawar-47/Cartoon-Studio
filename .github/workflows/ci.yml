@@ -88,7 +88,13 @@ jobs:
         name: Set up Python
         with:
           python-version: "3.11"
+      - name: Install headless Blender rendering libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libegl1 libegl-mesa0 libgl1 libglx-mesa0 libxkbcommon0 libx11-6 libxi6 libxxf86vm1 libxrender1 libxfixes3
       - name: Download pinned Blender 4.5.17 LTS
+        env:
+          EGL_PLATFORM: surfaceless
         run: |
           curl --fail --location --retry 3 --output blender.tar.xz https://download.blender.org/release/Blender4.5/blender-4.5.17-linux-x64.tar.xz
           mkdir blender-runtime
@@ -96,6 +102,8 @@ jobs:
           rm blender.tar.xz
           blender-runtime/blender --background --version
       - name: Generate character, world and prop with Blender
+        env:
+          EGL_PLATFORM: surfaceless
         run: |
           python scripts/verify_blender_assets.py --blender "$PWD/blender-runtime/blender" --output build/blender-assets
       - name: Upload real Blender outputs for inspection

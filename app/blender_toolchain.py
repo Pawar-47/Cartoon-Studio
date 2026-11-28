@@ -146,7 +146,7 @@ class BlenderToolchain:
             raise BlenderExecutionError("Blender did not produce " + ", ".join(missing) + f".\n{log}")
         if source.stat().st_size < 1024 or glb.stat().st_size < 1024:
             raise BlenderExecutionError("Blender produced an incomplete asset.")
-        if preview.stat().st_size < 4096 or preview.read_bytes()[:8] != b"\\x89PNG\\r\\n\\x1a\\n":
+        if preview.stat().st_size < 4096 or preview.read_bytes()[:8] != b"\x89PNG\r\n\x1a\n":
             raise BlenderExecutionError("Blender did not produce a valid review PNG.")
         with glb.open("rb") as stream:
             header = stream.read(12)
