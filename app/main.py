@@ -40,7 +40,6 @@ from app.character_foundry import (
     MASTER_TEMPLATE_ID,
     default_character_recipe,
     validate_character_recipe,
-    write_master_character,
 )
 from app.engine import (
     MAX_TIMEOUT_SECONDS,
@@ -1733,6 +1732,90 @@ def generate_blender_asset(project_id: str, payload: BlenderAssetGenerateRequest
     }}
 
 
+
+
+def _generate_foundry_blender_asset(
+    project_root: Path, asset_id: str, name: str,
+    recipe: dict[str, Any], destination: Path,
+) -> Any:
+    result = BlenderToolchain(DATA_DIR).generate(
+        project_root=project_root, asset_id=asset_id, asset_kind="character",
+        name=name, culture_profile=recipe.get("culture_profile", "pakistani_storybook_v1"),
+        recipe=recipe, timeout_seconds=900,
+    )
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(result.glb_path, destination)
+    return result
+
+
+def _foundry_generator_metadata(
+    project_id: str, asset_id: str, project_root: Path, result: Any,
+    recipe: dict[str, Any], asset_path: Path, container: dict[str, Any],
+    relative_recipe: str,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    details = result.manifest.get("details", {}) if isinstance(result.manifest, dict) else {}
+    morph_targets = list(details.get("morph_targets") or details.get("shape_keys") or [])
+    culture_profile = str(result.manifest.get(
+        "culture_profile", recipe.get("culture_profile", "pakistani_storybook_v1")
+    ))
+    version = str(result.manifest.get("generator_version", "0.3.0"))
+    source_path = result.source_path.relative_to(project_root).as_posix()
+    blender_manifest_path = result.manifest_path.relative_to(project_root).as_posix()
+    preview_path = result.preview_path.relative_to(project_root).as_posix()
+    source_url = f"/api/projects/{project_id}/character-assets/{asset_id}/blender-source"
+    preview_url = f"/api/projects/{project_id}/character-assets/{asset_id}/blender-preview"
+    rig_profile_id = str(details.get(
+        "rig_profile_id", recipe.get("rig_profile_id", "cartoon-studio.humanoid.v1")
+    ))
+    saved_recipe = dict(recipe)
+    saved_recipe.update({"culture_profile": culture_profile, "generator_version": version})
+    saved_recipe["generated_asset"] = {
+        "filename": asset_path.name, "sha256": container.get("sha256"),
+        "morph_targets": morph_targets, "rig_profile_id": rig_profile_id,
+        "source_blend_path": source_path, "blender_manifest_path": blender_manifest_path,
+        "preview_path": preview_path, "culture_profile": culture_profile,
+    }
+    generator = {
+        "name": "Cartoon Studio Blender Foundry", "version": version,
+        "template_id": recipe.get("master_template_id"), "recipe_path": relative_recipe,
+        "morph_targets": morph_targets, "rig_profile_id": rig_profile_id,
+        "culture_profile": culture_profile, "blender_version": result.blender_version,
+        "source_blend_path": source_path, "blender_manifest_path": blender_manifest_path,
+        "preview_path": preview_path, "blender_source_url": source_url,
+        "blender_preview_url": preview_url,
+        "hair_style": details.get("hair_style", recipe.get("hair_style")),
+        "hair_color": details.get("hair_color", recipe.get("hair_color")),
+        "outfit": details.get("outfit", "pakistani_kurta_shalwar_with_peshawari_chappal"),
+    }
+    return saved_recipe, generator
+
+
+def _foundry_rig_ready(rig_analysis: dict[str, Any]) -> bool:
+    hierarchy = rig_analysis.get("hierarchy_validation", {})
+    return (
+        int(rig_analysis.get("matched_bone_count", 0))
+        >= int(rig_analysis.get("required_bone_count", 1))
+        and hierarchy.get("status") == "valid"
+    )
+
+
+def _foundry_blender_artifact_path(project_id: str, asset_id: str, field: str) -> Path:
+    manifest_path = resolve_project_relative(DATA_DIR, project_id, f"assets/characters/{asset_id}.json")
+    if not manifest_path.is_file():
+        raise HTTPException(status_code=404, detail="Character asset not found.")
+    try:
+        envelope = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise HTTPException(status_code=500, detail="Character asset manifest is unreadable.") from error
+    relative_path = envelope.get("data", {}).get("generator", {}).get(field)
+    if not isinstance(relative_path, str) or not relative_path:
+        raise HTTPException(status_code=404, detail="This character has no Blender source artifact.")
+    path = resolve_project_relative(DATA_DIR, project_id, relative_path)
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="Blender artifact file is missing.")
+    return path
+
+
 @app.put("/api/projects/{project_id}/foundry-characters/{character_id}")
 def update_foundry_character(
     project_id: str, character_id: str, payload: FoundryCharacterInput
@@ -1758,6 +1841,7 @@ def update_foundry_character(
     recipe["hair_color"] = payload.hair_color
     try:
         recipe = validate_character_recipe(recipe)
+        recipe["culture_profile"] = "pakistani_storybook_v1"
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
     asset_id = str(uuid.uuid4())
@@ -1770,10 +1854,23 @@ def update_foundry_character(
     )
     temp_asset = asset_path.with_name(f".{asset_id}.tmp.glb")
     temp_recipe = recipe_path.with_name(f".{asset_id}.tmp.json")
+    project_root = project_directory(DATA_DIR, project_id)
+    blender_output_dir = project_root / "assets" / "blender" / asset_id
     try:
         stage_started = time.monotonic()
         print(f"[foundry-update] stage=generate-start character={character_id}", flush=True)
-        write_master_character(temp_asset, recipe_path=temp_recipe, recipe=recipe)
+        try:
+            blender_result = _generate_foundry_blender_asset(
+                project_root, asset_id, payload.name.strip(), recipe, temp_asset
+            )
+        except BlenderUnavailableError as error:
+            raise HTTPException(status_code=503, detail=str(error)) from error
+        except BlenderTimeoutError as error:
+            raise HTTPException(status_code=504, detail=str(error)) from error
+        except BlenderExecutionError as error:
+            raise HTTPException(
+                status_code=422, detail=f"Blender could not generate the Foundry character: {error}"
+            ) from error
         print(
             "[foundry-update] stage=generate-complete "
             f"elapsed={time.monotonic() - stage_started:.2f}s "
@@ -1789,7 +1886,7 @@ def update_foundry_character(
         try:
             inspection = get_engine_adapter().inspect_glb(
                 temp_asset,
-                allowed_root=project_directory(DATA_DIR, project_id),
+                allowed_root=project_root,
                 timeout_seconds=FOUNDRY_INSPECTION_TIMEOUT_SECONDS,
             )
             print(
@@ -1806,34 +1903,32 @@ def update_foundry_character(
                 status_code=422,
                 detail=f"Godot could not import the Foundry character: {error}",
             ) from error
+        saved_recipe, generator_metadata = _foundry_generator_metadata(
+            project_id, asset_id, project_root, blender_result, recipe,
+            asset_path, container, relative_recipe,
+        )
+        write_json_atomic(temp_recipe, saved_recipe)
         asset_path.parent.mkdir(parents=True, exist_ok=True)
         temp_asset.replace(asset_path)
-        saved_recipe = json.loads(temp_recipe.read_text(encoding="utf-8"))
-        saved_recipe["generated_asset"]["filename"] = asset_path.name
-        recipe_path.parent.mkdir(parents=True, exist_ok=True)
-        recipe_path.write_text(
-            json.dumps(saved_recipe, indent=2, ensure_ascii=False) + chr(10),
-            encoding="utf-8",
-        )
+        temp_recipe.replace(recipe_path)
         temp_recipe.unlink(missing_ok=True)
         now = datetime.now(UTC).isoformat()
+        rig_analysis = analyze_rig(inspection)
         asset_data = {
-            "original_filename": f"{payload.name.strip()}.glb", "relative_path": relative_asset,
-            "container": container, "engine_inspection": inspection,
-            "rig_analysis": analyze_rig(inspection),
-            "rig_ready": int(inspection.get("skeleton_count", 0)) > 0,
+            "original_filename": f"{payload.name.strip()}.glb",
+            "relative_path": relative_asset, "container": container,
+            "engine_inspection": inspection, "rig_analysis": rig_analysis,
+            "rig_ready": _foundry_rig_ready(rig_analysis),
             "animation_ready": int(inspection.get("animation_count", 0)) > 0,
-            "generator": {
-                "name": "Cartoon Studio Character Foundry",
-                "version": saved_recipe["generator_version"],
-                "template_id": saved_recipe["master_template_id"], "recipe_path": relative_recipe,
-                "morph_targets": list(saved_recipe["parameters"])},
+            "generator": generator_metadata,
         }
         manifest = make_envelope("character_asset", asset_id, asset_data, now, now, 1)
         manifest_digest = write_json_atomic(manifest_path, manifest)
         updated_data = dict(data)
         updated_data.update(
             {"name": payload.name.strip(), "description": payload.description.strip(),
+            "hair": recipe.get("hair_style", ""),
+            "clothing": [generator_metadata.get("outfit", "Pakistani kurta-shalwar")],
             "asset": asset_data, "foundry_recipe": saved_recipe,
             "rig_status": "ready" if asset_data["rig_ready"] else "unrigged"})
         updated = make_envelope(
@@ -1856,12 +1951,15 @@ def update_foundry_character(
         return {**updated, "asset_id": asset_id,
             "asset_url": f"/api/projects/{project_id}/character-assets/{asset_id}",
             "recipe_path": relative_recipe,
+            "blender_source_url": generator_metadata["blender_source_url"],
+            "blender_preview_url": generator_metadata["blender_preview_url"],
         }
     except BaseException:
         temp_asset.unlink(missing_ok=True)
         temp_recipe.unlink(missing_ok=True)
         asset_path.unlink(missing_ok=True)
         manifest_path.unlink(missing_ok=True)
+        shutil.rmtree(blender_output_dir, ignore_errors=True)
         raise
 
 
@@ -1891,6 +1989,7 @@ def create_foundry_character(
         recipe["hair_style"] = payload.hair_style
         recipe["hair_color"] = payload.hair_color
         recipe = validate_character_recipe(recipe)
+        recipe["culture_profile"] = "pakistani_storybook_v1"
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
 
@@ -1902,6 +2001,8 @@ def create_foundry_character(
         DATA_DIR, project_id, f"assets/characters/{asset_id}.json"
     )
     asset_path.parent.mkdir(parents=True, exist_ok=True)
+    project_root = project_directory(DATA_DIR, project_id)
+    blender_output_dir = project_root / "assets" / "blender" / asset_id
     stage_started = time.monotonic()
     stage = "generation"
     print(
@@ -1910,7 +2011,18 @@ def create_foundry_character(
         flush=True,
     )
     try:
-        write_master_character(asset_path, recipe_path=recipe_path, recipe=recipe)
+        try:
+            blender_result = _generate_foundry_blender_asset(
+                project_root, asset_id, payload.name.strip(), recipe, asset_path
+            )
+        except BlenderUnavailableError as error:
+            raise HTTPException(status_code=503, detail=str(error)) from error
+        except BlenderTimeoutError as error:
+            raise HTTPException(status_code=504, detail=str(error)) from error
+        except BlenderExecutionError as error:
+            raise HTTPException(
+                status_code=422, detail=f"Blender could not generate the Foundry character: {error}"
+            ) from error
         print(
             "[foundry-create] stage=generate-complete "
             f"elapsed={time.monotonic() - stage_started:.2f}s "
@@ -1933,7 +2045,7 @@ def create_foundry_character(
         try:
             inspection = get_engine_adapter().inspect_glb(
                 asset_path,
-                allowed_root=project_directory(DATA_DIR, project_id),
+                allowed_root=project_root,
                 timeout_seconds=FOUNDRY_INSPECTION_TIMEOUT_SECONDS,
             )
         except EngineUnavailableError as error:
@@ -1962,22 +2074,20 @@ def create_foundry_character(
         )
 
         stage = "document-persistence"
+        saved_recipe, generator_metadata = _foundry_generator_metadata(
+            project_id, asset_id, project_root, blender_result, recipe,
+            asset_path, container, relative_recipe,
+        )
+        write_json_atomic(recipe_path, saved_recipe)
         now = datetime.now(UTC).isoformat()
+        rig_analysis = analyze_rig(inspection)
         asset_data = {
             "original_filename": f"{payload.name.strip()}.glb",
-            "relative_path": relative_asset,
-            "container": container,
-            "engine_inspection": inspection,
-            "rig_analysis": analyze_rig(inspection),
-            "rig_ready": int(inspection.get("skeleton_count", 0)) > 0,
+            "relative_path": relative_asset, "container": container,
+            "engine_inspection": inspection, "rig_analysis": rig_analysis,
+            "rig_ready": _foundry_rig_ready(rig_analysis),
             "animation_ready": int(inspection.get("animation_count", 0)) > 0,
-            "generator": {
-                "name": "Cartoon Studio Character Foundry",
-                "version": recipe["generator_version"],
-                "template_id": recipe["master_template_id"],
-                "recipe_path": relative_recipe,
-                "morph_targets": list(recipe["parameters"]),
-            },
+            "generator": generator_metadata,
         }
         manifest = make_envelope(
             "character_asset", asset_id, asset_data, now, now, 1
@@ -1995,8 +2105,8 @@ def create_foundry_character(
             "face_design": "Original editable Cartoon Studio Foundry master character.",
             "body_proportions": {},
             "height_cm": None,
-            "hair": "",
-            "clothing": ["Foundry casual outfit"] if recipe["clothing_asset_ids"] else [],
+            "hair": recipe.get("hair_style", ""),
+            "clothing": [generator_metadata.get("outfit", "Pakistani kurta-shalwar")],
             "accessories": [],
             "eye_design": "Stylized cartoon eyes",
             "mouth_design": "Stylized cartoon mouth",
@@ -2013,7 +2123,7 @@ def create_foundry_character(
                 "face_features": FaceFeatureInput().model_dump(mode="json"),
             },
             "rig_status": "ready" if asset_data["rig_ready"] else "unrigged",
-            "foundry_recipe": recipe,
+            "foundry_recipe": saved_recipe,
         }
         document = make_envelope("character", character_id, data, now, now, 1)
         character_relative = f"characters/{character_id}.json"
@@ -2036,6 +2146,8 @@ def create_foundry_character(
             "asset_id": asset_id,
             "asset_url": f"/api/projects/{project_id}/character-assets/{asset_id}",
             "recipe_path": relative_recipe,
+            "blender_source_url": generator_metadata["blender_source_url"],
+            "blender_preview_url": generator_metadata["blender_preview_url"],
         }
     except BaseException as error:
         print(
@@ -2047,6 +2159,7 @@ def create_foundry_character(
         asset_path.unlink(missing_ok=True)
         recipe_path.unlink(missing_ok=True)
         manifest_path.unlink(missing_ok=True)
+        shutil.rmtree(blender_output_dir, ignore_errors=True)
         raise
 
 
@@ -2234,6 +2347,18 @@ def get_character_asset_manifest(project_id: str, asset_id: str) -> dict[str, An
         raise HTTPException(status_code=409, detail="Character asset manifest is invalid.")
     return {"asset_id": safe_asset_id, **manifest["data"]}
 
+
+
+@app.get("/api/projects/{project_id}/character-assets/{asset_id}/blender-source")
+def download_foundry_blender_source(project_id: str, asset_id: str) -> FileResponse:
+    path = _foundry_blender_artifact_path(project_id, asset_id, "source_blend_path")
+    return FileResponse(path, media_type="application/octet-stream", filename=path.name)
+
+
+@app.get("/api/projects/{project_id}/character-assets/{asset_id}/blender-preview")
+def download_foundry_blender_preview(project_id: str, asset_id: str) -> FileResponse:
+    path = _foundry_blender_artifact_path(project_id, asset_id, "preview_path")
+    return FileResponse(path, media_type="image/png", filename=path.name)
 
 
 @app.post("/api/projects/{project_id}/character-assets/{asset_id}/proportions", status_code=201)

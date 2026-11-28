@@ -15,12 +15,28 @@ const log = [];
 // Godot before responding. Generation alone takes about a minute on a shared runner,
 // and the Godot inspection that follows is allowed up to the engine's 180-second
 // budget, so the browser waits long enough for both stages to finish.
-const FOUNDRY_SAVE_TIMEOUT_MS = 420_000;
+const FOUNDRY_SAVE_TIMEOUT_MS = Number(process.env.FOUNDRY_SAVE_TIMEOUT_MS || 420_000);
 const record = (message) => {
   const line = new Date().toISOString() + " " + message;
   log.push(line);
   process.stdout.write(line + "\n");
 };
+
+async function verifyBlenderArtifacts(request, baseUrl, asset, label) {
+  const generator=asset?.generator||{};
+  if(!generator.blender_source_url||!generator.blender_preview_url)throw new Error(label+" Blender URLs missing.");
+  const [source,preview]=await Promise.all([
+    request.get(new URL(generator.blender_source_url,baseUrl).toString(),{timeout:FOUNDRY_SAVE_TIMEOUT_MS}),
+    request.get(new URL(generator.blender_preview_url,baseUrl).toString(),{timeout:FOUNDRY_SAVE_TIMEOUT_MS}),
+  ]);
+  if(!source.ok()||!preview.ok())throw new Error(label+" Blender artifact download failed.");
+  const [blendBytes,pngBytes]=await Promise.all([source.body(),preview.body()]);
+  if(blendBytes.length<1024||!pngBytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]))) {
+    throw new Error(label+" Blender source/preview file is invalid.");
+  }
+  record(label+": editable .blend source and Blender preview verified.");
+}
+
 let server;
 let browser;
 let failed = false;
@@ -175,6 +191,7 @@ try {
     characters = await charactersResponse.json();
     male = characters.find((item) => item.data?.name === "CI Foundry Ali");
     if (!male) throw new Error("Male Foundry profile was not persisted.");
+    await verifyBlenderArtifacts(request, baseUrl, male.data.asset, "Male Foundry character");
     const maleAssetResponse = await request.get(
       baseUrl + "/api/projects/" + project.id + "/character-assets/"
         + male.data.asset.relative_path.split("/").at(-1).replace(/\.glb$/i, ""),
@@ -258,6 +275,7 @@ try {
     if (!male || male.revision !== 2 || male.data.foundry_recipe.parameters.head_width !== 0.6) {
       throw new Error("Foundry edit did not preserve character identity and revision.");
     }
+    await verifyBlenderArtifacts(request, baseUrl, male.data.asset, "Updated male Foundry character");
     record("Saved recipe reopened, edited and persisted under the same character ID.");
   } else {
     record("Female-only acceptance mode: skipping already-passed male create/edit workflow.");
@@ -292,18 +310,21 @@ try {
       || female.data.foundry_recipe?.hair_style !== "bob") {
     throw new Error("Female Foundry recipe or template was not persisted.");
   }
+  await verifyBlenderArtifacts(request, baseUrl, female.data.asset, "Female Foundry character");
   const maleInspection = male?.data?.asset?.engine_inspection;
   const femaleInspection = female.data.asset.engine_inspection;
-  if (femaleInspection.skeleton_count !== 1 || femaleInspection.morph_target_count !== 10
-      || (!femaleOnly && (!maleInspection || maleInspection.skeleton_count !== 1
-        || maleInspection.morph_target_count !== 10))) {
-    throw new Error("Godot inspection did not confirm the expected rig and morph targets.");
+  const femaleBones=(femaleInspection.skeletons||[]).flatMap((skeleton)=>skeleton.bones||[]);
+  const maleBones=(maleInspection?.skeletons||[]).flatMap((skeleton)=>skeleton.bones||[]);
+  if(femaleInspection.skeleton_count!==1||femaleInspection.morph_target_count<16||femaleBones.length!==19
+    ||(!femaleOnly&&(!maleInspection||maleInspection.skeleton_count!==1||maleInspection.morph_target_count<16||maleBones.length!==19))) {
+    throw new Error("Godot inspection did not confirm the 19-bone rig and 16 morph targets.");
   }
   record(femaleOnly
     ? "Female GLB passed the live Godot import/inspection API."
     : "Male and female GLBs both passed the live Godot import/inspection API.");
 
-  const portraitDownloadPromise = page.waitForEvent("download", { timeout: 30_000 });
+  await page.locator("#preview-export-size").selectOption("512");
+  const portraitDownloadPromise = page.waitForEvent("download", { timeout: 120_000 });
   await page.locator("#export-preview-png").click({ force: true });
   await page.waitForFunction(
     () => {
@@ -311,7 +332,7 @@ try {
       return status.includes("PNG exported") || status.includes("PNG export failed");
     },
     null,
-    { timeout: 30_000 },
+    { timeout: 120_000 },
   );
   const portraitStatus = await page.locator("#preview-status").textContent();
   if (!portraitStatus.includes("PNG exported")) {
@@ -328,7 +349,7 @@ try {
     null,
     { timeout: 30_000 },
   );
-  const turnaroundDownloadPromise = page.waitForEvent("download", { timeout: 30_000 });
+  const turnaroundDownloadPromise = page.waitForEvent("download", { timeout: 120_000 });
   await page.locator("#export-turnaround-png").click({ force: true });
   await page.waitForFunction(
     () => {
@@ -336,7 +357,7 @@ try {
       return status.includes("turnaround sheet exported") || status.includes("Turnaround export failed");
     },
     null,
-    { timeout: 30_000 },
+    { timeout: 120_000 },
   );
   const turnaroundStatus = await page.locator("#preview-status").textContent();
   if (!turnaroundStatus.includes("turnaround sheet exported")) {

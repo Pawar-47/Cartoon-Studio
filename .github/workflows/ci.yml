@@ -59,28 +59,10 @@ jobs:
         env:
           CARTOON_STUDIO_GODOT_PATH: ${{ github.workspace }}/build/godot-runtime/Godot_v4.7.2-stable_win64.exe
         run: uv run --locked python -m pytest -q
-      - name: Install pinned Playwright browser
-        if: success()
-        run: |
-          npm install --no-save --no-package-lock playwright@1.56.1
-          npx playwright install chromium
-      - name: Launch Character Studio and verify browser workflows
-        if: success()
-        env:
-          CARTOON_STUDIO_GODOT_PATH: ${{ github.workspace }}/build/godot-runtime/Godot_v4.7.2-stable_win64.exe
-        run: node scripts/character_studio_visual_acceptance.mjs
-      - name: Upload browser acceptance diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: character-studio-browser-acceptance
-          path: build/browser-acceptance/
-          if-no-files-found: warn
-          retention-days: 14
 
   blender-runtime:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
         name: Checkout
@@ -115,6 +97,34 @@ jobs:
           CARTOON_STUDIO_GODOT_PATH: ${{ github.workspace }}/godot-runtime/Godot_v4.7.2-stable_linux.x86_64
         run: |
           python scripts/verify_blender_assets.py --blender "$PWD/blender-runtime/blender" --output build/blender-assets
+      - name: Set up uv for browser acceptance
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: 0.13.10
+          enable-cache: true
+      - name: Set up Node.js for browser acceptance
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install application and Playwright dependencies
+        run: |
+          uv sync --locked --group dev
+          npm install --no-save --no-package-lock playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Launch Character Studio with Blender and verify browser workflows
+        env:
+          CARTOON_STUDIO_BLENDER_PATH: ${{ github.workspace }}/blender-runtime/blender
+          CARTOON_STUDIO_GODOT_PATH: ${{ github.workspace }}/godot-runtime/Godot_v4.7.2-stable_linux.x86_64
+          EGL_PLATFORM: surfaceless
+          FOUNDRY_SAVE_TIMEOUT_MS: 900000
+        run: node scripts/character_studio_visual_acceptance.mjs
+      - name: Upload browser acceptance diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: character-studio-browser-acceptance
+          path: build/browser-acceptance/
+          if-no-files-found: ignore
       - name: Upload real Blender outputs for inspection
         if: always()
         uses: actions/upload-artifact@v4

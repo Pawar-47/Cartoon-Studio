@@ -18,7 +18,7 @@ from app.character_foundry import (
     validate_character_recipe,
 )
 from app.engine import GodotEngineAdapter
-from app.rig_analysis import REQUIRED_HUMANOID_BONES
+from app.rig_analysis import REQUIRED_HUMANOID_BONES, analyze_rig
 
 
 def read_glb(path: Path) -> dict:
@@ -122,6 +122,12 @@ def main() -> int:
                         "character: Blender rig is missing canonical bones "
                         + ", ".join(sorted(missing_bones))
                     )
+                rig_analysis = analyze_rig(godot_inspection)
+                if (
+                    rig_analysis.get("matched_bone_count") != rig_analysis.get("required_bone_count")
+                    or rig_analysis.get("hierarchy_validation", {}).get("status") != "valid"
+                ):
+                    raise RuntimeError("character: canonical humanoid rig mapping/hierarchy is invalid")
                 imported_targets = {
                     str(target.get("name", ""))
                     for target in godot_inspection.get("morph_targets", [])
@@ -177,6 +183,12 @@ def main() -> int:
         }
         if len(female_bones) != 19 or set(REQUIRED_HUMANOID_BONES) - female_bones:
             raise RuntimeError("female character: canonical 19-bone rig failed import")
+        female_rig_analysis = analyze_rig(female_inspection)
+        if (
+            female_rig_analysis.get("matched_bone_count") != female_rig_analysis.get("required_bone_count")
+            or female_rig_analysis.get("hierarchy_validation", {}).get("status") != "valid"
+        ):
+            raise RuntimeError("female character: canonical humanoid rig mapping/hierarchy is invalid")
         if female_inspection.get("morph_target_count", 0) < len(MORPH_TARGETS) + 6:
             raise RuntimeError("female character: recipe morph targets failed import")
         female_target = args.output / "character-female"
@@ -194,6 +206,9 @@ def main() -> int:
             "elapsed_seconds": female_result.elapsed_seconds,
             "godot_skeleton_count": female_inspection.get("skeleton_count", 0),
             "godot_morph_target_count": female_inspection.get("morph_target_count", 0),
+            "rig_ready": True,
+            "matched_bone_count": female_rig_analysis.get("matched_bone_count", 0),
+            "required_bone_count": female_rig_analysis.get("required_bone_count", 0),
         })
         report = {"blender": status, "godot": godot_status, "assets": summary}
         (args.output / "blender-runtime-report.json").write_text(

@@ -351,6 +351,16 @@ async function loadCharacters(){
    downloadButton.href="/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(savedAssetId);
    downloadButton.download=(data.name||"character")+".glb";downloadButton.textContent="Download GLB";
    card.append(downloadButton);
+   if (asset.generator?.source_blend_path) {
+    const sourceButton=document.createElement("a");sourceButton.className="secondary preview-saved";
+    sourceButton.href="/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(savedAssetId)+"/blender-source";
+    sourceButton.download=(data.name||"character")+".blend";sourceButton.textContent="Download editable Blender source";
+    card.append(sourceButton);
+    const blenderPreviewLink=document.createElement("a");blenderPreviewLink.className="secondary preview-saved";
+    blenderPreviewLink.href="/api/projects/"+encodeURIComponent(activeProject)+"/character-assets/"+encodeURIComponent(savedAssetId)+"/blender-preview";
+    blenderPreviewLink.target="_blank";blenderPreviewLink.rel="noopener";blenderPreviewLink.textContent="View Blender render";
+    card.append(blenderPreviewLink);
+   }
   }
   list.append(card);
  }
