@@ -79,5 +79,10 @@ def test_factory_contains_domain_generators_and_editable_glb_export() -> None:
     ):
         assert family in source
     assert "export_skins=True" in source
+    assert "cartoon-studio.humanoid.v1" in source
+    assert "head_width" in source
+    assert "def add_foundry_shape_keys" in source
+    assert "LeftShoulder" in source
     assert "export_morph=True" in source
     assert '"editable_source":True' in source.replace(" ", "")
+    assert "--recipe-json" in source

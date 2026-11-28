@@ -11,7 +11,12 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.blender_toolchain import BlenderToolchain
+from app.character_foundry import (
+    FEMALE_MASTER_TEMPLATE_ID, MORPH_TARGETS, default_character_recipe,
+    validate_character_recipe,
+)
 from app.engine import GodotEngineAdapter
+from app.rig_analysis import REQUIRED_HUMANOID_BONES
 
 
 def read_glb(path: Path) -> dict:
@@ -52,8 +57,19 @@ def main() -> int:
                            ("vehicle", "Pakistani Auto Rickshaw"),
                            ("vegetation", "Mango Tree")):
             asset_id = f"ci-{kind}-proof"
-            result = worker.generate(project_root=project, asset_id=asset_id,
-                                     asset_kind=kind, name=name, timeout_seconds=900)
+            recipe = None
+            if kind == "character":
+                recipe = default_character_recipe("ci-character-proof")
+                recipe["parameters"].update({
+                    "head_width": 0.35, "jaw_width": 0.25,
+                    "eye_spacing": 0.20, "torso_width": 0.15,
+                })
+                recipe["hair_style"] = "spiky"
+                recipe = validate_character_recipe(recipe)
+            result = worker.generate(
+                project_root=project, asset_id=asset_id,
+                asset_kind=kind, name=name, recipe=recipe, timeout_seconds=900
+            )
             gltf = read_glb(result.glb_path)
             if result.manifest.get("culture_profile") != "pakistani_storybook_v1":
                 raise RuntimeError(f"{kind}: Pakistani culture profile was not recorded")
@@ -77,7 +93,7 @@ def main() -> int:
                     for mesh in meshes
                     for name in mesh.get("extras", {}).get("targetNames", [])
                 }
-                required_targets = {
+                required_targets = set(MORPH_TARGETS) | {
                     "Smile", "JawOpen", "Blink", "Open", "Phoneme_A", "Phoneme_O"
                 }
                 if not required_targets.issubset(target_names):
@@ -85,8 +101,19 @@ def main() -> int:
                         "character: missing facial morph targets "
                         + ", ".join(sorted(required_targets - target_names))
                     )
-                if godot_inspection.get("skeleton_count", 0) < 1:
-                    raise RuntimeError("character: Godot did not import the Blender skeleton")
+                if godot_inspection.get("skeleton_count", 0) != 1:
+                    raise RuntimeError("character: Godot did not import exactly one Blender skeleton")
+                imported_bones = {
+                    str(bone.get("name", ""))
+                    for skeleton in godot_inspection.get("skeletons", [])
+                    for bone in skeleton.get("bones", [])
+                }
+                missing_bones = set(REQUIRED_HUMANOID_BONES) - imported_bones
+                if missing_bones:
+                    raise RuntimeError(
+                        "character: Blender rig is missing canonical bones "
+                        + ", ".join(sorted(missing_bones))
+                    )
                 imported_targets = {
                     str(target.get("name", ""))
                     for target in godot_inspection.get("morph_targets", [])
@@ -103,10 +130,14 @@ def main() -> int:
                     raise RuntimeError("character: Godot imported no skinned mesh")
             target = args.output / kind
             target.mkdir(parents=True, exist_ok=True)
-            for source in (
+            sources = [
                 result.source_path, result.glb_path,
                 result.manifest_path, result.preview_path,
-            ):
+            ]
+            recipe_input = result.glb_path.parent / "recipe-input.json"
+            if recipe_input.is_file():
+                sources.append(recipe_input)
+            for source in sources:
                 shutil.copy2(source, target / source.name)
             summary.append({
                 "kind": kind, "name": name, "blender_version": result.blender_version,
@@ -117,6 +148,45 @@ def main() -> int:
                 "godot_skeleton_count": godot_inspection.get("skeleton_count", 0),
                 "godot_morph_target_count": godot_inspection.get("morph_target_count", 0),
             })
+        female_recipe = default_character_recipe(
+            "ci-character-female-proof", FEMALE_MASTER_TEMPLATE_ID
+        )
+        female_recipe["hair_style"] = "long"
+        female_recipe["hair_color"] = "#4a2419"
+        female_recipe = validate_character_recipe(female_recipe)
+        female_result = worker.generate(
+            project_root=project, asset_id="ci-character-female-proof",
+            asset_kind="character", name="Pakistani Female Character",
+            recipe=female_recipe, timeout_seconds=900,
+        )
+        female_inspection = godot.inspect_glb(
+            female_result.glb_path, allowed_root=project, timeout_seconds=180
+        )
+        female_bones = {
+            str(bone.get("name", ""))
+            for skeleton in female_inspection.get("skeletons", [])
+            for bone in skeleton.get("bones", [])
+        }
+        if set(REQUIRED_HUMANOID_BONES) - female_bones:
+            raise RuntimeError("female character: canonical 19-bone rig failed import")
+        if female_inspection.get("morph_target_count", 0) < len(MORPH_TARGETS) + 6:
+            raise RuntimeError("female character: recipe morph targets failed import")
+        female_target = args.output / "character-female"
+        female_target.mkdir(parents=True, exist_ok=True)
+        for source in (
+            female_result.source_path, female_result.glb_path,
+            female_result.manifest_path, female_result.preview_path,
+            female_result.glb_path.parent / "recipe-input.json",
+        ):
+            if source.is_file():
+                shutil.copy2(source, female_target / source.name)
+        summary.append({
+            "kind": "character-female", "name": "Pakistani Female Character",
+            "blender_version": female_result.blender_version,
+            "elapsed_seconds": female_result.elapsed_seconds,
+            "godot_skeleton_count": female_inspection.get("skeleton_count", 0),
+            "godot_morph_target_count": female_inspection.get("morph_target_count", 0),
+        })
         report = {"blender": status, "godot": godot_status, "assets": summary}
         (args.output / "blender-runtime-report.json").write_text(
             json.dumps(report, indent=2) + "\\n", encoding="utf-8")

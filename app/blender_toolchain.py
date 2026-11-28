@@ -101,11 +101,14 @@ class BlenderToolchain:
 
     def generate(self, *, project_root: Path, asset_id: str, asset_kind: AssetKind,
                  name: str, culture_profile: CultureProfile = "pakistani_storybook_v1",
+                 recipe: dict[str, Any] | None = None,
                  timeout_seconds: float | None = None) -> BlenderAssetResult:
         if asset_kind not in KINDS:
             raise ValueError("asset_kind must be one of: " + ", ".join(sorted(KINDS)) + ".")
         if culture_profile not in CULTURE_PROFILES:
             raise ValueError("Unsupported Blender culture_profile.")
+        if recipe is not None and (asset_kind != "character" or not isinstance(recipe, dict)):
+            raise ValueError("A JSON recipe can only be supplied for character generation.")
         if not isinstance(asset_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", asset_id):
             raise ValueError("asset_id must contain 1-64 safe identifier characters.")
         if not isinstance(name, str) or not NAME.fullmatch(name.strip()):
@@ -127,12 +130,17 @@ class BlenderToolchain:
         source, glb, manifest_path = (output / f"{asset_id}.blend",
                                       output / f"{asset_id}.glb", output / "manifest.json")
         preview = output / f"{asset_id}_preview.png"
-        if any(path.exists() for path in (source, glb, manifest_path, preview)):
+        recipe_file = output / "recipe-input.json"
+        if any(path.exists() for path in (source, glb, manifest_path, preview)) or (recipe is not None and recipe_file.exists()):
             raise FileExistsError("Refusing to overwrite existing Blender asset output.")
+        if recipe is not None:
+            recipe_file.write_text(json.dumps(recipe, indent=2, ensure_ascii=False) + "\\n", encoding="utf-8")
         command = [str(self.executable), "--background", "--factory-startup", "--python",
                    str(self.script_path), "--", "--asset-kind", asset_kind, "--asset-id", asset_id,
                    "--name", name.strip(), "--output-dir", str(output),
                    "--culture-profile", culture_profile]
+        if recipe is not None:
+            command.extend(["--recipe-json", str(recipe_file)])
         started = time.monotonic()
         budget = max(1.0, float(timeout_seconds or self.timeout_seconds))
         try:

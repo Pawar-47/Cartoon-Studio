@@ -11,6 +11,7 @@ def args():
     p.add_argument("--asset-id",required=True); p.add_argument("--name",required=True)
     p.add_argument("--output-dir",type=Path,required=True)
     p.add_argument("--culture-profile",choices=("pakistani_storybook_v1",),default="pakistani_storybook_v1")
+    p.add_argument("--recipe-json",type=Path)
     return p.parse_args(values)
 
 def mat(name,color,rough=.72,metal=0):
@@ -19,6 +20,15 @@ def mat(name,color,rough=.72,metal=0):
     bs.inputs["Base Color"].default_value=(*color,1); bs.inputs["Roughness"].default_value=rough
     bs.inputs["Metallic"].default_value=metal
     return m
+
+def hex_rgb(value, fallback):
+    if isinstance(value, str) and len(value) == 7 and value.startswith("#"):
+        try:
+            return tuple(int(value[index:index + 2], 16) / 255.0 for index in (1, 3, 5))
+        except ValueError:
+            pass
+    return fallback
+
 
 def smooth(obj,material,bevel=0):
     obj.data.materials.append(material)
@@ -82,52 +92,246 @@ def curve(name,coords,radius,material):
     o=bpy.data.objects.new(name,c); bpy.context.collection.objects.link(o); o.data.materials.append(material)
     return o
 
-def rig(parts):
-    # Curves are converted to meshes so they can be skinned and exported with the rig.
-    for obj, _bone in parts:
-        if obj.type != "MESH":
-            bpy.ops.object.select_all(action="DESELECT")
-            obj.select_set(True)
-            bpy.context.view_layer.objects.active = obj
-            bpy.ops.object.convert(target="MESH")
-    data=bpy.data.armatures.new("CartoonStudio_HumanoidRig")
-    arm=bpy.data.objects.new("CartoonStudio_HumanoidRig",data); bpy.context.collection.objects.link(arm)
-    bpy.context.view_layer.objects.active=arm; arm.select_set(True); bpy.ops.object.mode_set(mode="EDIT")
-    specs={
-      "root":((0,0,0),(0,0,.2),None),"pelvis":((0,0,.85),(0,0,1.1),"root"),
-      "spine":((0,0,1.05),(0,0,1.78),"pelvis"),"chest":((0,0,1.7),(0,0,2),"spine"),
-      "neck":((0,0,1.95),(0,0,2.2),"chest"),"head":((0,0,2.15),(0,0,2.95),"neck"),
-      "upper_arm.L":((-.38,0,1.82),(-.68,0,1.35),"chest"),
-      "forearm.L":((-.68,0,1.35),(-.7,0,.98),"upper_arm.L"),
-      "upper_arm.R":((.38,0,1.82),(.68,0,1.35),"chest"),
-      "forearm.R":((.68,0,1.35),(.7,0,.98),"upper_arm.R"),
-      "thigh.L":((-.2,0,1),(-.2,0,.5),"pelvis"),"shin.L":((-.2,0,.5),(-.2,0,.1),"thigh.L"),
-      "thigh.R":((.2,0,1),(.2,0,.5),"pelvis"),"shin.R":((.2,0,.5),(.2,0,.1),"thigh.R")}
-    for name,(head,tail,parent) in specs.items():
-        b=data.edit_bones.new(name); b.head=head; b.tail=tail
-        if parent: b.parent=data.edit_bones[parent]; b.use_connect=(b.parent.tail==b.head)
-    bpy.ops.object.mode_set(mode="OBJECT"); arm.select_set(False)
-    for obj,bone in parts:
-        obj.parent=arm; group=obj.vertex_groups.new(name=bone)
-        group.add(list(range(len(obj.data.vertices))),1,"REPLACE")
-        mod=obj.modifiers.new("Humanoid deformation","ARMATURE"); mod.object=arm
-    arm["cartoon_studio_rig_profile"]="humanoid_stylized_v1"
-    return arm
+def _character_region(object_name):
+    name = object_name.lower()
+    if "nose" in name:
+        return "nose"
+    if "mouth" in name or "lip" in name:
+        return "mouth"
+    if any(token in name for token in ("eye", "iris", "pupil", "brow", "eyelid")):
+        return "eyes"
+    if any(token in name for token in ("head", "hair", "ear", "face", "cheek")):
+        return "head"
+    if any(token in name for token in ("sleeve", "arm", "hand", "finger", "thumb")):
+        return "arms"
+    if any(token in name for token in ("shalwar", "chappal", "foot", "thigh", "shin")):
+        return "legs"
+    return "torso"
 
-def character():
+
+def _character_bone(object_name, source_bone):
+    name = object_name.lower()
+    side = "Left" if ".l" in name or source_bone.endswith(".L") else "Right"
+    if any(token in name for token in ("hand |", "finger", "thumb")):
+        return side + "Hand"
+    if "chappal" in name or "foot |" in name:
+        return side + "Foot"
+    aliases = {
+        "pelvis": "Hips", "spine": "Spine", "chest": "Chest",
+        "neck": "Neck", "head": "Head",
+        "upper_arm.L": "LeftUpperArm", "forearm.L": "LeftLowerArm",
+        "thigh.L": "LeftUpperLeg", "shin.L": "LeftLowerLeg",
+        "foot.L": "LeftFoot",
+        "upper_arm.R": "RightUpperArm", "forearm.R": "RightLowerArm",
+        "thigh.R": "RightUpperLeg", "shin.R": "RightLowerLeg",
+        "foot.R": "RightFoot",
+    }
+    return aliases.get(source_bone, source_bone)
+
+
+def rig(parts):
+    specs = {
+        "Hips": ((0, 0, .85), (0, 0, 1.10), None),
+        "Spine": ((0, 0, 1.10), (0, 0, 1.60), "Hips"),
+        "Chest": ((0, 0, 1.60), (0, 0, 1.92), "Spine"),
+        "Neck": ((0, 0, 1.92), (0, 0, 2.16), "Chest"),
+        "Head": ((0, 0, 2.16), (0, 0, 2.95), "Neck"),
+        "LeftShoulder": ((-.35, 0, 1.82), (-.48, 0, 1.82), "Chest"),
+        "LeftUpperArm": ((-.48, 0, 1.82), (-.68, 0, 1.35), "LeftShoulder"),
+        "LeftLowerArm": ((-.68, 0, 1.35), (-.70, 0, .98), "LeftUpperArm"),
+        "LeftHand": ((-.70, 0, .98), (-.70, 0, .72), "LeftLowerArm"),
+        "RightShoulder": ((.35, 0, 1.82), (.48, 0, 1.82), "Chest"),
+        "RightUpperArm": ((.48, 0, 1.82), (.68, 0, 1.35), "RightShoulder"),
+        "RightLowerArm": ((.68, 0, 1.35), (.70, 0, .98), "RightUpperArm"),
+        "RightHand": ((.70, 0, .98), (.70, 0, .72), "RightLowerArm"),
+        "LeftUpperLeg": ((-.19, 0, .95), (-.19, 0, .50), "Hips"),
+        "LeftLowerLeg": ((-.19, 0, .50), (-.19, 0, .10), "LeftUpperLeg"),
+        "LeftFoot": ((-.19, 0, .10), (-.19, -.30, .05), "LeftLowerLeg"),
+        "RightUpperLeg": ((.19, 0, .95), (.19, 0, .50), "Hips"),
+        "RightLowerLeg": ((.19, 0, .50), (.19, 0, .10), "RightUpperLeg"),
+        "RightFoot": ((.19, 0, .10), (.19, -.30, .05), "RightLowerLeg"),
+    }
+
+    # Convert, apply modelling modifiers/transforms, and label every component
+    # before joining so the exported mesh retains semantic skinning regions.
+    for obj, source_bone in parts:
+        bpy.ops.object.select_all(action="DESELECT")
+        obj.select_set(True)
+        bpy.context.view_layer.objects.active = obj
+        if obj.type != "MESH":
+            bpy.ops.object.convert(target="MESH")
+        for modifier in list(obj.modifiers):
+            bpy.ops.object.modifier_apply(modifier=modifier.name)
+        bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+        bone_name = _character_bone(obj.name, source_bone)
+        if bone_name not in specs:
+            raise RuntimeError("Character component references unknown rig bone: " + bone_name)
+        bone_group = obj.vertex_groups.new(name=bone_name)
+        bone_group.add(list(range(len(obj.data.vertices))), 1.0, "REPLACE")
+        region_group = obj.vertex_groups.new(name="region_" + _character_region(obj.name))
+        region_group.add(list(range(len(obj.data.vertices))), 1.0, "REPLACE")
+
+    bpy.ops.object.select_all(action="DESELECT")
+    for obj, _source_bone in parts:
+        obj.select_set(True)
+    mesh = parts[0][0]
+    bpy.context.view_layer.objects.active = mesh
+    bpy.ops.object.join()
+    mesh.name = "CartoonStudioCharacterMesh"
+
+    data = bpy.data.armatures.new("CartoonStudio_HumanoidRig")
+    arm = bpy.data.objects.new("CartoonStudio_HumanoidRig", data)
+    bpy.context.collection.objects.link(arm)
+    bpy.context.view_layer.objects.active = arm
+    arm.select_set(True)
+    bpy.ops.object.mode_set(mode="EDIT")
+    for name, (head, tail, parent) in specs.items():
+        bone = data.edit_bones.new(name)
+        bone.head = head
+        bone.tail = tail
+        if parent:
+            bone.parent = data.edit_bones[parent]
+            bone.use_connect = bone.parent.tail == bone.head
+    bpy.ops.object.mode_set(mode="OBJECT")
+    arm.select_set(False)
+    mesh.parent = arm
+    modifier = mesh.modifiers.new("Humanoid deformation", "ARMATURE")
+    modifier.object = arm
+    arm["cartoon_studio_rig_profile"] = "cartoon-studio.humanoid.v1"
+    arm["cartoon_studio_bone_count"] = len(specs)
+    mesh["cartoon_studio_mesh_profile"] = "pakistani_storybook_character.v1"
+    return arm, mesh
+
+
+def add_foundry_shape_keys(mesh, recipe):
+    parameters = recipe.get("parameters", {}) if isinstance(recipe, dict) else {}
+    expressions = recipe.get("expression_weights", {}) if isinstance(recipe, dict) else {}
+    mesh.shape_key_add(name="Basis")
+    region_indices = {
+        group.name.removeprefix("region_"): group.index
+        for group in mesh.vertex_groups
+        if group.name.startswith("region_")
+    }
+
+    def in_regions(vertex, regions):
+        indices = {region_indices[name] for name in regions if name in region_indices}
+        return any(group.group in indices for group in vertex.groups)
+
+    def add_key(name, regions, deform, value=0.0):
+        key = mesh.shape_key_add(name=name)
+        for index, vertex in enumerate(mesh.data.vertices):
+            if in_regions(vertex, regions):
+                deform(key.data[index].co, vertex.co)
+        try:
+            key.value = max(-1.0, min(1.0, float(value)))
+        except (TypeError, ValueError):
+            key.value = 0.0
+        return key
+
+    def scale_x(point, base, factor):
+        point.x = base.x * factor
+
+    add_key("head_width", ("head",), lambda p, b: scale_x(p, b, 1.16), parameters.get("head_width", 0.0))
+    add_key(
+        "jaw_width", ("head",),
+        lambda p, b: scale_x(p, b, 1.24) if b.z < 2.55 and b.y < .08 else None,
+        parameters.get("jaw_width", 0.0),
+    )
+    add_key(
+        "chin_length", ("head",),
+        lambda p, b: setattr(p, "z", b.z - .12 * max(0.0, min(1.0, (2.42 - b.z) / .42)))
+        if b.z < 2.42 and b.y < .02 else None,
+        parameters.get("chin_length", 0.0),
+    )
+    def cheek(point, base):
+        if 2.34 < base.z < 2.64 and abs(base.x) > .14 and base.y < -.08:
+            point.x = base.x + math.copysign(.045, base.x)
+            point.y = base.y - .025
+    add_key("cheek_fullness", ("head",), cheek, parameters.get("cheek_fullness", 0.0))
+    add_key(
+        "eye_spacing", ("eyes",),
+        lambda p, b: setattr(p, "x", b.x + math.copysign(.075, b.x)),
+        parameters.get("eye_spacing", 0.0),
+    )
+    add_key("nose_width", ("nose",), lambda p, b: scale_x(p, b, 1.32), parameters.get("nose_width", 0.0))
+    add_key("mouth_width", ("mouth",), lambda p, b: scale_x(p, b, 1.30), parameters.get("mouth_width", 0.0))
+    add_key("torso_width", ("torso",), lambda p, b: scale_x(p, b, 1.18), parameters.get("torso_width", 0.0))
+    def shoulders(point, base):
+        if base.z > 1.48:
+            if base.x < 0:
+                point.x = base.x - .075
+            elif base.x > 0:
+                point.x = base.x + .075
+    add_key("shoulder_width", ("torso", "arms"), shoulders, parameters.get("shoulder_width", 0.0))
+    add_key(
+        "leg_length", ("legs",),
+        lambda p, b: setattr(p, "z", .95 + (b.z - .95) * 1.13),
+        parameters.get("leg_length", 0.0),
+    )
+
+    def smile(point, base):
+        if abs(base.x) > .015:
+            point.z = base.z + .035 * min(1.0, abs(base.x) / .12)
+    add_key("Smile", ("mouth",), smile, expressions.get("Smile", 0.0))
+    def jaw_open(point, base):
+        if base.z < 2.54 and base.y < -.05:
+            point.z = base.z - .055
+    add_key("JawOpen", ("head", "mouth"), jaw_open, expressions.get("JawOpen", 0.0))
+    add_key(
+        "Blink", ("eyes",),
+        lambda p, b: setattr(p, "z", 2.62 + (b.z - 2.62) * .16),
+        expressions.get("Blink", 0.0),
+    )
+    add_key(
+        "Open", ("mouth",),
+        lambda p, b: setattr(p, "z", 2.245 + (b.z - 2.245) * 2.2),
+        expressions.get("Open", 0.0),
+    )
+    add_key(
+        "Phoneme_A", ("mouth",),
+        lambda p, b: setattr(p, "z", 2.245 + (b.z - 2.245) * 3.0),
+        expressions.get("Phoneme_A", 0.0),
+    )
+    def phoneme_o(point, base):
+        point.z = 2.245 + (base.z - 2.245) * 2.1
+        point.x = base.x * .72
+    add_key("Phoneme_O", ("mouth",), phoneme_o, expressions.get("Phoneme_O", 0.0))
+    mesh["cartoon_studio_morph_targets"] = json.dumps(
+        ["head_width", "jaw_width", "chin_length", "cheek_fullness", "eye_spacing",
+         "nose_width", "mouth_width", "torso_width", "shoulder_width", "leg_length",
+         "Smile", "JawOpen", "Blink", "Open", "Phoneme_A", "Phoneme_O"]
+    )
+    return [
+        "head_width", "jaw_width", "chin_length", "cheek_fullness", "eye_spacing",
+        "nose_width", "mouth_width", "torso_width", "shoulder_width", "leg_length",
+        "Smile", "JawOpen", "Blink", "Open", "Phoneme_A", "Phoneme_O",
+    ]
+
+
+
+def character(recipe=None):
+    recipe = recipe if isinstance(recipe, dict) else {}
+    master_template_id = str(recipe.get("master_template_id", "cartoon-studio.stylized-adult.v1"))
+    is_female = "female" in master_template_id
+    hair_style = str(recipe.get("hair_style", "short"))
+    if hair_style not in {"short", "bob", "long", "ponytail", "spiky", "curly", "mohawk"}:
+        hair_style = "short"
+    hair_color = hex_rgb(recipe.get("hair_color"), (.045, .018, .012))
+    hair_highlight = tuple(min(1.0, value * 1.42 + .045) for value in hair_color)
     skin = mat("Skin | warm peach", (.76, .40, .27))
     highlight = mat("Skin | soft highlights", (.91, .58, .41))
     ear_inner = mat("Skin | ear detail", (.43, .16, .12))
-    hair = mat("Hair | deep espresso", (.045, .018, .012))
-    hair_light = mat("Hair | warm highlights", (.12, .045, .022))
-    kurta = mat("Clothing | peacock teal", (.018, .27, .31))
+    hair = mat("Hair | recipe color", hair_color)
+    hair_light = mat("Hair | recipe highlight", hair_highlight)
+    kurta = mat("Clothing | Pakistani kurta", (.55, .12, .25) if is_female else (.018, .27, .31))
     kurta_dark = mat("Clothing | deep teal seams", (.012, .12, .16))
     gold = mat("Clothing | brass piping", (.91, .55, .16))
     shirt = mat("Clothing | warm ivory", (.91, .78, .55))
-    shalwar = mat("Clothing | indigo", (.075, .12, .28))
+    shalwar = mat("Clothing | Pakistani shalwar", (.91, .78, .55) if is_female else (.075, .12, .28))
     shalwar_seam = mat("Clothing | seam blue", (.16, .23, .42))
     leather = mat("Shoes | dark leather", (.16, .055, .025))
-    sole = mat("Shoes | sole", (.045, .035, .03))
+    sole = mat("Peshawari Chappal | sole", (.045, .035, .03))
+    dupatta = mat("Dupatta | festive woven fabric", (.62, .12, .24))
     eye_white = mat("Eyes | ivory", (.98, .93, .81), .28)
     iris = mat("Eyes | amber", (.35, .13, .025), .24)
     pupil = mat("Eyes | dark pupil", (.009, .006, .004), .18)
@@ -139,7 +343,7 @@ def character():
         return obj
 
     # Continuous cross-section meshes define the torso, jaw, limbs and clothing silhouette.
-    add(loft(
+    torso_obj = add(loft(
         "Body | tailored kurta shell", (0, 0, 1.47),
         [(-.59, .27, .20, 0), (-.54, .32, .23, 0),
          (-.39, .35, .25, 0), (-.18, .39, .28, 0),
@@ -147,6 +351,8 @@ def character():
          (.46, .39, .24, 0), (.55, .25, .18, 0)],
         kurta, 56,
     ), "spine")
+    if is_female:
+        torso_obj.scale.x = .94
     add(loft(
         "Body | neck", (0, 0, 2.02),
         [(-.17, .12, .12, 0), (-.10, .14, .13, 0),
@@ -223,6 +429,36 @@ def character():
     add(curve("Hair | part highlight",
               [(-.04, -.27, 3.00), (.08, -.26, 3.025),
                (.20, -.22, 3.00)], .012, hair_light), "head")
+    if hair_style in {"bob", "long"}:
+        bottom = -.62 if hair_style == "bob" else -1.02
+        for sign, side in ((-1, "L"), (1, "R")):
+            add(loft("Hair | " + hair_style + " side lock." + side,
+                     (sign * .285, .025, 2.58),
+                     [(bottom, .07, .085, 0), (bottom * .55, .09, .11, 0),
+                      (0, .105, .12, 0), (.18, .08, .09, 0)],
+                     hair, 32), "head")
+    elif hair_style == "ponytail":
+        add(curve("Hair | tied ponytail",
+                  [(0, .22, 2.82), (.02, .40, 2.65), (.08, .47, 2.34),
+                   (.02, .42, 2.18)], .085, hair), "head")
+        add(ball("Hair | ponytail tie", (0, .25, 2.79), (.09, .09, .08), hair_light, 24), "head")
+    elif hair_style == "spiky":
+        for index, x in enumerate((-.24, -.12, 0, .12, .24)):
+            add(curve("Hair | spike %02d" % index,
+                      [(x, -.02, 2.98), (x * 1.1, -.01, 3.13 + (index % 2) * .06),
+                       (x * 1.15, .015, 3.18 + (index % 2) * .06)],
+                      .045, hair), "head")
+    elif hair_style == "curly":
+        for index in range(9):
+            angle = 2 * math.pi * index / 9
+            x = math.cos(angle) * .29
+            y = math.sin(angle) * .22
+            add(ball("Hair | curl %02d" % index, (x, y, 2.96), (.105, .10, .105), hair_light if index % 3 == 0 else hair, 20), "head")
+    elif hair_style == "mohawk":
+        add(loft("Hair | central mohawk", (0, .005, 3.00),
+                 [(-.08, .08, .09, 0), (0, .11, .11, 0),
+                  (.16, .085, .09, 0), (.27, .025, .03, 0)],
+                 hair, 32), "head")
 
     # Pakistani kurta details: band collar, button placket, side slits and restrained piping.
     add(block("Kurta | front placket", (0, -.292, 1.52),
@@ -248,29 +484,13 @@ def character():
     add(curve("Shalwar | drawstring",
               [(-.12, -.22, .99), (0, -.27, .94), (.12, -.22, .99)], .018, gold), "pelvis")
 
-    for sign, side in ((-1, "L"), (1, "R")):
-        lapel = add(block("Kurta | lapel." + side,
-                          (sign * .135, -.302, 1.80),
-                          (.115, .045, .25), gold, .025), "chest")
-        lapel.rotation_euler[1] = sign * .24
-        add(curve("Kurta | front piping." + side,
-                  [(sign * .17, -.30, 1.70),
-                   (sign * .16, -.31, 1.43),
-                   (sign * .13, -.29, 1.20)], .012, gold), "spine")
-        add(block("Kurta | pocket." + side,
-                  (sign * .235, -.285, 1.37), (.105, .035, .12),
-                  kurta_dark, .018), "spine")
-    for z in (1.60, 1.47, 1.34):
-        add(ball("Kurta | brass button", (0, -.326, z),
-                 (.022, .012, .022), gold, 20), "spine")
-    add(curve("Kurta | collar",
-              [(-.17, -.285, 1.94), (-.08, -.33, 2.00),
-               (0, -.345, 1.94), (.08, -.33, 2.00),
-               (.17, -.285, 1.94)], .025, shirt), "chest")
-    add(block("Body | waist belt", (0, -.02, .94),
-              (.61, .43, .09), leather, .025), "pelvis")
-    add(block("Body | belt buckle", (0, -.245, .94),
-              (.105, .035, .075), gold, .018), "pelvis")
+    if is_female:
+        add(curve("Dupatta | shoulder drape",
+                  [(-.47, .05, 1.94), (-.42, -.18, 1.78), (-.24, -.34, 1.42),
+                   (0, -.37, 1.05), (.16, -.34, .92)], .075, dupatta), "chest")
+        add(curve("Dupatta | embroidered border",
+                  [(-.42, -.23, 1.75), (-.22, -.38, 1.38),
+                   (.02, -.41, 1.02), (.18, -.38, .94)], .012, gold), "chest")
 
     for sign, side in ((-1, "L"), (1, "R")):
         add(loft(
@@ -304,9 +524,9 @@ def character():
     for sign, side in ((-1, "L"), (1, "R")):
         add(loft(
             "Shalwar | thigh." + side, (sign * .19, 0, .64),
-            [(-.42, .105, .13, 0), (-.32, .14, .16, 0),
-             (-.08, .16, .17, 0), (.20, .17, .18, 0),
-             (.38, .145, .16, 0), (.43, .11, .13, 0)],
+            [(-.42, .12, .13, 0), (-.32, .17, .17, 0),
+             (-.08, .20, .19, 0), (.20, .22, .20, 0),
+             (.38, .18, .17, 0), (.43, .12, .13, 0)],
             shalwar, 40,
         ), "thigh." + side)
         add(curve("Shalwar | seam." + side,
@@ -319,56 +539,39 @@ def character():
              (.25, .12, .13, 0)],
             shalwar, 36,
         ), "shin." + side)
+        add(ball("Foot | instep." + side, (sign * .19, -.13, .13),
+                 (.14, .25, .085), skin, 28), "foot." + side)
         add(block("Peshawari Chappal | sole." + side,
-                  (sign * .19, -.12, .035), (.30, .42, .055), sole, .025), "shin." + side)
+                  (sign * .19, -.12, .035), (.30, .42, .055), sole, .025), "foot." + side)
         add(curve("Peshawari Chappal | toe strap." + side,
                   [(sign * .08, -.30, .12), (sign * .19, -.19, .18),
-                   (sign * .30, -.30, .12)], .035, leather), "shin." + side)
+                   (sign * .30, -.30, .12)], .035, leather), "foot." + side)
         add(curve("Peshawari Chappal | instep strap." + side,
                   [(sign * .07, -.12, .16), (sign * .19, -.02, .20),
-                   (sign * .31, -.12, .16)], .032, leather), "shin." + side)
+                   (sign * .31, -.12, .16)], .032, leather), "foot." + side)
 
 
-    # Facial animation targets are real mesh shape keys, not metadata-only controls.
-    head.shape_key_add(name="Basis")
-    smile = head.shape_key_add(name="Smile")
-    for vertex in smile.data:
-        x, _, z = vertex.co
-        if -.30 < z < -.08:
-            vertex.co.z += .025 * min(abs(x) / .22, 1.0)
-    jaw = head.shape_key_add(name="JawOpen")
-    for vertex in jaw.data:
-        x, _, z = vertex.co
-        if z < -.10:
-            vertex.co.z -= .055 * max(0.0, 1.0 - abs(x) / .34)
-    for obj in blink_meshes:
-        obj.shape_key_add(name="Basis")
-        blink = obj.shape_key_add(name="Blink")
-        for vertex in blink.data:
-            vertex.co.z *= .16
-    mouth_obj.shape_key_add(name="Basis")
-    open_key = mouth_obj.shape_key_add(name="Open")
-    phoneme_a = mouth_obj.shape_key_add(name="Phoneme_A")
-    phoneme_o = mouth_obj.shape_key_add(name="Phoneme_O")
-    for vertex in open_key.data:
-        vertex.co.z *= 2.2
-    for vertex in phoneme_a.data:
-        vertex.co.z *= 3.0
-    for vertex in phoneme_o.data:
-        vertex.co.z *= 2.1
-        vertex.co.x *= .72
-
-    arm = rig(parts)
-    arm["cartoon_studio_rig_profile"] = "humanoid_stylized_v2"
+    arm, character_mesh = rig(parts)
+    morph_targets = add_foundry_shape_keys(character_mesh, recipe)
     arm["facial_controls"] = ["Smile", "JawOpen", "Blink", "Open", "Phoneme_A", "Phoneme_O"]
+    arm["template_id"] = master_template_id
     return {
         "rig": arm.name,
-        "mesh_count": len(parts),
-        "shape_keys": ["Smile", "JawOpen", "Blink", "Open", "Phoneme_A", "Phoneme_O"],
-        "character_profile": "pakistani_storybook_shalwar_kameez_v1",
+        "rig_profile_id": "cartoon-studio.humanoid.v1",
+        "bone_count": 19,
+        "mesh_count": 1,
+        "component_count": len(parts),
+        "shape_keys": morph_targets,
+        "morph_targets": morph_targets,
+        "character_profile": "pakistani_storybook_shalwar_kameez_v2",
         "culture_profile": "pakistani_storybook_v1",
+        "template_id": master_template_id,
+        "hair_style": hair_style,
+        "hair_color": str(recipe.get("hair_color", "#2b1b13")).lower(),
         "outfit": "kurta_shalwar_with_peshawari_chappal",
+        "female_dupatta": is_female,
     }
+
 
 
 def arch_curve(name, center_x, front_y, base_z, width, rise, material, radius=.035):
@@ -607,8 +810,13 @@ def vegetation():
 def main():
     a=args(); out=a.output_dir.resolve(); out.mkdir(parents=True,exist_ok=True)
     bpy.ops.object.select_all(action="SELECT"); bpy.ops.object.delete(use_global=False)
+    recipe = None
+    if a.recipe_json:
+        recipe = json.loads(a.recipe_json.read_text(encoding="utf-8"))
+        if not isinstance(recipe, dict):
+            raise RuntimeError("Character recipe input must be a JSON object.")
     builders = {"character": character, "world": world, "prop": prop, "building": building, "vehicle": vehicle, "vegetation": vegetation}
-    details = builders[a.asset_kind]()
+    details = builders[a.asset_kind](recipe) if a.asset_kind == "character" else builders[a.asset_kind]()
     scene=bpy.context.scene
     w=bpy.data.worlds[0] if bpy.data.worlds else bpy.data.worlds.new("Cartoon Studio | studio")
     scene.world=w; w.color=(.16,.19,.24)
@@ -651,6 +859,7 @@ def main():
       "generator":"cartoon-studio-blender-factory","generator_version":"0.3.0","culture_profile":a.culture_profile,
       "blender_version":bpy.app.version_string,"source_file":blend.name,"glb_file":glb.name,
       "preview_file":preview.name,"editable_source":True,
+      "recipe_file":a.recipe_json.name if a.recipe_json else None,
       "license":"Original procedural asset; no third-party geometry included.",
       "details":details}
     (out/"manifest.json").write_text(json.dumps(manifest,indent=2),encoding="utf-8")
