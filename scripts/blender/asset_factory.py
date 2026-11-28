@@ -33,6 +33,41 @@ def ball(name,loc,scale,material,seg=32):
     bpy.ops.object.transform_apply(location=False,rotation=False,scale=True)
     return smooth(o,material)
 
+def loft(name, location, profile, material, segments=48):
+    """Create a continuous organic mesh from elliptical cross-section rings."""
+    vertices = []
+    for z, radius_x, radius_y, depth_offset in profile:
+        for index in range(segments):
+            angle = 2 * math.pi * index / segments
+            vertices.append((
+                radius_x * math.cos(angle),
+                depth_offset + radius_y * math.sin(angle),
+                z,
+            ))
+    faces = []
+    for ring in range(len(profile) - 1):
+        for index in range(segments):
+            current = ring * segments + index
+            following = ring * segments + (index + 1) % segments
+            faces.append((current, following, following + segments, current + segments))
+    bottom_center = len(vertices)
+    vertices.append((0, profile[0][3], profile[0][0]))
+    top_center = len(vertices)
+    vertices.append((0, profile[-1][3], profile[-1][0]))
+    last_ring = (len(profile) - 1) * segments
+    for index in range(segments):
+        following = (index + 1) % segments
+        faces.append((bottom_center, following, index))
+        faces.append((top_center, last_ring + index, last_ring + following))
+    mesh = bpy.data.meshes.new(name + " | sculpted mesh")
+    mesh.from_pydata(vertices, [], faces)
+    mesh.update()
+    obj = bpy.data.objects.new(name, mesh)
+    bpy.context.collection.objects.link(obj)
+    obj.location = location
+    return smooth(obj, material)
+
+
 def block(name,loc,dims,material,bevel=.06):
     bpy.ops.mesh.primitive_cube_add(size=1,location=loc)
     o=bpy.context.object; o.name=name; o.dimensions=dims
@@ -79,53 +114,232 @@ def rig(parts):
     return arm
 
 def character():
-    skin=mat("Skin | warm peach",(.78,.43,.29)); light=mat("Skin | highlights",(.94,.64,.46))
-    hair=mat("Hair | espresso",(.065,.028,.018)); teal=mat("Clothing | teal jacket",(.025,.32,.37))
-    gold=mat("Clothing | piping",(.94,.62,.19)); pants=mat("Clothing | indigo",(.10,.15,.34))
-    leather=mat("Shoes | leather",(.20,.07,.035)); white=mat("Eyes | ivory",(.98,.92,.79),.3)
-    iris=mat("Eyes | amber",(.35,.15,.04),.25); dark=mat("Eyes | pupil",(.012,.009,.008),.2)
-    parts=[]
-    def add(obj,bone): parts.append((obj,bone)); return obj
-    add(ball("Body | torso",(0,0,1.47),(.43,.30,.62),teal),"spine")
-    add(ball("Body | neck",(0,0,2.04),(.15,.14,.22),skin),"neck")
-    add(ball("Body | head",(0,-.01,2.52),(.39,.34,.49),skin,48),"head")
-    for x,side in ((-.21,"L"),(.21,"R")): add(ball("Face | cheek."+side,(x,-.26,2.39),(.16,.10,.15),light),"head")
-    add(ball("Face | nose",(0,-.36,2.48),(.08,.10,.13),light),"head")
-    for x,side in ((-.145,"L"),(.145,"R")):
-        add(ball("Eye | white."+side,(x,-.31,2.61),(.105,.075,.13),white),"head")
-        add(ball("Eye | iris."+side,(x,-.378,2.60),(.052,.027,.073),iris),"head")
-        add(ball("Eye | pupil."+side,(x,-.401,2.60),(.026,.016,.046),dark),"head")
-        add(ball("Eye | glint."+side,(x-.014,-.417,2.635),(.013,.009,.018),white),"head")
-        add(curve("Face | brow."+side,[(x-.09,-.34,2.77),(x,-.38,2.80),(x+.09,-.34,2.77)],.024,hair),"head")
-    add(curve("Face | smile",[(-.12,-.35,2.34),(0,-.39,2.30),(.12,-.35,2.34)],.018,hair),"head")
-    add(ball("Hair | sculpted cap",(0,.005,2.89),(.405,.35,.19),hair,40),"head")
-    for i,x in enumerate((-.27,-.12,.04,.20,.31)):
-        lock=ball("Hair | swept lock %02d"%i,(x,-.14,2.92+(.06 if i in (1,2) else 0)),(.12,.22,.12),hair)
-        lock.rotation_euler[1]=-.35+i*.12; add(lock,"head")
-    add(ball("Clothing | jacket panel",(0,-.245,1.48),(.34,.09,.50),gold),"spine")
-    add(block("Clothing | lapel.L",(-.12,-.32,1.77),(.13,.055,.31),teal,.03),"chest")
-    add(block("Clothing | lapel.R",(.12,-.32,1.77),(.13,.055,.31),teal,.03),"chest")
-    for side,sign in (("L",-1),("R",1)):
-        add(ball("Sleeve."+side,(sign*.48,0,1.67),(.17,.17,.37),teal),"upper_arm."+side)
-        add(ball("Forearm."+side,(sign*.56,0,1.20),(.12,.13,.31),skin),"forearm."+side)
-        add(ball("Hand."+side,(sign*.58,-.03,.91),(.13,.12,.15),light),"forearm."+side)
-        add(ball("Trouser."+side,(sign*.20,0,.62),(.18,.20,.48),pants),"thigh."+side)
-        add(ball("Shin."+side,(sign*.20,0,.25),(.13,.14,.25),pants),"shin."+side)
-        add(ball("Boot."+side,(sign*.20,-.11,.10),(.18,.29,.12),leather),"shin."+side)
-        add(ball("Cuff."+side,(sign*.55,0,1.0),(.135,.14,.07),gold),"forearm."+side)
-    add(ball("Accessory | buckle",(0,-.315,1.02),(.075,.035,.075),gold),"pelvis")
-    arm=rig(parts); head=bpy.data.objects["Body | head"]
-    bpy.context.view_layer.objects.active=head; head.select_set(True)
-    bpy.ops.object.shape_key_add(from_mix=False)
-    head.data.shape_keys.key_blocks[-1].name="Basis"
-    bpy.ops.object.shape_key_add(from_mix=False); head.data.shape_keys.key_blocks[-1].name="Smile"
-    bpy.ops.object.shape_key_add(from_mix=False); head.data.shape_keys.key_blocks[-1].name="Blink"
-    for v in head.data.shape_keys.key_blocks["Smile"].data:
-        if v.co.z<-.12 and abs(v.co.x)<.22: v.co.z-=.025
-    for v in head.data.shape_keys.key_blocks["Blink"].data:
-        if v.co.z>.05: v.co.z*=.94
-    head.select_set(False)
-    return {"rig":arm.name,"mesh_count":len(parts),"shape_keys":["Smile","Blink"]}
+    skin = mat("Skin | warm peach", (.76, .40, .27))
+    highlight = mat("Skin | soft highlights", (.91, .58, .41))
+    ear_inner = mat("Skin | ear detail", (.43, .16, .12))
+    hair = mat("Hair | deep espresso", (.045, .018, .012))
+    hair_light = mat("Hair | warm highlights", (.12, .045, .022))
+    jacket = mat("Clothing | peacock teal", (.018, .27, .31))
+    jacket_dark = mat("Clothing | deep teal seams", (.012, .12, .16))
+    gold = mat("Clothing | brass piping", (.91, .55, .16))
+    shirt = mat("Clothing | warm ivory", (.91, .78, .55))
+    pants = mat("Clothing | indigo", (.075, .12, .28))
+    pants_seam = mat("Clothing | seam blue", (.16, .23, .42))
+    leather = mat("Shoes | dark leather", (.16, .055, .025))
+    sole = mat("Shoes | sole", (.045, .035, .03))
+    eye_white = mat("Eyes | ivory", (.98, .93, .81), .28)
+    iris = mat("Eyes | amber", (.35, .13, .025), .24)
+    pupil = mat("Eyes | dark pupil", (.009, .006, .004), .18)
+    mouth = mat("Face | mouth interior", (.12, .018, .018), .6)
+    parts = []
+
+    def add(obj, bone):
+        parts.append((obj, bone))
+        return obj
+
+    # Continuous cross-section meshes define the torso, jaw, limbs and clothing silhouette.
+    add(loft(
+        "Body | tailored jacket shell", (0, 0, 1.47),
+        [(-.59, .27, .20, 0), (-.54, .32, .23, 0),
+         (-.39, .35, .25, 0), (-.18, .39, .28, 0),
+         (.08, .44, .29, 0), (.30, .46, .28, 0),
+         (.46, .39, .24, 0), (.55, .25, .18, 0)],
+        jacket, 56,
+    ), "spine")
+    add(loft(
+        "Body | neck", (0, 0, 2.02),
+        [(-.17, .12, .12, 0), (-.10, .14, .13, 0),
+         (.08, .14, .13, 0), (.17, .11, .11, 0)],
+        skin, 40,
+    ), "neck")
+    head = add(loft(
+        "Face | sculpted head", (0, 0, 2.53),
+        [(-.51, .055, .09, 0), (-.47, .15, .17, 0),
+         (-.37, .23, .23, -.005), (-.23, .29, .27, -.008),
+         (-.05, .34, .30, 0), (.16, .36, .31, .008),
+         (.34, .31, .27, .012), (.46, .21, .19, .01),
+         (.51, .055, .07, 0)],
+        skin, 64,
+    ), "head")
+
+    for sign, side in ((-1, "L"), (1, "R")):
+        add(ball("Ear | outer." + side, (sign * .335, -.005, 2.51),
+                 (.082, .075, .13), highlight), "head")
+        add(ball("Ear | inner." + side, (sign * .382, -.055, 2.51),
+                 (.032, .025, .073), ear_inner), "head")
+
+    blink_meshes = []
+    for x, side in ((-.145, "L"), (.145, "R")):
+        white = add(ball("Eye | sclera." + side, (x, -.286, 2.625),
+                         (.079, .061, .103), eye_white, 40), "head")
+        iris_obj = add(ball("Eye | iris." + side, (x, -.342, 2.615),
+                            (.041, .025, .058), iris, 32), "head")
+        pupil_obj = add(ball("Eye | pupil." + side, (x, -.361, 2.615),
+                             (.021, .014, .038), pupil, 32), "head")
+        add(ball("Eye | catchlight." + side, (x - .012, -.375, 2.642),
+                 (.011, .008, .016), eye_white, 20), "head")
+        blink_meshes.extend((white, iris_obj, pupil_obj))
+        add(curve("Face | upper eyelid." + side,
+                  [(x - .085, -.29, 2.62), (x, -.35, 2.72),
+                   (x + .085, -.29, 2.62)], .018, ear_inner), "head")
+        add(curve("Face | brow." + side,
+                  [(x - .085, -.285, 2.765), (x, -.335, 2.79),
+                   (x + .085, -.285, 2.765)], .026, hair), "head")
+
+    add(loft(
+        "Face | shaped nose", (0, -.305, 2.455),
+        [(-.10, .025, .025, 0), (-.055, .052, .055, -.015),
+         (.035, .044, .05, 0), (.09, .018, .025, .005)],
+        highlight, 32,
+    ), "head")
+    mouth_obj = add(ball("Face | mouth cavity", (0, -.275, 2.245),
+                         (.105, .035, .048), mouth, 32), "head")
+    add(curve("Face | upper lip",
+              [(-.12, -.308, 2.285), (0, -.323, 2.275),
+               (.12, -.308, 2.285)], .014, ear_inner), "head")
+    add(curve("Face | lower lip",
+              [(-.09, -.30, 2.225), (0, -.315, 2.205),
+               (.09, -.30, 2.225)], .012, highlight), "head")
+    for sign, side in ((-1, "L"), (1, "R")):
+        add(ball("Face | cheek highlight." + side,
+                 (sign * .225, -.222, 2.405), (.075, .035, .055),
+                 highlight, 24), "head")
+
+    add(loft(
+        "Hair | sculpted cap", (0, .012, 2.91),
+        [(-.10, .30, .25, 0), (-.045, .365, .30, 0),
+         (.035, .375, .31, .015), (.12, .33, .28, .025),
+         (.19, .22, .19, .02), (.215, .055, .06, .01)],
+        hair, 56,
+    ), "head")
+    add(curve("Hair | swept fringe",
+              [(-.34, -.20, 2.91), (-.23, -.285, 2.96),
+               (-.07, -.315, 2.99), (.10, -.29, 2.96),
+               (.25, -.23, 2.91)], .065, hair_light), "head")
+    add(curve("Hair | side sweep",
+              [(.30, -.17, 2.94), (.37, -.10, 2.88),
+               (.35, -.02, 2.78)], .055, hair), "head")
+    add(curve("Hair | part highlight",
+              [(-.04, -.27, 3.00), (.08, -.26, 3.025),
+               (.20, -.22, 3.00)], .012, hair_light), "head")
+
+    # Jacket tailoring: center shirt, lapels, piping, pockets, buttons and collar.
+    add(block("Jacket | center placket", (0, -.286, 1.47),
+              (.115, .035, .49), shirt, .025), "chest")
+    for sign, side in ((-1, "L"), (1, "R")):
+        lapel = add(block("Jacket | lapel." + side,
+                          (sign * .135, -.302, 1.80),
+                          (.115, .045, .25), gold, .025), "chest")
+        lapel.rotation_euler[1] = sign * .24
+        add(curve("Jacket | front piping." + side,
+                  [(sign * .17, -.30, 1.70),
+                   (sign * .16, -.31, 1.43),
+                   (sign * .13, -.29, 1.20)], .012, gold), "spine")
+        add(block("Jacket | pocket." + side,
+                  (sign * .235, -.285, 1.37), (.105, .035, .12),
+                  jacket_dark, .018), "spine")
+    for z in (1.60, 1.47, 1.34):
+        add(ball("Jacket | brass button", (0, -.326, z),
+                 (.022, .012, .022), gold, 20), "spine")
+    add(curve("Jacket | collar",
+              [(-.17, -.285, 1.94), (-.08, -.33, 2.00),
+               (0, -.345, 1.94), (.08, -.33, 2.00),
+               (.17, -.285, 1.94)], .025, shirt), "chest")
+    add(block("Body | waist belt", (0, -.02, .94),
+              (.61, .43, .09), leather, .025), "pelvis")
+    add(block("Body | belt buckle", (0, -.245, .94),
+              (.105, .035, .075), gold, .018), "pelvis")
+
+    for sign, side in ((-1, "L"), (1, "R")):
+        add(loft(
+            "Sleeve | upper." + side, (sign * .455, 0, 1.65),
+            [(-.40, .12, .13, 0), (-.31, .16, .16, 0),
+             (-.10, .17, .17, 0), (.16, .16, .16, 0),
+             (.34, .13, .14, 0), (.40, .09, .10, 0)],
+            jacket, 40,
+        ), "upper_arm." + side)
+        add(ball("Sleeve | cuff." + side, (sign * .515, 0, 1.28),
+                 (.13, .14, .055), gold, 28), "forearm." + side)
+        add(loft(
+            "Arm | forearm." + side, (sign * .53, 0, 1.10),
+            [(-.28, .085, .095, 0), (-.20, .105, .11, 0),
+             (0, .12, .12, 0), (.18, .13, .13, 0),
+             (.27, .105, .11, 0)],
+            skin, 36,
+        ), "forearm." + side)
+        add(ball("Hand | palm." + side, (sign * .54, -.015, .79),
+                 (.115, .095, .13), highlight, 28), "forearm." + side)
+        for finger in range(4):
+            fx = sign * (.54 + (finger - 1.5) * .045)
+            fz = .675 - (.018 if finger in (0, 3) else 0)
+            add(ball("Hand | finger.%s.%d" % (side, finger + 1),
+                     (fx, -.025, fz), (.026, .031, .085),
+                     skin, 20), "forearm." + side)
+        add(ball("Hand | thumb." + side,
+                 (sign * .405, -.045, .785), (.045, .04, .075),
+                 skin, 20), "forearm." + side)
+
+    for sign, side in ((-1, "L"), (1, "R")):
+        add(loft(
+            "Trousers | thigh." + side, (sign * .19, 0, .64),
+            [(-.42, .105, .13, 0), (-.32, .14, .16, 0),
+             (-.08, .16, .17, 0), (.20, .17, .18, 0),
+             (.38, .145, .16, 0), (.43, .11, .13, 0)],
+            pants, 40,
+        ), "thigh." + side)
+        add(curve("Trousers | seam." + side,
+                  [(sign * .19, -.17, .93), (sign * .19, -.17, .66),
+                   (sign * .19, -.13, .40)], .008, pants_seam), "thigh." + side)
+        add(loft(
+            "Trousers | shin." + side, (sign * .19, 0, .245),
+            [(-.22, .09, .11, 0), (-.16, .11, .12, 0),
+             (.04, .12, .13, 0), (.20, .13, .14, 0),
+             (.25, .12, .13, 0)],
+            pants, 36,
+        ), "shin." + side)
+        add(ball("Boot | upper." + side, (sign * .19, -.105, .105),
+                 (.16, .27, .115), leather, 32), "shin." + side)
+        add(block("Boot | sole." + side, (sign * .19, -.115, .035),
+                  (.30, .40, .055), sole, .025), "shin." + side)
+
+    # Facial animation targets are real mesh shape keys, not metadata-only controls.
+    head.shape_key_add(name="Basis")
+    smile = head.shape_key_add(name="Smile")
+    for vertex in smile.data:
+        x, _, z = vertex.co
+        if -.30 < z < -.08:
+            vertex.co.z += .025 * min(abs(x) / .22, 1.0)
+    jaw = head.shape_key_add(name="JawOpen")
+    for vertex in jaw.data:
+        x, _, z = vertex.co
+        if z < -.10:
+            vertex.co.z -= .055 * max(0.0, 1.0 - abs(x) / .34)
+    for obj in blink_meshes:
+        obj.shape_key_add(name="Basis")
+        blink = obj.shape_key_add(name="Blink")
+        for vertex in blink.data:
+            vertex.co.z *= .16
+    mouth_obj.shape_key_add(name="Basis")
+    open_key = mouth_obj.shape_key_add(name="Open")
+    phoneme_a = mouth_obj.shape_key_add(name="Phoneme_A")
+    phoneme_o = mouth_obj.shape_key_add(name="Phoneme_O")
+    for vertex in open_key.data:
+        vertex.co.z *= 2.2
+    for vertex in phoneme_a.data:
+        vertex.co.z *= 3.0
+    for vertex in phoneme_o.data:
+        vertex.co.z *= 2.1
+        vertex.co.x *= .72
+
+    arm = rig(parts)
+    arm["cartoon_studio_rig_profile"] = "humanoid_stylized_v2"
+    arm["facial_controls"] = ["Smile", "JawOpen", "Blink", "Open", "Phoneme_A", "Phoneme_O"]
+    return {
+        "rig": arm.name,
+        "mesh_count": len(parts),
+        "shape_keys": ["Smile", "JawOpen", "Blink", "Open", "Phoneme_A", "Phoneme_O"],
+        "character_profile": "tailored_storybook_humanoid_v2",
+    }
 
 def world():
     grass=mat("World | meadow",(.22,.42,.19)); road=mat("World | asphalt",(.15,.17,.19))

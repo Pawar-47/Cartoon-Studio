@@ -56,9 +56,19 @@ def main() -> int:
             if kind == "character":
                 if not gltf.get("skins"):
                     raise RuntimeError("character: exported GLB has no skin")
-                if not any(primitive.get("targets") for mesh in meshes
-                           for primitive in mesh.get("primitives", [])):
-                    raise RuntimeError("character: exported GLB has no facial morph targets")
+                target_names = {
+                    name
+                    for mesh in meshes
+                    for name in mesh.get("extras", {}).get("targetNames", [])
+                }
+                required_targets = {
+                    "Smile", "JawOpen", "Blink", "Open", "Phoneme_A", "Phoneme_O"
+                }
+                if not required_targets.issubset(target_names):
+                    raise RuntimeError(
+                        "character: missing facial morph targets "
+                        + ", ".join(sorted(required_targets - target_names))
+                    )
             target = args.output / kind
             target.mkdir(parents=True, exist_ok=True)
             for source in (

@@ -1722,6 +1722,7 @@ def generate_blender_asset(project_id: str, payload: BlenderAssetGenerateRequest
         "source_path": result.source_path.relative_to(project_root).as_posix(),
         "glb_path": result.glb_path.relative_to(project_root).as_posix(),
         "manifest_path": result.manifest_path.relative_to(project_root).as_posix(),
+        "preview_path": result.preview_path.relative_to(project_root).as_posix(),
         "blender_version": result.blender_version, "elapsed_seconds": result.elapsed_seconds,
         "manifest": result.manifest, "godot_inspection": inspection,
     }}
